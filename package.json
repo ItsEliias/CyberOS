@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Unified ecosystem operations dashboard — CYBERTOOLS",
   "main": "out/main/main.js",
+  "type": "module",
   "author": "ItsEliias",
   "license": "MIT",
   "scripts": {
