@@ -560,7 +560,7 @@ app.whenReady().then(() => {
   const PROJECT_BASE = path.join(os.homedir(), 'Documents', 'Claude', 'Projects');
   const AUTO_DETECT = [
     { key: 'cyberlab',     dir: 'Cyberlab Compaion' },
-    { key: 'vaultscraper', dir: 'Vault Scraper' },
+    { key: 'vaultscraper', dir: 'VaultCore' },
     { key: 'ghostvault',   dir: 'GhostVault' },
   ];
   try {

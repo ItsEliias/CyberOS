@@ -1,7 +1,7 @@
 # CYBERTOOLS LAUNCHER
 ### ItsEliias CyberTools Suite — Unified Hub
 
-A production-quality system tray application for Windows, Mac, and Linux that provides one-click launching, live status, and a unified activity feed for the ItsEliias CyberTools suite: **CyberLab Companion** and **Vault Scraper**.
+A production-quality system tray application for Windows, Mac, and Linux that provides one-click launching, live status, and a unified activity feed for the ItsEliias CyberTools suite: **CyberLab Companion** and **VaultCore**.
 
 ---
 
@@ -51,13 +51,13 @@ Used in: splash screen (centred, max 180px wide) and panel header (24px height).
 
 ## App Icons in Cards
 
-The launcher shows icons for CyberLab Companion and Vault Scraper in their respective cards.
+The launcher shows icons for CyberLab Companion and VaultCore in their respective cards.
 
 Place logos at:
 - `assets/cyberlab/logo.png` — CyberLab Companion card icon (shown at 32px)
-- `assets/vaultscraper/logo.png` — Vault Scraper card icon (shown at 32px)
+- `assets/vaultscraper/logo.png` — VaultCore card icon (shown at 32px)
 
-If not found, "CC" and "VS" text placeholders are used.
+If not found, "CC" and "VC" text placeholders are used.
 
 ---
 
@@ -90,9 +90,9 @@ CyberLab Companion registers itself by writing to `~/cybertools-config.json`:
 
 ---
 
-## Registering Vault Scraper
+## Registering VaultCore
 
-Vault Scraper registers itself by writing to `~/cybertools-config.json`:
+VaultCore registers itself by writing to `~/cybertools-config.json`:
 
 ```json
 {
@@ -113,13 +113,13 @@ Vault Scraper registers itself by writing to `~/cybertools-config.json`:
 }
 ```
 
-`vaultscraper_status` should be updated every 10 seconds while Vault Scraper is running.
+`vaultscraper_status` should be updated every 10 seconds while VaultCore is running.
 
 ---
 
-## Vault Scraper Quick Trigger
+## VaultCore Quick Trigger
 
-The **⟳ Update Now** button on the Vault Scraper card writes a trigger key to
+The **⟳ Update Now** button on the VaultCore card writes a trigger key to
 `~/cybertools-config.json`:
 
 ```json
@@ -131,7 +131,7 @@ The **⟳ Update Now** button on the Vault Scraper card writes a trigger key to
 }
 ```
 
-Vault Scraper should poll this key on its 5-second config check. When detected:
+VaultCore should poll this key on its 5-second config check. When detected:
 1. Start an incremental update on all scheduled sources
 2. Remove the `vaultscraper_trigger` key from the config
 
@@ -160,10 +160,10 @@ All three CyberTools apps share this single config file. The launcher reads it e
 | `cyberlab.installed` | bool | Whether CyberLab is registered |
 | `cyberlab.execPath` | string | Path to CyberLab executable |
 | `cyberlab_status` | object | Live status from CyberLab (updated every 10s) |
-| `vaultscraper.installed` | bool | Whether Vault Scraper is registered |
-| `vaultscraper.execPath` | string | Path to Vault Scraper executable |
-| `vaultscraper_status` | object | Live status from Vault Scraper (updated every 10s) |
-| `vaultscraper_trigger` | object | Written by launcher to trigger scrape; consumed by VS |
+| `vaultscraper.installed` | bool | Whether VaultCore is registered |
+| `vaultscraper.execPath` | string | Path to VaultCore executable |
+| `vaultscraper_status` | object | Live status from VaultCore (updated every 10s) |
+| `vaultscraper_trigger` | object | Written by launcher to trigger scrape; consumed by VaultCore |
 | `launcher.customSlots` | array | User-configured custom shortcuts (max 4) |
 | `launcher.activityFeed` | array | Rolling activity log (last 50 entries) |
 
@@ -190,7 +190,7 @@ The launcher sends system desktop notifications for:
 
 - **Flag captured** — when `cyberlab_status.findingsCount` increases
 - **Vault scrape complete** — when an active scrape finishes
-- **App registered** — first time CyberLab or Vault Scraper appears in config
+- **App registered** — first time CyberLab or VaultCore appears in config
 - Clicking a notification opens the relevant app
 
 ---
@@ -239,6 +239,6 @@ cybertools-launcher/
 │   ├── logo.png                  Your logo (place here)
 │   ├── tray-icon.png             Your tray icon (place here)
 │   ├── cyberlab/logo.png         CyberLab card icon (place here)
-│   └── vaultscraper/logo.png     Vault Scraper card icon (place here)
+│   └── vaultscraper/logo.png     VaultCore card icon (place here)
 └── README.md
 ```
