@@ -1,0 +1,77 @@
+{
+  "name": "cyberlab-companion",
+  "version": "1.0.0",
+  "description": "AI-assisted cybersecurity workflow environment — CYBERTOOLS",
+  "main": "main.js",
+  "author": "ItsEliias",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --mac --linux",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux",
+    "pack": "electron-builder --dir",
+    "build:unsigned": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac",
+    "icons": "node generate-icons.js",
+    "combine": "cat renderer-part1.js renderer-part2.js renderer-part3.js > renderer.js"
+  },
+  "dependencies": {
+    "electron-squirrel-startup": "^1.0.0"
+  },
+  "devDependencies": {
+    "electron": "^28.1.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.itsEliias.cyberlab-companion",
+    "productName": "CYBERLAB COMPANION",
+    "copyright": "Copyright © 2025 ItsEliias",
+    "files": [
+      "**/*",
+      "!node_modules/.cache",
+      "!**/*.map"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.developer-tools"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "assets/icon.png",
+      "category": "Development"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

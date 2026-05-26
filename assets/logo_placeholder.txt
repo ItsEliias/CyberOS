@@ -1,0 +1,27 @@
+CYBERLAB COMPANION — Logo Placement Instructions
+=================================================
+
+Place your custom logo image here as:
+
+  assets/logo.png
+
+Requirements:
+- Format: PNG (recommended), JPG, or WEBP
+- Recommended dimensions: at least 180×180px (square or near-square works best)
+- The app will display it at:
+    • 180px max-width on the splash screen (auto-height, aspect ratio preserved)
+    • 24px height in the top navigation bar (aspect ratio preserved)
+    • Full size on the Progress screen header
+
+If no logo.png is found, the app will automatically display a styled "CC" text mark
+in the accent colour of the active theme — no configuration needed.
+
+This assets/ folder is per-app. Each app in the CyberTools suite has its own
+assets/logo.png so you can customise branding independently for each tool.
+
+Example logo ideas:
+- The ItsEliias armoured knight illustration
+- A stylised "CC" monogram
+- A shield/hacking icon in your colour palette
+
+After placing the file, restart the app to see your logo appear.

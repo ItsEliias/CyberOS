@@ -1,0 +1,1872 @@
+<!DOCTYPE html>
+<html lang="en" data-core="stealth" data-personality="neutral">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: blob:; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self'; media-src 'self'">
+<title>CYBERLAB — CYBERTOOLS</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" id="hljs-theme" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SPLASH SCREEN
+══════════════════════════════════════════════════════════════════════════════ -->
+<div id="splash">
+  <img id="splash-logo" class="splash-logo" src="assets/logo.png" alt="Logo" onerror="this.style.display='none';document.getElementById('splash-cc').style.display='block'">
+  <div id="splash-cc" class="splash-cc" style="display:none">CC</div>
+  <div class="splash-title">CYBERLAB COMPANION</div>
+  <div class="splash-sub">// ItsEliias</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SETUP WIZARD
+══════════════════════════════════════════════════════════════════════════════ -->
+<div id="setup-wizard">
+  <div class="wizard-card">
+    <div class="wizard-steps" id="wizard-steps"></div>
+
+    <!-- Step 1: Welcome -->
+    <div class="wizard-step" data-step="1">
+      <div style="text-align:center;margin-bottom:16px">
+        <img src="assets/logo.png" style="max-width:80px;height:auto" onerror="this.style.display='none'">
+        <div style="font-size:32px;font-weight:900;color:var(--accent);margin-top:8px" id="wizard-cc" style="display:none">CC</div>
+      </div>
+      <div class="wizard-title">Welcome to CYBERLAB COMPANION</div>
+      <div class="wizard-sub">Your AI-powered cybersecurity lab assistant. Let's get you set up — it only takes a minute.</div>
+      <div class="wizard-footer">
+        <button class="btn primary wizard-next">Let's Go →</button>
+      </div>
+    </div>
+
+    <!-- Step 2: API Key -->
+    <div class="wizard-step" data-step="2" style="display:none">
+      <div class="wizard-title">Anthropic API Key</div>
+      <div class="wizard-sub">CyberLab Companion uses Claude AI as its brain. You'll need an API key from Anthropic — it's the same key used across all CyberTools apps.</div>
+      <div style="margin-top:8px">
+        <div class="param-label" style="margin-bottom:4px">API Key</div>
+        <input type="password" id="wizard-apikey" class="form-input" placeholder="sk-ant-api03-..." autocomplete="off" spellcheck="false">
+        <div class="wizard-sub" style="margin-top:8px;font-size:11px">
+          Get your key at <span class="text-accent" style="cursor:pointer" id="open-anthropic-link">console.anthropic.com</span>
+        </div>
+        <button class="btn sm" id="test-api-btn" style="margin-top:10px">Test Connection</button>
+        <span id="api-test-result" style="font-size:12px;margin-left:10px"></span>
+      </div>
+      <div class="wizard-footer">
+        <button class="btn wizard-back">← Back</button>
+        <button class="btn primary wizard-next" id="wizard-step2-next">Continue →</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Obsidian Vault -->
+    <div class="wizard-step" data-step="3" style="display:none">
+      <div class="wizard-title">Obsidian Vault (Optional)</div>
+      <div class="wizard-sub">Writeups can be saved directly to your Obsidian vault with auto-generated wikilinks. Skip this if you don't use Obsidian.</div>
+      <div style="margin-top:12px">
+        <div class="param-label" style="margin-bottom:4px">Vault Path</div>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="wizard-vault" class="form-input" placeholder="~/Documents/MyVault" readonly>
+          <button class="btn" id="browse-vault-btn">Browse</button>
+        </div>
+        <div class="wizard-sub" style="margin-top:6px;font-size:11px">This path is shared with other CyberTools apps via ~/cybertools-config.json</div>
+      </div>
+      <div class="wizard-footer">
+        <button class="btn wizard-back">← Back</button>
+        <button class="btn primary wizard-next">Continue →</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Theme -->
+    <div class="wizard-step" data-step="4" style="display:none">
+      <div class="wizard-title">Choose Your Theme</div>
+      <div class="wizard-sub">Pick a workspace and atmosphere — you can change this any time from Settings.</div>
+      <div style="margin-top:12px">
+        <div class="theme-picker" id="wizard-theme-picker">
+          <div class="theme-picker-group">
+            <div class="theme-picker-label">WORKSPACE</div>
+            <div class="theme-chip-row" id="wizard-core-row">
+              <button class="theme-chip active" data-core="stealth"><span class="chip-swatch" style="background:#4a9eff"></span>Stealth</button>
+              <button class="theme-chip" data-core="graphite"><span class="chip-swatch" style="background:#6ea8fe"></span>Graphite</button>
+              <button class="theme-chip" data-core="frost"><span class="chip-swatch" style="background:#3b82f6"></span>Frost</button>
+              <button class="theme-chip" data-core="oled"><span class="chip-swatch" style="background:#f5f5f5"></span>OLED</button>
+            </div>
+          </div>
+          <div class="theme-picker-group">
+            <div class="theme-picker-label">ATMOSPHERE</div>
+            <div class="theme-chip-row" id="wizard-personality-row">
+              <button class="theme-chip active" data-personality="neutral"><span class="chip-swatch" style="background:#4a9eff"></span>Neutral</button>
+              <button class="theme-chip" data-personality="cyberpunk"><span class="chip-swatch" style="background:#b44fff"></span>Cyberpunk</button>
+              <button class="theme-chip" data-personality="terminal"><span class="chip-swatch" style="background:#00ff41"></span>Terminal</button>
+              <button class="theme-chip" data-personality="threat"><span class="chip-swatch" style="background:#cc0000"></span>Threat</button>
+            </div>
+          </div>
+          <div class="theme-combo-label" id="wizard-theme-combo">Stealth + Neutral</div>
+        </div>
+      </div>
+      <div class="wizard-footer">
+        <button class="btn wizard-back">← Back</button>
+        <button class="btn primary wizard-next">Continue →</button>
+      </div>
+    </div>
+
+    <!-- Step 5: Done -->
+    <div class="wizard-step" data-step="5" style="display:none">
+      <div style="text-align:center">
+        <div style="font-size:48px;margin-bottom:12px">🎯</div>
+        <div class="wizard-title">You're ready, ItsEliias</div>
+        <div class="wizard-sub" style="margin-top:8px">CyberLab Companion is configured. Start your first session and let's get to work.</div>
+      </div>
+      <div class="wizard-footer" style="justify-content:center">
+        <button class="btn primary" id="wizard-finish">Begin →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     MAIN APP
+══════════════════════════════════════════════════════════════════════════════ -->
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     MAIN APP
+══════════════════════════════════════════════════════════════════════════════ -->
+<div id="app-root" style="display:none">
+
+  <!-- ═══ LEFT SIDEBAR (wide, labeled nav + user + progress stats) ═══════════ -->
+  <div id="left-sidebar">
+
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">CC</div>
+      <div class="sidebar-brand-name">CYBERLAB</div>
+      <div class="sidebar-brand-sub">// ItsEliias</div>
+    </div>
+
+    <nav class="sidebar-nav" id="sidebar-nav">
+      <a class="sidebar-nav-item active" data-screen="dashboard" data-view="">
+        <svg class="snav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        <span>Dashboard</span>
+      </a>
+      <a class="sidebar-nav-item" data-screen="overview" data-view="">
+        <svg class="snav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>Overview</span>
+      </a>
+      <a class="sidebar-nav-item" data-screen="lab" data-view="">
+        <svg class="snav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span>Chat</span>
+      </a>
+      <a class="sidebar-nav-item" data-screen="exploits" data-view="">
+        <svg class="snav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <span>Exploits</span>
+      </a>
+      <a class="sidebar-nav-item" data-screen="enum" data-view="">
+        <svg class="snav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span>Enum</span>
+      </a>
+      <a class="sidebar-nav-item" data-screen="privesc" data-view="">
+        <svg class="snav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>Privilege Esc.</span>
+      </a>
+      <a class="sidebar-nav-item" data-screen="postex" data-view="">
+        <svg class="snav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        <span>Post-Exploitation</span>
+      </a>
+      <a class="sidebar-nav-item" data-screen="loot" data-view="">
+        <svg class="snav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span>Loot &amp; Creds</span>
+      </a>
+      <a class="sidebar-nav-item" data-screen="notes" data-view="">
+        <svg class="snav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <span>Notes</span>
+      </a>
+      <a class="sidebar-nav-item" data-screen="bookmarks" data-view="">
+        <svg class="snav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        <span>Bookmarks</span>
+      </a>
+      <a class="sidebar-nav-item" data-screen="commands" data-view="">
+        <svg class="snav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+        <span>Commands</span>
+      </a>
+      <a class="sidebar-nav-item" data-screen="recon" data-view="">
+        <svg class="snav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+        <span>Active Recon</span>
+      </a>
+      <a class="sidebar-nav-item" data-screen="progress" data-view="">
+        <svg class="snav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span>Reports</span>
+      </a>
+      <a class="sidebar-nav-item" data-screen="settings" data-view="">
+        <svg class="snav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>Settings</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <button class="btn sm" id="nav-sessions-btn" style="width:100%;margin-bottom:4px;font-size:11px" title="Browse all sessions">📂 All Sessions</button>
+      <button id="sessions-list-btn" style="display:none" aria-hidden="true"></button>
+      <div class="sidebar-user-row">
+        <img src="assets/logo.png" class="sidebar-user-avatar" alt="ItsEliias"
+             onerror="this.style.display='none';document.getElementById('sidebar-user-avatar-fb').style.display='flex'">
+        <div class="sidebar-user-avatar-fb" id="sidebar-user-avatar-fb" style="display:none">E</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-username">ItsEliias</div>
+          <div class="sidebar-userrole">Operator</div>
+        </div>
+      </div>
+
+      <div id="lab-progress-section">
+        <div class="sidebar-progress-label-row">
+          <span class="sidebar-progress-label">LAB PROGRESS</span>
+        </div>
+        <div class="sidebar-progress-sublabel">Overall Progress</div>
+        <div class="sidebar-progress-track">
+          <div id="sidebar-progress-fill" class="sidebar-progress-fill" style="width:0%"></div>
+        </div>
+        <div id="sidebar-progress-pct" class="sidebar-progress-pct">0%</div>
+        <div class="sidebar-stats-label">STATS</div>
+        <div class="sidebar-stat-list">
+          <div class="sidebar-stat-row"><span>Machines Hacked</span><span id="stat-machines-hacked">0</span></div>
+          <div class="sidebar-stat-row"><span>Flags Captured</span><span id="stat-flags-captured">0</span></div>
+          <div class="sidebar-stat-row"><span>Hints Used</span><span id="stat-hints-used">0</span></div>
+          <div class="sidebar-stat-row"><span>Time Spent</span><span id="stat-time-spent">0h</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- / left-sidebar -->
+
+  <!-- ═══ MAIN COLUMN ══════════════════════════════════════════════════════════ -->
+  <div id="main-col">
+
+    <!-- Update Banner -->
+    <div id="update-banner">
+      <span>🔔 Update available — <span id="update-version"></span></span>
+      <button class="btn sm" id="update-install-btn">Install Update</button>
+      <button class="btn sm" id="view-release-btn" style="margin-left:4px">View Release</button>
+      <button class="btn sm" id="dismiss-update-btn" style="margin-left:4px">Dismiss</button>
+    </div>
+
+    <!-- Offline Banner -->
+    <div id="offline-banner">
+      ⚠️ <strong>OFFLINE MODE</strong> — AI guidance unavailable. Command Builder, Reverse Shells, Encoder, Snippets, and Lab Tracker work fully offline.
+    </div>
+
+    <!-- Focus Mode Session Strip -->
+    <div id="focus-mode-session-strip">
+      <span id="focus-lab-name" class="text-accent font-mono" style="font-weight:700"></span>
+      <span id="focus-elapsed" class="font-mono" style="color:var(--success)">00:00</span>
+      <span id="focus-vpn-dot" class="vpn-dot off" title="VPN Status"></span>
+    </div>
+
+    <!-- TOP BAR -->
+    <div id="top-bar">
+      <div class="top-bar-left">
+        <img id="top-logo" class="top-logo" src="assets/logo.png" alt="" onerror="this.style.display='none';document.getElementById('top-logo-cc').style.display='flex'">
+        <div id="top-logo-cc" class="top-logo-cc-box" style="display:none">CC</div>
+        <span class="top-title">CYBERLAB COMPANION</span>
+        <span class="top-itsEliias">// ItsEliias</span>
+      </div>
+      <div class="top-bar-center">
+        <div class="session-indicator">
+          <div id="session-pulse" class="session-pulse idle"></div>
+          <span id="session-name-display">No active session</span>
+        </div>
+      </div>
+      <div class="top-bar-right">
+        <div class="vpn-chip vpn-off" id="vpn-indicator" title="VPN Status">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span id="vpn-label">No VPN</span>
+        </div>
+        <div class="topbar-divider"></div>
+        <button class="topbar-pill nav-tab-btn" id="btn-progress" data-screen="progress" title="My Progress">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          Progress
+        </button>
+        <button class="topbar-pill nav-tab-btn" id="btn-tracker" data-screen="tracker" title="Lab Tracker">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
+          Tracker
+        </button>
+        <div class="topbar-divider"></div>
+        <select class="theme-select" id="theme-select" title="Switch Workspace (use Settings for full theme control)">
+          <option value="stealth">Stealth</option>
+          <option value="graphite">Graphite</option>
+          <option value="frost">Frost</option>
+          <option value="oled">OLED</option>
+        </select>
+        <button class="icon-btn nav-tab-btn" id="btn-settings" data-screen="settings" title="Settings">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+        <button class="icon-btn" id="btn-focus" title="Focus Mode (Ctrl+Shift+F)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+        </button>
+        <div class="api-dot ok" id="api-status-dot" title="API Status"></div>
+      </div>
+    </div>
+
+    <!-- TAB BAR (session tabs) -->
+    <div id="tab-bar">
+      <div id="tabs-container" style="display:flex;gap:2px;align-items:flex-end"></div>
+      <button class="tab-add" id="new-tab-btn" title="New Session (Ctrl+N)" onclick="showNewSessionModal()">+</button>
+    </div>
+
+    <!-- SCREEN CONTAINER -->
+    <div id="screen-container">
+
+      <!-- ═══ LAB SCREEN ════════════════════════════════════════════════════════ -->
+      <div id="lab-screen" class="screen active" style="flex-direction:row">
+
+        <!-- TARGET PANEL -->
+        <div id="target-panel">
+
+          <div class="tp-section">
+            <div class="tp-section-label">ACTIVE TARGET</div>
+            <div class="tp-target-name-row">
+              <span class="tp-status-dot" id="session-status-dot"></span>
+              <span class="tp-target-text" id="session-display-name">—</span>
+            </div>
+            <div class="tp-badge-row">
+              <select class="platform-select" id="session-platform-select" title="Change platform">
+                <option value="HTB">HTB</option>
+                <option value="THM">THM</option>
+                <option value="PentesterLab">PentesterLab</option>
+                <option value="PortSwigger">PortSwigger</option>
+                <option value="PG">PG Practice</option>
+                <option value="CTF">CTF</option>
+                <option value="VulnHub">VulnHub</option>
+                <option value="Cisco">Cisco</option>
+                <option value="Other">Other</option>
+              </select>
+              <span class="diff-badge" id="session-diff-badge">Medium</span>
+            </div>
+          </div>
+
+          <div class="tp-section">
+            <div class="tp-section-label">TARGET INFO</div>
+            <div class="tp-info-row">
+              <span class="tp-info-key">IP Address</span>
+              <input class="tp-info-val tp-accent-val" id="target-ip" placeholder="10.10.10.x" spellcheck="false">
+            </div>
+            <div class="tp-info-row">
+              <span class="tp-info-key">Hostname</span>
+              <input class="tp-info-val" id="target-hostname" placeholder="box.htb" spellcheck="false">
+              <span id="target-hostname-display" style="display:none"></span>
+            </div>
+            <div class="tp-info-row">
+              <span class="tp-info-key">OS</span>
+              <select class="tp-info-val" id="target-os">
+                <option value="Unknown">Unknown</option>
+                <option value="Linux">Linux 🐧</option>
+                <option value="Windows">Windows 🪟</option>
+                <option value="FreeBSD">FreeBSD</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="tp-info-row">
+              <span class="tp-info-key">Release</span>
+              <input class="tp-info-val" id="target-notes" placeholder="e.g. Samba 3.0.20" spellcheck="false">
+            </div>
+          </div>
+
+          <div class="tp-section">
+            <div class="tp-section-label">OPEN PORTS <span class="tp-count" id="ports-count-badge">0</span></div>
+            <div id="findings-ports" class="tp-finding-list"></div>
+            <div id="findings-services" class="tp-finding-list"></div>
+          </div>
+
+          <div class="tp-section">
+            <div class="tp-section-label">CREDENTIALS</div>
+            <div id="findings-credentials" class="tp-finding-list"></div>
+            <div id="findings-users" class="tp-finding-list"></div>
+          </div>
+
+          <div class="tp-section">
+            <div class="tp-section-label">FLAGS <span class="tp-flags-frac" id="flags-fraction">0/0</span></div>
+            <div id="findings-flags" class="tp-finding-list"></div>
+          </div>
+
+          <div class="tp-section" id="tp-cves-section">
+            <div class="tp-section-label">CVEs</div>
+            <div id="findings-cves" class="tp-finding-list"></div>
+          </div>
+
+          <div class="tp-section">
+            <div class="tp-section-label">METHODS COMPLETED</div>
+            <div id="methodology-phases"></div>
+          </div>
+
+          <div id="hint-section">
+            <div class="hint-label">
+              <span>HINT LEVEL</span>
+              <span id="hint-level-badge" style="color:var(--accent);font-weight:700">L1</span>
+            </div>
+            <div class="hint-level-name" id="hint-level-name">Level 1 — Nudge</div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+              <button class="btn sm" id="hint-level-down" title="Lower hint level" style="padding:2px 7px;font-size:13px;line-height:1">−</button>
+              <input type="range" class="hint-slider" id="hint-slider" min="1" max="5" value="1" style="flex:1">
+              <button class="btn sm" id="hint-level-up" title="Raise hint level" style="padding:2px 7px;font-size:13px;line-height:1">+</button>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text-muted);margin-top:2px">
+              <span>Nudge</span><span>Hint</span><span>Guide</span><span>Walk</span><span>Full</span>
+            </div>
+          </div>
+
+          <div class="tp-section" style="border:none;padding-bottom:8px">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <div id="elapsed-display" class="elapsed-time">00:00</div>
+              <button class="btn sm" id="mark-complete-btn" style="margin-left:auto">✓ Done</button>
+              <button class="btn sm" id="add-finding-btn" title="Add Finding">+ Finding</button>
+              <button class="btn sm" id="summary-btn" title="Session Summary">📊 Summary</button>
+              <button class="btn primary sm" id="writeup-btn" style="display:none">📝 Writeup</button>
+              <button class="btn primary sm" id="generate-writeup-btn" style="display:none">📝 Writeup</button>
+            </div>
+          </div>
+
+        </div>
+        <!-- / target-panel -->
+
+        <!-- CENTER PANEL (AI Chat + Terminal) -->
+        <div id="center-panel">
+
+          <!-- AI Chat Section -->
+          <div id="ai-chat-section">
+            <div class="ai-chat-header">
+              <span class="ai-chat-title">AI ASSISTANT</span>
+              <span class="ai-model-badge">Claude</span>
+              <span class="teach-me-badge" id="teach-me-badge" style="display:none">📚 TEACH ME MODE — ACTIVE</span>
+            </div>
+
+            <div id="chat-history">
+              <div class="chat-empty" id="chat-empty">
+                <div class="chat-empty-icon">🤖</div>
+                <div class="chat-empty-text">Start a session to begin</div>
+                <div class="chat-empty-sub">Press + to create a new lab session</div>
+              </div>
+            </div>
+
+            <div id="typing-indicator" style="padding:0 16px 8px;display:none">
+              <div class="typing-indicator">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+              </div>
+            </div>
+
+            <div id="image-preview-area" style="padding:0 12px;display:none">
+              <div class="image-drop-zone" id="image-drop-zone"></div>
+            </div>
+
+            <div id="message-area">
+              <div class="quick-pills" id="quick-pills">
+                <button class="pill" data-prompt="What should I do next based on what I've found?">What next?</button>
+                <button class="pill" data-prompt="Give me a hint based on my current progress.">Give me a hint</button>
+                <button class="pill" data-prompt="Analyse this output">Analyse output</button>
+                <button class="pill" data-prompt="I'm stuck. Help me think through this.">I'm stuck</button>
+                <button class="pill" data-prompt="What tool should I use for this?">What tool?</button>
+                <button class="pill" data-prompt="Provide the full solution with all commands.">Full solution</button>
+                <button class="pill" data-prompt="TEACH_ME">Teach me</button>
+                <button class="pill" id="add-custom-pill" style="border-style:dashed">+ Custom</button>
+              </div>
+
+              <div>
+                <button class="terminal-toggle" id="terminal-toggle">▶ Paste terminal output</button>
+                <div class="terminal-output-area" id="terminal-output-area">
+                  <textarea class="terminal-output-input" id="terminal-output" placeholder="Paste nmap output, error messages, or any command output here..."></textarea>
+                </div>
+              </div>
+
+              <div class="input-row">
+                <button id="image-attach-btn" title="Attach image" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0 6px;font-size:16px;flex-shrink:0" type="button">📎</button>
+                <input type="file" id="image-file-input" accept="image/*" style="display:none">
+                <textarea id="message-input" rows="1" placeholder="Ask anything about this machine... (Ctrl+Enter to send)"></textarea>
+                <button id="send-btn" title="Send (Ctrl+Enter)">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                </button>
+              </div>
+
+              <div class="context-bar">
+                <div class="context-selector" id="context-selector">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                  Context: <span id="context-session-name">—</span> ▾
+                </div>
+                <div class="auto-cmd-indicator">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                  Auto-commands: <span class="auto-cmd-on" id="auto-cmd-status">ON</span>
+                </div>
+                <button class="btn sm" id="teach-me-btn" title="Toggle Teach Me Mode (Ctrl+M)" style="margin-left:auto;font-size:10px">📚 Teach Me</button>
+              </div>
+            </div>
+          </div>
+          <!-- / ai-chat-section -->
+
+          <!-- Output Log Section (shows AI-suggested commands & outputs) -->
+          <div id="terminal-section">
+            <div class="terminal-header-bar">
+              <span class="terminal-title-text">OUTPUT LOG</span>
+              <span class="terminal-live-dot" id="terminal-live-dot"></span>
+              <span style="font-size:10px;color:var(--text-muted);margin-left:4px" title="Paste output above the chat box to send it to the AI for analysis">Paste output in chat ↑ to analyse</span>
+              <select class="terminal-shell-sel" id="terminal-shell-select">
+                <option value="bash">Shell: bash</option>
+                <option value="zsh">Shell: zsh</option>
+                <option value="sh">Shell: sh</option>
+              </select>
+              <div style="margin-left:auto;display:flex;gap:4px">
+                <button class="terminal-icon-btn" id="terminal-clear-btn" title="Clear output log">🗑</button>
+                <button class="terminal-icon-btn" id="terminal-expand-btn" title="Expand">⤢</button>
+              </div>
+            </div>
+            <div class="terminal-body" id="terminal-body">
+              <div id="terminal-output-display" class="terminal-output-display">
+                <div class="terminal-welcome-line"><span class="terminal-prompt">itseliias@lame:~$</span> <span style="color:var(--text-muted)">Commands suggested by AI will appear here. Paste your own output above ↑ to analyse it.</span></div>
+              </div>
+            </div>
+          </div>
+          <!-- / terminal-section -->
+
+        </div>
+        <!-- / center-panel -->
+
+        <!-- RIGHT PANEL (Tools + Notes) -->
+        <div id="right-panel">
+
+          <!-- TOOLS section -->
+          <div id="tools-section">
+            <div class="rp-section-title">TOOLS</div>
+            <input class="tools-search-inp" id="tools-search" type="text" placeholder="Search tools...">
+            <div class="tool-filter-row" id="tool-filter-tabs">
+              <button class="tfil active" data-filter="all">All</button>
+              <button class="tfil" data-filter="recon">Recon</button>
+              <button class="tfil" data-filter="enum">Enum</button>
+              <button class="tfil" data-filter="exploit">Exploit</button>
+              <button class="tfil" data-filter="privesc">PrivEsc</button>
+              <button class="tfil" data-filter="post">Post</button>
+            </div>
+            <div class="tools-hint-row"><span>▶</span> Ask AI to run · Click card to paste command into chat</div>
+            <div id="tools-list" class="tools-list-wrap"></div>
+            <button class="manage-tools-btn" id="manage-tools-btn">🔧 Manage Tools</button>
+          </div>
+
+          <!-- NOTES section -->
+          <div id="notes-section">
+            <div class="notes-header-row">
+              <button class="notes-tab-btn active" data-notes-tab="notes">Notes</button>
+              <button class="notes-tab-btn" data-notes-tab="bookmarks">Bookmarks</button>
+              <button class="btn sm" id="new-note-btn" style="margin-left:auto">+ New Note</button>
+            </div>
+            <div id="notes-list" class="notes-list-wrap"></div>
+            <textarea id="session-notes-area" placeholder="Quick session notes..." style="width:100%;min-height:64px;resize:vertical;font-family:var(--font-mono);font-size:11px;background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:4px;box-sizing:border-box;margin-top:6px"></textarea>
+            <button class="btn sm" id="save-notes-btn" style="width:100%;margin-top:4px">💾 Save Notes</button>
+            <button class="view-all-notes" id="view-all-notes-btn">View All Notes →</button>
+          </div>
+
+          <!-- Legacy tool content (hidden, logic preserved) -->
+          <div id="legacy-tool-panel" style="display:none">
+            <div class="right-tabs">
+              <button class="right-tab active" data-tab="builder">Builder</button>
+              <button class="right-tab" data-tab="revshell">RevShell</button>
+              <button class="right-tab" data-tab="encode">Encode</button>
+              <button class="right-tab" data-tab="snippets">Snippets</button>
+              <button class="right-tab" data-tab="refs">Refs</button>
+            </div>
+            <div class="right-tab-content active" id="tab-builder">
+              <select class="tool-select" id="tool-category-select"><option value="">Select category...</option></select>
+              <select class="tool-select" id="tool-select"><option value="">Select tool...</option></select>
+              <div id="tool-description"></div>
+              <div id="tool-install"></div>
+              <div id="tool-params"></div>
+              <div class="code-wrap" id="builder-output-wrap" style="display:none">
+                <div class="code-header">
+                  <span class="code-lang">bash</span>
+                  <div style="display:flex;gap:4px">
+                    <button class="copy-btn" id="copy-builder-cmd">Copy</button>
+                    <button class="copy-btn" id="save-snippet-btn">⭐ Save</button>
+                  </div>
+                </div>
+                <pre><code id="builder-output" class="language-bash"></code></pre>
+              </div>
+              <div id="cmd-history-list"></div>
+              <div id="offline-cheatsheets" style="display:none">
+                <select class="tool-select" id="cheatsheet-select">
+                  <option value="">Select cheat sheet...</option>
+                  <option value="nmap">Nmap Flags</option>
+                  <option value="linprivesc">Linux PrivEsc</option>
+                  <option value="winprivesc">Windows PrivEsc</option>
+                  <option value="webenum">Web Enumeration</option>
+                  <option value="adattacks">Active Directory</option>
+                  <option value="revshells">Reverse Shells</option>
+                  <option value="hashid">Hash Identification</option>
+                </select>
+                <div id="cheatsheet-content" class="cheatsheet-panel" style="display:none"></div>
+                <div style="margin-top:8px">
+                  <input type="number" class="param-input" id="port-lookup-input" placeholder="Port number...">
+                  <div id="port-lookup-result" style="display:none"></div>
+                </div>
+              </div>
+            </div>
+            <div class="right-tab-content" id="tab-revshell">
+              <select class="tool-select" id="revshell-lang"></select>
+              <div class="form-row" style="margin-top:4px">
+                <div class="form-group">
+                  <div class="param-label">Your IP</div>
+                  <input type="text" class="param-input" id="revshell-ip" placeholder="10.10.14.x">
+                </div>
+                <div class="form-group">
+                  <div class="param-label">Port</div>
+                  <input type="text" class="param-input" id="revshell-port" value="4444">
+                </div>
+              </div>
+              <select class="tool-select" id="revshell-encoding">
+                <option value="raw">Raw</option><option value="base64">Base64</option><option value="url">URL Encoded</option>
+              </select>
+              <div id="revshell-outputs" style="display:none;margin-top:8px">
+                <div class="code-wrap"><div class="code-header"><span class="code-lang" id="revshell-lang-label">bash</span><button class="copy-btn" id="copy-revshell-payload">Copy</button></div><pre><code id="revshell-payload-out" class="language-bash"></code></pre></div>
+                <div class="code-wrap"><div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" id="copy-revshell-listener">Copy</button></div><pre><code id="revshell-listener-out" class="language-bash"></code></pre></div>
+                <div class="code-wrap"><div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" id="copy-revshell-stable">Copy</button></div><pre><code id="revshell-stable-out" class="language-bash"></code></pre></div>
+                <div id="revshell-note"></div>
+              </div>
+              <button class="btn primary" id="generate-revshell-btn" style="width:100%;margin-top:8px">Generate</button>
+            </div>
+            <div class="right-tab-content" id="tab-encode">
+              <textarea class="encode-input" id="encode-input" placeholder="Enter text to encode/decode..."></textarea>
+              <select class="tool-select" id="encode-operation">
+                <optgroup label="Base64"><option value="b64-encode">Base64 Encode</option><option value="b64-decode">Base64 Decode</option></optgroup>
+                <optgroup label="URL"><option value="url-encode">URL Encode</option><option value="url-decode">URL Decode</option></optgroup>
+                <optgroup label="HTML"><option value="html-encode">HTML Encode</option><option value="html-decode">HTML Decode</option></optgroup>
+                <optgroup label="Hex"><option value="hex-encode">Hex Encode</option><option value="hex-decode">Hex Decode</option></optgroup>
+                <optgroup label="Cipher"><option value="rot13">ROT13</option></optgroup>
+                <optgroup label="Hash"><option value="md5">MD5</option><option value="sha1">SHA1</option><option value="sha256">SHA256</option></optgroup>
+                <optgroup label="JWT"><option value="jwt-decode">JWT Decode</option></optgroup>
+              </select>
+              <div style="display:flex;gap:6px;margin-top:4px">
+                <button class="btn primary" id="encode-run-btn" style="flex:1">Run</button>
+                <button class="btn" id="encode-swap-btn">⇅</button>
+              </div>
+              <textarea class="encode-output" id="encode-output" readonly placeholder="Output will appear here..."></textarea>
+              <button class="btn sm" id="copy-encode-output">Copy Output</button>
+              <!-- Chain mode -->
+              <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+                <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Chain Mode</div>
+                <div style="display:flex;flex-direction:column;gap:4px">
+                  <select class="tool-select" id="chain-op-1" style="font-size:11px"><option value="">Step 1 — select op...</option></select>
+                  <select class="tool-select" id="chain-op-2" style="font-size:11px"><option value="">Step 2 — select op...</option></select>
+                  <select class="tool-select" id="chain-op-3" style="font-size:11px"><option value="">Step 3 — select op...</option></select>
+                  <button class="btn primary sm" id="chain-run-btn" style="margin-top:2px">⛓ Run Chain</button>
+                </div>
+                <div id="chain-mode-panel" style="margin-top:6px;display:flex;flex-direction:column;gap:4px"></div>
+              </div>
+            </div>
+            <div class="right-tab-content" id="tab-snippets">
+              <div style="display:flex;gap:6px">
+                <input type="text" class="snippet-search" id="snippets-search" placeholder="Search snippets...">
+                <button class="btn sm" id="add-snippet-btn">+</button>
+              </div>
+              <select class="tool-select" id="snippets-sort">
+                <option value="recent">Recent</option><option value="most-used">Most Used</option><option value="alpha">A-Z</option>
+              </select>
+              <button class="btn sm" id="export-snippets-btn">Export</button>
+              <button class="btn sm" id="import-snippets-btn">Import</button>
+              <div id="snippets-list"></div>
+            </div>
+            <div class="right-tab-content" id="tab-refs">
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <button class="ref-link" data-url="https://book.hacktricks.xyz">📖 HackTricks</button>
+                <button class="ref-link" data-url="https://gtfobins.github.io">🔧 GTFOBins</button>
+                <button class="ref-link" data-url="https://www.exploit-db.com">💥 ExploitDB</button>
+                <button class="ref-link" data-url="https://www.revshells.com">🐚 RevShells.com</button>
+                <button class="ref-link" data-url="https://gchq.github.io/CyberChef">🔐 CyberChef</button>
+                <button class="ref-link" data-url="https://github.com/swisskyrepo/PayloadsAllTheThings">💣 PayloadsAllTheThings</button>
+                <button class="ref-link" data-url="https://lolbas-project.github.io">🪟 LOLBAS</button>
+                <button class="ref-link" data-url="https://pentestmonkey.net">🐒 PentestMonkey</button>
+                <button class="ref-link" data-url="https://www.shodan.io">🔭 Shodan</button>
+              </div>
+            </div>
+          </div>
+          <!-- / legacy-tool-panel -->
+
+        </div>
+        <!-- / right-panel -->
+
+      </div>
+      <!-- / lab-screen -->
+
+      <!-- ═══ PROGRESS SCREEN ══════════════════════════════════════════════════ -->
+      <div id="progress-screen" class="screen">
+        <div class="progress-header">
+          <button class="btn" id="progress-back-btn">← Back</button>
+          <div>
+            <h1>Welcome back, ItsEliias</h1>
+            <div class="sub">Your cybersecurity journey at a glance</div>
+          </div>
+        </div>
+        <div class="stats-row" id="stats-row"></div>
+        <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">Skill Tree</h3>
+        <div class="skill-tree" id="skill-tree-grid"></div>
+        <h3 style="font-size:14px;font-weight:700;margin-bottom:8px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">Weakness Analysis</h3>
+        <div class="weakness-section">
+          <button class="weakness-btn" id="analyse-weakness-btn">🔍 Analyse My Progress</button>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px" id="weakness-last-run"></div>
+          <div class="weakness-result" id="weakness-result" style="display:none"></div>
+        </div>
+        <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">Achievements</h3>
+        <div class="achievements-grid" id="achievements-grid"></div>
+        <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">Progress Charts</h3>
+        <div class="charts-grid">
+          <div class="chart-card"><div class="chart-title">Time to Complete</div><canvas id="chart-time" height="200"></canvas></div>
+          <div class="chart-card"><div class="chart-title">Labs per Month</div><canvas id="chart-monthly" height="200"></canvas></div>
+          <div class="chart-card"><div class="chart-title">Platform Breakdown</div><canvas id="chart-platforms" height="200"></canvas></div>
+          <div class="chart-card"><div class="chart-title">Skill Coverage</div><canvas id="chart-skills" height="200"></canvas></div>
+        </div>
+      </div>
+
+      <!-- ═══ LAB TRACKER SCREEN ═══════════════════════════════════════════════ -->
+      <div id="tracker-screen" class="screen">
+        <div class="tracker-header">
+          <button class="btn" id="tracker-back-btn">← Back</button>
+          <h2>Lab Tracker</h2>
+          <input type="text" class="tracker-search" id="tracker-search" placeholder="Search labs...">
+          <button class="btn" id="add-lab-btn">+ Add Lab</button>
+          <button class="btn" id="bulk-import-btn">⬆ Bulk Import</button>
+          <button class="btn" id="sync-htb-btn">HTB Sync</button>
+          <button class="btn" id="sync-thm-btn">THM Sync</button>
+          <select class="tool-select" id="tracker-filter-platform" style="width:110px;font-size:12px"><option value="">All Platforms</option></select>
+          <select class="tool-select" id="tracker-filter-difficulty" style="width:110px;font-size:12px">
+            <option value="">All Difficulties</option>
+            <option value="Easy">Easy</option><option value="Medium">Medium</option><option value="Hard">Hard</option><option value="Insane">Insane</option>
+          </select>
+        </div>
+        <div class="kanban-board">
+          <div class="kanban-col" id="kanban-col-backlog" data-col="backlog">
+            <div class="kanban-col-header">📋 Want to Do <span class="kanban-count">0</span></div>
+            <div class="kanban-cards"></div>
+          </div>
+          <div class="kanban-col" id="kanban-col-inprogress" data-col="inprogress">
+            <div class="kanban-col-header">🔄 In Progress <span class="kanban-count">0</span></div>
+            <div class="kanban-cards"></div>
+          </div>
+          <div class="kanban-col" id="kanban-col-completed" data-col="completed">
+            <div class="kanban-col-header">✅ Completed <span class="kanban-count">0</span></div>
+            <div class="kanban-cards"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ SETTINGS SCREEN ═══════════════════════════════════════════════════ -->
+      <div id="settings-screen" class="screen">
+        <div style="max-width:700px;margin:0 auto;padding:24px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+            <button class="btn" id="settings-back-btn">← Back</button>
+            <h2 style="font-size:18px;font-weight:700">Settings</h2>
+          </div>
+          <div class="settings-section">
+            <div class="settings-title">🤖 API Configuration</div>
+            <div class="settings-row">
+              <span class="settings-label">Anthropic API Key</span>
+              <input type="password" class="settings-input" id="settings-apikey" placeholder="sk-ant-api03-..." autocomplete="off">
+            </div>
+            <div class="settings-row" style="border:none;padding-top:4px">
+              <span></span>
+              <div style="display:flex;gap:8px">
+                <button class="btn sm" id="settings-test-api">Test Connection</button>
+                <button class="btn sm" id="settings-save-api">Save Key</button>
+                <span id="settings-api-result" style="font-size:12px;align-self:center"></span>
+              </div>
+            </div>
+          </div>
+          <div class="settings-section">
+            <div class="settings-title">📔 Obsidian Vault</div>
+            <div class="settings-row">
+              <span class="settings-label">Vault Path</span>
+              <input type="text" class="settings-input" id="settings-vault" placeholder="~/Documents/MyVault" readonly>
+            </div>
+            <div class="settings-row" style="border:none;padding-top:4px">
+              <span></span>
+              <div style="display:flex;gap:8px">
+                <button class="btn sm" id="settings-browse-vault">Browse</button>
+                <button class="btn sm primary" id="save-obsidian-btn">Save Vault</button>
+                <button class="btn sm" id="settings-open-vault">Open in Finder/Explorer</button>
+              </div>
+            </div>
+          </div>
+          <div class="settings-section">
+            <div class="settings-title">🎯 HTB / THM Integration</div>
+            <div class="settings-row">
+              <span class="settings-label">HackTheBox API Key</span>
+              <input type="password" class="settings-input" id="settings-htb-key" placeholder="HTB API Key">
+            </div>
+            <div class="settings-row">
+              <span class="settings-label">TryHackMe Username</span>
+              <input type="text" class="settings-input" id="settings-thm-user" placeholder="your_username">
+            </div>
+            <div class="settings-row" style="border:none">
+              <span></span>
+              <button class="btn sm" id="settings-save-htb-thm">Save</button>
+            </div>
+          </div>
+          <div class="settings-section">
+            <div class="settings-title">🎨 Theme</div>
+            <div class="theme-picker" id="settings-theme-picker">
+              <div class="theme-picker-group">
+                <div class="theme-picker-label">WORKSPACE</div>
+                <div class="theme-chip-row" id="settings-core-row">
+                  <button class="theme-chip" data-core="stealth"><span class="chip-swatch" style="background:#4a9eff"></span>Stealth</button>
+                  <button class="theme-chip" data-core="graphite"><span class="chip-swatch" style="background:#6ea8fe"></span>Graphite</button>
+                  <button class="theme-chip" data-core="frost"><span class="chip-swatch" style="background:#3b82f6"></span>Frost</button>
+                  <button class="theme-chip" data-core="oled"><span class="chip-swatch" style="background:#f5f5f5"></span>OLED</button>
+                </div>
+              </div>
+              <div class="theme-picker-group">
+                <div class="theme-picker-label">ATMOSPHERE</div>
+                <div class="theme-chip-row" id="settings-personality-row">
+                  <button class="theme-chip" data-personality="neutral"><span class="chip-swatch" style="background:#4a9eff"></span>Neutral</button>
+                  <button class="theme-chip" data-personality="cyberpunk"><span class="chip-swatch" style="background:#b44fff"></span>Cyberpunk</button>
+                  <button class="theme-chip" data-personality="terminal"><span class="chip-swatch" style="background:#00ff41"></span>Terminal</button>
+                  <button class="theme-chip" data-personality="threat"><span class="chip-swatch" style="background:#cc0000"></span>Threat</button>
+                </div>
+              </div>
+              <div class="theme-combo-label" id="settings-theme-combo">Stealth + Neutral</div>
+            </div>
+          </div>
+          <div class="settings-section">
+            <div class="settings-title">🔊 Sounds</div>
+            <div class="settings-row">
+              <span class="settings-label">Enable Sound Effects</span>
+              <button class="settings-toggle" id="sounds-toggle"></button>
+            </div>
+            <div class="settings-row">
+              <span class="settings-label">Volume</span>
+              <input type="range" min="0" max="100" value="50" id="volume-slider" style="flex:1;max-width:200px">
+              <span id="volume-label" style="font-size:12px;color:var(--text-muted);min-width:30px">50%</span>
+            </div>
+          </div>
+          <div class="settings-section">
+            <div class="settings-title">⚡ Startup &amp; Performance</div>
+            <div class="settings-row">
+              <span class="settings-label">Autosave Interval</span>
+              <select class="settings-input" id="autosave-interval" style="max-width:160px">
+                <option value="30">30 seconds</option>
+                <option value="60" selected>60 seconds</option>
+                <option value="120">2 minutes</option>
+              </select>
+            </div>
+            <div class="settings-row">
+              <span class="settings-label">Default Timer Duration (minutes)</span>
+              <input type="number" class="settings-input" id="default-timer" value="120" min="5" max="480" style="max-width:100px">
+            </div>
+            <div class="settings-row">
+              <span class="settings-label">Check for Updates on Launch</span>
+              <button class="settings-toggle on" id="update-check-toggle"></button>
+            </div>
+          </div>
+          <div class="settings-section">
+            <div class="settings-title">⌨️ Keyboard Shortcuts</div>
+            <table class="shortcuts-table">
+              <thead><tr><th>Action</th><th>Shortcut</th></tr></thead>
+              <tbody>
+                <tr><td>New Session</td><td><kbd class="kbd">Ctrl+N</kbd></td></tr>
+                <tr><td>Send Message</td><td><kbd class="kbd">Ctrl+Enter</kbd></td></tr>
+                <tr><td>Focus Mode</td><td><kbd class="kbd">Ctrl+Shift+F</kbd></td></tr>
+                <tr><td>Global Snippet Search</td><td><kbd class="kbd">Ctrl+K</kbd></td></tr>
+                <tr><td>Toggle Teach Me Mode</td><td><kbd class="kbd">Ctrl+M</kbd></td></tr>
+                <tr><td>Hint Level Up/Down</td><td><kbd class="kbd">Ctrl+H / Ctrl+Shift+H</kbd></td></tr>
+                <tr><td>Close Modal</td><td><kbd class="kbd">Esc</kbd></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="settings-section">
+            <div class="settings-title">⚠️ Reset</div>
+            <div class="settings-row">
+              <span class="settings-label">Reset to factory defaults</span>
+              <button class="btn danger" id="factory-reset-btn">Reset Everything</button>
+            </div>
+          </div>
+          <div class="settings-section">
+            <div class="settings-title">ℹ️ About</div>
+            <div class="settings-row"><span class="settings-label">Version</span><span style="color:var(--text-dim)">CYBERLAB COMPANION v1.0</span></div>
+            <div class="settings-row"><span class="settings-label">Author</span><span style="color:var(--accent)">ItsEliias</span></div>
+            <div class="settings-row" style="border:none"><span></span><button class="btn sm" id="open-github-btn">GitHub</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ DASHBOARD SCREEN ══════════════════════════════════════════════════ -->
+      <div id="dashboard-screen" class="screen active" style="flex-direction:column;overflow-y:auto">
+        <div class="dash-hero">
+          <div class="dash-hero-left">
+            <div class="dash-logo">CC</div>
+            <div>
+              <div class="dash-welcome">Welcome back, <span id="dash-operator-name">Operator</span></div>
+              <div class="dash-tagline">CYBERLAB COMPANION — Your AI-powered hacking sidekick</div>
+            </div>
+          </div>
+          <button class="btn btn-primary" id="dash-new-session-btn" style="font-size:13px;padding:10px 20px" onclick="showNewSessionModal()">+ New Session</button>
+        </div>
+
+        <div class="dash-stats-row" id="dash-stats-row">
+          <div class="dash-stat-card"><div class="dash-stat-value" id="dash-stat-sessions">0</div><div class="dash-stat-label">Sessions</div></div>
+          <div class="dash-stat-card"><div class="dash-stat-value" id="dash-stat-flags">0</div><div class="dash-stat-label">Flags Captured</div></div>
+          <div class="dash-stat-card"><div class="dash-stat-value" id="dash-stat-machines">0</div><div class="dash-stat-label">Machines Owned</div></div>
+          <div class="dash-stat-card"><div class="dash-stat-value" id="dash-stat-notes">0</div><div class="dash-stat-label">Notes</div></div>
+        </div>
+
+        <div class="dash-body">
+          <div class="dash-col">
+            <div class="dash-section-title">Recent Sessions</div>
+            <div id="dash-recent-sessions" class="dash-sessions-list">
+              <div class="dash-empty">No sessions yet — start one above</div>
+            </div>
+            <div class="dash-section-title" style="margin-top:20px">Quick Actions</div>
+            <div class="dash-quick-actions">
+              <button class="dash-action-btn" data-screen="commands"><span class="dash-action-icon">⚡</span><span>Command Builder</span></button>
+              <button class="dash-action-btn" data-screen="recon"><span class="dash-action-icon">🔍</span><span>Active Recon</span></button>
+              <button class="dash-action-btn" data-screen="tracker"><span class="dash-action-icon">📋</span><span>Lab Tracker</span></button>
+              <button class="dash-action-btn" data-screen="progress"><span class="dash-action-icon">📊</span><span>Progress</span></button>
+              <button class="dash-action-btn" data-screen="notes"><span class="dash-action-icon">📝</span><span>All Notes</span></button>
+              <button class="dash-action-btn" data-screen="bookmarks"><span class="dash-action-icon">⭐</span><span>Bookmarks</span></button>
+            </div>
+          </div>
+          <div class="dash-col">
+            <div class="dash-section-title">Today's Tip</div>
+            <div class="dash-tip-card" id="dash-tip-card">
+              <div class="dash-tip-tag">PRO TIP</div>
+              <div class="dash-tip-text" id="dash-tip-text">Loading…</div>
+            </div>
+            <div class="dash-section-title" style="margin-top:20px">Phase Workspaces</div>
+            <div class="dash-phase-grid">
+              <div class="dash-phase-card" data-screen="exploits"><span class="dash-phase-icon">⚡</span><span class="dash-phase-name">Exploits</span><span class="dash-phase-sub">CVEs &amp; payloads</span></div>
+              <div class="dash-phase-card" data-screen="enum"><span class="dash-phase-icon">🔍</span><span class="dash-phase-name">Enumeration</span><span class="dash-phase-sub">Services &amp; dirs</span></div>
+              <div class="dash-phase-card" data-screen="privesc"><span class="dash-phase-icon">🛡</span><span class="dash-phase-name">PrivEsc</span><span class="dash-phase-sub">Escalation paths</span></div>
+              <div class="dash-phase-card" data-screen="postex"><span class="dash-phase-icon">🕵</span><span class="dash-phase-name">Post-Exploit</span><span class="dash-phase-sub">Persistence &amp; pivot</span></div>
+              <div class="dash-phase-card" data-screen="loot"><span class="dash-phase-icon">🔑</span><span class="dash-phase-name">Loot &amp; Creds</span><span class="dash-phase-sub">Credentials &amp; flags</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ OVERVIEW SCREEN ══════════════════════════════════════════════════ -->
+      <div id="overview-screen" class="screen" style="flex-direction:column;overflow-y:auto">
+        <div class="full-screen-header">
+          <button class="btn btn-ghost btn-sm" id="overview-back-btn">← Back</button>
+          <div><div class="full-screen-title">🏠 Session Overview</div><div class="full-screen-sub">Target status &amp; methodology progress</div></div>
+        </div>
+
+        <!-- No session state -->
+        <div id="overview-no-session" style="display:none;flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--text-muted)">
+          <div style="font-size:44px">📋</div>
+          <div style="font-size:15px">No active session</div>
+          <div style="font-size:12px;opacity:.7">Start a session from the Dashboard to see its overview here.</div>
+          <button class="btn btn-primary" id="overview-new-session-btn">+ New Session</button>
+        </div>
+
+        <!-- Overview body (shown when session active) -->
+        <div id="overview-body" style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px;overflow-y:auto">
+
+          <!-- Target card -->
+          <div class="overview-card">
+            <div class="overview-card-title">🎯 Target</div>
+            <div id="ov-target-name" class="ov-target-name">—</div>
+            <div class="ov-kv-grid">
+              <div class="ov-kv"><span class="ov-key">IP</span><span id="ov-ip" class="ov-val accent">—</span></div>
+              <div class="ov-kv"><span class="ov-key">Hostname</span><span id="ov-hostname" class="ov-val">—</span></div>
+              <div class="ov-kv"><span class="ov-key">OS</span><span id="ov-os" class="ov-val">—</span></div>
+              <div class="ov-kv"><span class="ov-key">Platform</span><span id="ov-platform" class="ov-val">—</span></div>
+              <div class="ov-kv"><span class="ov-key">Difficulty</span><span id="ov-difficulty" class="ov-val">—</span></div>
+              <div class="ov-kv"><span class="ov-key">Duration</span><span id="ov-duration" class="ov-val">—</span></div>
+            </div>
+          </div>
+
+          <!-- Findings card -->
+          <div class="overview-card">
+            <div class="overview-card-title">📊 Findings</div>
+            <div class="ov-stats-grid">
+              <div class="ov-stat"><span id="ov-ports" class="ov-stat-num">0</span><span class="ov-stat-label">Ports</span></div>
+              <div class="ov-stat"><span id="ov-users" class="ov-stat-num">0</span><span class="ov-stat-label">Users</span></div>
+              <div class="ov-stat"><span id="ov-creds" class="ov-stat-num">0</span><span class="ov-stat-label">Creds</span></div>
+              <div class="ov-stat"><span id="ov-flags" class="ov-stat-num">0</span><span class="ov-stat-label">Flags</span></div>
+            </div>
+            <div style="margin-top:12px">
+              <div class="ov-kv" style="margin-bottom:4px"><span class="ov-key">CVEs</span><span id="ov-cves" class="ov-val">0</span></div>
+              <div class="ov-kv"><span class="ov-key">Hashes</span><span id="ov-hashes" class="ov-val">0</span></div>
+            </div>
+          </div>
+
+          <!-- Methodology phases -->
+          <div class="overview-card" style="grid-column:1/-1">
+            <div class="overview-card-title">🗺️ Methodology Progress</div>
+            <div id="ov-methodology-phases" class="ov-phases-list" style="margin-top:10px"></div>
+          </div>
+
+          <!-- Quick actions -->
+          <div class="overview-card" style="grid-column:1/-1">
+            <div class="overview-card-title">⚡ Quick Actions</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+              <button class="btn btn-primary btn-sm ov-action-btn" data-screen="lab">💬 Open Chat</button>
+              <button class="btn btn-secondary btn-sm ov-action-btn" data-screen="recon">🔍 Active Recon</button>
+              <button class="btn btn-secondary btn-sm ov-action-btn" data-screen="exploits">⚡ Exploits</button>
+              <button class="btn btn-secondary btn-sm ov-action-btn" data-screen="enum">🔎 Enumeration</button>
+              <button class="btn btn-secondary btn-sm ov-action-btn" data-screen="privesc">🛡️ PrivEsc</button>
+              <button class="btn btn-secondary btn-sm ov-action-btn" data-screen="notes">📝 Notes</button>
+              <button class="btn btn-secondary btn-sm ov-action-btn" data-screen="commands">🖥️ Commands</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ═══ EXPLOITS PHASE SCREEN ════════════════════════════════════════════ -->
+      <div id="exploits-screen" class="screen" style="flex-direction:column">
+        <div class="full-screen-header">
+          <button class="btn btn-ghost btn-sm phase-back-btn">← Back</button>
+          <div><div class="full-screen-title">⚡ Exploits</div><div class="full-screen-sub">Manage exploits for your active session</div></div>
+          <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+            <button class="btn btn-outline btn-sm" id="exploits-filter-tools-btn">Show Tools →</button>
+            <button class="btn btn-primary btn-sm" id="exploits-add-btn">+ Add Finding</button>
+          </div>
+        </div>
+        <div class="phase-body">
+          <div class="phase-findings-col">
+            <div class="phase-col-header">Session Findings</div>
+            <div class="phase-add-row">
+              <input class="form-input" id="exploits-new-input" placeholder="Add exploit / CVE / payload..." style="flex:1;font-size:12px">
+              <select class="form-select" id="exploits-new-status" style="width:110px;font-size:12px">
+                <option value="found">Found</option>
+                <option value="tried">Tried</option>
+                <option value="worked">Worked ✓</option>
+                <option value="failed">Failed ✗</option>
+              </select>
+              <button class="btn btn-primary btn-sm" id="exploits-new-save-btn">Add</button>
+            </div>
+            <div id="exploits-findings-list" class="phase-findings-list"><div class="phase-empty">No findings yet — add above or pick from the library</div></div>
+          </div>
+          <div class="phase-library-col">
+            <div class="phase-col-header">Tool Library <span class="phase-library-filter" id="exploits-lib-filter">exploit</span></div>
+            <input class="form-input" id="exploits-lib-search" placeholder="Search library..." style="width:100%;font-size:12px;margin-bottom:8px">
+            <div id="exploits-library-list" class="phase-library-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ ENUM PHASE SCREEN ════════════════════════════════════════════════ -->
+      <div id="enum-screen" class="screen" style="flex-direction:column">
+        <div class="full-screen-header">
+          <button class="btn btn-ghost btn-sm phase-back-btn">← Back</button>
+          <div><div class="full-screen-title">🔍 Enumeration</div><div class="full-screen-sub">Services, directories, users</div></div>
+          <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+            <button class="btn btn-primary btn-sm" id="enum-add-btn">+ Add Finding</button>
+          </div>
+        </div>
+        <div class="phase-body">
+          <div class="phase-findings-col">
+            <div class="phase-col-header">Session Findings</div>
+            <div class="phase-add-row">
+              <input class="form-input" id="enum-new-input" placeholder="Add service / directory / user..." style="flex:1;font-size:12px">
+              <select class="form-select" id="enum-new-status" style="width:110px;font-size:12px">
+                <option value="found">Found</option>
+                <option value="interesting">Interesting</option>
+                <option value="checked">Checked</option>
+              </select>
+              <button class="btn btn-primary btn-sm" id="enum-new-save-btn">Add</button>
+            </div>
+            <div id="enum-findings-list" class="phase-findings-list"><div class="phase-empty">No findings yet</div></div>
+          </div>
+          <div class="phase-library-col">
+            <div class="phase-col-header">Tool Library <span class="phase-library-filter">enum + recon</span></div>
+            <input class="form-input" id="enum-lib-search" placeholder="Search library..." style="width:100%;font-size:12px;margin-bottom:8px">
+            <div id="enum-library-list" class="phase-library-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ PRIVESC PHASE SCREEN ══════════════════════════════════════════════ -->
+      <div id="privesc-screen" class="screen" style="flex-direction:column">
+        <div class="full-screen-header">
+          <button class="btn btn-ghost btn-sm phase-back-btn">← Back</button>
+          <div><div class="full-screen-title">🛡 Privilege Escalation</div><div class="full-screen-sub">Escalation vectors and attempts</div></div>
+          <div style="margin-left:auto">
+            <button class="btn btn-primary btn-sm" id="privesc-new-save-btn" style="display:none"></button>
+          </div>
+        </div>
+        <div class="phase-body">
+          <div class="phase-findings-col">
+            <div class="phase-col-header">Session Findings</div>
+            <div class="phase-add-row">
+              <input class="form-input" id="privesc-new-input" placeholder="Add privesc vector / technique..." style="flex:1;font-size:12px">
+              <select class="form-select" id="privesc-new-status" style="width:110px;font-size:12px">
+                <option value="found">Found</option>
+                <option value="tried">Tried</option>
+                <option value="worked">Worked ✓</option>
+                <option value="failed">Failed ✗</option>
+              </select>
+              <button class="btn btn-primary btn-sm" id="privesc-add-save-btn">Add</button>
+            </div>
+            <div id="privesc-findings-list" class="phase-findings-list"><div class="phase-empty">No findings yet</div></div>
+          </div>
+          <div class="phase-library-col">
+            <div class="phase-col-header">Tool Library <span class="phase-library-filter">privesc</span></div>
+            <input class="form-input" id="privesc-lib-search" placeholder="Search library..." style="width:100%;font-size:12px;margin-bottom:8px">
+            <div id="privesc-library-list" class="phase-library-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ POST-EXPLOITATION PHASE SCREEN ════════════════════════════════════ -->
+      <div id="postex-screen" class="screen" style="flex-direction:column">
+        <div class="full-screen-header">
+          <button class="btn btn-ghost btn-sm phase-back-btn">← Back</button>
+          <div><div class="full-screen-title">🕵 Post-Exploitation</div><div class="full-screen-sub">Persistence, pivoting, lateral movement</div></div>
+          <div style="margin-left:auto">
+            <button class="btn btn-primary btn-sm" id="postex-add-btn">+ Add Finding</button>
+          </div>
+        </div>
+        <div class="phase-body">
+          <div class="phase-findings-col">
+            <div class="phase-col-header">Session Findings</div>
+            <div class="phase-add-row">
+              <input class="form-input" id="postex-new-input" placeholder="Add persistence / pivot / lateral move..." style="flex:1;font-size:12px">
+              <select class="form-select" id="postex-new-status" style="width:110px;font-size:12px">
+                <option value="found">Found</option>
+                <option value="done">Done ✓</option>
+                <option value="failed">Failed ✗</option>
+              </select>
+              <button class="btn btn-primary btn-sm" id="postex-new-save-btn">Add</button>
+            </div>
+            <div id="postex-findings-list" class="phase-findings-list"><div class="phase-empty">No findings yet</div></div>
+          </div>
+          <div class="phase-library-col">
+            <div class="phase-col-header">Tool Library <span class="phase-library-filter">post</span></div>
+            <input class="form-input" id="postex-lib-search" placeholder="Search library..." style="width:100%;font-size:12px;margin-bottom:8px">
+            <div id="postex-library-list" class="phase-library-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ LOOT & CREDS PHASE SCREEN ════════════════════════════════════════ -->
+      <div id="loot-screen" class="screen" style="flex-direction:column">
+        <div class="full-screen-header">
+          <button class="btn btn-ghost btn-sm phase-back-btn">← Back</button>
+          <div><div class="full-screen-title">🔑 Loot &amp; Credentials</div><div class="full-screen-sub">Flags, hashes, passwords, keys</div></div>
+          <div style="margin-left:auto">
+            <button class="btn btn-primary btn-sm" id="loot-add-btn">+ Add Loot</button>
+          </div>
+        </div>
+        <div class="phase-body">
+          <div class="phase-findings-col">
+            <div class="phase-col-header">Session Loot</div>
+            <div class="phase-add-row">
+              <input class="form-input" id="loot-new-input" placeholder="Credential / hash / flag..." style="flex:1;font-size:12px;font-family:var(--font-mono)">
+              <select class="form-select" id="loot-new-type" style="width:110px;font-size:12px">
+                <option value="credential">Credential</option>
+                <option value="hash">Hash</option>
+                <option value="flag">Flag</option>
+                <option value="key">Key/Token</option>
+                <option value="file">File</option>
+              </select>
+              <button class="btn btn-primary btn-sm" id="loot-new-save-btn">Add</button>
+            </div>
+            <div id="loot-findings-list" class="phase-findings-list"><div class="phase-empty">No loot yet — start capturing!</div></div>
+          </div>
+          <div class="phase-library-col">
+            <div class="phase-col-header">Quick Commands</div>
+            <div id="loot-quick-cmds" class="phase-library-list" style="display:flex;flex-direction:column;gap:6px">
+              <div class="loot-cmd-card" data-cmd="cat /etc/passwd">cat /etc/passwd — local users</div>
+              <div class="loot-cmd-card" data-cmd="cat /etc/shadow">cat /etc/shadow — password hashes</div>
+              <div class="loot-cmd-card" data-cmd="find / -name '*.txt' 2>/dev/null | grep -i flag">find flags</div>
+              <div class="loot-cmd-card" data-cmd="find / -name 'id_rsa' 2>/dev/null">find SSH keys</div>
+              <div class="loot-cmd-card" data-cmd="find / -name '*.conf' 2>/dev/null | xargs grep -l password">find passwords in configs</div>
+              <div class="loot-cmd-card" data-cmd="env && set">dump environment variables</div>
+              <div class="loot-cmd-card" data-cmd="history">command history</div>
+              <div class="loot-cmd-card" data-cmd="cat ~/.bash_history">bash history</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ NOTES SCREEN ════════════════════════════════════════════════════ -->
+      <div id="notes-screen" class="screen" style="flex-direction:column">
+        <div class="full-screen-header">
+          <button class="btn btn-ghost btn-sm" id="notes-back-btn">← Back</button>
+          <div>
+            <div class="full-screen-title">Notes</div>
+            <div class="full-screen-sub">Session and global notes</div>
+          </div>
+          <div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input class="form-input" id="notes-screen-search" placeholder="Search notes..." style="width:180px;font-size:12px">
+            <select class="form-select" id="notes-screen-filter" style="font-size:12px;width:160px">
+              <option value="all">All Sessions</option>
+              <option value="global">Global Notes</option>
+            </select>
+            <button class="btn btn-primary btn-sm" id="notes-screen-new-btn">+ New Note</button>
+          </div>
+        </div>
+        <div class="full-screen-body">
+          <div class="notes-grid" id="notes-screen-grid"></div>
+        </div>
+      </div>
+
+      <!-- ═══ BOOKMARKS SCREEN ════════════════════════════════════════════════ -->
+      <div id="bookmarks-screen" class="screen" style="flex-direction:column">
+        <div class="full-screen-header">
+          <button class="btn btn-ghost btn-sm" id="bookmarks-back-btn">← Back</button>
+          <div>
+            <div class="full-screen-title">Bookmarks</div>
+            <div class="full-screen-sub">Starred notes across all sessions</div>
+          </div>
+          <div style="margin-left:auto">
+            <input class="form-input" id="bookmarks-screen-search" placeholder="Search bookmarks..." style="width:200px;font-size:12px">
+          </div>
+        </div>
+        <div class="full-screen-body" id="bookmarks-screen-body"></div>
+      </div>
+
+      <!-- ═══ COMMANDS SCREEN ═════════════════════════════════════════════════ -->
+      <div id="commands-screen" class="screen">
+        <div class="full-screen-header">
+          <button class="btn btn-ghost btn-sm" id="commands-back-btn">← Back</button>
+          <div>
+            <div class="full-screen-title">Commands</div>
+            <div class="full-screen-sub" style="display:none"></div>
+          </div>
+        </div>
+        <div class="cmd-tab-bar">
+          <button class="cmd-tab active" data-cmd-tab="builder">⚡ Command Builder</button>
+          <button class="cmd-tab" data-cmd-tab="revshell">🐚 Reverse Shells</button>
+          <button class="cmd-tab" data-cmd-tab="encoder">🔐 Encoder</button>
+          <button class="cmd-tab" data-cmd-tab="cheatsheets">📋 Cheatsheets</button>
+          <button class="cmd-tab" data-cmd-tab="refs">🔗 References</button>
+        </div>
+        <!-- Builder -->
+        <div class="cmd-panel active" id="cmd-panel-builder">
+          <div class="cmd-builder-grid">
+            <div class="cmd-builder-left">
+              <div class="cmd-section-title">Category</div>
+              <select class="form-select" id="cmd-tool-category-select"><option value="">Select category...</option></select>
+              <div class="cmd-section-title" style="margin-top:8px">Tool</div>
+              <select class="form-select" id="cmd-tool-select"><option value="">Select tool...</option></select>
+              <div id="cmd-tool-description" style="font-size:11px;color:var(--text-muted);margin-top:6px"></div>
+              <div id="cmd-tool-install" style="font-size:10px;color:var(--accent);margin-top:2px"></div>
+            </div>
+            <div class="cmd-builder-right">
+              <div class="cmd-section-title">Parameters</div>
+              <div id="cmd-tool-params"></div>
+              <div class="code-wrap" id="cmd-builder-output-wrap" style="display:none">
+                <div class="code-header">
+                  <span class="code-lang">bash</span>
+                  <div style="display:flex;gap:4px">
+                    <button class="copy-btn" id="cmd-copy-builder-cmd">Copy</button>
+                    <button class="copy-btn" id="cmd-save-snippet-btn">⭐ Save</button>
+                  </div>
+                </div>
+                <pre><code id="cmd-builder-output" class="language-bash"></code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- RevShell -->
+        <div class="cmd-panel" id="cmd-panel-revshell">
+          <div class="revshell-grid">
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div class="cmd-section-title">Shell Type</div>
+              <select class="form-select" id="cmd-revshell-lang"></select>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div>
+                  <div class="cmd-section-title" style="margin-bottom:4px">Your IP</div>
+                  <input type="text" class="form-input" id="cmd-revshell-ip" placeholder="10.10.14.1">
+                </div>
+                <div>
+                  <div class="cmd-section-title" style="margin-bottom:4px">Port</div>
+                  <input type="text" class="form-input" id="cmd-revshell-port" value="4444">
+                </div>
+              </div>
+              <div>
+                <div class="cmd-section-title" style="margin-bottom:4px">Encoding</div>
+                <select class="form-select" id="cmd-revshell-encoding">
+                  <option value="raw">Raw</option>
+                  <option value="base64">Base64</option>
+                  <option value="url">URL Encoded</option>
+                </select>
+              </div>
+              <button class="btn btn-primary" id="cmd-generate-revshell-btn">Generate Shell</button>
+            </div>
+            <div id="cmd-revshell-outputs" style="display:flex;flex-direction:column;gap:8px">
+              <div class="code-wrap"><div class="code-header"><span class="code-lang" id="cmd-revshell-lang-label">bash</span><button class="copy-btn" id="cmd-copy-revshell-payload">Copy</button></div><pre><code id="cmd-revshell-payload-out" class="language-bash"></code></pre></div>
+              <div class="code-wrap"><div class="code-header"><span class="code-lang">listener</span><button class="copy-btn" id="cmd-copy-revshell-listener">Copy</button></div><pre><code id="cmd-revshell-listener-out" class="language-bash"></code></pre></div>
+              <div class="code-wrap"><div class="code-header"><span class="code-lang">stabilise</span><button class="copy-btn" id="cmd-copy-revshell-stable">Copy</button></div><pre><code id="cmd-revshell-stable-out" class="language-bash"></code></pre></div>
+            </div>
+          </div>
+        </div>
+        <!-- Encoder -->
+        <div class="cmd-panel" id="cmd-panel-encoder">
+          <div style="max-width:640px;display:flex;flex-direction:column;gap:10px">
+            <div class="cmd-section-title">Input</div>
+            <textarea class="form-input" id="cmd-encode-input" rows="4" placeholder="Enter text to encode or decode..." style="resize:vertical;font-family:var(--font-mono)"></textarea>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <select class="form-select" id="cmd-encode-operation" style="flex:1">
+                <optgroup label="Base64"><option value="b64-encode">Base64 Encode</option><option value="b64-decode">Base64 Decode</option></optgroup>
+                <optgroup label="URL"><option value="url-encode">URL Encode</option><option value="url-decode">URL Decode</option></optgroup>
+                <optgroup label="HTML"><option value="html-encode">HTML Encode</option><option value="html-decode">HTML Decode</option></optgroup>
+                <optgroup label="Hex"><option value="hex-encode">Hex Encode</option><option value="hex-decode">Hex Decode</option></optgroup>
+                <optgroup label="Cipher"><option value="rot13">ROT13</option></optgroup>
+                <optgroup label="Hash"><option value="md5">MD5</option><option value="sha1">SHA1</option><option value="sha256">SHA256</option></optgroup>
+                <optgroup label="JWT"><option value="jwt-decode">JWT Decode</option></optgroup>
+              </select>
+              <button class="btn btn-primary" id="cmd-encode-run-btn">Run</button>
+              <button class="btn btn-outline" id="cmd-encode-swap-btn">⇅ Swap</button>
+            </div>
+            <div class="cmd-section-title">Output</div>
+            <textarea class="form-input" id="cmd-encode-output" rows="4" readonly placeholder="Output appears here..." style="resize:vertical;font-family:var(--font-mono);color:var(--accent)"></textarea>
+            <button class="btn btn-outline btn-sm" id="cmd-copy-encode-output">Copy Output</button>
+          </div>
+        </div>
+        <!-- Cheatsheets -->
+        <div class="cmd-panel" id="cmd-panel-cheatsheets">
+          <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
+            <select class="form-select" id="cmd-cheatsheet-select" style="flex:1;max-width:280px">
+              <option value="">Select cheat sheet...</option>
+              <option value="nmap">Nmap Flags</option>
+              <option value="linprivesc">Linux PrivEsc</option>
+              <option value="winprivesc">Windows PrivEsc</option>
+              <option value="webenum">Web Enumeration</option>
+              <option value="adattacks">Active Directory</option>
+              <option value="revshells">Reverse Shells</option>
+              <option value="hashid">Hash Identification</option>
+            </select>
+            <input type="number" class="form-input" id="cmd-port-lookup-input" placeholder="Port number lookup..." style="width:200px">
+          </div>
+          <div id="cmd-cheatsheet-content" class="cheatsheet-panel"></div>
+          <div id="cmd-port-lookup-result"></div>
+        </div>
+        <!-- References -->
+        <div class="cmd-panel" id="cmd-panel-refs">
+          <div class="refs-grid">
+            <div class="ref-card" data-url="https://book.hacktricks.xyz"><div class="ref-card-icon">📖</div><div class="ref-card-name">HackTricks</div><div class="ref-card-desc">The bible of pentest techniques</div></div>
+            <div class="ref-card" data-url="https://gtfobins.github.io"><div class="ref-card-icon">🔧</div><div class="ref-card-name">GTFOBins</div><div class="ref-card-desc">Unix binary privilege escalation</div></div>
+            <div class="ref-card" data-url="https://www.exploit-db.com"><div class="ref-card-icon">💥</div><div class="ref-card-name">ExploitDB</div><div class="ref-card-desc">Public exploit archive</div></div>
+            <div class="ref-card" data-url="https://www.revshells.com"><div class="ref-card-icon">🐚</div><div class="ref-card-name">RevShells.com</div><div class="ref-card-desc">Interactive reverse shell generator</div></div>
+            <div class="ref-card" data-url="https://gchq.github.io/CyberChef"><div class="ref-card-icon">🔐</div><div class="ref-card-name">CyberChef</div><div class="ref-card-desc">Encoding, decoding, analysis</div></div>
+            <div class="ref-card" data-url="https://github.com/swisskyrepo/PayloadsAllTheThings"><div class="ref-card-icon">💣</div><div class="ref-card-name">PayloadsAllTheThings</div><div class="ref-card-desc">Payload and bypass techniques</div></div>
+            <div class="ref-card" data-url="https://lolbas-project.github.io"><div class="ref-card-icon">🪟</div><div class="ref-card-name">LOLBAS</div><div class="ref-card-desc">Windows living-off-the-land binaries</div></div>
+            <div class="ref-card" data-url="https://pentestmonkey.net"><div class="ref-card-icon">🐒</div><div class="ref-card-name">PentestMonkey</div><div class="ref-card-desc">Cheatsheets and scripts</div></div>
+            <div class="ref-card" data-url="https://www.shodan.io"><div class="ref-card-icon">🔭</div><div class="ref-card-name">Shodan</div><div class="ref-card-desc">Internet-connected device search</div></div>
+            <div class="ref-card" data-url="https://cvedetails.com"><div class="ref-card-icon">⚠️</div><div class="ref-card-name">CVE Details</div><div class="ref-card-desc">Vulnerability database</div></div>
+            <div class="ref-card" data-url="https://www.hackthebox.com"><div class="ref-card-icon">🟩</div><div class="ref-card-name">HackTheBox</div><div class="ref-card-desc">HTB platform</div></div>
+            <div class="ref-card" data-url="https://tryhackme.com"><div class="ref-card-icon">🔴</div><div class="ref-card-name">TryHackMe</div><div class="ref-card-desc">THM platform</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ ACTIVE RECON SCREEN ══════════════════════════════════════════════ -->
+      <div id="recon-screen" class="screen">
+        <div class="full-screen-header">
+          <button class="btn btn-ghost btn-sm" id="recon-back-btn">← Back</button>
+          <div>
+            <div class="full-screen-title">Active Recon</div>
+            <div class="full-screen-sub">Structured intake — populates your session's target panel</div>
+          </div>
+          <div style="margin-left:auto;display:flex;gap:8px">
+            <button class="btn btn-outline btn-sm" id="recon-clear-btn">Clear</button>
+            <button class="btn btn-primary btn-sm" id="recon-apply-btn">Apply to Session →</button>
+          </div>
+        </div>
+        <div class="recon-body">
+          <!-- Left: intake form -->
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="recon-panel">
+              <div class="recon-panel-title">Target</div>
+              <div class="recon-field"><div class="recon-label">IP Address</div><input class="recon-input mono" id="recon-ip" placeholder="10.10.10.x"></div>
+              <div class="recon-field"><div class="recon-label">Hostname</div><input class="recon-input mono" id="recon-hostname" placeholder="box.htb"></div>
+              <div class="recon-field">
+                <div class="recon-label">OS</div>
+                <select class="recon-input" id="recon-os">
+                  <option value="">Unknown</option>
+                  <option value="Linux">Linux 🐧</option>
+                  <option value="Windows">Windows 🪟</option>
+                  <option value="FreeBSD">FreeBSD</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+            <div class="recon-panel">
+              <div class="recon-panel-title">Open Ports &amp; Services</div>
+              <div class="recon-field"><div class="recon-label">Port / Service (one per line or paste nmap)</div>
+                <textarea class="recon-input mono" id="recon-ports" rows="5" placeholder="22/ssh OpenSSH 8.2&#10;80/http Apache 2.4.49&#10;445/smb Samba 3.0.20"></textarea>
+              </div>
+            </div>
+            <div class="recon-panel">
+              <div class="recon-panel-title">Credentials Found</div>
+              <textarea class="recon-input mono" id="recon-creds" rows="3" placeholder="admin:password123&#10;root:toor"></textarea>
+            </div>
+            <div class="recon-panel">
+              <div class="recon-panel-title">Raw Scan Output (paste for AI analysis)</div>
+              <div class="recon-quick-paste">
+                <textarea id="recon-raw-output" placeholder="Paste your full nmap -sV -sC output, gobuster results, or any scan output here. Click Analyse to send to AI."></textarea>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                  <button class="btn btn-primary btn-sm" id="recon-analyse-btn">🤖 Analyse with AI</button>
+                  <button class="btn btn-outline btn-sm" id="recon-extract-btn">⚡ Auto-extract Findings</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Right: AI analysis output -->
+          <div class="recon-ai-panel">
+            <div class="recon-panel" style="flex:1">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                <div class="recon-panel-title" style="margin-bottom:0">AI Analysis</div>
+                <span id="recon-ai-status" style="font-size:10px;color:var(--text-muted)">Paste scan output and click Analyse</span>
+              </div>
+              <div class="recon-ai-output" id="recon-ai-output">
+                <span class="recon-placeholder">AI analysis of your scan output will appear here. Paste your nmap / gobuster / nikto output on the left and click Analyse.</span>
+              </div>
+            </div>
+            <div class="recon-panel">
+              <div class="recon-panel-title">Auto-Extracted Findings</div>
+              <div id="recon-extracted-list" style="display:flex;flex-direction:column;gap:6px;min-height:40px">
+                <div style="font-size:11px;color:var(--text-muted)">Extracted ports, services, CVEs and users will appear here after Auto-extract.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <!-- / screen-container -->
+
+    <!-- STATUS BAR / APP FOOTER -->
+    <div id="status-bar" class="app-footer">
+      <span class="footer-sig">ItsEliias // CYBERLAB v1.0</span>
+      <span class="status-sep">|</span>
+      <span>Session: <span id="status-elapsed" class="font-mono">00:00:00</span></span>
+      <span class="status-sep">|</span>
+      <span>Target: <span id="status-target-name">—</span></span>
+      <span class="status-sep">|</span>
+      <span id="status-flags-text">0 / 0 flags captured</span>
+      <div class="status-flags-bar-wrap">
+        <div class="status-flags-bar-fill" id="status-flags-bar-fill" style="width:0%"></div>
+      </div>
+      <span id="footer-status" class="footer-status">Ready</span>
+      <button class="footer-theme-btn" id="footer-theme-btn" title="Workspace / Atmosphere">◑ <span id="footer-theme-label">Theme</span></button>
+      <div class="footer-theme-panel" id="footer-theme-panel" style="display:none">
+        <div class="ftp-group"><div class="ftp-label">WORKSPACE</div>
+          <div class="ftp-chip-row" id="ftp-core-row">
+            <button class="ftp-chip" data-core="stealth"><span class="ftp-swatch" style="background:#4a9eff"></span>Stealth</button>
+            <button class="ftp-chip" data-core="graphite"><span class="ftp-swatch" style="background:#6ea8fe"></span>Graphite</button>
+            <button class="ftp-chip" data-core="frost"><span class="ftp-swatch" style="background:#3b82f6"></span>Frost</button>
+            <button class="ftp-chip" data-core="oled"><span class="ftp-swatch" style="background:#f5f5f5"></span>OLED</button>
+          </div>
+        </div>
+        <div class="ftp-group"><div class="ftp-label">ATMOSPHERE</div>
+          <div class="ftp-chip-row" id="ftp-personality-row">
+            <button class="ftp-chip" data-personality="neutral"><span class="ftp-swatch" style="background:#4a9eff"></span>Neutral</button>
+            <button class="ftp-chip" data-personality="cyberpunk"><span class="ftp-swatch" style="background:#b44fff"></span>Cyberpunk</button>
+            <button class="ftp-chip" data-personality="terminal"><span class="ftp-swatch" style="background:#00ff41"></span>Terminal</button>
+            <button class="ftp-chip" data-personality="threat"><span class="ftp-swatch" style="background:#cc0000"></span>Threat</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <!-- / main-col -->
+
+</div>
+<!-- / app-root -->
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     MODALS
+══════════════════════════════════════════════════════════════════════════════ -->
+
+<!-- New Session Modal -->
+<div class="modal-overlay" id="new-session-modal">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <span class="modal-title">New Lab Session</span>
+      <button class="modal-close" data-close="new-session-modal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="new-session-form">
+        <div class="form-row">
+          <div class="form-group">
+            <div class="form-label">Lab Name</div>
+            <input type="text" class="form-input" id="ns-name" placeholder="e.g. Lame, Blue, Hack The Box">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <div class="form-label">Platform</div>
+            <select class="form-select" id="ns-platform">
+              <option>HTB</option><option>THM</option><option>PentesterLab</option>
+              <option>PortSwigger</option><option>CTF</option><option>VulnHub</option>
+              <option>Cisco</option><option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <div class="form-label">Difficulty</div>
+            <select class="form-select" id="ns-difficulty">
+              <option>Easy</option><option>Medium</option><option>Hard</option><option>Insane</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <div class="form-label">Lab Type</div>
+            <select class="form-select" id="ns-labtype">
+              <option value="HTB/THM Linux">HTB/THM Linux</option>
+              <option value="HTB/THM Windows">HTB/THM Windows</option>
+              <option value="CTF">CTF</option>
+              <option value="Cisco/Networking">Cisco/Networking</option>
+              <option value="Web App">Web App (PortSwigger/PentesterLab)</option>
+              <option value="OSINT/CTF">OSINT/CTF</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <div class="form-label">Target IP (optional)</div>
+            <input type="text" class="form-input" id="ns-ip" placeholder="10.10.10.x" spellcheck="false">
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="form-label">Enable Exam Timer</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button class="settings-toggle" id="ns-timer-toggle"></button>
+            <input type="number" class="form-input" id="ns-timer-mins" value="120" min="1" max="480" style="width:100px">
+            <span style="font-size:12px;color:var(--text-muted)">minutes</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" data-close="new-session-modal">Cancel</button>
+      <button class="btn primary" id="create-session-btn" onclick="confirmNewSession()">Start Session</button>
+    </div>
+  </div>
+</div>
+
+<!-- Session Summary Modal -->
+<div class="modal-overlay" id="session-summary-modal">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-header">
+      <span class="modal-title">🎯 Session Complete</span>
+      <button class="modal-close" data-close="session-summary-modal">✕</button>
+    </div>
+    <div class="modal-body" id="session-summary-body">
+      <div class="summary-grid" id="summary-grid"></div>
+      <div style="margin-bottom:12px">
+        <div style="font-weight:700;margin-bottom:6px;font-size:13px">Methodology Completed</div>
+        <div id="summary-methodology" style="font-size:12px;color:var(--text-dim)"></div>
+      </div>
+      <div style="margin-bottom:12px">
+        <div style="font-weight:700;margin-bottom:6px;font-size:13px">Patterns Noticed</div>
+        <ul class="patterns-list" id="summary-patterns">
+          <li style="list-style:none;color:var(--success)">No patterns detected — clean session!</li>
+        </ul>
+      </div>
+      <div id="summary-weakness" style="margin-bottom:12px">
+        <div style="font-weight:700;margin-bottom:6px;font-size:13px">Areas to Review</div>
+        <div id="summary-weakness-content" style="font-size:12px;color:var(--text-dim)">Generating...</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" data-close="session-summary-modal">Close</button>
+      <button class="btn primary" id="go-to-writeup-btn">📝 Generate Writeup</button>
+    </div>
+  </div>
+</div>
+
+<!-- Writeup Modal -->
+<div class="modal-overlay" id="writeup-modal">
+  <div class="modal" style="max-width:1000px">
+    <div class="modal-header">
+      <span class="modal-title">📝 Writeup Generator</span>
+      <button class="modal-close" data-close="writeup-modal">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <div id="writeup-generating" style="padding:40px;text-align:center">
+        <div style="font-size:14px;color:var(--text-muted)">Generating writeup with Claude AI...</div>
+        <div class="typing-indicator" style="margin:16px auto;width:fit-content">
+          <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+        </div>
+      </div>
+      <div class="writeup-split" id="writeup-split" style="display:none">
+        <div class="writeup-preview" id="writeup-preview-pane"></div>
+        <textarea class="writeup-edit" id="writeup-editor" spellcheck="false"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn primary" id="writeup-generate-btn">✨ Generate</button>
+      <button class="btn" id="copy-writeup-btn">Copy to Clipboard</button>
+      <button class="btn" id="writeup-save-btn">💾 Save</button>
+      <button class="btn" id="writeup-export-btn">Export PDF</button>
+      <button class="btn primary" id="writeup-obsidian-btn">🗃 Save to Obsidian</button>
+      <div id="writeup-save-result" style="font-size:12px;align-self:center"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Finding Modal -->
+<div class="modal-overlay" id="add-finding-modal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <span class="modal-title">Add Finding</span>
+      <button class="modal-close" data-close="add-finding-modal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:10px">
+        <div class="form-label">Type</div>
+        <select class="form-select" id="finding-type-select">
+          <option value="PORT">🔌 Port/Service</option>
+          <option value="USER">👤 User/Credential</option>
+          <option value="CRED">🔑 Credential</option>
+          <option value="FLAG">🚩 Flag</option>
+          <option value="CVE">⚠️ CVE</option>
+          <option value="FILE">📁 File</option>
+          <option value="HASH">🔢 Hash</option>
+          <option value="SERVICE">🖥️ Service</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Value</div>
+        <input type="text" class="form-input" id="finding-value-input" placeholder="e.g. 80/http Apache 2.4.49">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" data-close="add-finding-modal">Cancel</button>
+      <button class="btn primary" id="confirm-add-finding">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Snippet Modal -->
+<div class="modal-overlay" id="snippet-modal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <span class="modal-title" id="snippet-modal-title">Add Snippet</span>
+      <button class="modal-close" data-close="snippet-modal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:10px">
+        <div class="form-label">Name</div>
+        <input type="text" class="form-input" id="snippet-name" placeholder="e.g. Full Nmap Scan">
+      </div>
+      <div class="form-group" style="margin-bottom:10px">
+        <div class="form-label">Command</div>
+        <textarea class="form-input" id="snippet-command" rows="3" style="resize:vertical;font-family:monospace" placeholder="nmap -sV -sC -p- --min-rate 5000 10.10.10.x"></textarea>
+      </div>
+      <div class="form-group" style="margin-bottom:10px">
+        <div class="form-label">Tags (comma separated)</div>
+        <input type="text" class="form-input" id="snippet-tags" placeholder="recon, nmap, scan">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Notes</div>
+        <input type="text" class="form-input" id="snippet-notes" placeholder="Optional notes...">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" data-close="snippet-modal">Cancel</button>
+      <button class="btn primary" id="save-snippet-confirm">Save Snippet</button>
+    </div>
+    <input type="hidden" id="snippet-edit-id">
+  </div>
+</div>
+
+<!-- Add/Edit Lab Modal -->
+<div class="modal-overlay" id="lab-modal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <span class="modal-title" id="lab-modal-title">Add Lab</span>
+      <button class="modal-close" data-close="lab-modal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="new-session-form">
+        <div class="form-group">
+          <div class="form-label">Lab Name</div>
+          <input type="text" class="form-input" id="lab-name-input" placeholder="e.g. Blue">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <div class="form-label">Platform</div>
+            <select class="form-select" id="lab-platform-input">
+              <option>HTB</option><option>THM</option><option>PentesterLab</option>
+              <option>PortSwigger</option><option>CTF</option><option>VulnHub</option>
+              <option>Cisco</option><option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <div class="form-label">Difficulty</div>
+            <select class="form-select" id="lab-difficulty-input">
+              <option>Easy</option><option>Medium</option><option>Hard</option><option>Insane</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="form-label">Tags</div>
+          <input type="text" class="form-input" id="lab-tags-input" placeholder="web, active-directory, windows">
+        </div>
+        <div class="form-group">
+          <div class="form-label">URL (optional)</div>
+          <input type="text" class="form-input" id="lab-url-input" placeholder="https://app.hackthebox.com/machines/...">
+        </div>
+        <div class="form-group">
+          <div class="form-label">Notes</div>
+          <input type="text" class="form-input" id="lab-notes-input" placeholder="Quick note...">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" data-close="lab-modal">Cancel</button>
+      <button class="btn primary" id="save-lab-confirm">Save</button>
+    </div>
+    <input type="hidden" id="lab-edit-id">
+  </div>
+</div>
+
+<!-- Bulk Import Modal -->
+<div class="modal-overlay" id="bulk-import-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <span class="modal-title">⬆ Bulk Import Labs</span>
+      <button class="modal-close" data-close="bulk-import-modal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="wizard-sub" style="margin-bottom:12px">Paste a list of lab names (one per line). They'll all be added to <strong>Want to Do</strong>.</div>
+      <div class="form-row" style="margin-bottom:10px">
+        <div class="form-group">
+          <div class="form-label">Platform</div>
+          <select class="form-select" id="bulk-import-platform"><option>HTB</option><option>THM</option><option>CTF</option><option>Other</option></select>
+        </div>
+        <div class="form-group">
+          <div class="form-label">Difficulty</div>
+          <select class="form-select" id="bulk-difficulty"><option>Easy</option><option>Medium</option><option>Hard</option><option>Insane</option></select>
+        </div>
+      </div>
+      <textarea class="form-input" id="bulk-import-text" rows="12" placeholder="Lame&#10;Blue&#10;Jerry&#10;Arctic&#10;Optimum&#10;..." style="resize:vertical;font-family:monospace;width:100%"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" data-close="bulk-import-modal">Cancel</button>
+      <button class="btn primary" id="bulk-import-confirm">Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sessions List Modal -->
+<div class="modal-overlay" id="sessions-list-modal">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <span class="modal-title">📂 All Sessions</span>
+      <button class="modal-close" data-close="sessions-list-modal">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <div id="sessions-list-content" style="max-height:60vh;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px">
+        <div style="color:var(--text-muted);font-size:13px;text-align:center;padding:24px">No sessions found</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal (generic) -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <span class="modal-title" id="confirm-title">Confirm</span>
+      <button class="modal-close" data-close="confirm-modal">✕</button>
+    </div>
+    <div class="modal-body">
+      <p id="confirm-msg" style="font-size:14px;line-height:1.5"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" data-close="confirm-modal">Cancel</button>
+      <button class="btn danger" id="confirm-ok-btn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- VPN Tooltip Modal -->
+<div class="modal-overlay" id="vpn-detail-modal">
+  <div class="modal" style="max-width:320px">
+    <div class="modal-header">
+      <span class="modal-title">VPN Status</span>
+      <button class="modal-close" data-close="vpn-detail-modal">✕</button>
+    </div>
+    <div class="modal-body" id="vpn-detail-body" style="font-family:monospace;font-size:13px;line-height:1.8">
+      Checking...
+    </div>
+  </div>
+</div>
+
+<!-- Achievement Toast -->
+<div id="achievement-toast">
+  <div class="achievement-toast-card">
+    <div class="achievement-toast-emoji" id="toast-emoji">🎯</div>
+    <div class="achievement-toast-title">Achievement Unlocked</div>
+    <div class="achievement-toast-name" id="toast-name"></div>
+    <div class="achievement-toast-desc" id="toast-desc"></div>
+    <div class="achievement-toast-user">// ItsEliias</div>
+    <button class="btn primary achievement-toast-close" id="toast-close">Continue</button>
+  </div>
+</div>
+
+<!-- Global Snippet Search Overlay -->
+<div id="snippet-search-overlay">
+  <div class="snippet-search-box">
+    <input type="text" class="snippet-search-input" id="global-snippet-input" placeholder="Search snippets...">
+    <div class="snippet-search-results" id="global-snippet-results"></div>
+  </div>
+</div>
+
+<!-- Focus Mode Exit Pill -->
+<div class="focus-exit-pill" id="focus-exit-pill">EXIT FOCUS</div>
+
+<!-- Focus Mode Hint Float -->
+<div class="focus-hint-float" id="focus-hint-float">
+  <div class="mini-hint-level" id="focus-hint-level">1</div>
+  <span style="font-size:11px;color:var(--text-muted)">Hint Level</span>
+</div>
+
+<!-- Manage Tools Modal -->
+<div class="modal-overlay" id="manage-tools-modal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <span class="modal-title">🔧 Manage Tools</span>
+      <button class="modal-close" data-close="manage-tools-modal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="mtool-list" id="mtool-list"></div>
+      <div class="mtool-add-form">
+        <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px">Add Custom Tool</div>
+        <div class="form-row">
+          <div class="form-group">
+            <div class="form-label">Tool Name</div>
+            <input type="text" class="form-input" id="mt-name" placeholder="e.g. Rustscan">
+          </div>
+          <div class="form-group">
+            <div class="form-label">Category</div>
+            <select class="form-select" id="mt-cat">
+              <option value="recon">Recon</option>
+              <option value="enum">Enum</option>
+              <option value="exploit">Exploit</option>
+              <option value="privesc">PrivEsc</option>
+              <option value="post">Post</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <div class="form-label">Description</div>
+          <input type="text" class="form-input" id="mt-desc" placeholder="e.g. Fast port scanner">
+        </div>
+        <div class="form-group" style="margin-bottom:10px">
+          <div class="form-label">Command Template (use {target} for IP)</div>
+          <input type="text" class="form-input" id="mt-cmd" placeholder="e.g. rustscan -a {target} -- -sV" style="font-family:monospace">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" data-close="manage-tools-modal">Close</button>
+      <button class="btn btn-primary" id="mt-add-btn">+ Add Tool</button>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden file input for logo check -->
+<input type="file" id="import-snippets-input" accept=".json" style="display:none">
+
+<!-- MAIN JS -->
+<script src="renderer.js"></script>
+</body>
+</html>
