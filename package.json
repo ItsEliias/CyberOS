@@ -2,36 +2,25 @@
   "name": "ghostvault",
   "version": "1.0.0",
   "description": "AI-powered note capture and vault intelligence — CYBERTOOLS",
-  "main": "main.js",
+  "main": "out/main/index.js",
+  "type": "module",
   "author": "ItsEliias",
   "license": "MIT",
   "scripts": {
-    "start": "electron .",
-    "build": "electron-builder --win --mac --linux",
-    "build:win": "electron-builder --win",
-    "build:mac": "electron-builder --mac",
-    "build:mac:unsigned": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac",
-    "build:linux": "electron-builder --linux"
-  },
-  "dependencies": {
-    "electron-squirrel-startup": "^1.0.0"
-  },
-  "devDependencies": {
-    "electron": "^33.0.0",
-    "electron-builder": "^25.1.8"
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "package": "electron-vite build && electron-builder",
+    "package:mac": "electron-vite build && electron-builder --mac",
+    "package:win": "electron-vite build && electron-builder --win",
+    "package:linux": "electron-vite build && electron-builder --linux"
   },
   "build": {
     "appId": "com.itsEliias.ghostvault",
     "productName": "GhostVault",
     "copyright": "Copyright © 2025 ItsEliias",
-    "files": [
-      "**/*",
-      "!node_modules/.cache",
-      "!**/*.map"
-    ],
-    "directories": {
-      "output": "dist"
-    },
+    "directories": { "output": "dist" },
+    "files": ["out/**/*", "assets/**/*"],
     "win": {
       "target": [{ "target": "nsis", "arch": ["x64"] }],
       "icon": "assets/icon.ico"
@@ -52,5 +41,25 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
     }
+  },
+  "dependencies": {
+    "framer-motion": "^11.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "zustand": "^4.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^4.2.0",
+    "autoprefixer": "^10.4.17",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^2.0.0",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.0"
   }
 }
