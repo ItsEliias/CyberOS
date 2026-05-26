@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Recon & attack surface workspace — CYBERTOOLS",
   "main": "out/main/main.js",
+  "type": "module",
   "author": "ItsEliias",
   "license": "MIT",
   "scripts": {
