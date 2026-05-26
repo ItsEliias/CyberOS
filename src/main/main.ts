@@ -203,7 +203,7 @@ function createCaptureWindow() {
     alwaysOnTop: true, skipTaskbar: true, resizable: true,
     webPreferences: {
       preload: preloadPath,
-      contextIsolation: true, nodeIntegration: false, spellcheck: true
+      contextIsolation: true, nodeIntegration: false, sandbox: false, spellcheck: true
     }
   });
 
@@ -255,7 +255,7 @@ function createWindow() {
     backgroundColor: '#0d0d1a',
     webPreferences: {
       preload: preloadPath,
-      contextIsolation: true, nodeIntegration: false, spellcheck: true
+      contextIsolation: true, nodeIntegration: false, sandbox: false, spellcheck: true
     }
   });
 
