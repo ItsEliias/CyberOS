@@ -2,68 +2,64 @@
   "name": "cyberlab-companion",
   "version": "1.0.0",
   "description": "AI-assisted cybersecurity workflow environment — CYBERTOOLS",
-  "main": "main.js",
+  "main": "out/main/index.js",
+  "type": "module",
   "author": "ItsEliias",
   "license": "MIT",
   "scripts": {
-    "start": "electron .",
-    "build": "electron-builder --win --mac --linux",
-    "build:win": "electron-builder --win",
-    "build:mac": "electron-builder --mac",
-    "build:linux": "electron-builder --linux",
-    "pack": "electron-builder --dir",
-    "build:unsigned": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac",
-    "icons": "node generate-icons.js",
-    "combine": "cat renderer-part1.js renderer-part2.js renderer-part3.js > renderer.js"
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "package": "electron-vite build && electron-builder",
+    "package:mac": "electron-vite build && electron-builder --mac",
+    "package:win": "electron-vite build && electron-builder --win",
+    "package:linux": "electron-vite build && electron-builder --linux",
+    "start": "electron-vite dev",
+    "build:mac": "electron-vite build && electron-builder --mac",
+    "build:win": "electron-vite build && electron-builder --win",
+    "build:linux": "electron-vite build && electron-builder --linux"
   },
   "dependencies": {
-    "electron-squirrel-startup": "^1.0.0"
+    "electron-squirrel-startup": "^1.0.0",
+    "framer-motion": "^11.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-syntax-highlighter": "^15.5.0",
+    "zustand": "^4.5.0"
   },
   "devDependencies": {
-    "electron": "^28.1.0",
-    "electron-builder": "^24.9.1"
+    "@electron-toolkit/tsconfig": "^1.0.1",
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@types/react-syntax-highlighter": "^15.5.11",
+    "@vitejs/plugin-react": "^4.2.0",
+    "autoprefixer": "^10.4.17",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^2.0.0",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.0"
   },
   "build": {
     "appId": "com.itsEliias.cyberlab-companion",
     "productName": "CYBERLAB COMPANION",
     "copyright": "Copyright © 2025 ItsEliias",
-    "files": [
-      "**/*",
-      "!node_modules/.cache",
-      "!**/*.map"
-    ],
-    "directories": {
-      "output": "dist"
-    },
+    "directories": { "output": "dist" },
+    "files": ["out/**/*", "assets/**/*"],
     "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
       "icon": "assets/icon.ico"
     },
     "mac": {
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        }
-      ],
+      "target": [{ "target": "dmg", "arch": ["x64", "arm64"] }],
       "icon": "assets/icon.icns",
       "category": "public.app-category.developer-tools"
     },
     "linux": {
-      "target": [
-        "AppImage",
-        "deb"
-      ],
+      "target": ["AppImage", "deb"],
       "icon": "assets/icon.png",
       "category": "Development"
     },

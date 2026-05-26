@@ -1,0 +1,405 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Default theme vars (stealth) ─────────────────────────────────────────── */
+:root {
+  --bg: #0e1117;
+  --bg-secondary: #161b22;
+  --bg2: #0d1017;
+  --bg3: #181e2a;
+  --bg4: #1e2535;
+  --panel: #161b22;
+  --panel-alt: #1c2128;
+  --border: #30363d;
+  --border2: #252d3d;
+  --input-bg: #131926;
+  --input-border: #21262d;
+  --accent: #4a9eff;
+  --accent-2: #7bb8ff;
+  --accent-dim: rgba(74, 158, 255, 0.12);
+  --accent-glow: rgba(74, 158, 255, 0.3);
+  --accent-2-glow: rgba(123, 184, 255, 0.2);
+  --text: #c9d1d9;
+  --text-dim: #8b949e;
+  --text-muted: #8b949e;
+  --btn-border: #4a9eff;
+  --btn-text: #4a9eff;
+  --btn-glow: rgba(74, 158, 255, 0.3);
+  --btn-hover-bg: rgba(74, 158, 255, 0.1);
+  --code-bg: #0d1017;
+  --sidebar-bg: #0d1017;
+  --card-bg: #141a24;
+  --chat-user-bg: rgba(74, 158, 255, 0.12);
+  --chat-ai-bg: #161b22;
+  --chat-ai-border: #4a9eff;
+  --scrollbar: #30363d;
+  --progress-start: #4a9eff;
+  --progress-end: #7bb8ff;
+  --danger: #f85149;
+  --error: #ff4a6e;
+  --success: #3ddc84;
+  --warning: #ffb347;
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+}
+
+/* ── Base resets ───────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-family);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ── Text selectable in chat/code areas ───────────────────────────────────── */
+.selectable, textarea, input, pre, code { user-select: text; }
+
+/* ── Tailwind layer overrides ─────────────────────────────────────────────── */
+@layer base {
+  h1, h2, h3, h4, h5, h6 { color: var(--text); }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  input, textarea, select {
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--accent);
+  }
+
+  button {
+    cursor: pointer;
+    font-family: var(--font-family);
+    font-size: 13px;
+    border-radius: 6px;
+    border: 1px solid var(--btn-border);
+    color: var(--btn-text);
+    background: transparent;
+    padding: 6px 14px;
+    transition: background 0.15s, box-shadow 0.15s;
+  }
+  button:hover {
+    background: var(--btn-hover-bg);
+    box-shadow: 0 0 8px var(--btn-glow);
+  }
+  button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+@layer components {
+  /* Panels */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+  }
+
+  /* Section headers */
+  .section-header {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 8px 12px 4px;
+  }
+
+  /* Tags / badges */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--accent-dim);
+    color: var(--accent);
+    border: 1px solid rgba(74, 158, 255, 0.25);
+  }
+
+  /* Code blocks */
+  .code-block {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+    font-size: 12px;
+    color: var(--text);
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  /* Accent button */
+  .btn-accent {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    font-weight: 500;
+  }
+  .btn-accent:hover {
+    background: var(--accent-2);
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+
+  /* Ghost button */
+  .btn-ghost {
+    border-color: var(--border);
+    color: var(--text-dim);
+    background: transparent;
+  }
+  .btn-ghost:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-dim);
+    box-shadow: none;
+  }
+
+  /* Danger button */
+  .btn-danger {
+    border-color: var(--danger);
+    color: var(--danger);
+    background: transparent;
+  }
+  .btn-danger:hover {
+    background: rgba(248, 81, 73, 0.12);
+  }
+
+  /* Input group */
+  .input-group label {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+
+  /* Divider */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 8px 0;
+  }
+
+  /* Scrollable area */
+  .scroll-area {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* Chat messages */
+  .chat-msg-user {
+    background: var(--chat-user-bg);
+    border: 1px solid var(--accent-dim);
+    border-radius: 8px;
+    padding: 10px 14px;
+  }
+  .chat-msg-ai {
+    background: var(--chat-ai-bg);
+    border: 1px solid var(--chat-ai-border);
+    border-radius: 8px;
+    padding: 10px 14px;
+  }
+
+  /* Finding tags */
+  .finding-port     { background: rgba(74, 158, 255, 0.15); color: #4a9eff; border-color: rgba(74,158,255,0.3); }
+  .finding-cred     { background: rgba(255, 179, 71, 0.15); color: #ffb347; border-color: rgba(255,179,71,0.3); }
+  .finding-flag     { background: rgba(61, 220, 132, 0.15); color: #3ddc84; border-color: rgba(61,220,132,0.3); }
+  .finding-cve      { background: rgba(248, 81, 73, 0.15);  color: #f85149; border-color: rgba(248,81,73,0.3); }
+  .finding-user     { background: rgba(180, 79, 255, 0.15); color: #b44fff; border-color: rgba(180,79,255,0.3); }
+  .finding-hash     { background: rgba(255, 122, 0, 0.15);  color: #ff7a00; border-color: rgba(255,122,0,0.3); }
+  .finding-file     { background: rgba(139, 148, 158, 0.15);color: #8b949e; border-color: rgba(139,148,158,0.3); }
+  .finding-service  { background: rgba(0, 255, 224, 0.12);  color: #00ffe0; border-color: rgba(0,255,224,0.25); }
+
+  /* Hint level badge */
+  .hint-1 { color: var(--success); border-color: var(--success); }
+  .hint-2 { color: var(--accent); border-color: var(--accent); }
+  .hint-3 { color: var(--warning); border-color: var(--warning); }
+  .hint-4 { color: #ff7a00; border-color: #ff7a00; }
+  .hint-5 { color: var(--danger); border-color: var(--danger); }
+
+  /* Difficulty badges */
+  .diff-easy   { color: var(--success); }
+  .diff-medium { color: var(--warning); }
+  .diff-hard   { color: #ff7a00; }
+  .diff-insane { color: var(--danger); }
+}
+
+/* ── Markdown prose (for chat messages) ──────────────────────────────────── */
+.prose {
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.65;
+}
+.prose h1 { font-size: 1.2em; font-weight: 700; margin: 12px 0 6px; color: var(--accent); }
+.prose h2 { font-size: 1.1em; font-weight: 600; margin: 10px 0 5px; color: var(--accent-2); }
+.prose h3 { font-size: 1em; font-weight: 600; margin: 8px 0 4px; color: var(--text); }
+.prose p { margin: 6px 0; }
+.prose ul, .prose ol { margin: 6px 0; padding-left: 18px; }
+.prose li { margin: 3px 0; }
+.prose strong { color: var(--text); font-weight: 600; }
+.prose em { color: var(--text-dim); }
+.prose code {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.9em;
+  color: var(--accent);
+}
+.prose pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin: 8px 0;
+  overflow-x: auto;
+}
+.prose pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text);
+  font-size: 0.85em;
+}
+.prose blockquote {
+  border-left: 3px solid var(--accent);
+  margin: 8px 0;
+  padding: 4px 12px;
+  color: var(--text-dim);
+}
+.prose hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+.prose a { color: var(--accent); }
+.prose table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 12.5px; }
+.prose th { background: var(--bg3); color: var(--text); padding: 6px 10px; text-align: left; border: 1px solid var(--border); }
+.prose td { padding: 5px 10px; border: 1px solid var(--border); color: var(--text-dim); }
+
+/* ── Progress bar ─────────────────────────────────────────────────────────── */
+.progress-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--progress-start), var(--progress-end));
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+/* ── Tab bar ──────────────────────────────────────────────────────────────── */
+.tab-bar { background: var(--bg2); border-bottom: 1px solid var(--border); }
+.tab-item {
+  padding: 8px 16px;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.tab-item:hover { background: var(--bg3); color: var(--text); }
+.tab-item.active { background: var(--bg); color: var(--accent); border-bottom: 2px solid var(--accent); }
+
+/* ── Sidebar nav items ────────────────────────────────────────────────────── */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.nav-item:hover { background: var(--bg3); color: var(--text); }
+.nav-item.active { background: var(--accent-dim); color: var(--accent); }
+
+/* ── Animations ───────────────────────────────────────────────────────────── */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.animate-fade-in { animation: fadeIn 0.2s ease-out; }
+.animate-pulse-dot { animation: pulse-dot 1.5s ease-in-out infinite; }
+.spinner { animation: spin 0.8s linear infinite; }
+
+/* ── Tooltip ──────────────────────────────────────────────────────────────── */
+[data-tooltip] { position: relative; }
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg4);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 100;
+}
+[data-tooltip]:hover::after { opacity: 1; }
+
+/* ── Modal backdrop ───────────────────────────────────────────────────────── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-box {
+  background: var(--panel);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 24px;
+  max-width: 520px;
+  width: 90%;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
