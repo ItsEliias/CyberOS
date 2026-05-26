@@ -1,0 +1,92 @@
+{
+  "name": "vaultcore",
+  "version": "1.0.0",
+  "description": "Centralized vault intelligence engine — CYBERTOOLS",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --mac --linux",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "playwright-core": "^1.40.0",
+    "@playwright/browser-chromium": "^1.40.0",
+    "pdf-parse": "^1.1.1",
+    "node-cron": "^3.0.3",
+    "turndown": "^7.1.2",
+    "cheerio": "^1.0.0-rc.12",
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.itsEliias.vaultcore",
+    "productName": "VAULTCORE",
+    "copyright": "Copyright © 2024 ItsEliias",
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "files": [
+      "**/*",
+      "!dist/**",
+      "!.git/**",
+      "assets/**"
+    ],
+    "extraResources": [
+      {
+        "from": "assets",
+        "to": "assets"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/logo.ico",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "VAULTCORE"
+    },
+    "mac": {
+      "target": ["dmg"],
+      "icon": "assets/logo.icns",
+      "category": "public.app-category.productivity"
+    },
+    "dmg": {
+      "title": "VAULTCORE Installer"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "icon": "assets/logo.png",
+      "category": "Utility",
+      "synopsis": "Obsidian-compatible web scraping companion"
+    },
+    "deb": {
+      "packageCategory": "utils"
+    }
+  },
+  "author": {
+    "name": "ItsEliias",
+    "email": "itseliiasstudy@gmail.com"
+  },
+  "license": "MIT",
+  "keywords": ["obsidian", "scraper", "markdown", "electron", "vault"],
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
