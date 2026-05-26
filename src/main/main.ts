@@ -194,7 +194,7 @@ function renameNote(oldPath: string, newPath: string): boolean {
 }
 
 // ─── Capture window ───────────────────────────────────────────────────────────
-const preloadPath = path.join(__dirname, '..', 'preload', 'preload.mjs');
+const preloadPath = path.join(__dirname, '..', 'preload', 'preload.js');
 
 function createCaptureWindow() {
   captureWindow = new BrowserWindow({
