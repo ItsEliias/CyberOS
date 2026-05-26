@@ -2,13 +2,15 @@
   "name": "vaultcore",
   "version": "1.0.0",
   "description": "Centralized vault intelligence engine — CYBERTOOLS",
-  "main": "main.js",
+  "type": "module",
+  "main": "out/main/index.js",
   "scripts": {
-    "start": "electron .",
-    "build": "electron-builder --win --mac --linux",
-    "build:win": "electron-builder --win",
-    "build:mac": "electron-builder --mac",
-    "build:linux": "electron-builder --linux",
+    "start": "electron-vite dev",
+    "build": "electron-vite build && electron-builder",
+    "build:mac": "electron-vite build && electron-builder --mac",
+    "build:win": "electron-vite build && electron-builder --win",
+    "build:linux": "electron-vite build && electron-builder --linux",
+    "preview": "electron-vite preview",
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
@@ -21,8 +23,18 @@
     "node-fetch": "^2.7.0"
   },
   "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.21",
     "electron": "^31.0.0",
-    "electron-builder": "^24.13.3"
+    "electron-builder": "^24.13.3",
+    "electron-vite": "^2.3.0",
+    "framer-motion": "^11.18.2",
+    "postcss": "^8.5.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.3",
+    "zustand": "^5.0.3"
   },
   "build": {
     "appId": "com.itsEliias.vaultcore",
@@ -33,60 +45,31 @@
       "buildResources": "assets"
     },
     "files": [
-      "**/*",
+      "out/**/*",
       "!dist/**",
+      "!src/**",
       "!.git/**",
       "assets/**"
     ],
     "extraResources": [
-      {
-        "from": "assets",
-        "to": "assets"
-      }
+      { "from": "assets", "to": "assets" }
     ],
     "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": ["x64"]
-        }
-      ],
-      "icon": "assets/logo.ico",
-      "requestedExecutionLevel": "asInvoker"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "VAULTCORE"
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "assets/logo.ico"
     },
     "mac": {
       "target": ["dmg"],
       "icon": "assets/logo.icns",
       "category": "public.app-category.productivity"
     },
-    "dmg": {
-      "title": "VAULTCORE Installer"
-    },
     "linux": {
       "target": ["AppImage", "deb"],
       "icon": "assets/logo.png",
-      "category": "Utility",
-      "synopsis": "Obsidian-compatible web scraping companion"
-    },
-    "deb": {
-      "packageCategory": "utils"
+      "category": "Utility"
     }
   },
-  "author": {
-    "name": "ItsEliias",
-    "email": "itseliiasstudy@gmail.com"
-  },
+  "author": { "name": "ItsEliias", "email": "itseliiasstudy@gmail.com" },
   "license": "MIT",
-  "keywords": ["obsidian", "scraper", "markdown", "electron", "vault"],
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
-  }
+  "engines": { "node": ">=18.0.0", "npm": ">=9.0.0" }
 }
