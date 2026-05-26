@@ -178,7 +178,7 @@ function createPanelWindow(): void {
     hasShadow   : true,
     title       : 'CYBERTOOLS — ItsEliias',
     webPreferences: {
-      preload         : path.join(__dirname, '..', 'preload', 'preload.js'),
+      preload         : path.join(__dirname, '..', 'preload', 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration : false,
       sandbox         : false,
