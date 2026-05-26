@@ -41,7 +41,7 @@ function createWindow() {
     show: false,
     webPreferences: {
       preload: preloadPath,
-      contextIsolation: true, nodeIntegration: false, webSecurity: true
+      contextIsolation: true, nodeIntegration: false, sandbox: false, webSecurity: true
     }
   });
 
