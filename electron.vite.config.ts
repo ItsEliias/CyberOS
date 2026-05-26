@@ -4,18 +4,23 @@ import { resolve } from 'path';
 import fs from 'fs';
 import path from 'path';
 
-// Plugin to copy src/main/lib/ CommonJS backend modules to out/main/lib/ after build
+// Plugin to copy src/main/lib/ and root sources/ to out/main/lib/ after build
 function copyMainLibPlugin() {
+  function copyDir(src: string, dest: string) {
+    if (!fs.existsSync(src)) return;
+    fs.mkdirSync(dest, { recursive: true });
+    for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+      const s = path.join(src, entry.name);
+      const d = path.join(dest, entry.name);
+      if (entry.isDirectory()) copyDir(s, d);
+      else fs.copyFileSync(s, d);
+    }
+  }
   return {
     name: 'copy-main-lib',
     closeBundle() {
-      const src  = resolve('src/main/lib');
-      const dest = resolve('out/main/lib');
-      if (!fs.existsSync(src)) return;
-      if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
-      for (const file of fs.readdirSync(src)) {
-        fs.copyFileSync(path.join(src, file), path.join(dest, file));
-      }
+      copyDir(resolve('src/main/lib'), resolve('out/main/lib'));
+      copyDir(resolve('sources'), resolve('out/main/lib/sources'));
     }
   };
 }
