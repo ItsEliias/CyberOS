@@ -1,0 +1,37 @@
+TRAY ICON — assets/tray-icon.png
+================================
+
+Place your tray icon PNG file at:
+  assets/tray-icon.png
+
+SPECIFICATIONS
+--------------
+File format  : PNG (with transparency recommended)
+Colour mode  : RGBA (32-bit)
+Resolution   : Provide at least 32×32 px
+
+Recommended sizes per platform:
+  Windows : 16×16 and/or 32×32 px  (Windows uses 16px in the notification area)
+  macOS   : 22×22 px @1x + 44×44 px @2x (Retina)
+             OR a single 32×32 that Electron will auto-scale
+  Linux   : 22×22 or 32×32 px
+
+TIPS
+----
+• Use a PNG with a transparent background so the icon looks correct on
+  both light and dark system tray backgrounds.
+• On macOS, if you want the icon to automatically adapt to the menu bar
+  colour (light/dark mode), name it a "template image": the image should
+  be black-on-transparent and Electron will call setTemplateImage(true).
+  To enable this, rename it "tray-icon-template.png" and update the path
+  in main.js → createTrayIcon().
+• On Windows, a 16×16 source looks crispest at normal DPI. For high-DPI
+  screens, Electron scales automatically from a 32×32 source.
+• Keep the design simple — the icon will be displayed at very small sizes.
+  A bold monogram ("CT") or simple geometric mark works well.
+
+FALLBACK
+--------
+If this file is absent, the launcher generates a fallback icon automatically:
+a dark background with a purple crosshair "+" pattern (matches the Cyberpunk
+theme accent colour). The app will still run normally with the fallback.

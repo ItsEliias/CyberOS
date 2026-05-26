@@ -1,0 +1,42 @@
+LAUNCHER LOGO — assets/logo.png
+================================
+
+Place your logo PNG file at:
+  assets/logo.png
+
+This logo is used in two places:
+  1. Splash screen  — centred, displayed at up to 180px wide (aspect ratio preserved)
+  2. Panel header   — displayed at 24px height (aspect ratio preserved)
+
+SPECIFICATIONS
+--------------
+File format  : PNG (transparency supported)
+Colour mode  : RGBA recommended
+Minimum size : 180×180 px (square looks best; landscape also works)
+Recommended  : 512×512 px or larger — Electron will scale down cleanly
+
+DESIGN NOTES
+------------
+• The splash screen shows the logo against the themed background colour
+  (e.g. #0e1117 for Stealth). A transparent-background PNG will look
+  best across all four themes.
+• The header displays the logo beside "CYBERTOOLS" text, so a compact
+  square or icon-style mark works better than a wide wordmark.
+• If no logo.png is found, a styled "CT" text mark appears instead —
+  in the theme accent colour with a 1px border, so the app always
+  looks intentional with or without a custom logo.
+
+APP CARD LOGOS (separate files)
+--------------------------------
+Each app card also has its own logo, stored separately:
+
+  assets/cyberlab/logo.png       — shown in the CyberLab Companion card (32×32 px)
+  assets/vaultscraper/logo.png   — shown in the Vault Scraper card (32×32 px)
+
+These are independent — place whichever PNG you choose in each folder.
+"CC" and "VS" text placeholders appear automatically if not found.
+
+FALLBACK
+--------
+If this file is absent, a styled "CT" monogram is shown automatically.
+The app will run normally with or without a logo.png.
