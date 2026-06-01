@@ -1,0 +1,27 @@
+VAULTCORE — Logo Placement Instructions
+============================================
+
+Place your custom logo image here:
+  assets/logo.png
+
+Requirements:
+- Format: PNG (transparent background recommended)
+- Minimum size: 256×256px
+- No maximum — the app scales it automatically
+- Square or near-square aspect ratios work best
+
+How it's used:
+- Splash screen: max 180px wide, centred on white background
+- Top bar: 24px height, preserves aspect ratio
+- Taskbar / dock icon: system-scaled from this file
+
+If no logo.png is found:
+- Splash screen shows styled "VC" text mark
+- Top bar shows "VC" placeholder in accent colour
+
+This app (VAULTCORE) uses its OWN logo independently
+from any other CyberLab tools — drop your chosen PNG here.
+
+Example filenames that work:
+  logo.png          ← required name
+  (rename yours to logo.png before placing here)

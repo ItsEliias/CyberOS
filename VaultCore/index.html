@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="en" data-core="stealth" data-personality="neutral">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VAULTCORE — CYBERTOOLS</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ═══════════════════ SPLASH SCREEN ═══════════════════ -->
+<div id="splash-screen" class="splash">
+  <div class="splash-inner">
+    <div class="splash-logo-wrap">
+      <img id="splash-logo" src="assets/logo.png" alt="VAULTCORE Logo" onerror="this.style.display='none'; document.getElementById('splash-logo-fallback').style.display='flex'">
+      <div id="splash-logo-fallback" class="splash-logo-text" style="display:none">VC</div>
+    </div>
+    <div class="splash-title">VAULTCORE</div>
+    <div class="splash-subtitle">// ItsEliias</div>
+    <div class="splash-bar"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ SETUP WIZARD ═══════════════════ -->
+<div id="setup-wizard" class="setup-wizard" style="display:none">
+  <div class="wizard-card">
+    <div class="wizard-step active" id="wizard-step-1">
+      <div class="wizard-logo-wrap">
+        <img id="wizard-logo" src="assets/logo.png" alt="VC" onerror="this.style.display='none'; document.getElementById('wizard-logo-fallback').style.display='block'">
+        <div id="wizard-logo-fallback" class="wizard-logo-fallback" style="display:none">VC</div>
+      </div>
+      <h1 class="wizard-title">VAULTCORE</h1>
+      <p class="wizard-subtitle">// ItsEliias</p>
+      <p class="wizard-body">Let's get you set up. This will only take a moment.</p>
+      <button class="btn btn-primary btn-lg wizard-next" data-next="2">Get Started →</button>
+    </div>
+    <div class="wizard-step" id="wizard-step-2" style="display:none">
+      <div class="wizard-step-num">Step 2 of 3</div>
+      <h2>Obsidian Vault</h2>
+      <p class="wizard-body">Select the folder where your Obsidian vault is located. Scraped notes will be saved here.</p>
+      <div class="vault-path-row">
+        <input type="text" id="wizard-vault-path" class="input" placeholder="/Users/you/Documents/ObsidianVault" readonly>
+        <button class="btn btn-outline" id="wizard-browse-vault">Browse</button>
+      </div>
+      <div id="wizard-vault-status" class="wizard-vault-status"></div>
+      <div class="wizard-nav-row">
+        <button class="btn btn-ghost wizard-back" data-back="1">← Back</button>
+        <button class="btn btn-primary wizard-next" data-next="3" id="wizard-next-2" disabled>Next →</button>
+      </div>
+    </div>
+    <div class="wizard-step" id="wizard-step-3" style="display:none">
+      <div class="wizard-step-num">Step 3 of 3</div>
+      <h2>Choose Your Theme</h2>
+      <p class="wizard-body">Select your preferred visual style. You can change this anytime.</p>
+      <div class="theme-picker" id="wizard-theme-picker">
+        <div class="theme-picker-group">
+          <div class="theme-picker-label">WORKSPACE</div>
+          <div class="theme-chip-row" id="vc-wizard-core-row">
+            <button class="theme-chip active" data-core="stealth"><span class="chip-swatch" style="background:#4a9eff"></span>Stealth</button>
+            <button class="theme-chip" data-core="graphite"><span class="chip-swatch" style="background:#6ea8fe"></span>Graphite</button>
+            <button class="theme-chip" data-core="frost"><span class="chip-swatch" style="background:#3b82f6"></span>Frost</button>
+            <button class="theme-chip" data-core="oled"><span class="chip-swatch" style="background:#f5f5f5"></span>OLED</button>
+          </div>
+        </div>
+        <div class="theme-picker-group">
+          <div class="theme-picker-label">ATMOSPHERE</div>
+          <div class="theme-chip-row" id="vc-wizard-personality-row">
+            <button class="theme-chip active" data-personality="neutral"><span class="chip-swatch" style="background:#4a9eff"></span>Neutral</button>
+            <button class="theme-chip" data-personality="cyberpunk"><span class="chip-swatch" style="background:#b44fff"></span>Cyberpunk</button>
+            <button class="theme-chip" data-personality="terminal"><span class="chip-swatch" style="background:#00ff41"></span>Terminal</button>
+            <button class="theme-chip" data-personality="threat"><span class="chip-swatch" style="background:#cc0000"></span>Threat</button>
+          </div>
+        </div>
+        <div class="theme-combo-label" id="vc-wizard-theme-combo">Stealth + Neutral</div>
+      </div>
+      <div class="wizard-nav-row">
+        <button class="btn btn-ghost wizard-back" data-back="2">← Back</button>
+        <button class="btn btn-primary" id="wizard-finish">Launch App →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ MAIN APP ═══════════════════ -->
+<div id="main-app" style="display:none" class="main-app">
+
+  <!-- Update Banner -->
+  <div id="update-banner" class="update-banner" style="display:none">
+    <span id="update-banner-text">A new version is available.</span>
+    <button class="btn btn-sm btn-outline" id="update-view-btn">View Release</button>
+    <button class="btn-icon update-banner-close" id="update-banner-close" title="Dismiss">✕</button>
+  </div>
+
+  <!-- ─── APP LAYOUT ─── -->
+  <div class="app-layout">
+
+    <!-- ═══ LEFT SIDEBAR ═══ -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-mark">
+          <img id="sidebar-logo-img" src="assets/logo.png" alt="VC" onerror="this.style.display='none'; document.getElementById('sidebar-logo-text').style.display='flex'">
+          <span id="sidebar-logo-text" class="sidebar-logo-text-fallback" style="display:none">VC</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="sidebar-item active" data-screen="scrape" title="Scrape (Ctrl+Enter)">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          <span>Scrape</span>
+        </button>
+        <button class="sidebar-item" data-screen="sources" title="Sources (Ctrl+L)">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/>
+            <line x1="9" y1="21" x2="9" y2="9"/>
+          </svg>
+          <span>Sources</span>
+        </button>
+        <button class="sidebar-item" data-screen="schedules" title="Schedules">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          <span>Schedules</span>
+        </button>
+        <button class="sidebar-item" data-screen="health" title="Vault Health (Ctrl+H)">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          <span>Vault Health</span>
+        </button>
+        <button class="sidebar-item" data-screen="logs" title="Logs">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+          <span>Logs</span>
+        </button>
+        <button class="sidebar-item" data-screen="settings" title="Settings (Ctrl+,)">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          <span>Settings</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-user">
+        <div class="sidebar-avatar">IE</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-username">ItsEliias</div>
+          <div class="sidebar-role">Operator</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ═══ MAIN AREA ═══ -->
+    <div class="main-area">
+
+      <!-- ─── TOP BAR ─── -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="topbar-logo-wrap">
+            <img id="topbar-logo" src="assets/logo.png" alt="VC" class="topbar-logo"
+              onerror="this.style.display='none'; document.getElementById('topbar-logo-fallback').style.display='flex'">
+            <span id="topbar-logo-fallback" class="topbar-logo-fallback" style="display:none">VC</span>
+          </div>
+          <span class="topbar-title">VAULTCORE</span>
+          <span class="topbar-brand">// ItsEliias</span>
+        </div>
+
+        <div class="topbar-center">
+          <div id="scrape-indicator" class="scrape-indicator idle">
+            <div class="indicator-dot"></div>
+            <span id="indicator-label">Idle — No active tasks</span>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <button class="topbar-pill" data-screen="sources">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+            Source Library
+          </button>
+          <button class="topbar-pill" data-screen="health">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Vault Health
+          </button>
+          <div class="topbar-divider"></div>
+          <button class="topbar-icon-btn" id="tray-btn" title="Minimise to Tray">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 15l-6-6-6 6"/></svg>
+          </button>
+          <div class="scrape-status-dot" id="scrape-status-dot" title="Status: Idle"></div>
+        </div>
+      </header>
+
+      <!-- ─── SCREENS ─── -->
+      <main class="screens">
+
+        <!-- ═══ SCREEN: SCRAPE ═══ -->
+        <section class="screen active" id="screen-scrape">
+
+          <!-- Source Type Bar -->
+          <div class="source-type-bar">
+            <div class="type-pills" id="source-type-pills">
+              <button class="pill active" data-type="obsidian-publish">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                Obsidian Publish
+              </button>
+              <button class="pill" data-type="website">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                Website
+              </button>
+              <button class="pill" data-type="github">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                GitHub
+              </button>
+              <button class="pill" data-type="youtube">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                YouTube
+              </button>
+              <button class="pill" data-type="pdf">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                PDF
+              </button>
+              <button class="pill" data-type="reddit">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z"/></svg>
+                Reddit
+              </button>
+              <button class="pill" data-type="twitter">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                Twitter/X
+              </button>
+              <button class="pill" data-type="notion">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.14c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z"/></svg>
+                Notion
+              </button>
+              <button class="pill" data-type="medium">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M13.54 12a6.8 6.8 0 0 1-6.77 6.82A6.8 6.8 0 0 1 0 12a6.8 6.8 0 0 1 6.77-6.82A6.8 6.8 0 0 1 13.54 12zM20.96 12c0 3.54-1.51 6.42-3.38 6.42-1.87 0-3.39-2.88-3.39-6.42s1.52-6.42 3.39-6.42 3.38 2.88 3.38 6.42M24 12c0 3.17-.53 5.75-1.19 5.75-.66 0-1.19-2.58-1.19-5.75s.53-5.75 1.19-5.75C23.47 6.25 24 8.83 24 12z"/></svg>
+                Medium
+              </button>
+              <button class="pill" data-type="cve">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                CVE
+              </button>
+              <button class="pill" data-type="rss">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
+                RSS
+              </button>
+            </div>
+            <button class="btn btn-sm btn-ghost" id="bulk-import-btn" title="Bulk URL Import (Ctrl+B)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Bulk Import
+            </button>
+          </div>
+
+          <!-- Compact Config Row -->
+          <div class="scrape-config-row">
+            <!-- Source-specific primary inputs (11 forms) -->
+            <div class="source-input-panel" id="source-input-panel">
+              <div class="source-form active" id="form-obsidian-publish">
+                <div class="config-field config-field-url">
+                  <label class="config-label">SOURCE URL</label>
+                  <div class="input-icon-wrap">
+                    <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                    <input type="url" class="input" id="obs-url" value="https://publish.obsidian.md/" placeholder="https://publish.obsidian.md/...">
+                  </div>
+                </div>
+                <div class="config-field">
+                  <label class="config-label">UPDATE MODE</label>
+                  <select class="select" id="obs-update-mode">
+                    <option value="full">Full Scrape</option>
+                    <option value="updates">Updates Only</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="source-form" id="form-website" style="display:none">
+                <div class="config-field config-field-url">
+                  <label class="config-label">SOURCE URL</label>
+                  <div class="input-icon-wrap">
+                    <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    <input type="url" class="input" id="web-url" placeholder="https://example.com">
+                  </div>
+                </div>
+                <div class="config-field">
+                  <label class="config-label">CRAWL DEPTH</label>
+                  <input type="number" class="input" id="web-depth" value="3" min="1" max="10">
+                </div>
+                <div class="config-field">
+                  <label class="config-label">SAME DOMAIN</label>
+                  <label class="toggle-label"><input type="checkbox" id="web-same-domain" checked><span class="toggle"></span></label>
+                </div>
+              </div>
+
+              <div class="source-form" id="form-github" style="display:none">
+                <div class="config-field config-field-url">
+                  <label class="config-label">REPOSITORY URL</label>
+                  <div class="input-icon-wrap">
+                    <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                    <input type="url" class="input" id="gh-url" placeholder="https://github.com/owner/repo">
+                  </div>
+                </div>
+                <div class="config-field">
+                  <label class="config-label">SCRAPE MODE</label>
+                  <select class="select" id="gh-mode">
+                    <option value="readme">README Only</option>
+                    <option value="wiki">Wiki</option>
+                    <option value="docs">Docs Folder</option>
+                    <option value="all">All Markdown</option>
+                  </select>
+                </div>
+                <div class="config-field">
+                  <label class="config-label">BRANCH</label>
+                  <input type="text" class="input" id="gh-branch" value="main" placeholder="main">
+                </div>
+              </div>
+
+              <div class="source-form" id="form-youtube" style="display:none">
+                <div class="config-field config-field-url">
+                  <label class="config-label">VIDEO / PLAYLIST URL</label>
+                  <div class="input-icon-wrap">
+                    <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                    <input type="url" class="input" id="yt-url" placeholder="https://youtube.com/watch?v=...">
+                  </div>
+                </div>
+                <div class="config-field">
+                  <label class="config-label">EXTRACT</label>
+                  <select class="select" id="yt-mode">
+                    <option value="full">Title + Desc + Transcript</option>
+                    <option value="description">Description Only</option>
+                  </select>
+                </div>
+                <div class="config-field">
+                  <label class="config-label">TIMESTAMPS</label>
+                  <label class="toggle-label"><input type="checkbox" id="yt-timestamps" checked><span class="toggle"></span></label>
+                </div>
+              </div>
+
+              <div class="source-form" id="form-pdf" style="display:none">
+                <div class="pdf-drop-zone" id="pdf-drop-zone">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  <p>Drop PDF files here or <button class="link-btn" id="pdf-browse-btn">browse</button></p>
+                </div>
+                <div id="pdf-file-list" class="pdf-file-list"></div>
+              </div>
+
+              <div class="source-form" id="form-reddit" style="display:none">
+                <div class="config-field config-field-url">
+                  <label class="config-label">THREAD URL</label>
+                  <div class="input-icon-wrap">
+                    <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z"/></svg>
+                    <input type="url" class="input" id="reddit-url" placeholder="https://reddit.com/r/...">
+                  </div>
+                </div>
+                <div class="config-field">
+                  <label class="config-label">MIN UPVOTES</label>
+                  <input type="number" class="input" id="reddit-min-upvotes" value="10" min="0">
+                </div>
+              </div>
+
+              <div class="source-form" id="form-twitter" style="display:none">
+                <div class="config-field config-field-url">
+                  <label class="config-label">THREAD URL</label>
+                  <div class="input-icon-wrap">
+                    <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                    <input type="url" class="input" id="twitter-url" placeholder="https://twitter.com/... or https://x.com/...">
+                  </div>
+                </div>
+                <p class="config-hint">Original thread only — retweets and replies excluded</p>
+              </div>
+
+              <div class="source-form" id="form-notion" style="display:none">
+                <div class="config-field config-field-url">
+                  <label class="config-label">NOTION PAGE URL</label>
+                  <div class="input-icon-wrap">
+                    <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.14c-.093-.514.28-.887.747-.933z"/></svg>
+                    <input type="url" class="input" id="notion-url" placeholder="https://notion.so/...">
+                  </div>
+                </div>
+              </div>
+
+              <div class="source-form" id="form-medium" style="display:none">
+                <div class="config-field config-field-url">
+                  <label class="config-label">ARTICLE / PUBLICATION URL</label>
+                  <div class="input-icon-wrap">
+                    <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M13.54 12a6.8 6.8 0 0 1-6.77 6.82A6.8 6.8 0 0 1 0 12a6.8 6.8 0 0 1 6.77-6.82A6.8 6.8 0 0 1 13.54 12zM20.96 12c0 3.54-1.51 6.42-3.38 6.42-1.87 0-3.39-2.88-3.39-6.42s1.52-6.42 3.39-6.42 3.38 2.88 3.38 6.42M24 12c0 3.17-.53 5.75-1.19 5.75-.66 0-1.19-2.58-1.19-5.75s.53-5.75 1.19-5.75C23.47 6.25 24 8.83 24 12z"/></svg>
+                    <input type="url" class="input" id="medium-url" placeholder="https://medium.com/... or https://yourpub.substack.com/">
+                  </div>
+                </div>
+                <p class="config-hint">Single article or full publication — auto-discovers all articles</p>
+              </div>
+
+              <div class="source-form" id="form-cve" style="display:none">
+                <div class="config-field config-field-url">
+                  <label class="config-label">CVE IDs (one per line)</label>
+                  <textarea class="input textarea" id="cve-ids" rows="3" placeholder="CVE-2021-44228&#10;CVE-2014-0160&#10;CVE-2021-26855"></textarea>
+                </div>
+                <p class="config-hint">Queries NVD API. Saved to /CVEs/[Year]/ in vault.</p>
+              </div>
+
+              <div class="source-form" id="form-rss" style="display:none">
+                <div class="config-field config-field-url">
+                  <label class="config-label">RSS FEED URL</label>
+                  <div class="input-icon-wrap">
+                    <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
+                    <input type="url" class="input" id="rss-url" placeholder="https://example.com/feed.xml">
+                  </div>
+                </div>
+                <div class="config-field">
+                  <label class="config-label">MAX ARTICLES</label>
+                  <input type="number" class="input" id="rss-max" value="10" min="1" max="100">
+                </div>
+              </div>
+            </div>
+
+            <!-- Global Config Fields -->
+            <div class="config-globals">
+              <div class="config-field">
+                <label class="config-label">OUTPUT FOLDER</label>
+                <div class="input-icon-wrap">
+                  <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                  <input type="text" class="input" id="output-subfolder" placeholder="Auto">
+                </div>
+              </div>
+              <div class="config-field">
+                <label class="config-label">CONFLICT STRATEGY</label>
+                <select class="select" id="conflict-strategy">
+                  <option value="skip">Skip All (safe)</option>
+                  <option value="overwrite">Overwrite All</option>
+                  <option value="keep-both">Keep Both</option>
+                  <option value="ask">Ask Me</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Advanced Options (Ctrl+[ to toggle) -->
+          <div class="options-row" id="options-row" style="display:none">
+            <div class="option-group">
+              <label>Source Name</label>
+              <input type="text" class="input input-sm" id="source-name" placeholder="My Source">
+            </div>
+            <div class="option-group">
+              <label>Request Delay</label>
+              <div class="slider-row">
+                <input type="range" class="slider" id="delay-slider" min="500" max="5000" step="250" value="1500">
+                <span id="delay-label">1.5s</span>
+              </div>
+            </div>
+            <div class="option-group option-toggles">
+              <label class="toggle-label compact">
+                <input type="checkbox" id="save-to-library"><span class="toggle"></span><span>Save to Library</span>
+              </label>
+              <label class="toggle-label compact">
+                <input type="checkbox" id="generate-canvas"><span class="toggle"></span><span>Generate Canvas</span>
+              </label>
+            </div>
+            <button class="btn btn-ghost btn-sm" id="toggle-options-close">Hide ↑</button>
+          </div>
+
+          <!-- Action Row -->
+          <div class="action-row">
+            <button class="btn btn-primary btn-start" id="start-scrape-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              START SCRAPE
+              <span class="btn-hint">Ctrl+Enter</span>
+            </button>
+            <button class="btn btn-ghost btn-sm" id="advanced-toggle-btn" title="Advanced Options (Ctrl+[)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/></svg>
+              Options
+            </button>
+          </div>
+
+          <!-- Active Scrape Progress Card -->
+          <div id="progress-section" class="progress-section" style="display:none">
+            <div class="scrape-active-card">
+              <div class="scrape-card-icon-wrap" id="scrape-card-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              </div>
+              <div class="scrape-card-body">
+                <div class="scrape-card-name-row">
+                  <span class="scrape-card-name" id="progress-source-name">Scraping...</span>
+                  <span class="source-type-badge" id="progress-type-badge">website</span>
+                </div>
+                <div class="scrape-card-url" id="scrape-card-url"></div>
+              </div>
+              <div class="scrape-card-count">
+                <span class="progress-count-num" id="progress-count">0/0</span>
+                <span class="progress-pct" id="progress-pct">0%</span>
+              </div>
+            </div>
+
+            <div class="progress-bar-wrap">
+              <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+            </div>
+
+            <div class="progress-stats">
+              <div class="pstat"><span class="pstat-label">PAGES FOUND</span><span class="pstat-val" id="stat-found">0</span></div>
+              <div class="pstat pstat-success"><span class="pstat-label">SCRAPED</span><span class="pstat-val" id="stat-saved">0</span></div>
+              <div class="pstat pstat-success"><span class="pstat-label">UPDATED</span><span class="pstat-val" id="stat-updated">0</span></div>
+              <div class="pstat pstat-error"><span class="pstat-label">FAILED</span><span class="pstat-val" id="stat-failed">0</span></div>
+              <div class="pstat pstat-warning"><span class="pstat-label">SKIPPED</span><span class="pstat-val" id="stat-skipped">0</span></div>
+              <div class="pstat"><span class="pstat-label">ELAPSED</span><span class="pstat-val" id="stat-elapsed">0s</span></div>
+              <div class="pstat"><span class="pstat-label">ETA</span><span class="pstat-val" id="stat-eta">—</span></div>
+            </div>
+
+            <div class="log-header">
+              <span class="log-header-title">LIVE LOG</span>
+              <button class="btn btn-ghost btn-xs" id="clear-log-btn">Clear Log</button>
+            </div>
+            <div class="log-panel" id="log-panel"></div>
+
+            <div class="scrape-controls">
+              <button class="btn btn-sm btn-outline" id="pause-btn">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                Pause
+              </button>
+              <button class="btn btn-sm btn-outline" id="resume-btn" style="display:none">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Resume
+              </button>
+              <button class="btn btn-sm btn-danger" id="stop-btn">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                Stop
+              </button>
+              <button class="btn btn-sm btn-outline" id="retry-failed-btn" style="display:none">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+                Retry Failed
+              </button>
+              <button class="btn btn-sm btn-outline" id="validate-links-btn">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                Validate Links
+              </button>
+            </div>
+          </div>
+
+          <!-- Post-Scrape Summary -->
+          <div id="post-scrape" class="post-scrape" style="display:none">
+            <div class="summary-card">
+              <div class="summary-check">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div class="summary-body">
+                <div class="summary-title">Scrape Complete</div>
+                <div class="summary-stats">
+                  <span class="sstat sstat-success"><span id="ss-saved">0</span> Saved</span>
+                  <span class="sstat sstat-success"><span id="ss-updated">0</span> Updated</span>
+                  <span class="sstat"><span id="ss-skipped">0</span> Skipped</span>
+                  <span class="sstat sstat-error"><span id="ss-failed">0</span> Failed</span>
+                  <span class="sstat"><span id="ss-time">0s</span> Time</span>
+                </div>
+              </div>
+            </div>
+            <div class="post-scrape-actions">
+              <button class="btn btn-outline btn-sm" id="ps-open-obsidian">Open in Obsidian</button>
+              <button class="btn btn-outline btn-sm" id="ps-open-folder">Open Folder</button>
+              <button class="btn btn-outline btn-sm" id="ps-validate-links">Validate Links</button>
+              <button class="btn btn-outline btn-sm" id="ps-view-library">View in Sources</button>
+              <button class="btn btn-primary btn-sm" id="ps-run-again">Run Again</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ═══ SCREEN: SOURCES ═══ -->
+        <section class="screen" id="screen-sources" style="display:none">
+          <div class="screen-header">
+            <div>
+              <h2 class="screen-title">SOURCE LIBRARY</h2>
+              <p class="screen-subtitle">Manage all your scraping sources and schedules.</p>
+            </div>
+            <button class="btn btn-primary" id="add-source-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add New Source
+            </button>
+          </div>
+
+          <div class="health-summary-row" id="library-health-row">
+            <div class="hstat"><span class="hstat-val" id="lib-total-sources">0</span><span class="hstat-label">SOURCES</span></div>
+            <div class="hstat"><span class="hstat-val" id="lib-total-notes">0</span><span class="hstat-label">TOTAL NOTES</span></div>
+            <div class="hstat"><span class="hstat-val" id="lib-last-activity">—</span><span class="hstat-label">LAST ACTIVITY</span></div>
+            <div class="hstat"><span class="hstat-val" id="lib-storage">—</span><span class="hstat-label">STORAGE USED</span></div>
+            <button class="btn btn-ghost btn-sm" id="gap-report-btn">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              Knowledge Gap Report
+            </button>
+          </div>
+
+          <div class="library-controls">
+            <div class="input-icon-wrap" style="flex:1;max-width:280px">
+              <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input type="text" class="input" id="library-search" placeholder="Search sources...">
+            </div>
+            <select class="select select-sm" id="library-filter">
+              <option value="all">Filter: All Sources</option>
+              <option value="obsidian-publish">Obsidian Publish</option>
+              <option value="website">Website</option>
+              <option value="github">GitHub</option>
+              <option value="youtube">YouTube</option>
+              <option value="rss">RSS</option>
+            </select>
+            <select class="select select-sm" id="library-sort">
+              <option value="lastScraped">Sort: Last Activity</option>
+              <option value="name">Sort: Name</option>
+              <option value="type">Sort: Type</option>
+              <option value="noteCount">Sort: Notes</option>
+            </select>
+          </div>
+
+          <div class="source-cards" id="source-cards"></div>
+          <div class="empty-library" id="empty-library" style="display:none">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+            <p>No sources yet. Add one above or scrape from the Scrape screen.</p>
+          </div>
+        </section>
+
+        <!-- ═══ SCREEN: SCHEDULES ═══ -->
+        <section class="screen" id="screen-schedules" style="display:none">
+          <div class="screen-header">
+            <div>
+              <h2 class="screen-title">SCHEDULES</h2>
+              <p class="screen-subtitle">Automated scraping runs — configured per source in the Sources screen.</p>
+            </div>
+            <button class="btn btn-outline btn-sm" id="run-all-now-btn">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Run All Now
+            </button>
+          </div>
+
+          <div class="health-summary-row">
+            <div class="hstat"><span class="hstat-val" id="sched-active-count">0</span><span class="hstat-label">ACTIVE SCHEDULES</span></div>
+            <div class="hstat"><span class="hstat-val" id="sched-next-run">—</span><span class="hstat-label">NEXT RUN</span></div>
+            <div class="hstat"><span class="hstat-val" id="sched-total-runs">0</span><span class="hstat-label">RUNS TODAY</span></div>
+          </div>
+
+          <div class="schedules-list" id="schedules-list"></div>
+          <div class="empty-library" id="empty-schedules" style="display:none">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <p>No scheduled sources. Add a schedule to a source in the Sources screen.</p>
+          </div>
+        </section>
+
+        <!-- ═══ SCREEN: VAULT HEALTH ═══ -->
+        <section class="screen" id="screen-health" style="display:none">
+          <div class="health-tab-bar">
+            <div class="health-tabs">
+              <button class="tab active" data-tab="stats">Statistics</button>
+              <button class="tab" data-tab="duplicates">Duplicate Detector</button>
+              <button class="tab" data-tab="deadlinks">Dead Links</button>
+              <button class="tab" data-tab="cleaner">Markdown Cleaner</button>
+            </div>
+            <button class="btn btn-outline btn-sm" id="refresh-stats-btn">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+              Refresh Data
+            </button>
+          </div>
+
+          <!-- Tab: Statistics -->
+          <div class="tab-panel active" id="tab-stats">
+            <div id="stats-loading" class="loading-msg" style="display:none">
+              <svg class="spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+              Analysing vault...
+            </div>
+            <div id="stats-content">
+              <div class="vault-stats-row">
+                <div class="vstat-card"><div class="vstat-val" id="st-total-notes">—</div><div class="vstat-label">TOTAL NOTES</div></div>
+                <div class="vstat-card"><div class="vstat-val" id="st-total-words">—</div><div class="vstat-label">TOTAL WORDS</div></div>
+                <div class="vstat-card"><div class="vstat-val" id="st-storage">—</div><div class="vstat-label">STORAGE USED</div></div>
+                <div class="vstat-card"><div class="vstat-val" id="st-sources">—</div><div class="vstat-label">SOURCE TYPES</div></div>
+              </div>
+              <div class="health-content-grid">
+                <div class="health-col health-col-chart">
+                  <div class="health-col-title">NOTES BY FOLDER</div>
+                  <canvas id="chart-folders"></canvas>
+                </div>
+                <div class="health-col">
+                  <div class="health-col-title">TOP LINKED NOTES</div>
+                  <div id="most-linked-list" class="ranked-list"></div>
+                  <button class="btn btn-ghost btn-xs view-all-btn" id="view-all-linked">View All</button>
+                </div>
+                <div class="health-col">
+                  <div class="health-col-title">ORPHANED NOTES</div>
+                  <div class="orphan-hero">
+                    <div class="orphan-count" id="st-orphans">—</div>
+                    <div class="orphan-label">Notes with no incoming links</div>
+                    <button class="btn btn-outline btn-sm" id="review-orphans-btn">Review</button>
+                  </div>
+                  <div class="health-col-title" style="margin-top:20px">MOST RECENT NOTES</div>
+                  <div id="newest-list" class="ranked-list"></div>
+                  <button class="btn btn-ghost btn-xs view-all-btn" id="view-all-notes">View All Notes</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab: Duplicate Detector -->
+          <div class="tab-panel" id="tab-duplicates" style="display:none">
+            <div class="tool-intro">
+              <p>Compares notes by exact title match and content similarity (>85% Jaccard). Non-destructive — you choose the action per pair.</p>
+              <button class="btn btn-primary" id="run-duplicate-btn">Run Duplicate Check</button>
+            </div>
+            <div id="dup-progress" class="tool-progress" style="display:none">
+              <div class="progress-bar-wrap"><div class="progress-bar" id="dup-progress-bar" style="width:0%"></div></div>
+              <span id="dup-progress-msg">Checking...</span>
+            </div>
+            <div id="dup-results" style="display:none">
+              <div class="dup-summary" id="dup-summary"></div>
+              <div id="dup-pairs"></div>
+            </div>
+          </div>
+
+          <!-- Tab: Dead Links -->
+          <div class="tab-panel" id="tab-deadlinks" style="display:none">
+            <div class="tool-intro">
+              <p>Scans all markdown files for external URLs and tests each one. Large vaults may take a while.</p>
+              <div class="tool-intro-actions">
+                <button class="btn btn-primary" id="run-deadlinks-btn">Check Dead Links</button>
+                <button class="btn btn-outline" id="export-deadlinks-btn" style="display:none">Export CSV</button>
+              </div>
+            </div>
+            <div id="dl-progress" class="tool-progress" style="display:none">
+              <div class="progress-bar-wrap"><div class="progress-bar" id="dl-progress-bar" style="width:0%"></div></div>
+              <span id="dl-progress-msg">Scanning...</span>
+            </div>
+            <div id="dl-results" style="display:none">
+              <div class="dl-summary" id="dl-summary"></div>
+              <div class="dl-filters">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="dead">Dead</button>
+                <button class="filter-btn" data-filter="redirected">Redirected</button>
+                <button class="filter-btn" data-filter="unknown">Unknown</button>
+              </div>
+              <div id="dl-list" class="dl-list"></div>
+            </div>
+          </div>
+
+          <!-- Tab: Markdown Cleaner -->
+          <div class="tab-panel" id="tab-cleaner" style="display:none">
+            <div class="cleaner-panel">
+              <div class="cleaner-options">
+                <h4>Operations</h4>
+                <div class="cleaner-checks">
+                  <label class="check-label"><input type="checkbox" id="cl-fix-headings" checked> Standardise heading levels</label>
+                  <label class="check-label"><input type="checkbox" id="cl-blank-lines" checked> Remove excessive blank lines</label>
+                  <label class="check-label"><input type="checkbox" id="cl-wikilinks" checked> Fix broken wikilinks</label>
+                  <label class="check-label"><input type="checkbox" id="cl-code-blocks" checked> Standardise code block tags</label>
+                  <label class="check-label"><input type="checkbox" id="cl-html" checked> Remove HTML tags</label>
+                  <label class="check-label"><input type="checkbox" id="cl-lists"> Fix list indentation</label>
+                  <label class="check-label"><input type="checkbox" id="cl-frontmatter"> Normalise frontmatter</label>
+                  <label class="check-label"><input type="checkbox" id="cl-tracking"> Strip tracking URL params</label>
+                </div>
+                <h4>Apply To</h4>
+                <select class="select" id="cleaner-scope">
+                  <option value="paste">Pasted Content</option>
+                  <option value="file">Select Note</option>
+                  <option value="folder">Select Folder</option>
+                  <option value="vault">Entire Vault</option>
+                </select>
+                <div id="cleaner-file-row" style="display:none" class="form-row" style="margin-top:8px">
+                  <input type="text" class="input" id="cleaner-file-path" placeholder="Note path" readonly>
+                  <button class="btn btn-outline btn-sm" id="cleaner-browse-file">Browse</button>
+                </div>
+                <button class="btn btn-primary" id="cleaner-run-btn" style="margin-top:12px">Preview Cleaning</button>
+              </div>
+              <div class="cleaner-preview">
+                <div class="preview-panes">
+                  <div class="pane">
+                    <div class="pane-header">Before</div>
+                    <textarea class="input textarea code" id="cleaner-before" rows="20" placeholder="Paste markdown here..."></textarea>
+                  </div>
+                  <div class="pane">
+                    <div class="pane-header">After</div>
+                    <div class="cleaner-after-wrap">
+                      <textarea class="input textarea code" id="cleaner-after" rows="20" readonly placeholder="Cleaned output will appear here..."></textarea>
+                      <button class="btn btn-primary" id="cleaner-apply-btn" style="display:none;margin-top:8px">Apply Changes</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ═══ SCREEN: LOGS ═══ -->
+        <section class="screen" id="screen-logs" style="display:none">
+          <div class="screen-header">
+            <div>
+              <h2 class="screen-title">SCRAPE LOGS</h2>
+              <p class="screen-subtitle">History of all scraping activity from this vault.</p>
+            </div>
+            <div class="logs-controls">
+              <select class="select select-sm" id="logs-filter">
+                <option value="all">All Types</option>
+                <option value="success">Saved / Updated</option>
+                <option value="error">Errors</option>
+                <option value="warning">Conflicts</option>
+                <option value="skipped">Skipped</option>
+              </select>
+              <button class="btn btn-ghost btn-sm" id="refresh-logs-btn">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+                Refresh
+              </button>
+              <button class="btn btn-ghost btn-sm" id="export-logs-btn">Export CSV</button>
+            </div>
+          </div>
+          <div class="logs-summary-row" id="logs-summary-row">
+            <div class="hstat"><span class="hstat-val" id="log-total">—</span><span class="hstat-label">TOTAL ENTRIES</span></div>
+            <div class="hstat"><span class="hstat-val" id="log-errors">—</span><span class="hstat-label">ERRORS</span></div>
+            <div class="hstat"><span class="hstat-val" id="log-last-run">—</span><span class="hstat-label">LAST RUN</span></div>
+          </div>
+          <div class="log-panel log-panel-full" id="log-panel-history"></div>
+          <div class="empty-library" id="empty-logs" style="display:none">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <p>No log data yet. Run a scrape to see activity here.</p>
+          </div>
+        </section>
+
+        <!-- ═══ SCREEN: SETTINGS ═══ -->
+        <section class="screen" id="screen-settings" style="display:none">
+          <div class="screen-header">
+            <div>
+              <h2 class="screen-title">SETTINGS</h2>
+              <p class="screen-subtitle">Configure Vault Scraper behaviour and integrations.</p>
+            </div>
+          </div>
+          <div class="settings-container">
+
+            <div class="settings-section">
+              <h3>Vault Configuration</h3>
+              <div class="form-row">
+                <label>Obsidian Vault Path</label>
+                <div class="input-with-btn">
+                  <input type="text" class="input" id="settings-vault-path" placeholder="/path/to/vault" readonly>
+                  <button class="btn btn-outline" id="settings-browse-vault">Browse</button>
+                  <button class="btn btn-outline" id="settings-open-vault-folder">Open</button>
+                </div>
+              </div>
+              <div class="settings-plugins">
+                <label>Detected Plugins</label>
+                <div id="plugin-badges" class="plugin-badges"></div>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3>Scraping Defaults</h3>
+              <div class="form-row-2">
+                <div>
+                  <label>Default Delay</label>
+                  <select class="select" id="settings-default-delay">
+                    <option value="500">0.5s (fast)</option>
+                    <option value="1000">1s</option>
+                    <option value="1500" selected>1.5s (default)</option>
+                    <option value="2000">2s</option>
+                    <option value="3000">3s (polite)</option>
+                  </select>
+                </div>
+                <div>
+                  <label>Default Conflict Strategy</label>
+                  <select class="select" id="settings-default-conflict">
+                    <option value="skip" selected>Skip All</option>
+                    <option value="overwrite">Overwrite All</option>
+                    <option value="keep-both">Keep Both</option>
+                    <option value="ask">Ask Me</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3>Scheduler</h3>
+              <label class="toggle-label">
+                <input type="checkbox" id="settings-scheduler-enabled" checked>
+                <span class="toggle"></span><span>Enable Scheduled Scrapes</span>
+              </label>
+              <label class="toggle-label" style="margin-top:8px">
+                <input type="checkbox" id="settings-notifications" checked>
+                <span class="toggle"></span><span>Desktop Notifications</span>
+              </label>
+            </div>
+
+            <div class="settings-section">
+              <h3>Themes</h3>
+              <div class="theme-picker" id="vc-screen-settings-theme-picker">
+                <div class="theme-picker-group">
+                  <div class="theme-picker-label">WORKSPACE</div>
+                  <div class="theme-chip-row" id="vc-settings-core-row">
+                    <button class="theme-chip" data-core="stealth"><span class="chip-swatch" style="background:#4a9eff"></span>Stealth</button>
+                    <button class="theme-chip" data-core="graphite"><span class="chip-swatch" style="background:#6ea8fe"></span>Graphite</button>
+                    <button class="theme-chip" data-core="frost"><span class="chip-swatch" style="background:#3b82f6"></span>Frost</button>
+                    <button class="theme-chip" data-core="oled"><span class="chip-swatch" style="background:#f5f5f5"></span>OLED</button>
+                  </div>
+                </div>
+                <div class="theme-picker-group">
+                  <div class="theme-picker-label">ATMOSPHERE</div>
+                  <div class="theme-chip-row" id="vc-settings-personality-row">
+                    <button class="theme-chip" data-personality="neutral"><span class="chip-swatch" style="background:#4a9eff"></span>Neutral</button>
+                    <button class="theme-chip" data-personality="cyberpunk"><span class="chip-swatch" style="background:#b44fff"></span>Cyberpunk</button>
+                    <button class="theme-chip" data-personality="terminal"><span class="chip-swatch" style="background:#00ff41"></span>Terminal</button>
+                    <button class="theme-chip" data-personality="threat"><span class="chip-swatch" style="background:#cc0000"></span>Threat</button>
+                  </div>
+                </div>
+                <div class="theme-combo-label" id="vc-settings-theme-combo">Stealth + Neutral</div>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3>Startup</h3>
+              <label class="toggle-label">
+                <input type="checkbox" id="settings-minimise-tray">
+                <span class="toggle"></span><span>Minimise to Tray on Close</span>
+              </label>
+            </div>
+
+            <div class="settings-section">
+              <h3>Sound Effects</h3>
+              <label class="toggle-label">
+                <input type="checkbox" id="settings-sounds">
+                <span class="toggle"></span><span>Enable Sound Effects</span>
+              </label>
+              <div class="form-row" id="volume-row" style="display:none;margin-top:10px">
+                <label>Volume</label>
+                <div class="slider-row">
+                  <input type="range" class="slider" id="settings-volume" min="0" max="100" value="60">
+                  <span id="volume-label">60%</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3>CyberLab Integration</h3>
+              <div id="cyberlab-status" class="cyberlab-status">
+                <div class="cl-indicator" id="cl-indicator">
+                  <span class="dot dot-grey"></span>
+                  <span id="cl-status-text">Checking...</span>
+                </div>
+                <button class="btn btn-outline btn-sm" id="open-cyberlab-btn" style="display:none">Open CyberLab</button>
+              </div>
+              <p class="hint">Shared vault path and theme sync via ~/cybertools-config.json</p>
+            </div>
+
+            <div class="settings-section">
+              <h3>About</h3>
+              <div class="about-row">
+                <div>
+                  <div class="about-title">VAULTCORE</div>
+                  <div class="about-version">Version <span id="about-version">1.0</span> // ItsEliias</div>
+                  <a class="link" href="#" id="about-github">GitHub Repository ↗</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3>Keyboard Shortcuts</h3>
+              <table class="shortcuts-table">
+                <tr><td>Ctrl+Enter</td><td>Start scrape</td></tr>
+                <tr><td>Ctrl+.</td><td>Pause / Resume scrape</td></tr>
+                <tr><td>Ctrl+S</td><td>Stop scrape</td></tr>
+                <tr><td>Ctrl+1/2/3/4</td><td>Switch themes</td></tr>
+                <tr><td>Ctrl+[</td><td>Toggle advanced options</td></tr>
+                <tr><td>Ctrl+L</td><td>Sources screen</td></tr>
+                <tr><td>Ctrl+H</td><td>Vault Health screen</td></tr>
+                <tr><td>Ctrl+,</td><td>Settings screen</td></tr>
+                <tr><td>Ctrl+N</td><td>Clear scrape input</td></tr>
+                <tr><td>Ctrl+B</td><td>Bulk URL import</td></tr>
+                <tr><td>Esc</td><td>Close modal</td></tr>
+              </table>
+            </div>
+
+            <div class="settings-section danger-section">
+              <h3>Reset</h3>
+              <p>Clears all source configurations and state files. Vault content is not affected.</p>
+              <button class="btn btn-danger" id="factory-reset-btn">Factory Reset</button>
+            </div>
+          </div>
+        </section>
+
+      </main>
+
+      <!-- ─── STATUS BAR ─── -->
+      <footer class="statusbar">
+        <span id="status-text">Ready</span>
+        <span class="statusbar-brand">ItsEliias // VAULTCORE v1.0</span>
+        <button class="footer-theme-btn" id="footer-theme-btn" title="Workspace / Atmosphere">◑ <span id="footer-theme-label">Theme</span></button>
+        <div class="footer-theme-panel" id="footer-theme-panel" style="display:none">
+          <div class="ftp-group"><div class="ftp-label">WORKSPACE</div>
+            <div class="ftp-chip-row" id="ftp-core-row">
+              <button class="ftp-chip" data-core="stealth"><span class="ftp-swatch" style="background:#4a9eff"></span>Stealth</button>
+              <button class="ftp-chip" data-core="graphite"><span class="ftp-swatch" style="background:#6ea8fe"></span>Graphite</button>
+              <button class="ftp-chip" data-core="frost"><span class="ftp-swatch" style="background:#3b82f6"></span>Frost</button>
+              <button class="ftp-chip" data-core="oled"><span class="ftp-swatch" style="background:#f5f5f5"></span>OLED</button>
+            </div>
+          </div>
+          <div class="ftp-group"><div class="ftp-label">ATMOSPHERE</div>
+            <div class="ftp-chip-row" id="ftp-personality-row">
+              <button class="ftp-chip" data-personality="neutral"><span class="ftp-swatch" style="background:#4a9eff"></span>Neutral</button>
+              <button class="ftp-chip" data-personality="cyberpunk"><span class="ftp-swatch" style="background:#b44fff"></span>Cyberpunk</button>
+              <button class="ftp-chip" data-personality="terminal"><span class="ftp-swatch" style="background:#00ff41"></span>Terminal</button>
+              <button class="ftp-chip" data-personality="threat"><span class="ftp-swatch" style="background:#cc0000"></span>Threat</button>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+    </div><!-- /main-area -->
+  </div><!-- /app-layout -->
+</div><!-- /main-app -->
+
+<!-- ═══════════════════ MODALS ═══════════════════ -->
+
+<!-- Bulk Import -->
+<div class="modal-overlay" id="modal-bulk" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Bulk URL Import</h3>
+      <button class="modal-close" data-modal="modal-bulk">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>URLs (one per line, up to 500)</label>
+        <textarea class="input textarea" id="bulk-urls" rows="12" placeholder="https://example.com/page1&#10;https://example.com/page2&#10;..."></textarea>
+      </div>
+      <div class="form-row-2">
+        <div>
+          <label>Source Type</label>
+          <select class="select" id="bulk-source-type">
+            <option value="auto">Auto-detect each</option>
+            <option value="website">Website</option>
+            <option value="github">GitHub</option>
+            <option value="youtube">YouTube</option>
+            <option value="reddit">Reddit</option>
+            <option value="medium">Medium/Substack</option>
+            <option value="rss">RSS</option>
+          </select>
+        </div>
+        <div>
+          <label>Conflict Strategy</label>
+          <select class="select" id="bulk-conflict">
+            <option value="skip">Skip All</option>
+            <option value="overwrite">Overwrite All</option>
+            <option value="keep-both">Keep Both</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Output Folder</label>
+        <input type="text" class="input" id="bulk-output-folder" placeholder="BulkImport">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-modal-close="modal-bulk">Cancel</button>
+      <button class="btn btn-primary" id="bulk-start-btn">Start Bulk Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- Conflict Ask Modal -->
+<div class="modal-overlay" id="modal-conflict" style="display:none">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <h3>Conflict Detected</h3>
+      <div class="modal-subtitle" id="conflict-modal-file"></div>
+    </div>
+    <div class="modal-body">
+      <p id="conflict-user-edited-notice" class="warning-text" style="display:none">⚠ You have edited this file since it was scraped. Rescraping may overwrite your edits.</p>
+      <div class="diff-panes">
+        <div class="diff-pane">
+          <div class="pane-header">Existing (in vault)</div>
+          <div class="diff-content" id="diff-existing"></div>
+        </div>
+        <div class="diff-pane">
+          <div class="pane-header">New (from scrape)</div>
+          <div class="diff-content" id="diff-new"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="conflict-skip">Skip</button>
+      <button class="btn btn-outline" id="conflict-keep-both">Keep Both</button>
+      <button class="btn btn-outline" id="conflict-overwrite">Overwrite</button>
+      <button class="btn btn-primary" id="conflict-merge">Merge (edit below)</button>
+    </div>
+    <div id="conflict-merge-area" style="display:none" class="merge-area">
+      <textarea class="input textarea code" id="conflict-merge-content" rows="15"></textarea>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="conflict-save-merge">Save Merged</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Source Modal -->
+<div class="modal-overlay" id="modal-source" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="source-modal-title">Add Source</h3>
+      <button class="modal-close" data-modal="modal-source">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>Name</label>
+        <input type="text" class="input" id="ms-name" placeholder="My Source">
+      </div>
+      <div class="form-row-2">
+        <div>
+          <label>Type</label>
+          <select class="select" id="ms-type">
+            <option value="obsidian-publish">Obsidian Publish</option>
+            <option value="website">Website</option>
+            <option value="github">GitHub</option>
+            <option value="youtube">YouTube</option>
+            <option value="pdf">PDF</option>
+            <option value="reddit">Reddit</option>
+            <option value="twitter">Twitter/X</option>
+            <option value="notion">Notion</option>
+            <option value="medium">Medium/Substack</option>
+            <option value="cve">CVE</option>
+            <option value="rss">RSS</option>
+          </select>
+        </div>
+        <div>
+          <label>URL</label>
+          <input type="url" class="input" id="ms-url" placeholder="https://...">
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Schedule</label>
+        <div class="schedule-row">
+          <select class="select" id="ms-frequency">
+            <option value="manual">Manual Only</option>
+            <option value="daily">Daily</option>
+            <option value="every-3-days">Every 3 Days</option>
+            <option value="weekly">Weekly</option>
+            <option value="every-2-weeks">Every 2 Weeks</option>
+          </select>
+          <input type="time" class="input" id="ms-time" value="09:00">
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Conflict Strategy</label>
+        <select class="select" id="ms-conflict">
+          <option value="skip">Skip All (safe)</option>
+          <option value="overwrite">Overwrite All</option>
+          <option value="keep-both">Keep Both</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-modal-close="modal-source">Cancel</button>
+      <button class="btn btn-primary" id="ms-save-btn">Save Source</button>
+    </div>
+  </div>
+</div>
+
+<!-- Note Splitter Modal -->
+<div class="modal-overlay" id="modal-split" style="display:none">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <h3>Note Splitter</h3>
+      <button class="modal-close" data-modal="modal-split">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>Note to Split</label>
+        <div class="input-with-btn">
+          <input type="text" class="input" id="split-file-path" placeholder="Paste note path or browse" readonly>
+          <button class="btn btn-outline" id="split-browse-btn">Browse</button>
+        </div>
+      </div>
+      <div id="split-headings-preview" class="split-headings" style="display:none">
+        <p>Select split points (H2/H3 headings that become separate notes):</p>
+        <div id="split-heading-list" class="split-heading-list"></div>
+      </div>
+      <div id="split-analyse-row">
+        <button class="btn btn-primary" id="split-analyse-btn">Analyse Note</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-modal-close="modal-split">Cancel</button>
+      <button class="btn btn-primary" id="split-confirm-btn" style="display:none">Split Note</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Dialog -->
+<div class="modal-overlay" id="modal-confirm" style="display:none">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3 id="confirm-title">Confirm</h3>
+    </div>
+    <div class="modal-body">
+      <p id="confirm-message"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="confirm-cancel">Cancel</button>
+      <button class="btn btn-danger" id="confirm-ok">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="renderer.js"></script>
+</body>
+</html>
