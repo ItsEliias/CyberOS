@@ -1,8 +1,10 @@
 import { motion } from 'framer-motion'
+import type { EcosystemEvent } from '../../shared/types'
 
 interface Metric { label: string; value: string | number; highlight?: boolean }
 
 interface AppCardProps {
+  id: string
   name: string
   subtitle: string
   active: boolean
@@ -10,22 +12,71 @@ interface AppCardProps {
   metrics: Metric[]
   execPath?: string
   accentColor?: string
+  eventHistory?: EcosystemEvent[]
 }
 
 function timeAgo(iso?: string): string {
   if (!iso) return 'never'
   const diff = Date.now() - new Date(iso).getTime()
-  if (diff < 60_000)  return 'just now'
-  if (diff < 3600_000) return `${Math.floor(diff / 60_000)}m ago`
+  if (diff < 60_000)    return 'just now'
+  if (diff < 3600_000)  return `${Math.floor(diff / 60_000)}m ago`
   if (diff < 86400_000) return `${Math.floor(diff / 3600_000)}h ago`
   return `${Math.floor(diff / 86400_000)}d ago`
 }
 
-export default function AppCard({ name, subtitle, active, lastActive, metrics, execPath, accentColor = '#4a9eff' }: AppCardProps) {
+// Build 6-bucket bar data (last 6 hours, newest rightmost)
+function buildSparklineBuckets(events: EcosystemEvent[], appName: string): number[] {
+  const now    = Date.now()
+  const counts = Array(6).fill(0)
+  for (const e of events) {
+    // Match by app name (case-insensitive partial) or id prefix
+    const evApp = (e.app || '').toLowerCase()
+    const target = appName.toLowerCase()
+    if (!evApp.includes(target) && !target.includes(evApp)) continue
+    const age = now - new Date(e.timestamp).getTime()
+    const bucket = Math.floor(age / 3_600_000) // which hour ago
+    if (bucket >= 0 && bucket < 6) counts[5 - bucket]++
+  }
+  return counts
+}
+
+function Sparkline({ counts, accentColor }: { counts: number[]; accentColor: string }) {
+  const max    = Math.max(...counts, 1)
+  const BAR_W  = 4
+  const GAP    = 1
+  const MAX_H  = 16
+  const totalW = counts.length * (BAR_W + GAP) - GAP
+
+  return (
+    <svg width={totalW} height={MAX_H} style={{ display: 'block' }} aria-hidden>
+      {counts.map((c, i) => {
+        const barH = Math.max(2, Math.round((c / max) * MAX_H))
+        return (
+          <rect
+            key={i}
+            x={i * (BAR_W + GAP)}
+            y={MAX_H - barH}
+            width={BAR_W}
+            height={barH}
+            fill={accentColor}
+            fillOpacity={0.6}
+            rx={1}
+          />
+        )
+      })}
+    </svg>
+  )
+}
+
+export default function AppCard({
+  id, name, subtitle, active, lastActive, metrics, execPath, accentColor = '#4a9eff', eventHistory = [],
+}: AppCardProps) {
   async function handleLaunch() {
     if (!execPath) return
     await window.electronAPI.launchApp(execPath)
   }
+
+  const sparkBuckets = buildSparklineBuckets(eventHistory, id)
 
   return (
     <motion.div
@@ -51,11 +102,9 @@ export default function AppCard({ name, subtitle, active, lastActive, metrics, e
           <h3 className="text-sm font-semibold text-text">{name}</h3>
           <p className="text-[11px] text-muted mt-0.5">{subtitle}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5">
-            <span className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-success' : 'bg-border'}`} />
-            <span className="text-[10px] text-muted">{active ? 'online' : 'offline'}</span>
-          </div>
+        <div className="flex items-center gap-1.5">
+          <span className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-success' : 'bg-border'}`} />
+          <span className="text-[10px] text-muted">{active ? 'online' : 'offline'}</span>
         </div>
       </div>
 
@@ -69,6 +118,12 @@ export default function AppCard({ name, subtitle, active, lastActive, metrics, e
             </p>
           </div>
         ))}
+      </div>
+
+      {/* Sparkline */}
+      <div className="flex items-center gap-2">
+        <Sparkline counts={sparkBuckets} accentColor={accentColor} />
+        <span className="text-[10px] text-muted/50">6h activity</span>
       </div>
 
       {/* Footer row */}

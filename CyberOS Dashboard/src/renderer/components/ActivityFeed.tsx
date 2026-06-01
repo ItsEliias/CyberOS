@@ -35,9 +35,12 @@ function timeAgo(iso: string): string {
   return `${Math.floor(diff / 3600_000)}h`
 }
 
-function EventRow({ event }: { event: EcosystemEvent }) {
-  const color = APP_COLORS[event.app] || '#8b949e'
-  const label = EVENT_LABELS[event.event] || event.event.replace(/[:.]/g, ' ')
+function EventRow({ event }: { event: EcosystemEvent & { appName?: string; eventType?: string } }) {
+  // Support both schemas: {app, event} (dashboard) and {appName, eventType} (other apps)
+  const appName  = event.app      || event.appName  || 'Unknown'
+  const eventKey = event.event    || event.eventType || ''
+  const color = APP_COLORS[appName] || '#8b949e'
+  const label = EVENT_LABELS[eventKey] || (eventKey ? eventKey.replace(/[:.]/g, ' ') : '—')
 
   return (
     <motion.div
@@ -51,7 +54,7 @@ function EventRow({ event }: { event: EcosystemEvent }) {
       <span className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: color }} />
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-1.5">
-          <span className="text-[11px] font-medium" style={{ color }}>{event.app}</span>
+          <span className="text-[11px] font-medium" style={{ color }}>{appName}</span>
           <span className="text-[11px] text-muted truncate">{label}</span>
         </div>
         {event.data && Object.keys(event.data).length > 0 && (

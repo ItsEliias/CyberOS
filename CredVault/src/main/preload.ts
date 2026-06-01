@@ -2,7 +2,7 @@
 // ItsEliias — contextBridge API surface
 
 import { contextBridge, ipcRenderer } from 'electron'
-import type { Credential, UnlockResult, VaultStats, SearchResult, ExportBackupPayload } from '../shared/types'
+import type { Credential, UnlockResult, VaultStats, SearchResult, ExportBackupPayload, PendingCredential } from '../shared/types'
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // Vault auth
@@ -48,4 +48,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Cross-app search (for completeness, same-process use)
   credvaultSearch: (q: { ip?: string; targetName?: string }): Promise<SearchResult[]>
     => ipcRenderer.invoke('credvault-search', q),
+
+  // Live Queue — pending credentials from ReconDesk
+  pending: {
+    get:     (): Promise<PendingCredential[]>           => ipcRenderer.invoke('pending:get'),
+    approve: (index: number): Promise<PendingCredential | null> => ipcRenderer.invoke('pending:approve', index),
+    dismiss: (index: number): Promise<boolean>          => ipcRenderer.invoke('pending:dismiss', index),
+    on:      (cb: (count: number) => void) => ipcRenderer.on('push:pending-count', (_e, count) => cb(count)),
+    off:     (cb: (count: number) => void) => ipcRenderer.removeListener('push:pending-count', (_e, count) => cb(count)),
+  },
 })

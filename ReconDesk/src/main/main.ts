@@ -1,7 +1,7 @@
 // ReconDesk — main.ts
 // ItsEliias // v1.0 — Electron main process
 
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, shell, dialog } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import os from 'os'
@@ -39,20 +39,41 @@ function defaultData(): ReconDeskData {
   return { targets: [], cards: [], activeTargetId: null, version: APP_VERSION }
 }
 
+function updateOperatorProfile(updates: Record<string, unknown>): void {
+  try {
+    let shared: Record<string, unknown> = {}
+    if (fs.existsSync(CYBERTOOLS_CONFIG)) {
+      try { shared = JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8')) } catch {}
+    }
+    const existing = (shared.operator_profile as Record<string, unknown>) || {}
+    shared.operator_profile = { ...existing, ...updates }
+    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8')
+  } catch {}
+}
+
 function writeStatus(data: ReconDeskData): void {
   try {
     let shared: Record<string, unknown> = {}
     if (fs.existsSync(CYBERTOOLS_CONFIG)) {
       try { shared = JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8')) } catch (_) {}
     }
+    const activeTarget = data.targets.find(t => t.id === data.activeTargetId)
     const status: ReconDeskStatus = {
       active:       true,
       lastActive:   new Date().toISOString(),
       targetCount:  data.targets.length,
       cardCount:    data.cards.length,
-      activeTarget: data.targets.find(t => t.id === data.activeTargetId)?.name
+      activeTarget: activeTarget?.name
     }
     shared.recondesk_status = status
+    const existingCtx = (shared.shared_context as Record<string, unknown>) || {}
+    shared.shared_context = {
+      ...existingCtx,
+      activeTarget: activeTarget?.name,
+      activeIP:     activeTarget?.ip,
+      lastUpdated:  new Date().toISOString(),
+      updatedBy:    'ReconDesk'
+    }
     fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8')
   } catch (e) {
     console.warn('[ReconDesk] status write failed:', (e as Error).message)
@@ -86,7 +107,76 @@ function createWindow(): void {
 // IPC handlers
 ipcMain.handle('data:load', () => loadData())
 
+// Track previous state for change detection
+let _previousData: ReconDeskData | null = null
+
 ipcMain.handle('data:save', (_e, data: ReconDeskData) => {
+  const prev = _previousData
+
+  // Detect new credentials across all targets
+  if (prev) {
+    let credentialDelta = 0
+    for (const target of data.targets) {
+      const prevTarget = prev.targets.find(t => t.id === target.id)
+      const prevCredCount = prevTarget ? prevTarget.credentials.length : 0
+      const currCredCount = target.credentials.length
+      if (currCredCount > prevCredCount) {
+        credentialDelta += currCredCount - prevCredCount
+      }
+    }
+    if (credentialDelta > 0) {
+      try {
+        let shared: Record<string, unknown> = {}
+        if (fs.existsSync(CYBERTOOLS_CONFIG)) {
+          try { shared = JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8')) } catch {}
+        }
+        const profile = (shared.operator_profile as Record<string, unknown>) || {}
+        const current = typeof profile.totalCredentials === 'number' ? profile.totalCredentials : 0
+        updateOperatorProfile({ totalCredentials: current + credentialDelta })
+      } catch {}
+
+      // Collect new credential objects and push to credvault_pending
+      try {
+        const newCreds: Array<{ targetName: string; targetIP: string; username?: string; hash?: string; type: string; service?: string; queuedAt: string }> = []
+        for (const target of data.targets) {
+          const prevTarget = prev.targets.find(t => t.id === target.id)
+          const prevCredIds = new Set(prevTarget?.credentials.map(c => c.id) ?? [])
+          for (const cred of target.credentials) {
+            if (!prevCredIds.has(cred.id)) {
+              newCreds.push({
+                targetName: target.name,
+                targetIP:   target.ip,
+                username:   cred.username,
+                hash:       cred.hash,
+                type:       cred.type ?? 'unknown',
+                service:    cred.service,
+                queuedAt:   new Date().toISOString()
+              })
+            }
+          }
+        }
+        if (newCreds.length > 0) {
+          let shared: Record<string, unknown> = {}
+          if (fs.existsSync(CYBERTOOLS_CONFIG)) {
+            try { shared = JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8')) } catch {}
+          }
+          const existing = (shared.credvault_pending as typeof newCreds) || []
+          shared.credvault_pending = [...existing, ...newCreds]
+          fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8')
+        }
+      } catch {}
+    }
+
+    // Detect targets newly marked completed — emit ecosystem event (don't count labs here)
+    for (const target of data.targets) {
+      const prevTarget = prev.targets.find(t => t.id === target.id)
+      if (target.status === 'completed' && prevTarget && prevTarget.status !== 'completed') {
+        try { emitEvent('ReconDesk', 'target:completed', { name: target.name, ip: target.ip }) } catch {}
+      }
+    }
+  }
+
+  _previousData = data
   saveData(data)
   writeStatus(data)
   return true
@@ -96,9 +186,35 @@ ipcMain.handle('app:version', () => APP_VERSION)
 
 ipcMain.handle('shell:open', (_e, url: string) => shell.openExternal(url))
 
+ipcMain.handle('export-target', async (_e, payload: { json: string; md: string; defaultName: string }) => {
+  const win = BrowserWindow.getFocusedWindow()
+  const { filePath, canceled } = await dialog.showSaveDialog(win!, {
+    title: 'Export Target Data',
+    defaultPath: payload.defaultName,
+    filters: [
+      { name: 'JSON', extensions: ['json'] },
+      { name: 'Markdown', extensions: ['md'] },
+      { name: 'All Files', extensions: ['*'] }
+    ]
+  })
+  if (canceled || !filePath) return { ok: false }
+
+  const isMarkdown = filePath.endsWith('.md')
+  fs.writeFileSync(filePath, isMarkdown ? payload.md : payload.json, 'utf8')
+
+  // Also write the other format alongside
+  const alt = isMarkdown
+    ? filePath.replace(/\.md$/, '.json')
+    : filePath.replace(/\.json$/, '.md')
+  fs.writeFileSync(alt, isMarkdown ? payload.json : payload.md, 'utf8')
+
+  return { ok: true, filePath }
+})
+
 app.whenReady().then(() => {
   createWindow()
   const data = loadData()
+  _previousData = data  // seed so first save doesn't false-positive on existing credentials
   writeStatus(data)
   emitEvent('ReconDesk', 'app:launched', { version: APP_VERSION })
 

@@ -230,6 +230,74 @@ ipcMain.handle('delete-graph', (_e, id: string): void => {
 
 ipcMain.handle('app:version', () => APP_VERSION)
 
+// ─── ReconDesk Sync Handlers ──────────────────────────────────────────────────
+
+ipcMain.handle('recondesk:push-node', (_e, node: {
+  ip: string
+  ports: Array<{ number: number; protocol: string; service?: string; version?: string; state: string }>
+}) => {
+  try {
+    const dataPath = path.join(os.homedir(), '.recondesk', 'data.json')
+    if (!fs.existsSync(dataPath)) return { ok: false, reason: 'ReconDesk data not found' }
+    const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'))
+    const target = data.targets.find((t: any) => t.ip === node.ip)
+    if (!target) return { ok: false, reason: `No ReconDesk target with IP ${node.ip}` }
+
+    const now = new Date().toISOString()
+    let portsAdded = 0
+    for (const port of node.ports) {
+      const exists = target.ports.find((p: any) => p.number === port.number && p.protocol === port.protocol)
+      if (!exists) {
+        target.ports.push({
+          id: `${Date.now()}-${port.number}`,
+          ...port,
+          notes: 'Imported from NetworkMap',
+        })
+        portsAdded++
+      }
+    }
+    target.updatedAt = now
+    fs.writeFileSync(dataPath, JSON.stringify(data, null, 2), 'utf8')
+    return { ok: true, targetName: target.name, portsAdded }
+  } catch (e) {
+    console.error('[NetworkMap] recondesk:push-node failed:', (e as Error).message)
+    return { ok: false, reason: (e as Error).message }
+  }
+})
+
+ipcMain.handle('recondesk:generate-graph', () => {
+  try {
+    const dataPath = path.join(os.homedir(), '.recondesk', 'data.json')
+    if (!fs.existsSync(dataPath)) return null
+    const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'))
+    const config = readCyberToolsConfig()
+    const activeIP = (config['shared_context'] as any)?.activeIP
+    const activeTarget =
+      (activeIP ? data.targets.find((t: any) => t.ip === activeIP) : null) ??
+      data.targets.find((t: any) => t.id === data.activeTargetId)
+    if (!activeTarget) return null
+
+    return {
+      name: `${activeTarget.name} (ReconDesk)`,
+      nodes: [{
+        id: activeTarget.ip,
+        label: activeTarget.name,
+        ip: activeTarget.ip,
+        ports: activeTarget.ports.map((p: any) => ({
+          number:   p.number,
+          protocol: p.protocol,
+          service:  p.service,
+          state:    p.state,
+        })),
+      }],
+      edges: [],
+    }
+  } catch (e) {
+    console.error('[NetworkMap] recondesk:generate-graph failed:', (e as Error).message)
+    return null
+  }
+})
+
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 
 const gotLock = app.requestSingleInstanceLock()

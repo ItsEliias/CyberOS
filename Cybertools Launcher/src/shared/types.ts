@@ -48,6 +48,92 @@ export interface GhostVaultStatus {
   error?: string;
 }
 
+export interface ReconDeskConfig {
+  execPath: string;
+}
+
+export interface ReconDeskStatus {
+  activeTarget?: string | null;
+  targetCount?: number;
+  lastActive?: string | null;
+  error?: string;
+}
+
+export interface SignalBoardConfig {
+  execPath: string;
+}
+
+export interface SignalBoardStatus {
+  feedCount?: number;
+  lastRefresh?: string | null;
+  lastActive?: string | null;
+  error?: string;
+}
+
+export interface CyberOSConfig {
+  execPath: string;
+}
+
+export interface CyberOSStatus {
+  lastActive?: string | null;
+  error?: string;
+}
+
+export interface CredVaultConfig {
+  execPath: string;
+}
+
+export interface CredVaultStatus {
+  active?: boolean;
+  credentialCount?: number;
+  lastActive?: string | null;
+  error?: string;
+}
+
+export interface PlaybookStudioConfig {
+  execPath: string;
+}
+
+export interface PlaybookStudioStatus {
+  active?: boolean;
+  activePlaybook?: string | null;
+  lastActive?: string | null;
+  error?: string;
+}
+
+export interface ReportForgeConfig {
+  execPath: string;
+}
+
+export interface ReportForgeStatus {
+  active?: boolean;
+  reportCount?: number;
+  lastActive?: string | null;
+  error?: string;
+}
+
+export interface TerminalLinkConfig {
+  execPath: string;
+}
+
+export interface TerminalLinkStatus {
+  active?: boolean;
+  commandCount?: number;
+  lastActive?: string | null;
+  error?: string;
+}
+
+export interface NetworkMapConfig {
+  execPath: string;
+}
+
+export interface NetworkMapStatus {
+  active?: boolean;
+  currentGraph?: string | null;
+  lastActive?: string | null;
+  error?: string;
+}
+
 export interface CustomSlot {
   name: string;
   execPath: string;
@@ -61,7 +147,7 @@ export interface LauncherConfig {
 }
 
 export interface ActivityEntry {
-  type: 'cyberlab' | 'vaultscraper' | 'ghostvault' | 'launcher' | 'error';
+  type: 'cyberlab' | 'vaultscraper' | 'ghostvault' | 'recondesk' | 'signalboard' | 'cyberos' | 'credvault' | 'playbookstudio' | 'reportforge' | 'terminallink' | 'networkmap' | 'launcher' | 'error';
   text: string;
   timestamp: string;
 }
@@ -77,6 +163,22 @@ export interface CyberToolsConfig {
   vaultscraper_trigger: unknown;
   ghostvault: GhostVaultConfig;
   ghostvault_status: GhostVaultStatus | null;
+  recondesk: ReconDeskConfig;
+  recondesk_status: ReconDeskStatus | null;
+  signalboard: SignalBoardConfig;
+  signalboard_status: SignalBoardStatus | null;
+  cyberos: CyberOSConfig;
+  cyberos_status: CyberOSStatus | null;
+  credvault?: CredVaultConfig;
+  credvault_status?: CredVaultStatus | null;
+  playbookstudio?: PlaybookStudioConfig;
+  playbookstudio_status?: PlaybookStudioStatus | null;
+  reportforge?: ReportForgeConfig;
+  reportforge_status?: ReportForgeStatus | null;
+  terminallink?: TerminalLinkConfig;
+  terminallink_status?: TerminalLinkStatus | null;
+  networkmap?: NetworkMapConfig;
+  networkmap_status?: NetworkMapStatus | null;
   launcher: LauncherConfig;
 }
 
@@ -123,4 +225,12 @@ export interface EcosystemEvent {
   eventType: string;
   data: Record<string, unknown>;
   timestamp: string;
+}
+
+export interface SearchResult {
+  app: string;
+  type: 'target' | 'port' | 'credential' | 'context';
+  title: string;
+  subtitle: string;
+  score: number;
 }

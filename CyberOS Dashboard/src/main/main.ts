@@ -35,10 +35,12 @@ function isOnline(lastActive?: string): boolean {
 
 function annotateConfig(cfg: EcosystemConfig): EcosystemConfig {
   // Stamp each status with a live `active` flag based on heartbeat age
-  if (cfg.cyberlab_status)   cfg.cyberlab_status.active   = isOnline(cfg.cyberlab_status.lastActive)
+  if (cfg.cyberlab_status)     cfg.cyberlab_status.active     = isOnline(cfg.cyberlab_status.lastActive)
   if (cfg.vaultscraper_status) cfg.vaultscraper_status.active = isOnline(cfg.vaultscraper_status.lastActive)
-  if (cfg.ghostvault_status) cfg.ghostvault_status.active  = isOnline(cfg.ghostvault_status.lastActive)
-  if (cfg.recondesk_status)  cfg.recondesk_status.active   = isOnline(cfg.recondesk_status.lastActive)
+  if (cfg.ghostvault_status)   cfg.ghostvault_status.active   = isOnline(cfg.ghostvault_status.lastActive)
+  if (cfg.recondesk_status)    cfg.recondesk_status.active    = isOnline(cfg.recondesk_status.lastActive)
+  if (cfg.signalboard_status)  cfg.signalboard_status.active  = isOnline(cfg.signalboard_status.lastActive)
+  if (cfg.agenticos_status)    cfg.agenticos_status.active    = isOnline(cfg.agenticos_status.lastActive)
   return cfg
 }
 
@@ -58,12 +60,16 @@ function createWindow(): void {
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 16, y: 16 },
     webPreferences: {
-      preload: path.join(__dirname, '../preload/preload.js'),
+      preload: path.join(__dirname, '../preload/preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false
     }
   })
+
+  // Notify renderer when fullscreen state changes
+  mainWindow.on('enter-full-screen', () => push('window:fullscreen', true))
+  mainWindow.on('leave-full-screen', () => push('window:fullscreen', false))
 
   if (process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
@@ -74,9 +80,15 @@ function createWindow(): void {
 
 // ─── IPC ──────────────────────────────────────────────────────────────────────
 
-ipcMain.handle('ecosystem:state', () => annotateConfig(readConfig()))
-ipcMain.handle('ecosystem:events', () => readEvents().slice(0, 50))
-ipcMain.handle('app:version', () => APP_VERSION)
+ipcMain.handle('ecosystem:state',        () => annotateConfig(readConfig()))
+ipcMain.handle('ecosystem:events',       () => readEvents().slice(0, 50))
+ipcMain.handle('ecosystem:eventHistory', () => readEvents())
+ipcMain.handle('app:version',            () => APP_VERSION)
+
+ipcMain.handle('window:toggleFullscreen', () => {
+  if (!mainWindow) return
+  mainWindow.setFullScreen(!mainWindow.isFullScreen())
+})
 
 ipcMain.handle('app:launch', (_e, execPath: string) => {
   if (!execPath || !fs.existsSync(execPath)) return { ok: false, error: 'Path not found' }

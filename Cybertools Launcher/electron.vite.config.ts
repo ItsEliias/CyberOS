@@ -25,6 +25,14 @@ export default defineConfig({
     plugins: [react()],
     resolve: {
       alias: { '@shared': resolve('src/shared') }
+    },
+    build: {
+      rollupOptions: {
+        input: {
+          index:  resolve('src/renderer/index.html'),
+          search: resolve('src/renderer/search.html'),
+        }
+      }
     }
   }
 });

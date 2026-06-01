@@ -1,20 +1,79 @@
-import { useState, type ReactNode, type CSSProperties } from 'react'
+import { useState, useEffect, type ReactNode, type CSSProperties } from 'react'
 import { useStore } from '../store'
 import CredentialModal from './CredentialModal'
-import type { Credential, ReconTarget, ImportPreviewRow } from '@shared/types'
+import type { Credential, ReconTarget, ImportPreviewRow, PendingCredential } from '@shared/types'
 
 export default function ImportView() {
-  const setCredentials  = useStore(s => s.setCredentials)
-  const setStats        = useStore(s => s.setStats)
+  const setCredentials   = useStore(s => s.setCredentials)
+  const setStats         = useStore(s => s.setStats)
   const addImportHistory = useStore(s => s.addImportHistory)
-  const importHistory   = useStore(s => s.importHistory)
+  const importHistory    = useStore(s => s.importHistory)
+  const setPendingCount  = useStore(s => s.setPendingCount)
 
-  const [targets, setTargets]           = useState<ReconTarget[]>([])
+  const [targets, setTargets]               = useState<ReconTarget[]>([])
   const [loadingTargets, setLoadingTargets] = useState(false)
-  const [preview, setPreview]           = useState<ImportPreviewRow[] | null>(null)
-  const [importDone, setImportDone]     = useState<{ count: number; label: string } | null>(null)
-  const [showManual, setShowManual]     = useState(false)
-  const [statusMsg, setStatusMsg]       = useState('')
+  const [preview, setPreview]               = useState<ImportPreviewRow[] | null>(null)
+  const [importDone, setImportDone]         = useState<{ count: number; label: string } | null>(null)
+  const [showManual, setShowManual]         = useState(false)
+  const [statusMsg, setStatusMsg]           = useState('')
+  const [pendingItems, setPendingItems]     = useState<PendingCredential[]>([])
+  const [pendingWorking, setPendingWorking] = useState(false)
+
+  // Load pending queue on mount and keep in sync with push events
+  useEffect(() => {
+    window.electronAPI.pending.get().then(items => {
+      setPendingItems(items)
+      setPendingCount(items.length)
+    })
+    const handler = (_count: number) => {
+      window.electronAPI.pending.get().then(items => {
+        setPendingItems(items)
+        setPendingCount(items.length)
+      })
+    }
+    window.electronAPI.pending.on(handler)
+    return () => window.electronAPI.pending.off(handler)
+  }, [setPendingCount])
+
+  async function approvePending(index: number) {
+    setPendingWorking(true)
+    try {
+      const cred = await window.electronAPI.pending.approve(index)
+      if (cred) {
+        // Build and save the credential directly
+        await window.electronAPI.addCredential({
+          username:   cred.username ?? '(unknown)',
+          hash:       cred.hash,
+          hashType:   cred.type,
+          service:    cred.service ?? 'Unknown',
+          source:     'ReconDesk live push',
+          targetName: cred.targetName,
+          ip:         cred.targetIP,
+          tags:       [],
+          verified:   false,
+          status:     'active',
+        })
+        addImportHistory({
+          timestamp:   new Date().toISOString(),
+          count:       1,
+          sourceLabel: `Live push from ReconDesk — ${cred.targetName}`
+        })
+        await refreshData()
+      }
+      const updated = await window.electronAPI.pending.get()
+      setPendingItems(updated)
+      setPendingCount(updated.length)
+    } finally {
+      setPendingWorking(false)
+    }
+  }
+
+  async function dismissPending(index: number) {
+    await window.electronAPI.pending.dismiss(index)
+    const updated = await window.electronAPI.pending.get()
+    setPendingItems(updated)
+    setPendingCount(updated.length)
+  }
 
   async function refreshData() {
     const [creds, stats] = await Promise.all([
@@ -99,6 +158,71 @@ export default function ImportView() {
   return (
     <div style={{ padding: 24, maxWidth: 800, display: 'flex', flexDirection: 'column', gap: 24 }}>
       <h2 style={{ fontSize: 16, fontWeight: 600 }}>Import Credentials</h2>
+
+      {/* Live Queue */}
+      {pendingItems.length > 0 && (
+        <Section title={`Live Queue — ${pendingItems.length} pending from ReconDesk`}>
+          <div style={{
+            padding: '10px 14px',
+            marginBottom: 12,
+            background: 'rgba(255,193,7,0.08)',
+            border: '1px solid rgba(255,193,7,0.3)',
+            borderRadius: 6,
+            fontSize: 12,
+            color: '#ffc107',
+            fontWeight: 500,
+          }}>
+            {pendingItems.length} new credential{pendingItems.length !== 1 ? 's' : ''} detected from ReconDesk — approve to encrypt and store
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {pendingItems.map((item, i) => (
+              <div key={i} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '8px 12px',
+                background: 'var(--panel)',
+                border: '1px solid var(--border)',
+                borderRadius: 6,
+                fontSize: 12,
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ fontWeight: 500 }}>{item.targetName}</span>
+                  <span style={{ color: 'var(--text-dim)', marginLeft: 6 }}>{item.targetIP}</span>
+                  {item.username && (
+                    <span style={{ fontFamily: 'monospace', marginLeft: 8, color: 'var(--accent)' }}>
+                      {item.username}
+                    </span>
+                  )}
+                  {item.hash && (
+                    <span style={{ fontFamily: 'monospace', marginLeft: 6, color: 'var(--text-dim)', fontSize: 10 }}>
+                      {item.hash.slice(0, 16)}…
+                    </span>
+                  )}
+                  <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                    {item.type}
+                  </span>
+                </div>
+                <button
+                  className="btn btn-accent"
+                  style={{ fontSize: 11, padding: '4px 10px' }}
+                  disabled={pendingWorking}
+                  onClick={() => approvePending(i)}
+                >
+                  Import &amp; Encrypt
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  style={{ fontSize: 11, padding: '4px 10px' }}
+                  onClick={() => dismissPending(i)}
+                >
+                  Dismiss
+                </button>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
 
       {/* Import from ReconDesk */}
       <Section title="Import from ReconDesk">

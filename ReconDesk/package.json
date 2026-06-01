@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "description": "Recon & attack surface workspace — CYBERTOOLS",
   "main": "out/main/main.js",
-  "type": "module",
   "author": "ItsEliias",
   "license": "MIT",
   "scripts": {
+    "start": "electron-vite dev",
     "dev": "electron-vite dev",
     "build": "electron-vite build && electron-builder",
     "build:mac": "electron-vite build && electron-builder --mac",

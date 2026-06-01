@@ -83,14 +83,29 @@ export default function GraphLibrary({ onOpenGraph }: Props) {
     setLoading(true)
     setError(null)
     try {
-      const nodes = await window.electronAPI.importFromReconDesk()
-      if (nodes.length > 0) {
-        const g = nodesToGraph(nodes, `ReconDesk Import ${new Date().toLocaleDateString()}`)
+      const result = await window.electronAPI.generateFromReconDesk()
+      if (result && result.nodes.length > 0) {
+        // Map ReconDesk port shape → NetworkPort shape
+        const nodes: NetworkNode[] = result.nodes.map((n: any) => ({
+          id:       n.ip,
+          ip:       n.ip,
+          hostname: n.label !== n.ip ? n.label : undefined,
+          status:   'up' as const,
+          ports:    n.ports.map((p: any) => ({
+            port:     p.number,
+            protocol: p.protocol,
+            state:    p.state as 'open' | 'filtered' | 'closed',
+            service:  p.service,
+          })),
+          x: 0,
+          y: 0,
+        }))
+        const g = nodesToGraph(nodes, result.name)
         await window.electronAPI.saveGraph(g)
         reload()
         onOpenGraph(g)
       } else {
-        setError('No active target found in ReconDesk.')
+        setError('No active ReconDesk target found.')
       }
     } catch (e) {
       setError((e as Error).message)

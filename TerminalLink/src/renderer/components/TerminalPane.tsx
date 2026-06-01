@@ -1,8 +1,9 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { Terminal } from 'xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import type { CommandEntry } from '@shared/types';
+import CaptureOverlay from './CaptureOverlay';
 
 const TERMINAL_THEME = {
   background:          '#0a0e14',
@@ -29,11 +30,41 @@ interface Props {
 }
 
 export default function TerminalPane({ paneId, paneNumber, active, onCommand, onFocus }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const termRef      = useRef<Terminal | null>(null);
-  const fitRef       = useRef<FitAddon | null>(null);
-  const inputBufRef  = useRef('');
-  const deadRef      = useRef(false);
+  const containerRef  = useRef<HTMLDivElement>(null);
+  const termRef       = useRef<Terminal | null>(null);
+  const fitRef        = useRef<FitAddon | null>(null);
+  const inputBufRef   = useRef('');
+  const deadRef       = useRef(false);
+  const [captureData, setCaptureData] = useState<string | null>(null);
+
+  const captureTerminal = useCallback((): string | null => {
+    const terminal = termRef.current;
+    if (!terminal) return null;
+
+    const buffer = terminal.buffer.active;
+    const lines: string[] = [];
+    for (let i = 0; i < buffer.length; i++) {
+      lines.push(buffer.getLine(i)?.translateToString(true) ?? '');
+    }
+    // Remove trailing empty lines
+    while (lines.length > 0 && lines[lines.length - 1].trim() === '') lines.pop();
+
+    const canvas = document.createElement('canvas');
+    const fontSize   = 13;
+    const lineHeight = 18;
+    const padding    = 16;
+    canvas.width  = 860;
+    canvas.height = Math.max(lines.length * lineHeight + padding * 2, 200);
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = '#0a0e14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.font      = `${fontSize}px "SF Mono", "Fira Code", monospace`;
+    ctx.fillStyle = '#c9d1d9';
+    lines.forEach((line, i) => {
+      ctx.fillText(line, padding, padding + (i + 1) * lineHeight);
+    });
+    return canvas.toDataURL('image/png');
+  }, []);
 
   // Restart helper
   const restart = useCallback(async () => {
@@ -156,7 +187,7 @@ export default function TerminalPane({ paneId, paneNumber, active, onCommand, on
       }}
       onMouseDown={onFocus}
     >
-      {/* Pane label */}
+      {/* Pane toolbar */}
       <div style={{
         height: 22,
         display: 'flex',
@@ -164,7 +195,6 @@ export default function TerminalPane({ paneId, paneNumber, active, onCommand, on
         padding: '0 8px',
         background: 'var(--panel)',
         borderBottom: '1px solid var(--border)',
-        color: active ? 'var(--accent)' : 'var(--text-dim)',
         fontSize: 11,
         fontFamily: 'inherit',
         userSelect: 'none',
@@ -174,12 +204,50 @@ export default function TerminalPane({ paneId, paneNumber, active, onCommand, on
           width: 6, height: 6, borderRadius: '50%',
           background: active ? 'var(--accent)' : 'var(--text-muted)'
         }} />
-        <span>PANE {paneNumber}</span>
+        <span style={{ color: active ? 'var(--accent)' : 'var(--text-dim)' }}>
+          PANE {paneNumber}
+        </span>
+
+        {/* Spacer */}
+        <div style={{ flex: 1 }} />
+
+        {/* Capture button */}
+        <button
+          title="Capture terminal"
+          onMouseDown={e => e.stopPropagation()}
+          onClick={e => {
+            e.stopPropagation();
+            const data = captureTerminal();
+            if (data) setCaptureData(data);
+          }}
+          style={{
+            fontSize: 10,
+            padding: '1px 7px',
+            borderRadius: 3,
+            background: 'var(--bg)',
+            border: '1px solid var(--border)',
+            color: 'var(--text-muted)',
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            lineHeight: '16px',
+          }}
+        >
+          ⊡ Capture
+        </button>
       </div>
+
       <div
         ref={containerRef}
         style={{ flex: 1, overflow: 'hidden', padding: '4px 2px 2px' }}
       />
+
+      {/* Capture overlay */}
+      {captureData && (
+        <CaptureOverlay
+          imageData={captureData}
+          onClose={() => setCaptureData(null)}
+        />
+      )}
     </div>
   );
 }

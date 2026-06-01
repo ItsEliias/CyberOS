@@ -82,16 +82,54 @@ export default function SettingsPanel({ open, config, onClose, onSave }: Props) 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {tab === 'apps' && (
                 <>
+                  <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--text-dim)' }}>
+                    Core
+                  </div>
                   {[
                     { label: 'CyberLab Companion', field: 'cyberlab',     installed: config?.cyberlab?.installed },
                     { label: 'VaultCore',           field: 'vaultscraper', installed: config?.vaultscraper?.installed },
                     { label: 'GhostVault',          field: 'ghostvault',   installed: false },
+                    { label: 'ReconDesk',           field: 'recondesk',    installed: false },
+                    { label: 'SignalBoard',          field: 'signalboard',  installed: false },
+                    { label: 'CyberOS Dashboard',   field: 'cyberos',      installed: false },
                   ].map(({ label, field, installed }) => {
                     const cfg = (config as Record<string, { execPath?: string; installed?: boolean }> | null)?.[field];
                     return (
                       <div key={field}>
                         <div className="flex items-center gap-2 mb-1">
                           <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${installed ? 'bg-green-400' : 'bg-gray-500'}`} />
+                          <span className="text-xs font-semibold" style={{ color: 'var(--text)' }}>{label}</span>
+                        </div>
+                        <div className="text-[10px] mb-1.5 truncate" style={{ color: 'var(--text-dim)' }}>
+                          {cfg?.execPath || 'Not configured'}
+                        </div>
+                        <button
+                          onClick={() => pickExecPath(field)}
+                          className="w-full text-[11px] py-1 rounded border text-center transition-colors hover:bg-white/5"
+                          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                        >
+                          Locate app…
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                  <div className="text-[10px] uppercase tracking-wider mt-3 mb-1" style={{ color: 'var(--text-dim)' }}>
+                    Tools
+                  </div>
+                  {[
+                    { label: 'CredVault',       field: 'credvault' },
+                    { label: 'PlaybookStudio',  field: 'playbookstudio' },
+                    { label: 'ReportForge',     field: 'reportforge' },
+                    { label: 'TerminalLink',    field: 'terminallink' },
+                    { label: 'NetworkMap',      field: 'networkmap' },
+                  ].map(({ label, field }) => {
+                    const cfg = (config as Record<string, { execPath?: string }> | null)?.[field];
+                    const hasPath = !!cfg?.execPath;
+                    return (
+                      <div key={field}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${hasPath ? 'bg-green-400' : 'bg-gray-500'}`} />
                           <span className="text-xs font-semibold" style={{ color: 'var(--text)' }}>{label}</span>
                         </div>
                         <div className="text-[10px] mb-1.5 truncate" style={{ color: 'var(--text-dim)' }}>

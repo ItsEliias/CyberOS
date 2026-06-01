@@ -5,6 +5,7 @@ import SplashScreen from './components/SplashScreen';
 import Header from './components/Header';
 import StatsStrip from './components/StatsStrip';
 import AppCard from './components/AppCard';
+import NewAppCard from './components/NewAppCard';
 import CustomSlotsGrid from './components/CustomSlotsGrid';
 import ActivityFeed from './components/ActivityFeed';
 import UpdateBanner from './components/UpdateBanner';
@@ -148,9 +149,28 @@ export default function App() {
 
             {activeTab === 'tools' && config && (
               <>
+                {/* ── Core ── */}
+                <div className="text-[10px] uppercase tracking-widest font-semibold px-0.5"
+                  style={{ color: 'var(--text-dim)' }}>
+                  Core
+                </div>
                 <AppCard appKey="cyberlab"     config={config} onLaunch={handleLaunch} />
                 <AppCard appKey="vaultscraper" config={config} onLaunch={handleLaunch} onUpdateNow={handleUpdateNow} />
                 <AppCard appKey="ghostvault"   config={config} onLaunch={handleLaunch} />
+                <AppCard appKey="recondesk"    config={config} onLaunch={handleLaunch} />
+                <AppCard appKey="signalboard"  config={config} onLaunch={handleLaunch} />
+                <AppCard appKey="cyberos"      config={config} onLaunch={handleLaunch} />
+
+                {/* ── Tools ── */}
+                <div className="text-[10px] uppercase tracking-widest font-semibold px-0.5 pt-1"
+                  style={{ color: 'var(--text-dim)' }}>
+                  Tools
+                </div>
+                <NewAppCard appKey="credvault"      config={config} onLaunch={handleLaunch} />
+                <NewAppCard appKey="playbookstudio" config={config} onLaunch={handleLaunch} />
+                <NewAppCard appKey="reportforge"    config={config} onLaunch={handleLaunch} />
+                <NewAppCard appKey="terminallink"   config={config} onLaunch={handleLaunch} />
+                <NewAppCard appKey="networkmap"     config={config} onLaunch={handleLaunch} />
 
                 {slots.length > 0 && (
                   <div className="pt-1">

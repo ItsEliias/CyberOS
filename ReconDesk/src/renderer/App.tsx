@@ -6,17 +6,20 @@ import Footer from './components/Footer'
 import TargetPanel from './components/TargetPanel'
 import AttackBoard from './components/AttackBoard'
 import TargetAssets from './components/TargetAssets'
+import TimelineView from './components/TimelineView'
+import ExportButton from './components/ExportButton'
 
-type Tab = 'board' | 'assets'
+type Tab = 'board' | 'assets' | 'timeline'
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'board',  label: 'Board'  },
-  { id: 'assets', label: 'Assets' },
+  { id: 'board',    label: 'Board'    },
+  { id: 'assets',   label: 'Assets'   },
+  { id: 'timeline', label: 'Timeline' },
 ]
 
 export default function App() {
-  const hydrate    = useStore(s => s.hydrate)
-  const activeId   = useStore(s => s.activeTargetId)
+  const hydrate  = useStore(s => s.hydrate)
+  const activeId = useStore(s => s.activeTargetId)
   const [tab, setTab] = useState<Tab>('board')
 
   useEffect(() => {
@@ -56,11 +59,17 @@ export default function App() {
                 )}
               </button>
             ))}
+            {activeId && (
+              <div className="ml-auto">
+                <ExportButton targetId={activeId} />
+              </div>
+            )}
           </div>
 
           {/* Panel content */}
-          {tab === 'board'  && <AttackBoard />}
-          {tab === 'assets' && <TargetAssets />}
+          {tab === 'board'    && <AttackBoard />}
+          {tab === 'assets'   && <TargetAssets />}
+          {tab === 'timeline' && <TimelineView />}
         </div>
       </div>
 

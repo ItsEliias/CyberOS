@@ -5,10 +5,11 @@ import type { ReconDeskData } from '../shared/types'
 declare global {
   interface Window {
     electronAPI: {
-      loadData:   () => Promise<ReconDeskData>
-      saveData:   (data: ReconDeskData) => Promise<boolean>
-      getVersion: () => Promise<string>
-      openUrl:    (url: string) => Promise<void>
+      loadData:     () => Promise<ReconDeskData>
+      saveData:     (data: ReconDeskData) => Promise<boolean>
+      getVersion:   () => Promise<string>
+      openUrl:      (url: string) => Promise<void>
+      exportTarget: (payload: { json: string; md: string; defaultName: string }) => Promise<{ ok: boolean; filePath?: string }>
     }
   }
 }

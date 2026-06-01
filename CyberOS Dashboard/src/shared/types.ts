@@ -37,8 +37,22 @@ export interface ReconDeskStatus extends AppStatus {
 }
 
 export interface AppRegistration {
-  installed: boolean
+  installed?: boolean
   execPath?: string
+  name?: string
+  version?: string
+}
+
+export interface SignalBoardStatus extends AppStatus {
+  unreadCount?: number
+  lastRefresh?: string
+  topItem?: string
+}
+
+export interface AgenticOSStatus extends AppStatus {
+  activeAgentCount?: number
+  runningTaskCount?: number
+  completedTaskCount?: number
 }
 
 export interface EcosystemConfig {
@@ -48,9 +62,34 @@ export interface EcosystemConfig {
   cyberlab_status?: CyberLabStatus
   vaultscraper?: AppRegistration
   vaultscraper_status?: VaultScraperStatus
+  ghostvault?: AppRegistration
   ghostvault_status?: GhostVaultStatus
+  recondesk?: AppRegistration
   recondesk_status?: ReconDeskStatus
+  signalboard?: AppRegistration
+  signalboard_status?: SignalBoardStatus
+  agenticos?: AppRegistration
+  agenticos_status?: AgenticOSStatus
+  cyberos?: AppRegistration
   launcher?: { activityFeed?: EcosystemEvent[] }
+  operator_profile?: {
+    operatorName?: string
+    totalLabsCompleted?: number
+    totalFlags?: number
+    totalCredentials?: number
+    currentStreak?: number
+    lastActiveDate?: string
+    skillProgress?: Record<string, number>
+    activityDates?: string[]
+  }
+  shared_context?: {
+    activeLab?: string
+    activeTarget?: string
+    activeIP?: string
+    activePlaybook?: string
+    lastUpdated?: string
+    updatedBy?: string
+  }
 }
 
 export interface EcosystemEvent {

@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type {
   CyberToolsConfig, VpnStatus, UpdateInfo,
-  ActivityEntry, CustomSlot, EcosystemEvent
+  ActivityEntry, CustomSlot, EcosystemEvent, SearchResult
 } from '../shared/types.js';
 
 const api = {
@@ -67,4 +67,14 @@ const api = {
 
 contextBridge.exposeInMainWorld('api', api);
 
-export type ElectronAPI = typeof api;
+// ─── Search window bridge ─────────────────────────────────────────────────────
+
+const searchApi = {
+  query: (q: string) => ipcRenderer.invoke('search:query', q) as Promise<SearchResult[]>,
+  close: ()         => ipcRenderer.invoke('search:close') as Promise<void>,
+};
+
+contextBridge.exposeInMainWorld('searchApi', searchApi);
+
+export type ElectronAPI   = typeof api;
+export type SearchAPI     = typeof searchApi;

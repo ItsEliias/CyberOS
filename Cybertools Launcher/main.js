@@ -30,7 +30,7 @@ const {
   addActivityEntry, clearActivityFeed, writeTrigger
 } = require('./config');
 
-const ecosystemBus = require('./ecosystem-bus');
+const ecosystemBus = require('./ecosystem-bus.cjs');
 
 // ─── Single-instance lock ─────────────────────────────────────────────────────
 
@@ -364,18 +364,24 @@ function launchApp(appKey) {
   }
 
   try {
+    let child;
     if (process.platform === 'darwin' && execPath.endsWith('.app')) {
       // Production: open macOS app bundle
-      spawn('open', [execPath, '--args', ...args], { detached: true, stdio: 'ignore' }).unref();
+      child = spawn('open', [execPath, '--args', ...args], { detached: true, stdio: 'ignore' });
     } else if (fs.existsSync(execPath) && fs.statSync(execPath).isDirectory()) {
       // Dev mode: project directory — run `electron .` inside it
       const electronBin = path.join(execPath, 'node_modules', '.bin', 'electron');
       const electronCmd = fs.existsSync(electronBin) ? electronBin : 'electron';
-      spawn(electronCmd, ['.'], { cwd: execPath, detached: true, stdio: 'ignore' }).unref();
+      child = spawn(electronCmd, ['.'], { cwd: execPath, detached: true, stdio: 'ignore' });
     } else {
       // Production executable
-      spawn(execPath, args, { detached: true, stdio: 'ignore' }).unref();
+      child = spawn(execPath, args, { detached: true, stdio: 'ignore' });
     }
+    // Absorb ENOENT / permission errors before unref so they don't throw globally
+    child.on('error', (err) => {
+      console.error(`[launch] spawn error for ${execPath}:`, err.message);
+    });
+    child.unref();
     addActivityEntry({ type: 'launcher', text: `${appName} opened` });
     return true;
   } catch (err) {
@@ -669,7 +675,7 @@ app.whenReady().then(() => {
   // Auto-detect dev project directories if execPath is empty
   const PROJECT_BASE = path.join(os.homedir(), 'Documents', 'Claude', 'Projects');
   const AUTO_DETECT = [
-    { key: 'cyberlab',     dir: 'Cyberlab Compaion' },
+    { key: 'cyberlab',     dir: 'Cyberlab Companion' },
     { key: 'vaultscraper', dir: 'VaultCore' },
     { key: 'ghostvault',   dir: 'GhostVault' },
   ];

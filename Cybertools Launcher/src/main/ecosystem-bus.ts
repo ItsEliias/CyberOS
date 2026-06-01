@@ -48,6 +48,10 @@ export function emitEvent(appName: string, eventType: string, data: Record<strin
 }
 
 export function watchEvents(callback: (events: EcosystemEvent[]) => void): () => void {
+  // Close any previous watcher before starting a new one
+  if (watchDebounceTimer) { clearTimeout(watchDebounceTimer); watchDebounceTimer = null; }
+  if (fsWatcher) { fsWatcher.close(); fsWatcher = null; }
+
   try {
     const dir = path.dirname(EVENTS_PATH);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -64,7 +68,7 @@ export function watchEvents(callback: (events: EcosystemEvent[]) => void): () =>
   }
 
   return () => {
-    if (watchDebounceTimer) clearTimeout(watchDebounceTimer);
+    if (watchDebounceTimer) { clearTimeout(watchDebounceTimer); watchDebounceTimer = null; }
     if (fsWatcher) { fsWatcher.close(); fsWatcher = null; }
   };
 }

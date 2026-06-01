@@ -1,6 +1,6 @@
 import {
   app, BrowserWindow, Tray, Menu, nativeImage,
-  ipcMain, dialog, Notification, screen, shell
+  ipcMain, dialog, Notification, screen, shell, globalShortcut
 } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -32,6 +32,7 @@ app.on('second-instance', () => {
 
 let tray:           Tray | null           = null;
 let panelWindow:    BrowserWindow | null  = null;
+let searchWindow:   BrowserWindow | null  = null;
 let isPanelVisible  = false;
 let isDialogOpen    = false;
 let lastHideTime    = 0;
@@ -231,6 +232,162 @@ function togglePanel(trayBounds: Electron.Rectangle): void {
   }
 }
 
+// ─── Unified Search window ────────────────────────────────────────────────────
+
+function createSearchWindow(): void {
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+  const SW = 640, SH = 480;
+
+  searchWindow = new BrowserWindow({
+    width       : SW,
+    height      : SH,
+    x           : Math.round((width  - SW) / 2),
+    y           : Math.round((height - SH) / 2),
+    show        : false,
+    frame       : false,
+    resizable   : false,
+    movable     : false,
+    minimizable : false,
+    maximizable : false,
+    skipTaskbar : true,
+    alwaysOnTop : true,
+    transparent : false,
+    hasShadow   : true,
+    backgroundColor: '#0e1117',
+    title       : 'CyberOS Search',
+    webPreferences: {
+      preload         : path.join(__dirname, '..', 'preload', 'preload.cjs'),
+      contextIsolation: true,
+      nodeIntegration : false,
+      sandbox         : false,
+      devTools        : process.env.NODE_ENV === 'development'
+    }
+  });
+
+  if (process.env.NODE_ENV === 'development') {
+    searchWindow.loadURL('http://localhost:5173/search.html');
+  } else {
+    searchWindow.loadFile(path.join(__dirname, '..', 'renderer', 'search.html'));
+  }
+
+  searchWindow.on('blur', () => {
+    if (searchWindow && !searchWindow.isDestroyed()) searchWindow.hide();
+  });
+
+  searchWindow.webContents.on('will-navigate', e => e.preventDefault());
+  searchWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+}
+
+function showSearchWindow(): void {
+  if (!searchWindow || searchWindow.isDestroyed()) createSearchWindow();
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+  const SW = 640;
+  const x  = Math.round((width - SW) / 2);
+  searchWindow!.setPosition(x, Math.round(height * 0.22), false);
+  searchWindow!.setAlwaysOnTop(true);
+  searchWindow!.show();
+  searchWindow!.focus();
+  searchWindow!.webContents.send('search-shown');
+}
+
+// ─── Search IPC ───────────────────────────────────────────────────────────────
+
+interface SearchResult {
+  app: string;
+  type: 'target' | 'port' | 'credential' | 'context';
+  title: string;
+  subtitle: string;
+  score: number;
+}
+
+function scoreText(field: string, query: string): number {
+  const f = field.toLowerCase();
+  const q = query.toLowerCase();
+  if (f === q)           return 100;
+  if (f.startsWith(q))   return 70;
+  if (f.includes(q))     return 40;
+  return 0;
+}
+
+function scoreFields(fields: string[], query: string): number {
+  return fields.reduce((sum, f) => sum + scoreText(f, query), 0);
+}
+
+function searchReconDesk(query: string): SearchResult[] {
+  const dataPath = path.join(os.homedir(), '.recondesk', 'data.json');
+  if (!fs.existsSync(dataPath)) return [];
+  try {
+    const raw  = fs.readFileSync(dataPath, 'utf-8');
+    const data = JSON.parse(raw) as {
+      targets?: Array<{
+        name?: string; ip?: string; os?: string;
+        ports?: Array<{ number?: number; service?: string; version?: string }>;
+        credentials?: Array<{ username?: string; service?: string }>;
+      }>;
+    };
+    const results: SearchResult[] = [];
+    for (const target of data.targets || []) {
+      const tName = target.name || '';
+      const tIp   = target.ip   || '';
+      const tOs   = target.os   || '';
+      const s = scoreFields([tName, tIp, tOs], query);
+      if (s > 0) {
+        results.push({ app: 'ReconDesk', type: 'target', title: tName, subtitle: `${tIp}${tOs ? ' · ' + tOs : ''}`, score: s });
+      }
+      for (const port of target.ports || []) {
+        const svc  = port.service || '';
+        const ver  = port.version || '';
+        const ps   = scoreFields([String(port.number || ''), svc, ver], query);
+        if (ps > 0) {
+          results.push({ app: 'ReconDesk', type: 'port', title: `${port.number}/${svc || 'unknown'}`, subtitle: `${tName}${ver ? ' · ' + ver : ''}`, score: ps });
+        }
+      }
+      for (const cred of target.credentials || []) {
+        const uname = cred.username || '';
+        const svc2  = cred.service  || '';
+        const cs    = scoreFields([uname, svc2], query);
+        if (cs > 0) {
+          results.push({ app: 'ReconDesk', type: 'credential', title: uname || 'credential', subtitle: `${tName}${svc2 ? ' · ' + svc2 : ''}`, score: cs });
+        }
+      }
+    }
+    return results;
+  } catch { return []; }
+}
+
+function searchCyberContext(query: string): SearchResult[] {
+  const cfgPath = path.join(os.homedir(), 'cybertools-config.json');
+  if (!fs.existsSync(cfgPath)) return [];
+  try {
+    const raw  = fs.readFileSync(cfgPath, 'utf-8');
+    const data = JSON.parse(raw) as Record<string, unknown>;
+    const results: SearchResult[] = [];
+    const ctx = (data.shared_context || data) as Record<string, unknown>;
+    for (const [key, val] of Object.entries(ctx)) {
+      const strVal = typeof val === 'string' ? val : JSON.stringify(val);
+      const s = scoreFields([key, strVal], query);
+      if (s > 0) {
+        results.push({ app: 'Launcher', type: 'context', title: key, subtitle: String(strVal).slice(0, 80), score: s });
+      }
+    }
+    return results;
+  } catch { return []; }
+}
+
+function setupSearchIPC(): void {
+  ipcMain.handle('search:query', (_e, query: string): SearchResult[] => {
+    if (!query || typeof query !== 'string' || !query.trim()) return [];
+    const q       = query.trim().slice(0, 200);
+    const all     = [...searchReconDesk(q), ...searchCyberContext(q)];
+    return all.sort((a, b) => b.score - a.score).slice(0, 30);
+  });
+
+  ipcMain.handle('search:close', () => {
+    if (searchWindow && !searchWindow.isDestroyed()) searchWindow.hide();
+    return true;
+  });
+}
+
 // ─── Tray setup ───────────────────────────────────────────────────────────────
 
 function setupTray(): void {
@@ -254,6 +411,43 @@ function refreshContextMenu(): void {
     {
       label: 'Open VaultCore', accelerator: 'CommandOrControl+2',
       click: () => launchApp('vaultscraper')
+    },
+    {
+      label: 'Open GhostVault', accelerator: 'CommandOrControl+3',
+      click: () => launchApp('ghostvault')
+    },
+    {
+      label: 'Open ReconDesk', accelerator: 'CommandOrControl+4',
+      click: () => launchApp('recondesk')
+    },
+    {
+      label: 'Open SignalBoard', accelerator: 'CommandOrControl+5',
+      click: () => launchApp('signalboard')
+    },
+    {
+      label: 'Open CyberOS Dashboard', accelerator: 'CommandOrControl+6',
+      click: () => launchApp('cyberos')
+    },
+    { type: 'separator' },
+    {
+      label: 'Open CredVault',
+      click: () => launchApp('credvault')
+    },
+    {
+      label: 'Open PlaybookStudio',
+      click: () => launchApp('playbookstudio')
+    },
+    {
+      label: 'Open ReportForge',
+      click: () => launchApp('reportforge')
+    },
+    {
+      label: 'Open TerminalLink',
+      click: () => launchApp('terminallink')
+    },
+    {
+      label: 'Open NetworkMap',
+      click: () => launchApp('networkmap')
     },
     { type: 'separator' },
     {
@@ -300,6 +494,30 @@ function launchApp(appKey: string): boolean {
   } else if (appKey === 'ghostvault') {
     execPath = config.ghostvault?.execPath || '';
     appName  = 'GhostVault';
+  } else if (appKey === 'recondesk') {
+    execPath = config.recondesk?.execPath || '';
+    appName  = 'ReconDesk';
+  } else if (appKey === 'signalboard') {
+    execPath = config.signalboard?.execPath || '';
+    appName  = 'SignalBoard';
+  } else if (appKey === 'cyberos') {
+    execPath = config.cyberos?.execPath || '';
+    appName  = 'CyberOS Dashboard';
+  } else if (appKey === 'credvault') {
+    execPath = (config as Record<string,{execPath?:string}>).credvault?.execPath || '';
+    appName  = 'CredVault';
+  } else if (appKey === 'playbookstudio') {
+    execPath = (config as Record<string,{execPath?:string}>).playbookstudio?.execPath || '';
+    appName  = 'PlaybookStudio';
+  } else if (appKey === 'reportforge') {
+    execPath = (config as Record<string,{execPath?:string}>).reportforge?.execPath || '';
+    appName  = 'ReportForge';
+  } else if (appKey === 'terminallink') {
+    execPath = (config as Record<string,{execPath?:string}>).terminallink?.execPath || '';
+    appName  = 'TerminalLink';
+  } else if (appKey === 'networkmap') {
+    execPath = (config as Record<string,{execPath?:string}>).networkmap?.execPath || '';
+    appName  = 'NetworkMap';
   } else if (appKey.startsWith('custom_')) {
     const idx  = parseInt(appKey.replace('custom_', ''), 10);
     const slot = config.launcher?.customSlots?.[idx];
@@ -316,15 +534,33 @@ function launchApp(appKey: string): boolean {
   }
 
   try {
+    let child;
+    // Strip dev env vars so spawned apps load their own built renderer, not localhost:5173
+    const childEnv = { ...process.env, NODE_ENV: 'production' };
+    delete (childEnv as Record<string, string | undefined>)['ELECTRON_RENDERER_URL'];
     if (process.platform === 'darwin' && execPath.endsWith('.app')) {
-      spawn('open', [execPath, '--args', ...args], { detached: true, stdio: 'ignore' }).unref();
+      child = spawn('open', [execPath, '--args', ...args], { detached: true, stdio: 'ignore' });
     } else if (fs.statSync(execPath).isDirectory()) {
-      const electronBin = path.join(execPath, 'node_modules', '.bin', 'electron');
-      const electronCmd = fs.existsSync(electronBin) ? electronBin : 'electron';
-      spawn(electronCmd, ['.'], { cwd: execPath, detached: true, stdio: 'ignore' }).unref();
+      // .bin/electron is a shell script — spawn() won't execute shebangs without shell:true.
+      // Use the real Electron binary and pass the app directory as the argument.
+      let electronBin: string;
+      if (process.platform === 'darwin') {
+        electronBin = path.join(execPath, 'node_modules', 'electron', 'dist', 'Electron.app', 'Contents', 'MacOS', 'Electron');
+      } else if (process.platform === 'win32') {
+        electronBin = path.join(execPath, 'node_modules', 'electron', 'dist', 'electron.exe');
+      } else {
+        electronBin = path.join(execPath, 'node_modules', 'electron', 'dist', 'electron');
+      }
+      const electronExec = fs.existsSync(electronBin) ? electronBin : 'electron';
+      child = spawn(electronExec, [execPath], { detached: true, stdio: 'ignore', env: childEnv });
     } else {
-      spawn(execPath, args, { detached: true, stdio: 'ignore' }).unref();
+      child = spawn(execPath, args, { detached: true, stdio: 'ignore', env: childEnv });
     }
+    // Absorb spawn errors (e.g. ENOENT) before unref so they don't throw globally
+    child.on('error', (err) => {
+      console.error(`[launch] spawn error for ${execPath}:`, err.message);
+    });
+    child.unref();
     addActivityEntry({ type: 'launcher', text: `${appName} opened` });
     return true;
   } catch (err) {
@@ -373,6 +609,43 @@ function checkNotifications(prev: typeof currentConfig, curr: typeof currentConf
   if (!prevGVExec && currGVExec) {
     notify('GhostVault connected to launcher', '', () => launchApp('ghostvault'));
     addActivityEntry({ type: 'launcher', text: 'GhostVault registered with launcher' });
+  }
+
+  const prevRDExec = prev.recondesk?.execPath || '';
+  const currRDExec = curr.recondesk?.execPath || '';
+  if (!prevRDExec && currRDExec) {
+    notify('ReconDesk connected to launcher', '', () => launchApp('recondesk'));
+    addActivityEntry({ type: 'launcher', text: 'ReconDesk registered with launcher' });
+  }
+
+  const prevSBExec = prev.signalboard?.execPath || '';
+  const currSBExec = curr.signalboard?.execPath || '';
+  if (!prevSBExec && currSBExec) {
+    notify('SignalBoard connected to launcher', '', () => launchApp('signalboard'));
+    addActivityEntry({ type: 'launcher', text: 'SignalBoard registered with launcher' });
+  }
+
+  const prevCOExec = prev.cyberos?.execPath || '';
+  const currCOExec = curr.cyberos?.execPath || '';
+  if (!prevCOExec && currCOExec) {
+    notify('CyberOS Dashboard connected to launcher', '', () => launchApp('cyberos'));
+    addActivityEntry({ type: 'launcher', text: 'CyberOS Dashboard registered with launcher' });
+  }
+
+  const p = prev as Record<string,{execPath?:string}|undefined>;
+  const c = curr  as Record<string,{execPath?:string}|undefined>;
+  const newApps: Array<[string,string,string]> = [
+    ['credvault',      'CredVault',      'credvault'],
+    ['playbookstudio', 'PlaybookStudio', 'playbookstudio'],
+    ['reportforge',    'ReportForge',    'reportforge'],
+    ['terminallink',   'TerminalLink',   'terminallink'],
+    ['networkmap',     'NetworkMap',     'networkmap'],
+  ];
+  for (const [key, label, appKey] of newApps) {
+    if (!p[key]?.execPath && c[key]?.execPath) {
+      notify(`${label} connected to launcher`, '', () => launchApp(appKey));
+      addActivityEntry({ type: 'launcher', text: `${label} registered with launcher` });
+    }
   }
 
   const prevFindings = prev.cyberlab_status ? (prev.cyberlab_status.findingsCount || 0) : 0;
@@ -558,19 +831,28 @@ function setupIPC(): void {
 // ─── App lifecycle ────────────────────────────────────────────────────────────
 
 app.whenReady().then(() => {
-  const PROJECT_BASE = path.join(os.homedir(), 'Documents', 'Claude', 'Projects');
+  const PROJECT_BASE  = path.join(os.homedir(), 'Documents', 'Claude', 'Projects');
+  const CYBER_APPS    = path.join(PROJECT_BASE, 'Cyber Apps');
   const AUTO_DETECT = [
-    { key: 'cyberlab',     dir: 'Cyberlab Compaion' },
-    { key: 'vaultscraper', dir: 'VaultCore' },
-    { key: 'ghostvault',   dir: 'GhostVault' },
+    { key: 'cyberlab',       base: CYBER_APPS, dir: 'Cyberlab Compaion' },
+    { key: 'vaultscraper',  base: CYBER_APPS, dir: 'VaultCore' },
+    { key: 'ghostvault',    base: CYBER_APPS, dir: 'GhostVault' },
+    { key: 'recondesk',     base: CYBER_APPS, dir: 'ReconDesk' },
+    { key: 'signalboard',   base: CYBER_APPS, dir: 'SignalBoard' },
+    { key: 'cyberos',       base: CYBER_APPS, dir: 'CyberOS Dashboard' },
+    { key: 'credvault',     base: CYBER_APPS, dir: 'CredVault' },
+    { key: 'playbookstudio',base: CYBER_APPS, dir: 'PlaybookStudio' },
+    { key: 'reportforge',   base: CYBER_APPS, dir: 'ReportForge' },
+    { key: 'terminallink',  base: CYBER_APPS, dir: 'TerminalLink' },
+    { key: 'networkmap',    base: CYBER_APPS, dir: 'NetworkMap' },
   ];
   try {
     const cfg = readConfig();
     let changed = false;
-    for (const { key, dir } of AUTO_DETECT) {
+    for (const { key, base, dir } of AUTO_DETECT) {
       const appCfg = (cfg as Record<string, unknown>)[key] as { execPath?: string } | undefined;
-      if (appCfg && !appCfg.execPath) {
-        const detected = path.join(PROJECT_BASE, dir);
+      if (appCfg && (!appCfg.execPath || !fs.existsSync(appCfg.execPath))) {
+        const detected = path.join(base, dir);
         if (fs.existsSync(detected)) {
           appCfg.execPath = detected;
           changed = true;
@@ -585,7 +867,11 @@ app.whenReady().then(() => {
 
   setupTray();
   createPanelWindow();
+  createSearchWindow();
   setupIPC();
+  setupSearchIPC();
+
+  globalShortcut.register('CommandOrControl+Shift+F', () => showSearchWindow());
 
   configPollTimer = setInterval(pollConfig, 5000);
   pollConfig();
@@ -615,6 +901,7 @@ app.on('window-all-closed', e => e.preventDefault());
 app.on('before-quit', () => {
   if (configPollTimer) clearInterval(configPollTimer);
   if (vpnCheckTimer)   clearInterval(vpnCheckTimer);
+  globalShortcut.unregisterAll();
 });
 
 app.on('activate', () => {

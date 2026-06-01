@@ -1,9 +1,10 @@
 import { app, BrowserWindow, ipcMain, globalShortcut } from 'electron';
 import path from 'path';
+import os from 'os';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import fs from 'fs';
-import type { CommandEntry } from '../shared/types.js';
+import type { CommandEntry, CapturePayload } from '../shared/types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const _require   = createRequire(import.meta.url);
@@ -236,3 +237,41 @@ ipcMain.handle('log-commands', (_evt, { commands }: { commands: CommandEntry[] }
 
 // ─── IPC: Version ─────────────────────────────────────────────────────────────
 ipcMain.handle('get-version', () => app.getVersion());
+
+// ─── IPC: Capture save ────────────────────────────────────────────────────────
+ipcMain.handle('capture:save', async (_e, payload: CapturePayload) => {
+  try {
+    const base64 = payload.imageData.replace(/^data:image\/png;base64,/, '');
+    const buffer = Buffer.from(base64, 'base64');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `capture-${timestamp}.png`;
+
+    let savePath: string;
+    if (payload.destination === 'ghostvault') {
+      const configPath = path.join(os.homedir(), 'cybertools-config.json');
+      let activeLab = 'Unknown';
+      try {
+        const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        activeLab = (cfg.shared_context as Record<string, string>)?.activeLab ?? 'Unknown';
+      } catch { /* fall through to default */ }
+      const vaultBase = path.join(
+        os.homedir(), 'Documents', 'CyberOS-Vault', 'CyberLab', activeLab, 'screenshots'
+      );
+      fs.mkdirSync(vaultBase, { recursive: true });
+      savePath = path.join(vaultBase, filename);
+    } else {
+      savePath = path.join(os.homedir(), 'Downloads', filename);
+    }
+
+    if (payload.label.trim()) {
+      fs.writeFileSync(savePath.replace('.png', '.txt'), payload.label, 'utf8');
+    }
+    fs.writeFileSync(savePath, buffer);
+
+    emitEcosystemEvent('capture:saved', { destination: payload.destination, path: savePath });
+    return { ok: true, path: savePath };
+  } catch (e) {
+    console.error('[terminallink] capture:save error:', (e as Error).message);
+    return { ok: false, path: '' };
+  }
+});

@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { CommandEntry, SessionContext } from '../shared/types.js';
+import type { CommandEntry, SessionContext, CapturePayload, CaptureResult } from '../shared/types.js';
 
 const api = {
   // ── PTY ───────────────────────────────────────────────────────────────────
@@ -37,6 +37,9 @@ const api = {
 
   getVersion: (): Promise<string> =>
     ipcRenderer.invoke('get-version'),
+
+  saveCapture: (payload: CapturePayload): Promise<CaptureResult> =>
+    ipcRenderer.invoke('capture:save', payload),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', api);

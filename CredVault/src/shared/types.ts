@@ -96,3 +96,13 @@ export interface SearchResult {
   ip?: string
   targetName?: string
 }
+
+export interface PendingCredential {
+  targetName: string
+  targetIP: string
+  username?: string
+  hash?: string
+  type: string
+  service?: string
+  queuedAt: string
+}

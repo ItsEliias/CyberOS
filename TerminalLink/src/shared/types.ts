@@ -28,3 +28,14 @@ export interface EcosystemEvent {
   timestamp: string
   id: string
 }
+
+export interface CapturePayload {
+  imageData: string                        // base64 data URL
+  label: string
+  destination: 'ghostvault' | 'downloads'
+}
+
+export interface CaptureResult {
+  ok: boolean
+  path: string
+}

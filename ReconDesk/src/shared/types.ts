@@ -7,6 +7,13 @@ export type CredType = 'plaintext' | 'hash' | 'key' | 'token'
 export type AttackStage = 'recon' | 'enum' | 'exploit' | 'post' | 'privesc' | 'loot'
 export type CardStatus = 'todo' | 'inprogress' | 'done' | 'blocked'
 
+export interface TimelineEvent {
+  id: string
+  timestamp: string
+  type: 'card' | 'asset' | 'status'
+  description: string
+}
+
 export interface Port {
   id: string
   number: number
@@ -38,6 +45,7 @@ export interface Target {
   notes?: string
   ports: Port[]
   credentials: Credential[]
+  timeline: TimelineEvent[]
   createdAt: string
   updatedAt: string
 }
@@ -51,6 +59,7 @@ export interface AttackCard {
   stage: AttackStage
   status: CardStatus
   findings: string[]
+  linkedAssets?: string[]
   createdAt: string
   updatedAt: string
 }

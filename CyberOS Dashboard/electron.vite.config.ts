@@ -9,7 +9,7 @@ export default defineConfig({
   },
   preload: {
     plugins: [externalizeDepsPlugin()],
-    build: { rollupOptions: { input: { preload: resolve('src/main/preload.ts') } } }
+    build: { rollupOptions: { input: { preload: resolve('src/main/preload.ts') }, output: { format: 'cjs' } } }
   },
   renderer: {
     root: resolve('src/renderer'),

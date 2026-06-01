@@ -12,7 +12,7 @@ import {
 } from './vault-crypto'
 import type {
   VaultData, Credential, CredVaultStatus,
-  UnlockResult, SearchResult, ExportBackupPayload
+  UnlockResult, SearchResult, ExportBackupPayload, PendingCredential
 } from '../shared/types'
 
 const APP_VERSION       = '1.0.0'
@@ -23,6 +23,7 @@ let sessionKey: string | null = null
 let vaultData: VaultData | null = null
 let mainWindow: BrowserWindow | null = null
 let statusInterval: NodeJS.Timeout | null = null
+let pendingInterval: NodeJS.Timeout | null = null
 let lockTimer: NodeJS.Timeout | null = null
 
 // Lockout state
@@ -331,6 +332,49 @@ ipcMain.handle('credvault-search', (_e, query: { ip?: string; targetName?: strin
     .map(c => ({ id: c.id, service: c.service, username: c.username, ip: c.ip, targetName: c.targetName }))
 })
 
+// Live Queue: pending credentials from ReconDesk
+
+function readPending(): PendingCredential[] {
+  try {
+    if (!fs.existsSync(CYBERTOOLS_CONFIG)) return []
+    const cfg = JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8'))
+    return (cfg?.credvault_pending as PendingCredential[]) ?? []
+  } catch {
+    return []
+  }
+}
+
+function writePending(items: PendingCredential[]): void {
+  try {
+    let shared: Record<string, unknown> = {}
+    if (fs.existsSync(CYBERTOOLS_CONFIG)) {
+      try { shared = JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8')) } catch {}
+    }
+    shared.credvault_pending = items
+    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8')
+  } catch (e) {
+    console.warn('[CredVault] writePending failed:', (e as Error).message)
+  }
+}
+
+ipcMain.handle('pending:get', (): PendingCredential[] => readPending())
+
+ipcMain.handle('pending:approve', (_e, index: number): PendingCredential | null => {
+  const items = readPending()
+  if (index < 0 || index >= items.length) return null
+  const [approved] = items.splice(index, 1)
+  writePending(items)
+  return approved
+})
+
+ipcMain.handle('pending:dismiss', (_e, index: number): boolean => {
+  const items = readPending()
+  if (index < 0 || index >= items.length) return false
+  items.splice(index, 1)
+  writePending(items)
+  return true
+})
+
 ipcMain.handle('app:version', () => APP_VERSION)
 
 // App lifecycle
@@ -353,11 +397,17 @@ if (!app.requestSingleInstanceLock()) {
     statusInterval = setInterval(() => {
       writeStatus(sessionKey === null, getCredCount())
     }, 10_000)
+
+    pendingInterval = setInterval(() => {
+      const count = readPending().length
+      mainWindow?.webContents.send('push:pending-count', count)
+    }, 8_000)
   })
 
   app.on('window-all-closed', () => {
-    if (statusInterval) clearInterval(statusInterval)
-    if (lockTimer)      clearTimeout(lockTimer)
+    if (statusInterval)  clearInterval(statusInterval)
+    if (pendingInterval) clearInterval(pendingInterval)
+    if (lockTimer)       clearTimeout(lockTimer)
     lockVault('app closed')
     if (process.platform !== 'darwin') app.quit()
   })

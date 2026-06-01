@@ -3,16 +3,19 @@ import { parseCyberlabStatus, parseVaultscraperStatus, formatRelativeTime, forma
 import type { CyberToolsConfig } from '@shared/types';
 
 interface Props {
-  appKey: 'cyberlab' | 'vaultscraper' | 'ghostvault';
+  appKey: 'cyberlab' | 'vaultscraper' | 'ghostvault' | 'recondesk' | 'signalboard' | 'cyberos';
   config: CyberToolsConfig;
   onLaunch: (key: string) => void;
   onUpdateNow?: () => void;
 }
 
 const APP_INFO = {
-  cyberlab    : { name: 'CyberLab Companion', icon: '🧪', abbr: 'CL' },
-  vaultscraper: { name: 'VaultCore',          icon: '🗄', abbr: 'VC' },
-  ghostvault  : { name: 'GhostVault',         icon: '👻', abbr: 'GV' },
+  cyberlab    : { name: 'CyberLab Companion',  icon: '🧪', abbr: 'CL' },
+  vaultscraper: { name: 'VaultCore',           icon: '🗄', abbr: 'VC' },
+  ghostvault  : { name: 'GhostVault',          icon: '👻', abbr: 'GV' },
+  recondesk   : { name: 'ReconDesk',           icon: '🎯', abbr: 'RD' },
+  signalboard : { name: 'SignalBoard',          icon: '📡', abbr: 'SB' },
+  cyberos     : { name: 'CyberOS Dashboard',   icon: '🖥', abbr: 'OS' },
 } as const;
 
 function DotStatus({ color, glow }: { color: string; glow?: string }) {
@@ -192,11 +195,169 @@ export default function AppCard({ appKey, config, onLaunch, onUpdateNow }: Props
   }
 
   // ─── GhostVault ─────────────────────────────────────────────────────────────
-  const gvCfg         = config.ghostvault;
-  const isConfigured  = !!gvCfg?.execPath;
-  const dotColor      = isConfigured ? '#4a9eff' : '#6b7a99';
-  const dotGlow       = isConfigured ? 'rgba(74,158,255,.3)' : undefined;
-  const statusLine    = isConfigured ? 'Ready' : 'Not configured';
+  if (appKey === 'ghostvault') {
+    const gvCfg        = config.ghostvault;
+    const isConfigured = !!gvCfg?.execPath;
+    const dotColor     = isConfigured ? '#4a9eff' : '#6b7a99';
+    const dotGlow      = isConfigured ? 'rgba(74,158,255,.3)' : undefined;
+    const statusLine   = isConfigured ? 'Ready' : 'Not configured';
+
+    return (
+      <motion.div
+        whileHover={{ scale: 1.01 }}
+        className="rounded-lg p-3 border"
+        style={{ background: 'var(--card-bg)', borderColor: 'var(--border)' }}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <DotStatus color={dotColor} glow={dotGlow} />
+            <div className="min-w-0">
+              <div className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>
+                {info.name}
+              </div>
+              <div className="text-[11px] truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                {statusLine}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => onLaunch(appKey)}
+            disabled={!isConfigured}
+            className="text-[11px] px-2.5 py-1 rounded font-medium flex-shrink-0 transition-colors disabled:opacity-40"
+            style={{ background: 'var(--accent)', color: '#fff' }}
+          >
+            Open
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // ─── ReconDesk ──────────────────────────────────────────────────────────────
+  if (appKey === 'recondesk') {
+    const rdStatus     = config.recondesk_status;
+    const isConfigured = !!config.recondesk?.execPath;
+    const hasError     = !!rdStatus?.error;
+    const dotColor     = !isConfigured ? '#6b7a99' : hasError ? '#f85149' : rdStatus?.activeTarget ? '#d29922' : '#4a9eff';
+    const dotGlow      = !isConfigured ? undefined : rdStatus?.activeTarget ? 'rgba(210,153,34,.4)' : 'rgba(74,158,255,.3)';
+    const statusLine   = !isConfigured ? 'Not configured' : hasError ? 'Error' : rdStatus?.activeTarget ? `Active: ${rdStatus.activeTarget}` : rdStatus ? 'Connected · idle' : 'Offline';
+
+    return (
+      <motion.div
+        whileHover={{ scale: 1.01 }}
+        className="rounded-lg p-3 border"
+        style={{ background: 'var(--card-bg)', borderColor: 'var(--border)' }}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <DotStatus color={dotColor} glow={dotGlow} />
+            <div className="min-w-0">
+              <div className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>
+                {info.name}
+              </div>
+              <div className="text-[11px] truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                {statusLine}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => onLaunch(appKey)}
+            disabled={!isConfigured}
+            className="text-[11px] px-2.5 py-1 rounded font-medium flex-shrink-0 transition-colors disabled:opacity-40"
+            style={{ background: 'var(--accent)', color: '#fff' }}
+          >
+            Open
+          </button>
+        </div>
+
+        {rdStatus && isConfigured && (
+          <div className="mt-2.5 grid grid-cols-2 gap-2">
+            {[
+              { label: 'Targets', value: rdStatus.targetCount != null ? `${rdStatus.targetCount}` : '—' },
+              { label: 'Active',  value: rdStatus.activeTarget ? rdStatus.activeTarget.split(' ')[0] : '—' },
+            ].map(m => (
+              <div key={m.label} className="text-center py-1.5 rounded"
+                style={{ background: 'var(--bg3)' }}>
+                <div className="text-[11px] font-bold font-mono truncate px-1" style={{ color: 'var(--accent)' }}>
+                  {m.value}
+                </div>
+                <div className="text-[9px] uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                  {m.label}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </motion.div>
+    );
+  }
+
+  // ─── SignalBoard ─────────────────────────────────────────────────────────────
+  if (appKey === 'signalboard') {
+    const sbStatus     = config.signalboard_status;
+    const isConfigured = !!config.signalboard?.execPath;
+    const hasError     = !!sbStatus?.error;
+    const dotColor     = !isConfigured ? '#6b7a99' : hasError ? '#f85149' : sbStatus ? '#4a9eff' : '#6b7a99';
+    const dotGlow      = isConfigured && sbStatus && !hasError ? 'rgba(74,158,255,.3)' : undefined;
+    const statusLine   = !isConfigured ? 'Not configured' : hasError ? 'Error' : sbStatus ? 'Connected' : 'Offline';
+
+    return (
+      <motion.div
+        whileHover={{ scale: 1.01 }}
+        className="rounded-lg p-3 border"
+        style={{ background: 'var(--card-bg)', borderColor: 'var(--border)' }}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <DotStatus color={dotColor} glow={dotGlow} />
+            <div className="min-w-0">
+              <div className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>
+                {info.name}
+              </div>
+              <div className="text-[11px] truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                {statusLine}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => onLaunch(appKey)}
+            disabled={!isConfigured}
+            className="text-[11px] px-2.5 py-1 rounded font-medium flex-shrink-0 transition-colors disabled:opacity-40"
+            style={{ background: 'var(--accent)', color: '#fff' }}
+          >
+            Open
+          </button>
+        </div>
+
+        {sbStatus && isConfigured && (
+          <div className="mt-2.5 grid grid-cols-2 gap-2">
+            {[
+              { label: 'Feeds',      value: sbStatus.feedCount != null ? `${sbStatus.feedCount}` : '—' },
+              { label: 'Refreshed',  value: sbStatus.lastRefresh ? formatRelativeTime(sbStatus.lastRefresh) || '—' : '—' },
+            ].map(m => (
+              <div key={m.label} className="text-center py-1.5 rounded"
+                style={{ background: 'var(--bg3)' }}>
+                <div className="text-[11px] font-bold font-mono truncate px-1" style={{ color: 'var(--accent)' }}>
+                  {m.value}
+                </div>
+                <div className="text-[9px] uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                  {m.label}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </motion.div>
+    );
+  }
+
+  // ─── CyberOS Dashboard ───────────────────────────────────────────────────────
+  const osCfg        = config.cyberos;
+  const isConfigured = !!osCfg?.execPath;
+  const osStatus     = config.cyberos_status;
+  const dotColor     = !isConfigured ? '#6b7a99' : osStatus?.error ? '#f85149' : '#4a9eff';
+  const dotGlow      = isConfigured && !osStatus?.error ? 'rgba(74,158,255,.3)' : undefined;
+  const statusLine   = !isConfigured ? 'Not configured' : osStatus?.error ? 'Error' : osStatus ? 'Connected' : 'Ready';
 
   return (
     <motion.div

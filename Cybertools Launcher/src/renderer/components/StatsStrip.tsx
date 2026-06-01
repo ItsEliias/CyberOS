@@ -1,5 +1,10 @@
 import { useLauncherStore } from '../store';
 
+const ALL_APP_KEYS = [
+  'cyberlab', 'vaultscraper', 'ghostvault', 'recondesk', 'signalboard', 'cyberos',
+  'credvault', 'playbookstudio', 'reportforge', 'terminallink', 'networkmap',
+] as const;
+
 export default function StatsStrip() {
   const config = useLauncherStore(s => s.config);
   const clStatus = config?.cyberlab_status;
@@ -8,13 +13,16 @@ export default function StatsStrip() {
   const streak     = clStatus?.streak       ?? 0;
   const labsDone   = clStatus?.labsDone     ?? 0;
   const noteCount  = vsStatus?.vaultNoteCount ?? 0;
-  const sources    = vsStatus?.totalSources   ?? 0;
+
+  const configuredCount = config
+    ? ALL_APP_KEYS.filter(k => !!(config as Record<string, { execPath?: string } | undefined>)[k]?.execPath).length
+    : 0;
 
   const stats = [
     { label: 'Streak',  value: streak    > 0 ? `${streak}d`  : '—' },
     { label: 'Labs',    value: labsDone  > 0 ? `${labsDone}` : '—' },
     { label: 'Notes',   value: noteCount > 0 ? `${noteCount}` : '—' },
-    { label: 'Sources', value: sources   > 0 ? `${sources}`  : '—' },
+    { label: 'Apps',    value: `${configuredCount}/11` },
   ];
 
   return (

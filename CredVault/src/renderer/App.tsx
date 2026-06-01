@@ -16,6 +16,7 @@ export default function App() {
   const setCredentials = useStore(s => s.setCredentials)
   const setStats    = useStore(s => s.setStats)
   const setVersion  = useStore(s => s.setVersion)
+  const setPendingCount = useStore(s => s.setPendingCount)
 
   // Bootstrap: check if vault needs first-time setup
   useEffect(() => {
@@ -36,6 +37,14 @@ export default function App() {
     window.electronAPI.getCredentials().then(setCredentials)
     window.electronAPI.getStats().then(setStats)
   }, [isUnlocked, setCredentials, setStats])
+
+  // Subscribe to live pending-count push from main and seed on mount
+  useEffect(() => {
+    window.electronAPI.pending.get().then(items => setPendingCount(items.length))
+    const handler = (count: number) => setPendingCount(count)
+    window.electronAPI.pending.on(handler)
+    return () => window.electronAPI.pending.off(handler)
+  }, [setPendingCount])
 
   if (!isUnlocked) {
     return <LockScreen needsSetup={!isSetup} />

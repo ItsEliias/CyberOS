@@ -17,6 +17,12 @@ function getDefaultConfig(): CyberToolsConfig {
     vaultscraper_trigger: null,
     ghostvault: { name: 'GhostVault', execPath: '' },
     ghostvault_status: null,
+    recondesk: { execPath: '' },
+    recondesk_status: null,
+    signalboard: { execPath: '' },
+    signalboard_status: null,
+    cyberos: { execPath: '' },
+    cyberos_status: null,
     launcher: { customSlots: [], activityFeed: [], updateUrl: '' }
   };
 }
@@ -28,6 +34,9 @@ function mergeWithDefaults(raw: Partial<CyberToolsConfig>): CyberToolsConfig {
   out.cyberlab     = { ...def.cyberlab,     ...(raw.cyberlab     || {}) };
   out.vaultscraper = { ...def.vaultscraper, ...(raw.vaultscraper || {}) };
   out.ghostvault   = { ...def.ghostvault,   ...(raw.ghostvault   || {}) };
+  out.recondesk    = { ...def.recondesk,    ...(raw.recondesk    || {}) };
+  out.signalboard  = { ...def.signalboard,  ...(raw.signalboard  || {}) };
+  out.cyberos      = { ...def.cyberos,      ...(raw.cyberos      || {}) };
 
   const rawLauncher = raw.launcher || {};
   out.launcher = {

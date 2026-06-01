@@ -12,6 +12,150 @@ const STATE_COLOR: Record<PortState, string> = {
   closed:   'text-muted',
 }
 
+// ─── Nmap XML Parser ──────────────────────────────────────────────────────────
+
+interface NmapPort {
+  number: number
+  protocol: 'tcp' | 'udp'
+  service: string
+  version: string
+}
+
+function parseNmapXml(xml: string): { ports: NmapPort[]; error?: string } {
+  try {
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(xml, 'application/xml')
+    const parseError = doc.querySelector('parsererror')
+    if (parseError) return { ports: [], error: 'Invalid XML: ' + parseError.textContent?.slice(0, 80) }
+
+    const ports: NmapPort[] = []
+    const portEls = doc.querySelectorAll('host ports port')
+    portEls.forEach(portEl => {
+      const stateEl   = portEl.querySelector('state')
+      const serviceEl = portEl.querySelector('service')
+      const state     = stateEl?.getAttribute('state') ?? ''
+      if (state !== 'open') return
+
+      const protocol = (portEl.getAttribute('protocol') ?? 'tcp') as 'tcp' | 'udp'
+      const portId   = parseInt(portEl.getAttribute('portid') ?? '0')
+      if (!portId) return
+
+      const name    = serviceEl?.getAttribute('name') ?? ''
+      const product = serviceEl?.getAttribute('product') ?? ''
+      const ver     = serviceEl?.getAttribute('version') ?? ''
+      const version = [product, ver].filter(Boolean).join(' ')
+
+      ports.push({ number: portId, protocol, service: name, version })
+    })
+
+    return { ports }
+  } catch (e) {
+    return { ports: [], error: 'Parse error: ' + (e as Error).message }
+  }
+}
+
+// ─── Nmap Import Modal ────────────────────────────────────────────────────────
+
+function NmapImportModal({ targetId, onClose }: { targetId: string; onClose: () => void }) {
+  const addPort = useStore(s => s.addPort)
+  const [xml, setXml] = useState('')
+  const [preview, setPreview] = useState<NmapPort[] | null>(null)
+  const [error, setError] = useState('')
+
+  function handleParse() {
+    setError('')
+    const { ports, error: err } = parseNmapXml(xml)
+    if (err) { setError(err); return }
+    if (ports.length === 0) { setError('No open ports found in XML.'); return }
+    setPreview(ports)
+  }
+
+  function handleImport() {
+    if (!preview) return
+    preview.forEach(p => {
+      addPort(targetId, {
+        number: p.number, protocol: p.protocol,
+        service: p.service || undefined,
+        version: p.version || undefined,
+        state: 'open',
+      })
+    })
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        transition={{ duration: 0.15 }}
+        className="bg-panel border border-border rounded-lg w-[520px] max-h-[80vh] flex flex-col shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <span className="text-xs font-semibold text-text">Import nmap XML</span>
+          <button onClick={onClose} className="text-muted hover:text-text text-sm transition-colors">✕</button>
+        </div>
+
+        <div className="flex flex-col gap-3 p-4 overflow-y-auto flex-1">
+          {!preview ? (
+            <>
+              <p className="text-[11px] text-muted">Paste nmap XML output below (from <code className="text-accent/70">nmap -oX</code> or stdout with <code className="text-accent/70">-oX -</code>).</p>
+              <textarea
+                autoFocus
+                value={xml}
+                onChange={e => setXml(e.target.value)}
+                placeholder="<?xml version=&quot;1.0&quot;?>&#10;<nmaprun>&#10;  ...&#10;</nmaprun>"
+                rows={10}
+                className="w-full bg-bg border border-border rounded px-3 py-2 text-[11px] font-mono text-text placeholder-muted focus:outline-none focus:border-accent resize-none transition-colors"
+              />
+              {error && <p className="text-[11px] text-error">{error}</p>}
+              <button
+                onClick={handleParse}
+                disabled={!xml.trim()}
+                className="w-full bg-accent/15 hover:bg-accent/25 border border-accent/30 text-accent text-xs py-1.5 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Parse XML
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-[11px] text-muted">
+                Found <span className="text-success font-medium">{preview.length}</span> open port{preview.length !== 1 ? 's' : ''}:
+              </p>
+              <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
+                {preview.map(p => (
+                  <div key={`${p.number}-${p.protocol}`} className="flex items-center gap-2 py-1 px-2 bg-bg rounded text-xs">
+                    <span className="font-mono text-success w-14 flex-shrink-0">{p.number}/{p.protocol.toUpperCase()}</span>
+                    <span className="text-text flex-1">{p.service || '—'}</span>
+                    {p.version && <span className="text-muted text-[10px] truncate max-w-[160px]">{p.version}</span>}
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2 mt-1">
+                <button
+                  onClick={() => { setPreview(null); setError('') }}
+                  className="flex-1 bg-border/40 hover:bg-border/60 text-muted text-xs py-1.5 rounded transition-colors"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={handleImport}
+                  className="flex-1 bg-accent/15 hover:bg-accent/25 border border-accent/30 text-accent text-xs py-1.5 rounded transition-colors"
+                >
+                  Import all
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
 // ─── Ports ────────────────────────────────────────────────────────────────────
 
 function PortsSection({ targetId }: { targetId: string }) {
@@ -19,6 +163,7 @@ function PortsSection({ targetId }: { targetId: string }) {
   const addPort    = useStore(s => s.addPort)
   const removePort = useStore(s => s.removePort)
   const [adding, setAdding] = useState(false)
+  const [importing, setImporting] = useState(false)
   const [form, setForm] = useState({
     number: '', protocol: 'tcp' as 'tcp' | 'udp',
     service: '', version: '', state: 'open' as PortState, notes: ''
@@ -46,13 +191,28 @@ function PortsSection({ targetId }: { targetId: string }) {
     <section>
       <div className="flex items-center justify-between mb-2">
         <span className="text-[11px] font-semibold text-muted uppercase tracking-widest">Ports</span>
-        <button
-          onClick={() => setAdding(v => !v)}
-          className="w-5 h-5 flex items-center justify-center text-muted hover:text-text hover:bg-border rounded transition-colors text-sm"
-        >
-          {adding ? '✕' : '+'}
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setImporting(true)}
+            className="px-2 h-5 flex items-center justify-center text-muted hover:text-accent hover:bg-accent/10 border border-transparent hover:border-accent/20 rounded transition-colors text-[10px] font-medium"
+            title="Import nmap XML"
+          >
+            nmap
+          </button>
+          <button
+            onClick={() => setAdding(v => !v)}
+            className="w-5 h-5 flex items-center justify-center text-muted hover:text-text hover:bg-border rounded transition-colors text-sm"
+          >
+            {adding ? '✕' : '+'}
+          </button>
+        </div>
       </div>
+
+      <AnimatePresence>
+        {importing && (
+          <NmapImportModal targetId={targetId} onClose={() => setImporting(false)} />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {adding && (
