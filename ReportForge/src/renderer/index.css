@@ -1,0 +1,126 @@
+/* ── CSS Variables ─────────────────────────────────────────────────────────── */
+:root {
+  --bg        : #0d0f0d;
+  --panel     : #131713;
+  --border    : #1e261e;
+  --text      : #e6f0e6;
+  --text-dim  : #8fa88f;
+  --text-muted: #4d5e4d;
+  --accent    : #3fb950;
+  --accent-dim: #2a7a36;
+  --success   : #3fb950;
+  --error     : #ff4444;
+  --warning   : #f0a500;
+
+  /* Severity */
+  --sev-critical: #ff4444;
+  --sev-high    : #ff6b35;
+  --sev-medium  : #f0a500;
+  --sev-low     : #3fb950;
+  --sev-info    : #8b949e;
+}
+
+/* ── Reset ─────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* ── Scrollbars ────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ── Inputs ────────────────────────────────────────────────────────────────── */
+input, textarea, select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+input:focus, textarea:focus, select:focus {
+  border-color: var(--accent);
+}
+input::placeholder, textarea::placeholder { color: var(--text-muted); }
+
+textarea { resize: vertical; min-height: 80px; }
+
+/* ── Buttons ───────────────────────────────────────────────────────────────── */
+button {
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 14px;
+  transition: opacity 0.15s, background 0.15s;
+}
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-primary {
+  background: var(--accent);
+  color: #000;
+  font-weight: 600;
+}
+.btn-primary:hover:not(:disabled) { background: #4dcf63; }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover:not(:disabled) { background: var(--border); color: var(--text); }
+
+.btn-danger {
+  background: transparent;
+  color: var(--error);
+  border: 1px solid var(--error);
+}
+.btn-danger:hover:not(:disabled) { background: var(--error); color: #fff; }
+
+/* ── Severity badges ───────────────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.badge-critical { background: rgba(255,68,68,0.15); color: var(--sev-critical); border: 1px solid rgba(255,68,68,0.3); }
+.badge-high     { background: rgba(255,107,53,0.15); color: var(--sev-high);     border: 1px solid rgba(255,107,53,0.3); }
+.badge-medium   { background: rgba(240,165,0,0.15);  color: var(--sev-medium);  border: 1px solid rgba(240,165,0,0.3); }
+.badge-low      { background: rgba(63,185,80,0.15);  color: var(--sev-low);     border: 1px solid rgba(63,185,80,0.3); }
+.badge-info     { background: rgba(139,148,158,0.15); color: var(--sev-info);   border: 1px solid rgba(139,148,158,0.3); }
+
+/* ── Print / PDF styles ────────────────────────────────────────────────────── */
+@media print {
+  :root {
+    --bg: #ffffff;
+    --panel: #f8f8f8;
+    --border: #dddddd;
+    --text: #1a1a1a;
+    --text-dim: #555555;
+    --text-muted: #888888;
+    --accent: #2a7a36;
+  }
+  html, body { overflow: visible; height: auto; }
+  #root { height: auto; overflow: visible; }
+  .no-print { display: none !important; }
+  .print-page { display: block !important; }
+  a { color: inherit; text-decoration: underline; }
+}

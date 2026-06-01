@@ -1,0 +1,70 @@
+{
+  "name": "terminallink",
+  "version": "1.0.0",
+  "description": "Dual-pane terminal emulator with CyberOS session logging — CYBERTOOLS",
+  "main": "out/main/index.js",
+  "scripts": {
+    "start": "electron-vite dev",
+    "build": "electron-vite build && electron-builder",
+    "build:mac": "electron-vite build && electron-builder --mac",
+    "build:win": "electron-vite build && electron-builder --win",
+    "build:linux": "electron-vite build && electron-builder --linux",
+    "preview": "electron-vite preview",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "node-pty": "^1.0.0",
+    "xterm": "^5.3.0",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-web-links": "^0.11.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.21",
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3",
+    "electron-vite": "^2.3.0",
+    "framer-motion": "^11.18.2",
+    "postcss": "^8.5.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.7.3",
+    "zustand": "^5.0.3"
+  },
+  "build": {
+    "appId": "com.itsEliias.terminallink",
+    "productName": "TerminalLink",
+    "copyright": "Copyright © 2024 ItsEliias",
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "files": [
+      "out/**/*",
+      "!dist/**",
+      "!src/**",
+      "!.git/**",
+      "assets/**"
+    ],
+    "extraResources": [
+      { "from": "assets", "to": "assets" }
+    ],
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "assets/logo.ico"
+    },
+    "mac": {
+      "target": ["dmg"],
+      "icon": "assets/logo.icns",
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "icon": "assets/logo.png",
+      "category": "Utility"
+    }
+  },
+  "author": { "name": "ItsEliias", "email": "itseliiasstudy@gmail.com" },
+  "license": "MIT",
+  "engines": { "node": ">=18.0.0", "npm": ">=9.0.0" }
+}

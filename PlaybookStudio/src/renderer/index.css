@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:         #0e1117;
+  --panel:      #161b22;
+  --border:     #30363d;
+  --text:       #c9d1d9;
+  --text-dim:   #8b949e;
+  --text-muted: #484f58;
+  --accent:     #4a9eff;
+  --accent-dim: #1f4068;
+  --success:    #3fb950;
+  --error:      #f85149;
+  --warning:    #d29922;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', 'SF Pro Display', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+.drag-region { -webkit-app-region: drag; }
+.no-drag     { -webkit-app-region: no-drag; }
+
+::-webkit-scrollbar       { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+::selection { background: rgba(74, 158, 255, 0.25); }
+input, textarea, button, select { user-select: text; }
+
+/* Textarea reset */
+textarea {
+  resize: none;
+  font-family: inherit;
+}
