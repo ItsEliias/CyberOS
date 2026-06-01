@@ -577,13 +577,40 @@ Skill point allocation on lab completion:
 
 ---
 
-# 5. Pickle Rick — Ecosystem Walkthrough
+# 5. Ecosystem Walkthroughs
 
-The full step-by-step walkthrough of using the CyberOS ecosystem to complete TryHackMe's Pickle Rick room from start to finish is in a dedicated file:
+Two dedicated walkthrough files show the ecosystem in action across real TryHackMe rooms. Both are based on actual published writeup data — no assumptions.
 
-**`Pickle Rick — THM Ecosystem Walkthrough.md`** (same directory as this guide)
+---
 
-It covers: target setup in ReconDesk, CyberLab session creation, GhostVault note capture, SignalBoard intelligence check, all three flags found and logged, writeup generation, and vault organisation — based on the actual published walkthrough, not assumptions.
+## 5.1 Pickle Rick — THM Ecosystem Walkthrough
+
+**`Pickle Rick — THM Ecosystem Walkthrough.md`**
+
+A beginner-friendly Linux web room. Covers the core loop: target setup in ReconDesk, CyberLab session creation, SignalBoard intelligence check, GhostVault note capture, three flags found and logged, writeup generation. Uses 4 of the 12 apps — appropriate for the room's simplicity.
+
+| Room | Platform | Difficulty | Flags | Apps used |
+|---|---|---|---|---|
+| Pickle Rick | THM | Easy | 3 | ReconDesk, CyberLab, GhostVault, SignalBoard |
+
+---
+
+## 5.2 Blue — THM Ecosystem Walkthrough
+
+**`Blue — THM Ecosystem Walkthrough.md`**
+
+The ecosystem's full showcase. A Windows 7 machine vulnerable to MS17-010 (EternalBlue). Multi-stage Metasploit chain, real credential dumping with hashdump, NTLM hash cracking, three flags across different system locations, and a professional report at the end. Every one of the 12 apps has a natural role — nothing is forced.
+
+| Room | Platform | Difficulty | Flags | Apps used |
+|---|---|---|---|---|
+| Blue | THM | Easy | 3 | All 12 |
+
+**App sequence:**
+```
+Launcher → SignalBoard → CyberLab → PlaybookStudio → ReconDesk
+    → NetworkMap → TerminalLink → CredVault → GhostVault
+    → ReportForge → Dashboard → VaultCore
+```
 
 ---
 
