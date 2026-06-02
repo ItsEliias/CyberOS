@@ -7,6 +7,9 @@ import AppCard from './components/AppCard'
 import ActivityFeed from './components/ActivityFeed'
 import AlertsPanel from './components/AlertsPanel'
 import OperatorProfile from './components/OperatorProfile'
+import Sidebar from './components/Sidebar'
+import MetricGauge from './components/MetricGauge'
+import EcosystemChart from './components/EcosystemChart'
 import type { EcosystemConfig, EcosystemEvent } from '../shared/types'
 
 // ─── App card builder ─────────────────────────────────────────────────────────
@@ -209,64 +212,66 @@ export default function App() {
         onBellClick={() => setShowAlerts(v => !v)}
       />
 
-      {/* Alerts panel overlay */}
       <AnimatePresence>
         {showAlerts && <AlertsPanel onClose={() => setShowAlerts(false)} />}
       </AnimatePresence>
 
       <div className="flex flex-1 min-h-0">
-        {/* App cards grid */}
-        <div className="flex-1 p-5 overflow-y-auto">
-          <p className="text-[11px] font-semibold text-muted uppercase tracking-widest mb-4">
-            Ecosystem Applications
-          </p>
+        <Sidebar />
 
-          <div className="grid grid-cols-3 gap-4">
-            {cards.map(card => (
-              <AppCard
-                key={card.id}
-                id={card.id}
-                name={card.name}
-                subtitle={card.subtitle}
-                active={card.active}
-                lastActive={card.lastActive}
-                metrics={card.metrics}
-                execPath={card.execPath}
-                accentColor={card.accentColor}
-                eventHistory={eventHistory}
-              />
-            ))}
-          </div>
+        <div className="flex flex-1 min-h-0 min-w-0">
+          {/* Main content */}
+          <div className="flex-1 p-5 overflow-y-auto">
 
-          {/* Ecosystem health bar */}
-          <div className="mt-6 bg-panel border border-border rounded-lg p-4">
+            {/* ── Ecosystem status gauges ── */}
             <p className="text-[11px] font-semibold text-muted uppercase tracking-widest mb-3">
-              Ecosystem Health
+              Ecosystem Status
             </p>
-            <div className="flex gap-3">
+            <div className="flex gap-2 mb-5">
               {cards.map(card => (
-                <div key={card.id} className="flex-1 flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-muted">{card.name}</span>
-                    <span className={`w-1.5 h-1.5 rounded-full ${card.active ? 'bg-success' : 'bg-border'}`} />
-                  </div>
-                  <div className="h-0.5 bg-border rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-700"
-                      style={{ width: card.active ? '100%' : '0%', background: card.accentColor }}
-                    />
-                  </div>
-                </div>
+                <MetricGauge
+                  key={card.id}
+                  label={card.name}
+                  value={card.active ? 100 : 0}
+                  active={card.active}
+                  color={card.accentColor}
+                  sublabel={card.metrics[0]?.value?.toString()}
+                />
               ))}
             </div>
+
+            {/* ── App cards grid ── */}
+            <p className="text-[11px] font-semibold text-muted uppercase tracking-widest mb-4">
+              Applications
+            </p>
+            <div className="grid grid-cols-3 gap-4">
+              {cards.map(card => (
+                <AppCard
+                  key={card.id}
+                  id={card.id}
+                  name={card.name}
+                  subtitle={card.subtitle}
+                  active={card.active}
+                  lastActive={card.lastActive}
+                  metrics={card.metrics}
+                  execPath={card.execPath}
+                  accentColor={card.accentColor}
+                  eventHistory={eventHistory}
+                />
+              ))}
+            </div>
+
+            {/* ── Activity chart ── */}
+            <div className="mt-5">
+              <EcosystemChart />
+            </div>
+
+            {/* ── Operator profile ── */}
+            <OperatorProfile />
           </div>
 
-          {/* Operator Profile */}
-          <OperatorProfile />
+          <ActivityFeed />
         </div>
-
-        {/* Activity feed */}
-        <ActivityFeed />
       </div>
 
       <Footer />
