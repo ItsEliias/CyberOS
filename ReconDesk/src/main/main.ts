@@ -5,8 +5,15 @@ import { app, BrowserWindow, ipcMain, shell, dialog } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import os from 'os'
+import https from 'https'
 import { emitEvent } from './ecosystem-bus'
-import type { ReconDeskData, ReconDeskStatus } from '../shared/types'
+import type { ReconDeskData, ReconDeskStatus, CveResult } from '../shared/types'
+
+// ─── CVE lookup ───────────────────────────────────────────────────────────────
+
+const cveCache = new Map<string, CveResult[]>()
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const APP_VERSION       = '1.0.0'
 const DATA_FILE         = path.join(os.homedir(), '.recondesk', 'data.json')
@@ -183,6 +190,47 @@ ipcMain.handle('data:save', (_e, data: ReconDeskData) => {
 })
 
 ipcMain.handle('app:version', () => APP_VERSION)
+
+ipcMain.handle('cve:lookup', (_e, service: string, version: string): Promise<CveResult[]> => {
+  const key = `${service} ${version}`.trim().toLowerCase()
+  if (!key || key.length < 3) return Promise.resolve([])
+  if (cveCache.has(key)) return Promise.resolve(cveCache.get(key)!)
+
+  return new Promise((resolve) => {
+    const query = encodeURIComponent(key)
+    const reqPath = `/rest/json/cves/2.0?keywordSearch=${query}&resultsPerPage=5`
+    const options = {
+      hostname: 'services.nvd.nist.gov',
+      path: reqPath,
+      headers: { 'User-Agent': 'CyberOS-ReconDesk' }
+    }
+    const timer = setTimeout(() => resolve([]), 8000)
+    https.get(options, (res) => {
+      let data = ''
+      res.on('data', c => { data += c })
+      res.on('end', () => {
+        clearTimeout(timer)
+        try {
+          const json = JSON.parse(data)
+          const results: CveResult[] = (json.vulnerabilities ?? []).map((v: any) => {
+            const cve    = v.cve
+            const metric = cve.metrics?.cvssMetricV31?.[0] ?? cve.metrics?.cvssMetricV2?.[0]
+            return {
+              id:          cve.id,
+              description: cve.descriptions?.find((d: any) => d.lang === 'en')?.value ?? '',
+              score:       metric?.cvssData?.baseScore ?? null,
+              severity:    metric?.cvssData?.baseSeverity ?? null,
+              published:   cve.published?.slice(0, 10) ?? '',
+              url:         `https://nvd.nist.gov/vuln/detail/${cve.id}`
+            }
+          })
+          cveCache.set(key, results)
+          resolve(results)
+        } catch { resolve([]) }
+      })
+    }).on('error', () => { clearTimeout(timer); resolve([]) })
+  })
+})
 
 ipcMain.handle('shell:open', (_e, url: string) => shell.openExternal(url))
 

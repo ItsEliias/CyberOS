@@ -217,6 +217,9 @@ export interface ParsedVaultscraperStatus {
 export interface UpdateInfo {
   version: string;
   url: string;
+  current?: string;
+  latest?: string;
+  notes?: string;
 }
 
 export interface EcosystemEvent {

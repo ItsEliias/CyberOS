@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../store'
 import type { PortState, CredType } from '../../shared/types'
+import { CvePanel } from './CvePanel'
 
 const PORT_STATES: PortState[]  = ['open', 'filtered', 'closed']
 const CRED_TYPES:  CredType[]   = ['plaintext', 'hash', 'key', 'token']
@@ -287,20 +288,25 @@ function PortsSection({ targetId }: { targetId: string }) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="group flex items-center gap-2 py-1.5 px-2 rounded hover:bg-border/30 transition-colors"
+              className="group flex flex-col rounded hover:bg-border/30 transition-colors px-2"
             >
-              <span className={`text-xs font-mono font-medium w-12 flex-shrink-0 ${STATE_COLOR[port.state]}`}>
-                {port.number}
-              </span>
-              <span className="text-[10px] text-muted w-6 flex-shrink-0">{port.protocol}</span>
-              <span className="text-xs text-text flex-1 truncate">{port.service || '—'}</span>
-              {port.version && (
-                <span className="text-[10px] text-muted truncate max-w-[100px]">{port.version}</span>
-              )}
-              <button
-                onClick={() => removePort(targetId, port.id)}
-                className="opacity-0 group-hover:opacity-100 text-muted hover:text-danger text-[10px] transition-all flex-shrink-0"
-              >✕</button>
+              <div className="flex items-center gap-2 py-1.5">
+                <span className={`text-xs font-mono font-medium w-12 flex-shrink-0 ${STATE_COLOR[port.state]}`}>
+                  {port.number}
+                </span>
+                <span className="text-[10px] text-muted w-6 flex-shrink-0">{port.protocol}</span>
+                <span className="text-xs text-text flex-1 truncate">{port.service || '—'}</span>
+                {port.version && (
+                  <span className="text-[10px] text-muted truncate max-w-[100px]">{port.version}</span>
+                )}
+                {(port.service || port.version) && (
+                  <CvePanel service={port.service} version={port.version} />
+                )}
+                <button
+                  onClick={() => removePort(targetId, port.id)}
+                  className="opacity-0 group-hover:opacity-100 text-muted hover:text-danger text-[10px] transition-all flex-shrink-0"
+                >✕</button>
+              </div>
             </motion.div>
           ))}
         </div>

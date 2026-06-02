@@ -40,9 +40,14 @@ const api = {
   },
   onUpdateAvailable   : (cb: (info: UpdateInfo) => void) => {
     const listener = (_e: Electron.IpcRendererEvent, info: UpdateInfo) => cb(info);
-    ipcRenderer.on('update-available', listener);
-    return () => ipcRenderer.removeListener('update-available', listener);
+    ipcRenderer.on('update-available',  listener);
+    ipcRenderer.on('update:available',  listener);
+    return () => {
+      ipcRenderer.removeListener('update-available', listener);
+      ipcRenderer.removeListener('update:available', listener);
+    };
   },
+  checkForUpdates     : () => ipcRenderer.invoke('update:check-now'),
   onSplashComplete    : (cb: () => void) => {
     const listener = () => cb();
     ipcRenderer.on('splash-complete', listener);

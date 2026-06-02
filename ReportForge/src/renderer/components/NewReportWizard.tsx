@@ -1,35 +1,46 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { makeBlankReport, makeId, PLATFORMS } from '../lib/defaults';
-import type { Report, ReconDeskTarget, WriteupFile } from '@shared/types';
+import { makeReportFromTemplate, makeId, PLATFORMS } from '../lib/defaults';
+import TemplateCard from './TemplateCard';
+import type { Report, ReconDeskTarget, WriteupFile, ReportTemplate } from '@shared/types';
 
 interface Props {
   onComplete: (r: Report) => void;
   onCancel: () => void;
 }
 
+const STEP_LABELS = ['Choose Template', 'Report Metadata', 'Import from ReconDesk', 'Import Writeup'];
+const TOTAL_STEPS = 4;
+
 export default function NewReportWizard({ onComplete, onCancel }: Props) {
   const [step, setStep] = useState(1);
-  const [draft, setDraft] = useState<Report>(() => makeBlankReport());
+  const [selectedTemplate, setSelectedTemplate] = useState<ReportTemplate>('blank');
+  const [draft, setDraft] = useState<Report>(() => makeReportFromTemplate('blank'));
 
-  // Step 2 state
+  // Step 3 state
   const [targets, setTargets] = useState<ReconDeskTarget[]>([]);
   const [selectedTarget, setSelectedTarget] = useState<string>('');
   const [importingTarget, setImportingTarget] = useState(false);
 
-  // Step 3 state
+  // Step 4 state
   const [writeups, setWriteups] = useState<WriteupFile[]>([]);
   const [selectedWriteup, setSelectedWriteup] = useState<string>('');
   const [importingWriteup, setImportingWriteup] = useState(false);
 
   useEffect(() => {
-    if (step === 2) {
+    if (step === 3) {
       window.reportforge.listReconTargets().then(t => setTargets(t || []));
     }
-    if (step === 3) {
+    if (step === 4) {
       window.reportforge.listWriteupFiles().then(w => setWriteups(w || []));
     }
   }, [step]);
+
+  // Rebuild draft when template changes (before metadata is filled)
+  function handleTemplateSelect(t: ReportTemplate) {
+    setSelectedTemplate(t);
+    setDraft(makeReportFromTemplate(t));
+  }
 
   function patch(p: Partial<Report>) {
     setDraft(d => ({ ...d, ...p }));
@@ -44,7 +55,6 @@ export default function NewReportWizard({ onComplete, onCancel }: Props) {
       targetIP         : (t.ip as string) || draft.targetIP,
       reconDeskTargetId: t.id,
     };
-    // Pre-fill credentials section
     if (t.credentials && Array.isArray(t.credentials) && t.credentials.length > 0) {
       const credLines = t.credentials.map((c: { username?: string; password?: string; service?: string }) =>
         `| ${c.username || '—'} | ${c.password || '—'} | ${c.service || '—'} |`
@@ -72,7 +82,7 @@ export default function NewReportWizard({ onComplete, onCancel }: Props) {
     setImportingWriteup(false);
   }
 
-  const canNext1 = draft.title.trim() && draft.targetName.trim() && draft.operator.trim();
+  const canNext2 = draft.title.trim() && draft.targetName.trim() && draft.operator.trim();
 
   return (
     <div style={{
@@ -84,7 +94,7 @@ export default function NewReportWizard({ onComplete, onCancel }: Props) {
         animate={{ opacity: 1, scale: 1 }}
         style={{
           background: 'var(--panel)', border: '1px solid var(--border)',
-          borderRadius: 10, width: 540, maxHeight: '85vh', overflow: 'hidden',
+          borderRadius: 10, width: 560, maxHeight: '85vh', overflow: 'hidden',
           display: 'flex', flexDirection: 'column'
         }}
       >
@@ -92,7 +102,7 @@ export default function NewReportWizard({ onComplete, onCancel }: Props) {
         <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)' }}>
           <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>New Report</h2>
           <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-            {[1, 2, 3].map(s => (
+            {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map(s => (
               <div key={s} style={{
                 height: 3, flex: 1, borderRadius: 2,
                 background: s <= step ? 'var(--accent)' : 'var(--border)',
@@ -101,7 +111,7 @@ export default function NewReportWizard({ onComplete, onCancel }: Props) {
             ))}
           </div>
           <div style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 6 }}>
-            Step {step} of 3 — {step === 1 ? 'Report Metadata' : step === 2 ? 'Import from ReconDesk' : 'Import Writeup'}
+            Step {step} of {TOTAL_STEPS} — {STEP_LABELS[step - 1]}
           </div>
         </div>
 
@@ -110,12 +120,17 @@ export default function NewReportWizard({ onComplete, onCancel }: Props) {
           <AnimatePresence mode="wait">
             {step === 1 && (
               <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                <Step1Form draft={draft} onChange={patch} />
+                <StepTemplate selected={selectedTemplate} onSelect={handleTemplateSelect} />
               </motion.div>
             )}
             {step === 2 && (
               <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                <Step2Import
+                <Step2Form draft={draft} onChange={patch} />
+              </motion.div>
+            )}
+            {step === 3 && (
+              <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <Step3Import
                   targets={targets}
                   selected={selectedTarget}
                   onSelect={setSelectedTarget}
@@ -125,9 +140,9 @@ export default function NewReportWizard({ onComplete, onCancel }: Props) {
                 />
               </motion.div>
             )}
-            {step === 3 && (
-              <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                <Step3Writeup
+            {step === 4 && (
+              <motion.div key="step4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <Step4Writeup
                   writeups={writeups}
                   selected={selectedWriteup}
                   onSelect={setSelectedWriteup}
@@ -148,13 +163,17 @@ export default function NewReportWizard({ onComplete, onCancel }: Props) {
             {step === 1 ? 'Cancel' : 'Back'}
           </button>
           <div style={{ display: 'flex', gap: 8 }}>
-            {step < 3 && (
+            {step > 1 && step < TOTAL_STEPS && (
               <button className="btn-ghost" onClick={() => setStep(s => s + 1)} style={{ color: 'var(--text-muted)' }}>
                 Skip
               </button>
             )}
-            {step < 3 ? (
-              <button className="btn-primary" disabled={step === 1 && !canNext1} onClick={() => setStep(s => s + 1)}>
+            {step < TOTAL_STEPS ? (
+              <button
+                className="btn-primary"
+                disabled={step === 2 && !canNext2}
+                onClick={() => setStep(s => s + 1)}
+              >
                 Next
               </button>
             ) : (
@@ -169,8 +188,28 @@ export default function NewReportWizard({ onComplete, onCancel }: Props) {
   );
 }
 
-// ── Step 1: Metadata ──────────────────────────────────────────────────────────
-function Step1Form({ draft, onChange }: { draft: Report; onChange: (p: Partial<Report>) => void }) {
+// ── Step 1: Template Selection ────────────────────────────────────────────────
+function StepTemplate({ selected, onSelect }: {
+  selected: ReportTemplate;
+  onSelect: (t: ReportTemplate) => void;
+}) {
+  const templates: ReportTemplate[] = ['blank', 'ptes', 'owasp-web', 'htb-machine'];
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <p style={{ color: 'var(--text-dim)', fontSize: 13, margin: 0 }}>
+        Choose a starting structure for your report. You can customise sections after creation.
+      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        {templates.map(t => (
+          <TemplateCard key={t} id={t} selected={selected === t} onSelect={onSelect} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Step 2: Metadata ──────────────────────────────────────────────────────────
+function Step2Form({ draft, onChange }: { draft: Report; onChange: (p: Partial<Report>) => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <Field label="Report Title *">
@@ -206,8 +245,8 @@ function Step1Form({ draft, onChange }: { draft: Report; onChange: (p: Partial<R
   );
 }
 
-// ── Step 2: ReconDesk Import ──────────────────────────────────────────────────
-function Step2Import({ targets, selected, onSelect, onImport, importing, draft }: {
+// ── Step 3: ReconDesk Import ──────────────────────────────────────────────────
+function Step3Import({ targets, selected, onSelect, onImport, importing, draft }: {
   targets: ReconDeskTarget[];
   selected: string;
   onSelect: (id: string) => void;
@@ -247,8 +286,8 @@ function Step2Import({ targets, selected, onSelect, onImport, importing, draft }
   );
 }
 
-// ── Step 3: CyberLab Writeup Import ──────────────────────────────────────────
-function Step3Writeup({ writeups, selected, onSelect, onImport, importing }: {
+// ── Step 4: CyberLab Writeup Import ──────────────────────────────────────────
+function Step4Writeup({ writeups, selected, onSelect, onImport, importing }: {
   writeups: WriteupFile[];
   selected: string;
   onSelect: (path: string) => void;

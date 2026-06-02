@@ -1,5 +1,14 @@
 // Shared types used by both main process and renderer
 
+export interface CveResult {
+  id: string
+  description: string
+  score: number | null
+  severity: string | null
+  published: string
+  url: string
+}
+
 export type Platform = 'HTB' | 'THM' | 'CTF' | 'Custom'
 export type TargetStatus = 'active' | 'completed' | 'abandoned'
 export type PortState = 'open' | 'filtered' | 'closed'

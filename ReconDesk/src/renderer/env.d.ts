@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-import type { ReconDeskData } from '../shared/types'
+import type { ReconDeskData, CveResult } from '../shared/types'
 
 declare global {
   interface Window {
@@ -10,6 +10,7 @@ declare global {
       getVersion:   () => Promise<string>
       openUrl:      (url: string) => Promise<void>
       exportTarget: (payload: { json: string; md: string; defaultName: string }) => Promise<{ ok: boolean; filePath?: string }>
+      cveLookup:    (service: string, version: string) => Promise<CveResult[]>
     }
   }
 }

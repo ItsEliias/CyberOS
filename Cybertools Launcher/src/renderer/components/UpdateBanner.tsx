@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { UpdateInfo } from '@shared/types';
 
@@ -6,23 +7,51 @@ interface Props {
 }
 
 export default function UpdateBanner({ updateInfo }: Props) {
+  const [dismissed, setDismissed] = useState(false);
+
+  const visible = updateInfo && !dismissed;
+  const displayVersion = updateInfo?.latest ?? updateInfo?.version ?? '';
+
   return (
     <AnimatePresence>
-      {updateInfo && (
+      {visible && (
         <motion.div
           initial={{ height: 0, opacity: 0 }}
-          animate={{ height: 'auto', opacity: 1 }}
+          animate={{ height: 36, opacity: 1 }}
           exit={{ height: 0, opacity: 0 }}
-          className="overflow-hidden"
+          transition={{ duration: 0.2 }}
+          className="overflow-hidden flex-shrink-0"
         >
-          <button
-            onClick={() => window.api.openExternal(updateInfo.url)}
-            className="w-full px-4 py-2 flex items-center justify-between text-[11px] transition-opacity hover:opacity-80"
-            style={{ background: 'rgba(74,158,255,.12)', borderBottom: '1px solid rgba(74,158,255,.25)' }}
+          <div
+            className="w-full h-full flex items-center justify-between px-3 text-[11px]"
+            style={{
+              background  : 'rgba(234,179,8,0.13)',
+              borderBottom: '1px solid rgba(234,179,8,0.30)',
+              color       : '#f59e0b',
+            }}
           >
-            <span style={{ color: '#4a9eff' }}>Update v{updateInfo.version} available</span>
-            <span style={{ color: 'var(--text-dim)' }}>Download →</span>
-          </button>
+            <span className="font-medium truncate mr-2">
+              CyberOS v{displayVersion} available
+            </span>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => window.api.openExternal(updateInfo!.url)}
+                className="underline hover:opacity-70 transition-opacity"
+                style={{ color: '#f59e0b' }}
+              >
+                View release
+              </button>
+              <button
+                onClick={() => setDismissed(true)}
+                className="hover:opacity-70 transition-opacity leading-none text-[13px]"
+                style={{ color: '#f59e0b' }}
+                aria-label="Dismiss update banner"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>

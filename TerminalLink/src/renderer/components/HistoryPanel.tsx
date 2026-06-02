@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import type { CommandEntry } from '@shared/types';
+import ReplayView from './ReplayView';
 
 interface Props {
   commands: CommandEntry[];
@@ -18,8 +19,9 @@ function relativeTime(iso: string): string {
 }
 
 export default function HistoryPanel({ commands, onClear }: Props) {
-  const [query, setQuery]           = useState('');
-  const [clearPending, setClearPend] = useState(false);
+  const [query,        setQuery]       = useState('');
+  const [clearPending, setClearPend]   = useState(false);
+  const [replayMode,   setReplayMode]  = useState(false);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -64,142 +66,177 @@ export default function HistoryPanel({ commands, onClear }: Props) {
         display: 'flex',
         flexDirection: 'column',
         gap: 6,
+        flexShrink: 0,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
           <span style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: 1 }}>
-            History
+            {replayMode ? 'Replay' : 'History'}
           </span>
-          <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{commands.length} cmds</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{commands.length} cmds</span>
+            <button
+              onClick={() => setReplayMode(r => !r)}
+              disabled={commands.length === 0}
+              title="Replay session commands"
+              style={{
+                fontSize: 10,
+                padding: '2px 6px',
+                borderRadius: 3,
+                background: replayMode ? 'var(--accent-dim)' : 'var(--bg)',
+                border: `1px solid ${replayMode ? 'var(--accent)' : 'var(--border)'}`,
+                color: replayMode ? 'var(--accent)' : 'var(--text-dim)',
+                opacity: commands.length === 0 ? 0.4 : 1,
+                cursor: commands.length === 0 ? 'default' : 'pointer',
+              }}
+            >
+              {replayMode ? '■ List' : '▶ Replay'}
+            </button>
+          </div>
         </div>
-        <input
-          type="text"
-          placeholder="Filter commands..."
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          style={{
-            width: '100%',
-            background: 'var(--bg)',
-            border: '1px solid var(--border)',
-            borderRadius: 3,
-            padding: '4px 8px',
-            color: 'var(--text)',
-            fontSize: 12,
-            outline: 'none',
-          }}
-        />
+
+        {/* Only show filter input in list mode */}
+        {!replayMode && (
+          <input
+            type="text"
+            placeholder="Filter commands..."
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            style={{
+              width: '100%',
+              background: 'var(--bg)',
+              border: '1px solid var(--border)',
+              borderRadius: 3,
+              padding: '4px 8px',
+              color: 'var(--text)',
+              fontSize: 12,
+              outline: 'none',
+            }}
+          />
+        )}
       </div>
 
-      {/* List */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
-        {filtered.length === 0 && (
-          <div style={{ padding: 12, color: 'var(--text-muted)', fontSize: 11, textAlign: 'center' }}>
-            {query ? 'No matches' : 'No commands yet'}
-          </div>
-        )}
-        {filtered.map(entry => (
-          <div
-            key={entry.id}
-            style={{
-              padding: '6px 10px',
-              borderBottom: '1px solid var(--border)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 3,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{
-                  fontSize: 9,
-                  padding: '1px 4px',
-                  background: entry.pane === 1 ? 'rgba(74,158,255,0.2)' : 'rgba(0,255,65,0.15)',
-                  color:      entry.pane === 1 ? 'var(--accent)' : 'var(--success)',
-                  borderRadius: 2,
-                  textTransform: 'uppercase',
-                }}>P{entry.pane}</span>
-                <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                  {relativeTime(entry.timestamp)}
-                </span>
+      {/* Body — switches between list view and replay view */}
+      {replayMode ? (
+        <ReplayView
+          commands={commands}
+          onExit={() => setReplayMode(false)}
+        />
+      ) : (
+        <>
+          {/* List */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
+            {filtered.length === 0 && (
+              <div style={{ padding: 12, color: 'var(--text-muted)', fontSize: 11, textAlign: 'center' }}>
+                {query ? 'No matches' : 'No commands yet'}
               </div>
-              <button
-                title="Copy"
-                onClick={() => navigator.clipboard.writeText(entry.command)}
+            )}
+            {filtered.map(entry => (
+              <div
+                key={entry.id}
                 style={{
-                  fontSize: 10,
-                  color: 'var(--text-muted)',
-                  padding: '1px 4px',
-                  borderRadius: 2,
-                  background: 'var(--bg)',
-                  border: '1px solid var(--border)',
+                  padding: '6px 10px',
+                  borderBottom: '1px solid var(--border)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 3,
                 }}
               >
-                copy
-              </button>
-            </div>
-            <span style={{
-              fontSize: 12,
-              color: 'var(--text)',
-              wordBreak: 'break-all',
-              whiteSpace: 'pre-wrap',
-              fontFamily: 'inherit',
-            }}>
-              {entry.command}
-            </span>
-            {entry.outputSnippet && (
-              <span style={{
-                fontSize: 10,
-                color: 'var(--text-muted)',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}>
-                {entry.outputSnippet}
-              </span>
-            )}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{
+                      fontSize: 9,
+                      padding: '1px 4px',
+                      background: entry.pane === 1 ? 'rgba(74,158,255,0.2)' : 'rgba(0,255,65,0.15)',
+                      color:      entry.pane === 1 ? 'var(--accent)' : 'var(--success)',
+                      borderRadius: 2,
+                      textTransform: 'uppercase',
+                    }}>P{entry.pane}</span>
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                      {relativeTime(entry.timestamp)}
+                    </span>
+                  </div>
+                  <button
+                    title="Copy"
+                    onClick={() => navigator.clipboard.writeText(entry.command)}
+                    style={{
+                      fontSize: 10,
+                      color: 'var(--text-muted)',
+                      padding: '1px 4px',
+                      borderRadius: 2,
+                      background: 'var(--bg)',
+                      border: '1px solid var(--border)',
+                    }}
+                  >
+                    copy
+                  </button>
+                </div>
+                <span style={{
+                  fontSize: 12,
+                  color: 'var(--text)',
+                  wordBreak: 'break-all',
+                  whiteSpace: 'pre-wrap',
+                  fontFamily: 'inherit',
+                }}>
+                  {entry.command}
+                </span>
+                {entry.outputSnippet && (
+                  <span style={{
+                    fontSize: 10,
+                    color: 'var(--text-muted)',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}>
+                    {entry.outputSnippet}
+                  </span>
+                )}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* Footer actions */}
-      <div style={{
-        padding: '6px 10px',
-        borderTop: '1px solid var(--border)',
-        display: 'flex',
-        gap: 6,
-      }}>
-        <button
-          onClick={handleExport}
-          disabled={commands.length === 0}
-          style={{
-            flex: 1,
-            padding: '5px 0',
-            fontSize: 11,
-            borderRadius: 3,
-            background: 'var(--accent-dim)',
-            border: '1px solid var(--accent)',
-            color: 'var(--accent)',
-            opacity: commands.length === 0 ? 0.4 : 1,
-          }}
-        >
-          Export
-        </button>
-        <button
-          onClick={handleClear}
-          disabled={commands.length === 0}
-          style={{
-            flex: 1,
-            padding: '5px 0',
-            fontSize: 11,
-            borderRadius: 3,
-            background: clearPending ? 'rgba(255,68,68,0.2)' : 'var(--bg)',
-            border: `1px solid ${clearPending ? 'var(--error)' : 'var(--border)'}`,
-            color: clearPending ? 'var(--error)' : 'var(--text-dim)',
-            opacity: commands.length === 0 ? 0.4 : 1,
-          }}
-        >
-          {clearPending ? 'Confirm' : 'Clear'}
-        </button>
-      </div>
+          {/* Footer actions */}
+          <div style={{
+            padding: '6px 10px',
+            borderTop: '1px solid var(--border)',
+            display: 'flex',
+            gap: 6,
+            flexShrink: 0,
+          }}>
+            <button
+              onClick={handleExport}
+              disabled={commands.length === 0}
+              style={{
+                flex: 1,
+                padding: '5px 0',
+                fontSize: 11,
+                borderRadius: 3,
+                background: 'var(--accent-dim)',
+                border: '1px solid var(--accent)',
+                color: 'var(--accent)',
+                opacity: commands.length === 0 ? 0.4 : 1,
+              }}
+            >
+              Export
+            </button>
+            <button
+              onClick={handleClear}
+              disabled={commands.length === 0}
+              style={{
+                flex: 1,
+                padding: '5px 0',
+                fontSize: 11,
+                borderRadius: 3,
+                background: clearPending ? 'rgba(255,68,68,0.2)' : 'var(--bg)',
+                border: `1px solid ${clearPending ? 'var(--error)' : 'var(--border)'}`,
+                color: clearPending ? 'var(--error)' : 'var(--text-dim)',
+                opacity: commands.length === 0 ? 0.4 : 1,
+              }}
+            >
+              {clearPending ? 'Confirm' : 'Clear'}
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -1,5 +1,7 @@
 export type Severity = 'critical' | 'high' | 'medium' | 'low' | 'info';
 
+export type ReportTemplate = 'blank' | 'ptes' | 'owasp-web' | 'htb-machine';
+
 export interface Finding {
   id: string;
   title: string;

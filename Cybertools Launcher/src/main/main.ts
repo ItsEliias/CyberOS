@@ -701,28 +701,32 @@ function startVpnCheck(): void {
 
 function checkForUpdates(): void {
   try {
-    const config     = readConfig();
-    const releaseUrl = config.launcher?.updateUrl || DEFAULT_UPDATE_URL;
-    const req = https.get(
-      releaseUrl,
-      { headers: { 'User-Agent': `CyberTools-Launcher/${APP_VERSION}` } },
-      res => {
-        let body = '';
-        res.on('data', (chunk: string) => { body += chunk; });
-        res.on('end', () => {
-          try {
-            const data    = JSON.parse(body);
-            const tagName = (data.tag_name || '').replace(/^v/, '');
-            if (tagName && isNewerVersion(tagName, APP_VERSION)) {
-              panelWindow?.webContents.send('update-available', {
-                version: tagName,
-                url    : data.html_url || ''
-              });
-            }
-          } catch (_) {}
-        });
-      }
-    );
+    const options = {
+      hostname: 'api.github.com',
+      path    : '/repos/ItsEliias/CyberOS/releases/latest',
+      headers : { 'User-Agent': 'CyberOS-Launcher' }
+    };
+    const req = https.get(options, res => {
+      let data = '';
+      res.on('data', (chunk: string) => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const release      = JSON.parse(data);
+          const latestVersion = release.tag_name?.replace(/^v/, '') ?? '';
+          if (latestVersion && isNewerVersion(latestVersion, APP_VERSION)) {
+            const payload = {
+              version: latestVersion,
+              url    : release.html_url || '',
+              current: APP_VERSION,
+              latest : latestVersion,
+              notes  : release.body?.slice(0, 300) ?? ''
+            };
+            panelWindow?.webContents.send('update:available', payload);
+            panelWindow?.webContents.send('update-available',  payload);
+          }
+        } catch (_) {}
+      });
+    });
     req.on('error', () => {});
     req.setTimeout(8000, () => req.destroy());
   } catch (_) {}
@@ -819,7 +823,8 @@ function setupIPC(): void {
     })
   );
 
-  ipcMain.handle('open-external', (_e, url: string) => { shell.openExternal(url); return true; });
+  ipcMain.handle('open-external',   (_e, url: string) => { shell.openExternal(url); return true; });
+  ipcMain.handle('update:check-now', () => { checkForUpdates(); return true; });
 
   ipcMain.handle('ecosystem-read-events', () => ecosystemBus.readEvents());
   ipcMain.handle('ecosystem-emit', (_e, appName: string, eventType: string, data: Record<string, unknown>) => {
@@ -893,7 +898,7 @@ app.whenReady().then(() => {
     }, 1500);
   });
 
-  setTimeout(checkForUpdates, 4000);
+  setTimeout(checkForUpdates, 3000);
 });
 
 app.on('window-all-closed', e => e.preventDefault());
