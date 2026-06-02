@@ -76,7 +76,7 @@ export default function App() {
     const { setVpnStatus } = useStore.getState();
     const poll = async () => {
       try {
-        const status = await window.electronAPI.checkVpn();
+        const status = await window.electronAPI.checkVPN();
         setVpnStatus(status as never);
       } catch {}
     };

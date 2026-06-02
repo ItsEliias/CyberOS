@@ -25,6 +25,7 @@ let mainWindow: BrowserWindow | null = null
 let statusInterval: NodeJS.Timeout | null = null
 let pendingInterval: NodeJS.Timeout | null = null
 let lockTimer: NodeJS.Timeout | null = null
+let configWatcher: import('fs').FSWatcher | null = null
 
 // Lockout state
 let failedAttempts = 0
@@ -82,6 +83,19 @@ function lockVault(reason: string): void {
   writeStatus(true, 0)
   emitEvent('CredVault', 'vault:locked', { reason })
   mainWindow?.webContents.send('vault:locked')
+}
+
+function setupConfigWatch(win: BrowserWindow): void {
+  try {
+    configWatcher = fs.watch(CYBERTOOLS_CONFIG, { persistent: false }, () => {
+      setTimeout(() => {
+        try {
+          const count = readPending().length
+          win.webContents.send('push:pending-count', count)
+        } catch {}
+      }, 100)
+    })
+  } catch {}
 }
 
 function createWindow(): void {
@@ -398,10 +412,12 @@ if (!app.requestSingleInstanceLock()) {
       writeStatus(sessionKey === null, getCredCount())
     }, 10_000)
 
+    // fs.watch fires immediately when config changes; 30s interval is fallback heartbeat
+    if (mainWindow) setupConfigWatch(mainWindow)
     pendingInterval = setInterval(() => {
       const count = readPending().length
       mainWindow?.webContents.send('push:pending-count', count)
-    }, 8_000)
+    }, 30_000)
   })
 
   app.on('window-all-closed', () => {
@@ -411,6 +427,8 @@ if (!app.requestSingleInstanceLock()) {
     lockVault('app closed')
     if (process.platform !== 'darwin') app.quit()
   })
+
+  app.on('before-quit', () => { configWatcher?.close() })
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

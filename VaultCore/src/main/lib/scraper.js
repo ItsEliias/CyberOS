@@ -95,7 +95,9 @@ async function runScrape(config, vaultPath, onProgress) {
     updated: 0,
     skipped: 0,
     failed: 0,
-    startTime: Date.now()
+    startTime: Date.now(),
+    updatedNotes: [],
+    suggestedTags: {}
   };
 
   const log = (type, message, url) => {
@@ -238,13 +240,43 @@ async function runScrape(config, vaultPath, onProgress) {
       const processedContent = processor.injectFrontmatter(page, config, obsidianPlugins);
       const finalContent = processor.autoTag(processedContent, page);
 
+      // Collect suggested tags for this note
+      const suggestedForPage = processor.getSuggestedTags(page.content || '');
+      if (suggestedForPage.length > 0) {
+        stats.suggestedTags[page.title || page.url] = suggestedForPage;
+      }
+
       // Handle conflict
       const conflictResult = await conflict.handleConflict(outputPath, finalContent, config.conflictStrategy || 'skip', scrapeState);
       if (conflictResult.action === 'skip') {
         stats.skipped++;
         log('skipped', `Conflict skipped: ${page.title || page.url}`, page.url);
       } else if (conflictResult.action === 'wrote') {
-        if (fs.existsSync(outputPath)) {
+        const isUpdate = fs.existsSync(outputPath);
+        if (isUpdate) {
+          try {
+            const oldContent = fs.readFileSync(outputPath, 'utf8');
+            const newContent = conflictResult.content || finalContent;
+            // First-line diff for summary
+            const oldLines = oldContent.split('\n').filter(l => l.trim() && !l.startsWith('---') && !l.startsWith('#'));
+            const newLines = newContent.split('\n').filter(l => l.trim() && !l.startsWith('---') && !l.startsWith('#'));
+            stats.updatedNotes.push({
+              title: page.title || page.url,
+              oldFirstLine: (oldLines[0] || '').trim().slice(0, 120),
+              newFirstLine: (newLines[0] || '').trim().slice(0, 120)
+            });
+            // Store diff data for renderer
+            const previousScrapedAt = scrapeState[page.url] ? scrapeState[page.url].scrapedAt : null;
+            if (!stats.scrapeDiffs) stats.scrapeDiffs = [];
+            stats.scrapeDiffs.push({
+              url              : page.url,
+              previous         : oldContent,
+              current          : newContent,
+              diff             : lineDiff(oldContent, newContent),
+              scrapedAt        : new Date().toISOString(),
+              previousScrapedAt: previousScrapedAt || new Date().toISOString()
+            });
+          } catch (_) {}
           stats.updated++;
           log('success', `Updated: ${page.title || page.url}`, page.url);
         } else {
@@ -414,6 +446,40 @@ async function dispatchScraper(type, browser, newPageFn, config, vaultPath, log,
   }
 }
 
+// ─── LCS-based line diff ──────────────────────────────────────────────────────
+
+function lineDiff(a, b) {
+  const as = a.split('\n');
+  const bs = b.split('\n');
+  const m = as.length;
+  const n = bs.length;
+  // Build LCS dp table
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = as[i - 1] === bs[j - 1]
+        ? dp[i - 1][j - 1] + 1
+        : Math.max(dp[i - 1][j], dp[i][j - 1]);
+    }
+  }
+  // Traceback
+  const out = [];
+  let i = m, j = n;
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && as[i - 1] === bs[j - 1]) {
+      out.unshift({ line: as[i - 1], type: 'unchanged' });
+      i--; j--;
+    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+      out.unshift({ line: bs[j - 1], type: 'added' });
+      j--;
+    } else {
+      out.unshift({ line: as[i - 1], type: 'removed' });
+      i--;
+    }
+  }
+  return out;
+}
+
 module.exports = {
   runScrape,
   retryFailed,
@@ -422,5 +488,6 @@ module.exports = {
   stopScrape,
   sanitizeFileName,
   sanitizePath,
-  hashContent
+  hashContent,
+  lineDiff
 };

@@ -22,6 +22,9 @@ const reportforge = {
 
   openExternal   : (url: string)              => ipcRenderer.invoke('open-external', url) as Promise<void>,
 
+  checkGhostVaultExport   : ()               => ipcRenderer.invoke('reportforge:check-ghostvault') as Promise<{ sessionName: string; notes: string; exportedAt: string } | null>,
+  clearGhostVaultExport   : ()               => ipcRenderer.invoke('reportforge:clear-ghostvault-export') as Promise<boolean>,
+
   onTriggerPrintView: (cb: (report: Report) => void) => {
     const listener = (_: Electron.IpcRendererEvent, r: Report) => cb(r);
     ipcRenderer.on('trigger-print-view', listener);

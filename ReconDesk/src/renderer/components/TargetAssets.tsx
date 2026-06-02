@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../store'
-import type { PortState, CredType } from '../../shared/types'
+import type { Port, PortState, CredType } from '../../shared/types'
 import { CvePanel } from './CvePanel'
+import { FlagsSection } from './FlagsSection'
 
 const PORT_STATES: PortState[]  = ['open', 'filtered', 'closed']
 const CRED_TYPES:  CredType[]   = ['plaintext', 'hash', 'key', 'token']
@@ -154,6 +155,47 @@ function NmapImportModal({ targetId, onClose }: { targetId: string; onClose: () 
         </div>
       </motion.div>
     </div>
+  )
+}
+
+// ─── Attack Surface Score ─────────────────────────────────────────────────────
+
+const RISKY_SERVICES    = new Set(['http', 'https', 'ftp', 'smb', 'rdp', 'ssh', 'telnet'])
+const CVE_PRONE_SERVICES = new Set(['smb', 'rdp', 'ftp', 'http', 'https', 'telnet', 'mysql', 'mssql', 'postgresql', 'vnc'])
+
+function computeSurfaceScore(ports: Port[]): number {
+  const open = ports.filter(p => p.state === 'open')
+  let score = 0
+
+  // +5 per open port, capped at 40
+  score += Math.min(open.length * 5, 40)
+
+  // +10 per known risky service
+  for (const p of open) {
+    const svc = (p.service ?? '').toLowerCase()
+    if (RISKY_SERVICES.has(svc)) score += 10
+  }
+
+  // +5 per CVE-prone service (on top)
+  for (const p of open) {
+    const svc = (p.service ?? '').toLowerCase()
+    if (CVE_PRONE_SERVICES.has(svc)) score += 5
+  }
+
+  return Math.min(score, 100)
+}
+
+function SurfaceBadge({ ports }: { ports: Port[] }) {
+  const score = computeSurfaceScore(ports)
+  const color = score <= 30 ? 'var(--success)' : score <= 60 ? 'var(--warning)' : 'var(--error)'
+  return (
+    <span
+      title="Attack Surface Score: reflects open ports, risky services, and CVE-prone services. 0–30 low, 31–60 medium, 61–100 high."
+      style={{ color, borderColor: color }}
+      className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-transparent"
+    >
+      Surface: {score}
+    </span>
   )
 }
 
@@ -473,6 +515,7 @@ export default function TargetAssets() {
         {active.os && <span className="text-xs text-muted">{active.os}</span>}
         <span className="text-xs font-mono text-accent/70">{active.ip}</span>
         <span className="text-xs text-muted/50 px-1.5 py-0.5 bg-border/30 rounded">{active.platform}</span>
+        <SurfaceBadge ports={active.ports} />
         <span className="ml-auto text-[11px] text-muted">
           {active.ports.length} port{active.ports.length !== 1 ? 's' : ''} · {active.credentials.length} cred{active.credentials.length !== 1 ? 's' : ''}
         </span>
@@ -484,6 +527,8 @@ export default function TargetAssets() {
           <PortsSection targetId={activeId} />
           <div className="border-t border-border" />
           <CredsSection targetId={activeId} />
+          <div className="border-t border-border" />
+          <FlagsSection targetId={activeId} />
         </div>
       </div>
     </div>

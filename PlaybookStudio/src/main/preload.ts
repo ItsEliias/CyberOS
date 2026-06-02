@@ -27,4 +27,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('context:updated', (_e, d) => cb(d))
     return () => ipcRenderer.removeAllListeners('context:updated')
   },
+
+  // Cross-app: send command to TerminalLink via config file
+  runCommand: (payload: {
+    command: string
+    stepTitle: string
+    playbookTitle: string
+    source: string
+    queuedAt: string
+  }): Promise<{ ok: boolean; error?: string }> =>
+    ipcRenderer.invoke('playbook:run-command', payload),
 })

@@ -40,6 +40,13 @@ const api = {
 
   saveCapture: (payload: CapturePayload): Promise<CaptureResult> =>
     ipcRenderer.invoke('capture:save', payload),
+
+  // Cross-app: receive command pasted from PlaybookStudio
+  onPasteCommand: (cb: (payload: { command: string; stepTitle: string; playbookTitle: string; source: string; queuedAt: string }) => void): (() => void) => {
+    const fn = (_: Electron.IpcRendererEvent, payload: { command: string; stepTitle: string; playbookTitle: string; source: string; queuedAt: string }) => cb(payload);
+    ipcRenderer.on('terminal:paste-command', fn);
+    return () => ipcRenderer.removeListener('terminal:paste-command', fn);
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', api);

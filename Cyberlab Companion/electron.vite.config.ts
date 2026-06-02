@@ -15,7 +15,8 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()],
     build: {
       rollupOptions: {
-        input: { preload: resolve('src/main/preload.ts') }
+        input: { preload: resolve('src/main/preload.ts') },
+        output: { format: 'cjs' }
       }
     }
   },

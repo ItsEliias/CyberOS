@@ -2,6 +2,22 @@ import { useState, useEffect, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Credential } from '@shared/types'
 
+/** Compute human-readable age and display colour from a createdAt ISO string */
+function credAge(createdAt: string): { label: string; color: string; stale: boolean } {
+  const now   = Date.now()
+  const then  = new Date(createdAt).getTime()
+  const ms    = now - then
+  const hours = ms / 3_600_000
+  const days  = ms / 86_400_000
+
+  if (hours < 1)   return { label: 'just now', color: 'var(--text-muted)', stale: false }
+  if (hours < 24)  return { label: `${Math.floor(hours)}h ago`, color: 'var(--text-muted)', stale: false }
+  if (days < 7)    return { label: `${Math.floor(days)}d ago`, color: 'var(--success)', stale: false }
+  if (days < 30)   return { label: `${Math.floor(days)}d ago`, color: 'var(--warning)', stale: false }
+  if (days < 90)   return { label: `${Math.floor(days)}d ago`, color: 'var(--error)', stale: false }
+  return             { label: `${Math.floor(days)}d ago`, color: 'var(--error)', stale: true }
+}
+
 interface Props {
   cred:     Credential
   onEdit:   (c: Credential) => void
@@ -41,6 +57,7 @@ export default function CredentialRow({ cred, onEdit, onDelete }: Props) {
   }
 
   const hasSecret = cred.password || cred.hash
+  const age = credAge(cred.createdAt)
 
   return (
     <>
@@ -77,13 +94,36 @@ export default function CredentialRow({ cred, onEdit, onDelete }: Props) {
           </span>
           {cred.verified && <span style={{ fontSize: 10, color: 'var(--success)', marginLeft: 5 }}>✓</span>}
         </td>
+        {/* Age indicator */}
+        <td style={{ padding: '9px 14px', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 10, color: age.color }}>
+            {age.label}
+          </span>
+          {age.stale && (
+            <span style={{
+              display: 'inline-block',
+              marginLeft: 4,
+              fontSize: 9,
+              color: 'var(--error)',
+              opacity: 0.8,
+              border: '1px solid var(--error)',
+              borderRadius: 3,
+              padding: '0 3px',
+              lineHeight: '14px',
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase'
+            }}>
+              stale
+            </span>
+          )}
+        </td>
       </tr>
 
       {/* Expanded detail row */}
       <AnimatePresence>
         {expanded && (
           <tr>
-            <td colSpan={7} style={{ padding: 0 }}>
+            <td colSpan={8} style={{ padding: 0 }}>
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}

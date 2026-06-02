@@ -571,7 +571,7 @@ function processTODOs(raw) {
   }
 
   if (!existing.open.length && !actions.length) {
-    out.push(`*No action items detected (v2 · ${text.length} chars processed). Write tasks as bullet points starting with a verb (e.g. "- Call John back").*`);
+    out.push(`*No action items detected (v2 · ${raw.length} chars processed). Write tasks as bullet points starting with a verb (e.g. "- Call John back").*`);
     out.push('');
   }
 

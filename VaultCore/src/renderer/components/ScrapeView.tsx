@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useStore } from '../store';
 import type { SourceType, ConflictStrategy, UpdateMode, ScrapeConfig } from '@shared/types';
+import ScrapeSummary from './ScrapeSummary';
 
 const SOURCE_TYPES: Array<{ id: SourceType; label: string }> = [
   { id: 'obsidian-publish', label: 'Obsidian Publish' },
@@ -370,37 +371,12 @@ export default function ScrapeView() {
         {/* Post-scrape summary */}
         <AnimatePresence>
           {showPostScrape && lastResult && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-              className="border-b p-4"
-              style={{ borderColor: 'var(--border)', background: 'var(--bg2)' }}>
-              <div className="text-sm font-semibold mb-3" style={{ color: '#3fb950' }}>✓ Scrape Complete</div>
-              <div className="flex gap-4 text-xs mb-3">
-                <div className="stat-chip text-center" style={{ minWidth: 80 }}>
-                  <div className="font-bold text-lg font-mono" style={{ color: '#3fb950' }}>{lastResult.saved}</div>
-                  <div style={{ color: 'var(--text-dim)' }}>Saved</div>
-                </div>
-                <div className="stat-chip text-center" style={{ minWidth: 80 }}>
-                  <div className="font-bold text-lg font-mono" style={{ color: '#7bb8ff' }}>{lastResult.updated}</div>
-                  <div style={{ color: 'var(--text-dim)' }}>Updated</div>
-                </div>
-                <div className="stat-chip text-center" style={{ minWidth: 80 }}>
-                  <div className="font-bold text-lg font-mono" style={{ color: '#f85149' }}>{lastResult.failed}</div>
-                  <div style={{ color: 'var(--text-dim)' }}>Failed</div>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => window.electronAPI.openVaultInObsidian()}
-                  className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-white/5"
-                  style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>Open in Obsidian</button>
-                <button onClick={() => useStore.getState().setActiveView('sources')}
-                  className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-white/5"
-                  style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>View Sources</button>
-                <button onClick={() => { setShowPostScrape(false); setLastResult(null); clearLog(); setUrl(''); }}
-                  className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-white/5"
-                  style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>New Scrape</button>
-              </div>
-            </motion.div>
+            <ScrapeSummary
+              result={lastResult}
+              onOpenObsidian={() => window.electronAPI.openVaultInObsidian()}
+              onViewSources={() => useStore.getState().setActiveView('sources')}
+              onNewScrape={() => { setShowPostScrape(false); setLastResult(null); clearLog(); setUrl(''); }}
+            />
           )}
         </AnimatePresence>
 

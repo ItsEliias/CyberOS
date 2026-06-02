@@ -38,7 +38,10 @@ function emitEvent(appName, eventType, data = {}) {
       data
     });
     if (events.length > MAX_EVENTS) events.splice(MAX_EVENTS);
-    fs.writeFileSync(BUS_FILE, JSON.stringify(events, null, 2), 'utf8');
+    // Atomic write: write to .tmp then rename to avoid partial-read corruption
+    const tmpFile = BUS_FILE + '.tmp';
+    fs.writeFileSync(tmpFile, JSON.stringify(events, null, 2), 'utf8');
+    fs.renameSync(tmpFile, BUS_FILE);
   } catch (e) {
     console.error('[EcosystemBus] emit error:', e.message);
   }

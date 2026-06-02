@@ -311,6 +311,24 @@ ipcMain.handle('signal-print-ready', () => {
 
 ipcMain.handle('open-external', (_, url: string) => shell.openExternal(url));
 
+// GhostVault export check
+ipcMain.handle('reportforge:check-ghostvault', (): Record<string, unknown> | null => {
+  try {
+    const cfg = readSharedConfig();
+    const exp = cfg.ghostvault_export as Record<string, unknown> | undefined;
+    return exp && exp.notes ? exp : null;
+  } catch { return null; }
+});
+
+ipcMain.handle('reportforge:clear-ghostvault-export', (): boolean => {
+  try {
+    const shared = readSharedConfig();
+    delete shared.ghostvault_export;
+    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8');
+    return true;
+  } catch { return false; }
+});
+
 // Ecosystem emit from renderer
 ipcMain.handle('ecosystem-emit', (_, appName: string, event: string, data: Record<string, unknown>) => {
   ecosystemBus.emitEvent(appName, event, data);

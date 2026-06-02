@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect, useMemo } from 'react';
+import { useRef, useCallback, useEffect, useMemo, useState } from 'react';
 import { useStore } from '../store';
 import { parseMarkdown } from '../lib/markdown';
 import type { EditorMode } from '@shared/types';
@@ -27,8 +27,21 @@ export default function EditorView({
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const config = useStore(s => s.config);
+  const [exportToast, setExportToast] = useState(false);
 
   const isPinned = activeNote ? pinnedPaths.has(activeNote.path) : false;
+
+  async function handleExportToReport() {
+    if (!activeNote || !editorContent.trim()) return;
+    const ok = await window.ghostvault.exportNotes({
+      sessionName: activeNote.name,
+      notes      : editorContent
+    });
+    if (ok) {
+      setExportToast(true);
+      setTimeout(() => setExportToast(false), 2500);
+    }
+  }
 
   function markDirty() {
     setDirty(true);
@@ -93,7 +106,7 @@ export default function EditorView({
   }, [editorContent]);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" style={{ position: 'relative' }}>
       {/* Toolbar */}
       <div className="flex items-center gap-2 px-4 py-2 border-b flex-shrink-0"
         style={{ borderColor: 'var(--border)', background: 'var(--bg2)' }}>
@@ -153,8 +166,22 @@ export default function EditorView({
             }}>
             {dirty ? 'Save' : 'Saved'}
           </button>
+          {activeNote && editorContent.trim() && (
+            <button onClick={handleExportToReport}
+              title="Export notes to ReportForge"
+              className="px-2.5 py-1 rounded text-[10px] font-medium transition-colors"
+              style={{ border: '1px solid var(--accent-dim, rgba(88,166,255,0.3))', color: 'var(--accent)' }}>
+              → Report
+            </button>
+          )}
         </div>
       </div>
+      {exportToast && (
+        <div className="absolute top-14 right-4 px-3 py-1.5 rounded text-[11px] font-medium z-50"
+          style={{ background: 'var(--bg3)', border: '1px solid var(--success)', color: 'var(--success)', boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }}>
+          Notes staged for ReportForge
+        </div>
+      )}
 
       {/* Editor + Preview */}
       <div className="flex flex-1 min-h-0">

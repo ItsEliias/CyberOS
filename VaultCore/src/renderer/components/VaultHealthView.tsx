@@ -3,11 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import type { DuplicateGroup, DeadLink } from '@shared/types';
 
-type HealthTab = 'overview' | 'duplicates' | 'deadlinks';
+type HealthTab = 'overview' | 'duplicates' | 'deadlinks' | 'sources';
 
 export default function VaultHealthView() {
   const {
-    vaultPath, vaultStats, duplicates, deadLinks, healthProgress,
+    vaultPath, vaultStats, duplicates, deadLinks, healthProgress, sources,
     setVaultStats, setDuplicates, setDeadLinks, setHealthProgress, addLog,
   } = useStore();
 
@@ -135,30 +135,39 @@ export default function VaultHealthView() {
 
       {/* Tab bar */}
       <div className="flex border-b shrink-0 px-5" style={{ borderColor: 'var(--border)' }}>
-        {(['overview', 'duplicates', 'deadlinks'] as HealthTab[]).map(t => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className="tab px-3 py-2.5 text-xs capitalize border-b-2 -mb-px"
-            style={{
-              color       : tab === t ? 'var(--accent)' : 'var(--text-muted)',
-              borderColor : tab === t ? 'var(--accent)' : 'transparent',
-            }}>
-            {t === 'deadlinks' ? 'Dead Links' : t.charAt(0).toUpperCase() + t.slice(1)}
-            {t === 'duplicates' && duplicates.length > 0 && (
-              <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full"
-                style={{ background: 'var(--bg3)', color: 'var(--text-dim)' }}>
-                {duplicates.length}
-              </span>
-            )}
-            {t === 'deadlinks' && deadLinks.length > 0 && (
-              <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full"
-                style={{ background: 'var(--bg3)', color: 'var(--text-dim)' }}>
-                {deadLinks.length}
-              </span>
-            )}
-          </button>
-        ))}
+        {(['overview', 'sources', 'duplicates', 'deadlinks'] as HealthTab[]).map(t => {
+          const errCount = sources.filter(s => s.health?.status === 'error').length;
+          return (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className="tab px-3 py-2.5 text-xs capitalize border-b-2 -mb-px"
+              style={{
+                color       : tab === t ? 'var(--accent)' : 'var(--text-muted)',
+                borderColor : tab === t ? 'var(--accent)' : 'transparent',
+              }}>
+              {t === 'deadlinks' ? 'Dead Links' : t === 'sources' ? 'Source Health' : t.charAt(0).toUpperCase() + t.slice(1)}
+              {t === 'sources' && errCount > 0 && (
+                <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full"
+                  style={{ background: 'rgba(248,81,73,0.15)', color: '#f85149' }}>
+                  {errCount}
+                </span>
+              )}
+              {t === 'duplicates' && duplicates.length > 0 && (
+                <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full"
+                  style={{ background: 'var(--bg3)', color: 'var(--text-dim)' }}>
+                  {duplicates.length}
+                </span>
+              )}
+              {t === 'deadlinks' && deadLinks.length > 0 && (
+                <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full"
+                  style={{ background: 'var(--bg3)', color: 'var(--text-dim)' }}>
+                  {deadLinks.length}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Tab content */}
@@ -202,6 +211,8 @@ export default function VaultHealthView() {
                 )}
               </div>
             )}
+
+            {tab === 'sources' && <SourceHealthTab />}
 
             {tab === 'duplicates' && (
               <div className="space-y-3">
@@ -283,6 +294,58 @@ export default function VaultHealthView() {
           </motion.div>
         </AnimatePresence>
       </div>
+    </div>
+  );
+}
+
+function SourceHealthTab() {
+  const { sources } = useStore();
+  if (sources.length === 0) {
+    return <EmptyState icon="📡" title="No sources configured" subtitle="Add sources in the Sources view" />;
+  }
+  const statusOrder = { error: 0, warning: 1, unknown: 2, healthy: 3 };
+  const sorted = [...sources].sort((a, b) => {
+    const sa = statusOrder[a.health?.status ?? 'unknown'];
+    const sb = statusOrder[b.health?.status ?? 'unknown'];
+    return sa - sb;
+  });
+  const colorMap: Record<string, string> = {
+    healthy: '#3fb950', warning: '#d29922', error: '#f85149', unknown: 'var(--text-dim)',
+  };
+  function fmt(ts?: string) {
+    if (!ts) return '—';
+    return new Date(ts).toLocaleDateString() + ' ' + new Date(ts).toLocaleTimeString();
+  }
+  return (
+    <div className="space-y-2">
+      {sorted.map(src => {
+        const status = src.health?.status ?? 'unknown';
+        const color = colorMap[status];
+        const isError = status === 'error';
+        return (
+          <div key={src.id} className="card p-3"
+            style={isError ? { border: '1px solid rgba(248,81,73,0.35)' } : undefined}>
+            <div className="flex items-center gap-3">
+              <span className="w-2.5 h-2.5 rounded-full shrink-0"
+                style={{ background: color, boxShadow: isError ? `0 0 6px ${color}` : undefined }} />
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-medium truncate" style={{ color: 'var(--text)' }}>{src.name}</div>
+                {src.url && <div className="text-[10px] font-mono truncate" style={{ color: 'var(--text-dim)' }}>{src.url}</div>}
+              </div>
+              <span className="text-[10px] px-1.5 py-0.5 rounded capitalize" style={{ background: `${color}18`, color }}>{status}</span>
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-x-4 text-[10px]" style={{ color: 'var(--text-dim)' }}>
+              <span>Last success: {fmt(src.health?.lastSuccess)}</span>
+              <span>Failures: {src.health?.consecutiveFailures ?? 0}</span>
+              {src.health?.lastError && (
+                <span className="col-span-2 mt-1 truncate" style={{ color: '#f85149' }}>
+                  Error: {src.health.lastError.slice(0, 100)}
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

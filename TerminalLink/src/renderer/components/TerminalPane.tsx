@@ -36,6 +36,7 @@ export default function TerminalPane({ paneId, paneNumber, active, onCommand, on
   const inputBufRef   = useRef('');
   const deadRef       = useRef(false);
   const [captureData, setCaptureData] = useState<string | null>(null);
+  const [pasteToast, setPasteToast]   = useState<string | null>(null);
 
   const captureTerminal = useCallback((): string | null => {
     const terminal = termRef.current;
@@ -158,6 +159,13 @@ export default function TerminalPane({ paneId, paneNumber, active, onCommand, on
       });
     });
 
+    // Paste command from PlaybookStudio
+    const offPaste = window.electronAPI.onPasteCommand((payload) => {
+      term.write(payload.command);
+      setPasteToast(`Command from PlaybookStudio: ${payload.stepTitle}`);
+      setTimeout(() => setPasteToast(null), 3000);
+    });
+
     // Focus passthrough
     containerRef.current?.addEventListener('mousedown', onFocus);
 
@@ -167,6 +175,7 @@ export default function TerminalPane({ paneId, paneNumber, active, onCommand, on
       disposeKey.dispose();
       offData();
       offExit();
+      offPaste();
       ro.disconnect();
       window.electronAPI.ptyKill(paneId);
       term.dispose();
@@ -235,6 +244,27 @@ export default function TerminalPane({ paneId, paneNumber, active, onCommand, on
           ⊡ Capture
         </button>
       </div>
+
+      {/* Paste-command toast */}
+      {pasteToast && (
+        <div style={{
+          position: 'absolute',
+          top: 26,
+          left: 0,
+          right: 0,
+          zIndex: 10,
+          padding: '4px 10px',
+          background: 'rgba(227,179,65,0.15)',
+          borderBottom: '1px solid rgba(227,179,65,0.4)',
+          color: '#e3b341',
+          fontSize: 10,
+          fontFamily: 'inherit',
+          userSelect: 'none',
+          pointerEvents: 'none',
+        }}>
+          {pasteToast}
+        </div>
+      )}
 
       <div
         ref={containerRef}

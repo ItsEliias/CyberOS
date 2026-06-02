@@ -50,6 +50,9 @@ export function createSession(opts: {
     examMode: !!(opts.timerEnabled),
     complete: false,
     mistakes: { repeatedCommands: {}, skippedSteps: [], hintEscalations: {}, methodologyBreaks: [] },
+    hintsUsed: 0,
+    hintLog: [],
+    screenshots: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };

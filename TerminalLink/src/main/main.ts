@@ -15,6 +15,7 @@ let mainWindow: BrowserWindow | null = null;
 const ptys = new Map<string, ReturnType<typeof pty.spawn>>();
 
 const CONFIG_PATH     = path.join(process.env.HOME!, 'cybertools-config.json');
+let _lastCommandAt    = '';
 const EVENTS_PATH     = path.join(process.env.HOME!, 'Library', 'Application Support', 'CyberTools', 'ecosystem-events.json');
 const SESSIONS_DIR    = path.join(process.env.HOME!, 'Library', 'Application Support', 'TerminalLink', 'sessions');
 
@@ -60,6 +61,21 @@ function emitEcosystemEvent(event: string, data: Record<string, unknown>): void 
   }
 }
 
+// ─── Pending command watcher ──────────────────────────────────────────────────
+function watchForPendingCommand(win: BrowserWindow): void {
+  try {
+    fs.watch(CONFIG_PATH, { persistent: false }, () => {
+      try {
+        const config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+        const pending = config.pending_command as { command: string; stepTitle: string; playbookTitle: string; source: string; queuedAt: string } | undefined;
+        if (!pending || pending.queuedAt === _lastCommandAt) return;
+        _lastCommandAt = pending.queuedAt;
+        win.webContents.send('terminal:paste-command', pending);
+      } catch { /* ignore parse errors */ }
+    });
+  } catch { /* ignore if file doesn't exist yet */ }
+}
+
 // ─── Window ───────────────────────────────────────────────────────────────────
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -101,6 +117,7 @@ if (!app.requestSingleInstanceLock()) {
     createWindow();
     writeConfig({ terminallink_status: { active: true, lastActive: new Date().toISOString(), commandCount: 0 } });
     emitEcosystemEvent('session:started', { timestamp: new Date().toISOString() });
+    if (mainWindow) watchForPendingCommand(mainWindow);
 
     app.on('activate', () => {
       if (!mainWindow) createWindow();

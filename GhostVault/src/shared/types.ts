@@ -15,6 +15,26 @@ export interface GhostVaultConfig {
   windowX?: number;
   windowY?: number;
   firstRun?: boolean;
+  captureHotkey?: string;
+  labSessionTemplate?: string;
+}
+
+export interface CyberLabStatus {
+  currentLab?: string;
+  activeTarget?: string;
+  activeIP?: string;
+}
+
+export interface ReconDeskStatus {
+  activeTarget?: string;
+  activeIP?: string;
+}
+
+export interface CyberToolsSharedConfig {
+  cyberlab_status?: CyberLabStatus;
+  recondesk_status?: ReconDeskStatus;
+  ghostvault_status?: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
 export interface ThemeConfig {

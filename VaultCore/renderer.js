@@ -672,6 +672,14 @@ function setupIpcListeners() {
   api.onVaultHealthProgress((data) => {
     updateHealthProgress(data);
   });
+
+  // Scheduled scrape completed in background — refresh Source Library so
+  // lastScraped / noteCount / status columns stay current.
+  api.onScheduleComplete((data) => {
+    setStatus(`Scheduled scrape complete: ${data.source || 'source'}`);
+    sounds.notification();
+    refreshSourceLibrary();
+  });
 }
 
 // ─── Keyboard Shortcuts ───────────────────────────────────────────────────────

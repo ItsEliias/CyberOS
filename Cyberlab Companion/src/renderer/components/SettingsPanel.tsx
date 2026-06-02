@@ -1,16 +1,42 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '../store';
-import type { AppConfig } from '@shared/types';
-import type { ThemeId } from '@shared/types';
-import { THEMES } from '../lib/themes';
+import type { AppConfig, BgThemeId, AccentThemeId } from '@shared/types';
+import { BG_THEMES, ACCENT_THEMES } from '../lib/themes';
 
 export default function SettingsPanel() {
-  const { config, setConfig, setTheme, theme } = useStore();
+  const { config, setConfig, setBgTheme, setAccentTheme, bgTheme, accentTheme } = useStore();
   const [form, setForm] = useState<Partial<AppConfig>>(config || {});
   const [newApiKey, setNewApiKey] = useState('');
   const [testingKey, setTestingKey] = useState(false);
   const [keyStatus, setKeyStatus] = useState<'idle'|'ok'|'fail'>('idle');
   const [saved, setSaved] = useState(false);
+  const [ollamaModels, setOllamaModels] = useState<string[]>([]);
+  const [ollamaStatus, setOllamaStatus] = useState<'unknown'|'ok'|'error'>('unknown');
+  const [loadingOllamaModels, setLoadingOllamaModels] = useState(false);
+
+  const aiProvider = form.aiProvider || 'claude';
+
+  useEffect(() => {
+    if (aiProvider === 'ollama') refreshOllamaModels();
+  }, [aiProvider]);
+
+  async function refreshOllamaModels() {
+    setLoadingOllamaModels(true);
+    try {
+      const res = await (window.electronAPI as Record<string, Function>).ollamaListModels(form.ollamaEndpoint) as { success: boolean; models: string[]; error?: string };
+      if (res.success) {
+        setOllamaModels(res.models);
+        setOllamaStatus('ok');
+      } else {
+        setOllamaStatus('error');
+        setOllamaModels([]);
+      }
+    } catch {
+      setOllamaStatus('error');
+    } finally {
+      setLoadingOllamaModels(false);
+    }
+  }
 
   async function save() {
     const updated = { ...config, ...form } as AppConfig;
@@ -24,8 +50,8 @@ export default function SettingsPanel() {
     if (!newApiKey.trim()) return;
     setTestingKey(true);
     try {
-      const ok = await window.electronAPI.testApiKey(newApiKey.trim());
-      if (ok) {
+      const result = await window.electronAPI.testApiKey(newApiKey.trim()) as { success: boolean; error?: string; warning?: string };
+      if (result?.success) {
         await window.electronAPI.saveApiKey(newApiKey.trim());
         setKeyStatus('ok');
       } else {
@@ -49,27 +75,47 @@ export default function SettingsPanel() {
     if (path) setForm(f => ({ ...f, obsidianVault: path }));
   }
 
-  const THEME_IDS = Object.keys(THEMES) as ThemeId[];
+  const BG_IDS     = Object.keys(BG_THEMES)     as BgThemeId[];
+  const ACCENT_IDS = Object.keys(ACCENT_THEMES) as AccentThemeId[];
 
   return (
     <div className="flex flex-col h-full overflow-y-auto p-4">
       <div className="max-w-xl mx-auto w-full space-y-6">
         <h2 className="text-sm font-semibold text-[var(--text)]">Settings</h2>
 
-        {/* Theme */}
+        {/* Theme — Background */}
         <section className="card space-y-3">
-          <div className="text-xs font-semibold text-[var(--text-dim)] uppercase tracking-wide">Theme</div>
+          <div className="text-xs font-semibold text-[var(--text-dim)] uppercase tracking-wide">Background</div>
           <div className="flex gap-2 flex-wrap">
-            {THEME_IDS.map(t => (
+            {BG_IDS.map(id => (
               <button
-                key={t}
+                key={id}
                 className={`flex items-center gap-2 px-3 py-2 rounded text-xs transition-colors ${
-                  theme === t ? 'bg-[var(--accent-dim)] text-[var(--accent)] border border-[var(--accent-dim)]' : 'btn-ghost'
+                  bgTheme === id ? 'bg-[var(--accent-dim)] text-[var(--accent)] border border-[var(--accent-dim)]' : 'btn-ghost'
                 }`}
-                onClick={() => setTheme(t)}
+                onClick={() => setBgTheme(id)}
               >
-                <div className="w-2 h-2 rounded-full" style={{ background: THEMES[t].dot }} />
-                {THEMES[t].name}
+                <div className="w-2.5 h-2.5 rounded-full border border-[var(--border)]" style={{ background: BG_THEMES[id].dot }} />
+                {BG_THEMES[id].name}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Theme — Colour / Accent */}
+        <section className="card space-y-3">
+          <div className="text-xs font-semibold text-[var(--text-dim)] uppercase tracking-wide">Colour</div>
+          <div className="flex gap-2 flex-wrap">
+            {ACCENT_IDS.map(id => (
+              <button
+                key={id}
+                className={`flex items-center gap-2 px-3 py-2 rounded text-xs transition-colors ${
+                  accentTheme === id ? 'bg-[var(--accent-dim)] text-[var(--accent)] border border-[var(--accent-dim)]' : 'btn-ghost'
+                }`}
+                onClick={() => setAccentTheme(id)}
+              >
+                <div className="w-2.5 h-2.5 rounded-full" style={{ background: ACCENT_THEMES[id].dot }} />
+                {ACCENT_THEMES[id].name}
               </button>
             ))}
           </div>
@@ -121,30 +167,96 @@ export default function SettingsPanel() {
           </div>
         </section>
 
-        {/* API Key */}
+        {/* AI Provider */}
         <section className="card space-y-3">
-          <div className="text-xs font-semibold text-[var(--text-dim)] uppercase tracking-wide">Claude API Key</div>
-          <p className="text-xs text-[var(--text-muted)]">Update your Anthropic API key. The current key is encrypted.</p>
+          <div className="text-xs font-semibold text-[var(--text-dim)] uppercase tracking-wide">AI Provider</div>
           <div className="flex gap-2">
-            <input
-              type="password"
-              value={newApiKey}
-              onChange={e => setNewApiKey(e.target.value)}
-              className="flex-1 font-mono text-xs"
-              placeholder="sk-ant-api03-..."
-            />
-            <button
-              className={`px-3 py-1.5 text-xs rounded border transition-colors ${
-                keyStatus === 'ok' ? 'border-[var(--success)] text-[var(--success)] bg-transparent' :
-                keyStatus === 'fail' ? 'border-[var(--error)] text-[var(--error)] bg-transparent' :
-                'btn-accent'
-              }`}
-              onClick={testKey}
-              disabled={testingKey || !newApiKey.trim()}
-            >
-              {testingKey ? 'Testing...' : keyStatus === 'ok' ? 'Saved ✓' : keyStatus === 'fail' ? 'Failed ✗' : 'Test & Save'}
-            </button>
+            {(['claude', 'ollama'] as const).map(p => (
+              <button
+                key={p}
+                className={`px-3 py-1.5 text-xs rounded border transition-colors ${
+                  aiProvider === p ? 'bg-[var(--accent-dim)] text-[var(--accent)] border-[var(--accent-dim)]' : 'btn-ghost'
+                }`}
+                onClick={() => setForm(f => ({ ...f, aiProvider: p }))}
+              >
+                {p === 'claude' ? 'Claude API' : 'Ollama (Local)'}
+              </button>
+            ))}
           </div>
+          {aiProvider === 'claude' && (
+            <div className="space-y-3">
+              <div className="input-group">
+                <label>Claude Model</label>
+                <select
+                  value={form.claudeModel || 'claude-sonnet-4-6'}
+                  onChange={e => setForm(f => ({ ...f, claudeModel: e.target.value }))}
+                  className="w-full text-xs"
+                >
+                  <option value="claude-haiku-4-5-20251001">Haiku 4.5 — Fast / cheap</option>
+                  <option value="claude-sonnet-4-6">Sonnet 4.6 — Balanced (default)</option>
+                  <option value="claude-opus-4-7">Opus 4.7 — Best / slow</option>
+                </select>
+              </div>
+              <div className="text-xs text-[var(--text-muted)]">Update your Anthropic API key. The current key is encrypted.</div>
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  value={newApiKey}
+                  onChange={e => setNewApiKey(e.target.value)}
+                  className="flex-1 font-mono text-xs"
+                  placeholder="sk-ant-api03-..."
+                />
+                <button
+                  className={`px-3 py-1.5 text-xs rounded border transition-colors ${
+                    keyStatus === 'ok' ? 'border-[var(--success)] text-[var(--success)] bg-transparent' :
+                    keyStatus === 'fail' ? 'border-[var(--error)] text-[var(--error)] bg-transparent' :
+                    'btn-accent'
+                  }`}
+                  onClick={testKey}
+                  disabled={testingKey || !newApiKey.trim()}
+                >
+                  {testingKey ? 'Testing...' : keyStatus === 'ok' ? 'Saved ✓' : keyStatus === 'fail' ? 'Failed ✗' : 'Test & Save'}
+                </button>
+              </div>
+            </div>
+          )}
+          {aiProvider === 'ollama' && (
+            <div className="space-y-3">
+              <div className="input-group">
+                <label>Ollama Endpoint</label>
+                <input
+                  type="text"
+                  value={form.ollamaEndpoint || 'http://localhost:11434'}
+                  onChange={e => setForm(f => ({ ...f, ollamaEndpoint: e.target.value }))}
+                  className="w-full font-mono text-xs"
+                  placeholder="http://localhost:11434"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${ollamaStatus === 'ok' ? 'bg-[var(--success)]' : ollamaStatus === 'error' ? 'bg-[var(--error)]' : 'bg-[var(--text-muted)]'}`} />
+                <span className="text-xs text-[var(--text-muted)]">
+                  {ollamaStatus === 'ok' ? 'Ollama reachable' : ollamaStatus === 'error' ? 'Ollama not running' : 'Unknown'}
+                </span>
+                <button className="btn-ghost px-2 py-1 text-xs ml-auto" onClick={refreshOllamaModels} disabled={loadingOllamaModels}>
+                  {loadingOllamaModels ? '...' : 'Refresh'}
+                </button>
+              </div>
+              <div className="input-group">
+                <label>Model</label>
+                <select
+                  value={form.ollamaModel || ''}
+                  onChange={e => setForm(f => ({ ...f, ollamaModel: e.target.value }))}
+                  className="w-full text-xs"
+                >
+                  <option value="">Select a model...</option>
+                  {ollamaModels.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+              {ollamaStatus === 'error' && (
+                <p className="text-xs" style={{ color: 'var(--error)' }}>Start Ollama with: <code className="font-mono">ollama serve</code></p>
+              )}
+            </div>
+          )}
         </section>
 
         {/* Preferences */}

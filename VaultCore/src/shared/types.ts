@@ -32,6 +32,14 @@ export interface SourceSchedule {
   nextRun?          : string;
 }
 
+export interface SourceHealth {
+  lastChecked?         : string;
+  lastSuccess?         : string;
+  consecutiveFailures  : number;
+  lastError?           : string;
+  status               : 'healthy' | 'warning' | 'error' | 'unknown';
+}
+
 export interface Source {
   id          : string;
   name        : string;
@@ -41,6 +49,7 @@ export interface Source {
   lastScraped?: string;
   noteCount?  : number;
   schedule?   : SourceSchedule;
+  health?     : SourceHealth;
 }
 
 export interface ScrapeProgress {
@@ -54,12 +63,30 @@ export interface ScrapeProgress {
   phase?   : string;
 }
 
+export interface DiffLine {
+  line: string;
+  type: 'added' | 'removed' | 'unchanged';
+}
+
+export interface ScrapeDiff {
+  url             : string;
+  previous        : string;
+  current         : string;
+  diff            : DiffLine[];
+  scrapedAt       : string;
+  previousScrapedAt: string;
+}
+
 export interface ScrapeResult {
   saved   : number;
   updated : number;
   failed  : number;
   skipped?: number;
   errors? : string[];
+  updatedNotes?: Array<{ title: string; oldFirstLine: string; newFirstLine: string }>;
+  folderStats? : Array<{ folder: string; count: number }>;
+  suggestedTags?: Record<string, string[]>;
+  scrapeDiffs?: ScrapeDiff[];
 }
 
 export interface ScrapeConfig {

@@ -5,9 +5,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import os from 'os';
-import https from 'https';
-import http from 'http';
 import * as ecosystemBus from './ecosystem-bus.js';
+import { registerExtras, DEFAULT_CAPTURE_HOTKEY } from './ipc-extras.js';
 import type { GhostVaultConfig, NoteFile, NewNoteResult, SaveCaptureResult } from '../shared/types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -104,31 +103,6 @@ function saveConfig(cfg: Partial<GhostVaultConfig>): boolean {
   }
 }
 
-// ─── HTTP helper ──────────────────────────────────────────────────────────────
-function fetchJSON(url: string, opts: { method?: string; headers?: Record<string, string>; body?: string } = {}) {
-  return new Promise<{ status: number; body: unknown }>((resolve, reject) => {
-    const parsed  = new URL(url);
-    const lib     = parsed.protocol === 'https:' ? https : http;
-    const reqOpts = {
-      hostname: parsed.hostname,
-      port    : parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
-      path    : parsed.pathname + parsed.search,
-      method  : opts.method || 'GET',
-      headers : opts.headers || {}
-    };
-    const req = lib.request(reqOpts, res => {
-      let data = '';
-      res.on('data', (c: string) => data += c);
-      res.on('end', () => {
-        try { resolve({ status: res.statusCode ?? 200, body: JSON.parse(data) }); }
-        catch  { resolve({ status: res.statusCode ?? 200, body: data }); }
-      });
-    });
-    req.on('error', reject);
-    if (opts.body) req.write(opts.body);
-    req.end();
-  });
-}
 
 // ─── Vault helpers ────────────────────────────────────────────────────────────
 function ensureVaultFolders(vaultPath: string) {
@@ -244,6 +218,27 @@ function toggleCaptureWindow() {
   }
 }
 
+// ─── Global capture hotkey ────────────────────────────────────────────────────
+function registerCaptureHotkey() {
+  const cfg = loadConfig();
+  const key = cfg.captureHotkey || DEFAULT_CAPTURE_HOTKEY;
+  try {
+    globalShortcut.register(key, () => {
+      if (!captureWindow) createCaptureWindow();
+      if (captureWindow!.isVisible()) {
+        captureWindow!.focus();
+      } else {
+        sendCaptureFolders();
+        captureWindow!.show();
+        captureWindow!.setAlwaysOnTop(true, 'floating');
+        captureWindow!.focus();
+      }
+    });
+  } catch (e) {
+    console.warn('[GhostVault] Capture hotkey registration failed for', key, ':', (e as Error).message);
+  }
+}
+
 // ─── Main window ──────────────────────────────────────────────────────────────
 function createWindow() {
   const cfg = loadConfig();
@@ -284,78 +279,11 @@ function createWindow() {
 
   try {
     globalShortcut.register('CommandOrControl+N', () => toggleCaptureWindow());
-    globalShortcut.register('CommandOrControl+Shift+G', () => {
-      if (mainWindow) {
-        if (mainWindow.isMinimized()) mainWindow.restore();
-        mainWindow.show();
-        mainWindow.focus();
-        mainWindow.webContents.send('quick-capture');
-      }
-    });
-  } catch (e) { console.warn('Shortcut registration:', (e as Error).message); }
+  } catch (e) { console.warn('Shortcut registration (Ctrl+N):', (e as Error).message); }
+
+  registerCaptureHotkey();
 }
 
-// ─── Ollama ───────────────────────────────────────────────────────────────────
-function checkOllamaRunning(): Promise<boolean> {
-  return new Promise(resolve => {
-    const req = http.request(
-      { hostname: 'localhost', port: 11434, path: '/api/tags', method: 'GET' },
-      res => { resolve(res.statusCode === 200); }
-    );
-    req.on('error', () => resolve(false));
-    req.setTimeout(2000, () => { req.destroy(); resolve(false); });
-    req.end();
-  });
-}
-
-function callOllama(model: string, prompt: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const body = JSON.stringify({ model: model || 'mistral', prompt, stream: false });
-    const req  = http.request({
-      hostname: 'localhost', port: 11434, path: '/api/generate', method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
-    }, res => {
-      let data = '';
-      res.on('data', (c: string) => data += c);
-      res.on('end', () => {
-        try { resolve(JSON.parse(data).response || data); }
-        catch { resolve(data); }
-      });
-    });
-    req.on('error', reject);
-    req.setTimeout(60000, () => { req.destroy(); reject(new Error('Ollama timeout')); });
-    req.write(body);
-    req.end();
-  });
-}
-
-function buildOllamaPrompt(text: string, _mode: string, ctx: string): string {
-  const ctxInstructions: Record<string, string> = {
-    work: `You are formatting a work note. Follow these rules STRICTLY:
-- PRESERVE every name, phone number, email address, date, time, and amount EXACTLY as written
-- PRESERVE all factual details, context, and shorthand — do NOT rewrite or paraphrase content
-- Add structure AROUND the content, not instead of it
-- Use clean professional markdown with clear sections
-- Extract action items as unchecked checkboxes (- [ ] )
-- NO corporate buzzwords, NO generic summaries, NO AI filler text
-- Output ONLY the formatted markdown — no explanation or preamble`,
-    cyber: `You are formatting a cybersecurity/hacking note. Follow these rules STRICTLY:
-- PRESERVE all IP addresses, ports, hashes, CVEs, domains EXACTLY as written
-- PRESERVE all commands and terminal output — wrap in code blocks
-- Structure: Target Info → Open Ports → Findings → Commands → Next Steps
-- Markdown optimized for Obsidian — use ## headers, code blocks, and bullet lists
-- No rewriting — structure only
-- Output ONLY the formatted markdown — no explanation or preamble`,
-    personal: `You are lightly organising a personal note. Follow these rules STRICTLY:
-- Keep the writer's voice and style — minimal reformatting
-- PRESERVE all specific details, names, places, amounts exactly as written
-- Only add structure if the note is genuinely messy — otherwise just clean up whitespace
-- Use simple markdown — avoid complex section headers for short notes
-- Checkboxes for any tasks or reminders mentioned
-- Output ONLY the formatted markdown — no explanation or preamble`
-  };
-  return `${ctxInstructions[ctx] || ctxInstructions.work}\n\nRAW NOTE TO FORMAT:\n---\n${text}\n---`;
-}
 
 // ─── App lifecycle ────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
@@ -364,13 +292,21 @@ app.whenReady().then(() => {
   if (cfg.vaultPath) setTimeout(() => refreshVaultNoteCount(cfg.vaultPath!), 500);
   createWindow();
   startStatusWriter();
+  registerExtras({
+    loadConfig,
+    saveConfig,
+    cybertoolsConfigPath: CYBERTOOLS_CONFIG,
+    getCaptureWindow: () => captureWindow,
+    createCaptureWindow,
+    sendCaptureFolders,
+  });
   ecosystemBus.emitEvent('GhostVault', 'ghostvault.app.opened', {});
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 
 app.on('before-quit', () => stopStatusWriter());
+app.on('will-quit', () => { globalShortcut.unregisterAll(); });
 app.on('window-all-closed', () => {
-  globalShortcut.unregisterAll();
   if (process.platform !== 'darwin') app.quit();
 });
 
@@ -498,26 +434,25 @@ ipcMain.handle('save-capture-note', async (_, { folder, title, text }: { folder:
   } catch (e) { return { ok: false, error: (e as Error).message }; }
 });
 
-ipcMain.handle('ollama-check', async () => {
-  const running = await checkOllamaRunning();
-  if (!running) return { running: false, models: [] };
-  try {
-    const res     = await fetchJSON('http://localhost:11434/api/tags');
-    const body    = res.body as { models?: Array<{ name: string }> };
-    const models  = (body?.models || []).map(m => m.name).sort();
-    return { running: true, models };
-  } catch { return { running: true, models: [] }; }
-});
-
-ipcMain.handle('ollama-format', async (_, { text, mode, ctx, model }: { text: string; mode: string; ctx: string; model?: string }) => {
-  try {
-    const running = await checkOllamaRunning();
-    if (!running) return { error: 'ollama_not_running' };
-    const prompt = buildOllamaPrompt(text, mode, ctx);
-    const result = await callOllama(model || 'mistral', prompt);
-    return { result: result.trim() };
-  } catch (e) { return { error: (e as Error).message }; }
-});
-
 ipcMain.handle('get-capture-theme',  () => loadConfig().captureTheme || { core: 'stealth', personality: 'neutral' });
 ipcMain.handle('save-capture-theme', (_, theme) => saveConfig({ captureTheme: theme }));
+
+ipcMain.handle('ghostvault:export-notes', (_, payload: { sessionName: string; notes: string }): boolean => {
+  try {
+    let shared: Record<string, unknown> = {};
+    if (fs.existsSync(CYBERTOOLS_CONFIG)) {
+      try { shared = JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8')); } catch (_) {}
+    }
+    shared.ghostvault_export = {
+      sessionName: payload.sessionName,
+      notes      : payload.notes,
+      exportedAt : new Date().toISOString()
+    };
+    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8');
+    return true;
+  } catch (e) {
+    console.error('[GhostVault] export-notes failed:', (e as Error).message);
+    return false;
+  }
+});
+

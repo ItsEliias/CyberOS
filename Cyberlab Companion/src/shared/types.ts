@@ -1,4 +1,6 @@
-export type ThemeId = 'stealth' | 'terminal' | 'cyberpunk' | 'graphite' | 'oled' | 'threat';
+export type ThemeId    = 'stealth' | 'terminal' | 'cyberpunk' | 'graphite' | 'oled' | 'threat';
+export type BgThemeId = 'stealth' | 'graphite' | 'oled' | 'threat' | 'cyber';
+export type AccentThemeId = 'blue' | 'terminal' | 'purple' | 'red' | 'cyan';
 export type PanelId = 'chat' | 'commands' | 'reverseshell' | 'encoder' | 'cheatsheets' | 'labtracker' | 'progress' | 'snippets' | 'writeup' | 'settings';
 export type Platform = 'HTB' | 'THM' | 'CTF' | 'Other';
 export type Difficulty = 'Easy' | 'Medium' | 'Hard' | 'Insane' | '';
@@ -86,6 +88,9 @@ export interface Session {
   examMode: boolean;
   complete: boolean;
   mistakes: SessionMistakes;
+  hintsUsed: number;
+  hintLog: Array<{ timestamp: string; stage: string }>;
+  screenshots: ScreenshotAttachment[];
   createdAt: string;
   updatedAt: string;
 }
@@ -100,6 +105,8 @@ export interface Tab {
 
 export interface AppConfig {
   theme: ThemeId;
+  bgTheme?: BgThemeId;
+  accentTheme?: AccentThemeId;
   obsidianVault: string;
   outputDir: string;
   vpnCheckEnabled: boolean;
@@ -111,6 +118,24 @@ export interface AppConfig {
   thmUsername?: string;
   apiKeyConfigured?: boolean;
   setupComplete?: boolean;
+  // AI provider
+  aiProvider?: 'claude' | 'ollama';
+  claudeModel?: string;
+  ollamaModel?: string;
+  ollamaEndpoint?: string;
+}
+
+export interface ReconDeskFinding {
+  type: 'port' | 'credential' | 'card';
+  data: Record<string, unknown>;
+}
+
+export interface ScreenshotAttachment {
+  id: string;
+  path: string;
+  timestamp: string;
+  sessionId: string;
+  labName: string;
 }
 
 export interface ProgressData {

@@ -11,6 +11,7 @@ export default function SetupWizard() {
   const [apiKey, setApiKey] = useState('');
   const [testing, setTesting] = useState(false);
   const [apiError, setApiError] = useState('');
+  const [apiWarning, setApiWarning] = useState('');
   const [operatorName, setOperatorName] = useState('ItsEliias');
   const [obsidianVault, setObsidianVault] = useState('');
 
@@ -22,13 +23,14 @@ export default function SetupWizard() {
     setTesting(true);
     setApiError('');
     try {
-      const ok = await window.electronAPI.testApiKey(apiKey.trim());
-      if (ok) {
+      const result = await window.electronAPI.testApiKey(apiKey.trim()) as { success: boolean; error?: string; warning?: string };
+      if (result?.success) {
         await window.electronAPI.saveApiKey(apiKey.trim());
         setApiKeyConfigured(true);
+        if (result.warning) setApiWarning(result.warning);
         setStep('settings');
       } else {
-        setApiError('API key test failed — check the key and try again.');
+        setApiError(result?.error || 'API key test failed — check the key and try again.');
       }
     } catch (e: unknown) {
       setApiError(e instanceof Error ? e.message : 'Test failed');
@@ -125,6 +127,11 @@ export default function SetupWizard() {
 
         <AnimatedStep show={step === 'settings'}>
           <h2 className="text-lg font-semibold text-[var(--text)] mb-2">Quick Setup</h2>
+          {apiWarning && (
+            <p className="text-[var(--warning,#eab308)] text-xs mb-3 p-2 rounded" style={{ background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.2)' }}>
+              ⚠ API key saved, but: {apiWarning}
+            </p>
+          )}
           <div className="space-y-4 mb-6">
             <div className="input-group">
               <label>Your Operator Name</label>

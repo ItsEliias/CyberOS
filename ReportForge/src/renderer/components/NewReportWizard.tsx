@@ -26,6 +26,8 @@ export default function NewReportWizard({ onComplete, onCancel }: Props) {
   const [writeups, setWriteups] = useState<WriteupFile[]>([]);
   const [selectedWriteup, setSelectedWriteup] = useState<string>('');
   const [importingWriteup, setImportingWriteup] = useState(false);
+  const [ghostExport, setGhostExport] = useState<{ sessionName: string; notes: string; exportedAt: string } | null>(null);
+  const [importingGhost, setImportingGhost] = useState(false);
 
   useEffect(() => {
     if (step === 3) {
@@ -33,6 +35,7 @@ export default function NewReportWizard({ onComplete, onCancel }: Props) {
     }
     if (step === 4) {
       window.reportforge.listWriteupFiles().then(w => setWriteups(w || []));
+      window.reportforge.checkGhostVaultExport().then(exp => setGhostExport(exp));
     }
   }, [step]);
 
@@ -80,6 +83,32 @@ export default function NewReportWizard({ onComplete, onCancel }: Props) {
       patch({ sections, cyberLabSessionId: makeId() });
     }
     setImportingWriteup(false);
+  }
+
+  async function importFromGhostVault() {
+    if (!ghostExport) return;
+    setImportingGhost(true);
+    // Append as a new section or append to Executive Summary
+    const ghostSection = draft.sections.find(s => s.title === ghostExport.sessionName);
+    let sections;
+    if (ghostSection) {
+      sections = draft.sections.map(s =>
+        s.id === ghostSection.id ? { ...s, content: ghostExport.notes } : s
+      );
+    } else {
+      const newSection = {
+        id     : makeId(),
+        title  : ghostExport.sessionName,
+        content: ghostExport.notes,
+        order  : draft.sections.length,
+        visible: true,
+      };
+      sections = [...draft.sections, newSection];
+    }
+    patch({ sections });
+    await window.reportforge.clearGhostVaultExport();
+    setGhostExport(null);
+    setImportingGhost(false);
   }
 
   const canNext2 = draft.title.trim() && draft.targetName.trim() && draft.operator.trim();
@@ -148,6 +177,9 @@ export default function NewReportWizard({ onComplete, onCancel }: Props) {
                   onSelect={setSelectedWriteup}
                   onImport={importFromWriteup}
                   importing={importingWriteup}
+                  ghostExport={ghostExport}
+                  onImportGhost={importFromGhostVault}
+                  importingGhost={importingGhost}
                 />
               </motion.div>
             )}
@@ -286,36 +318,84 @@ function Step3Import({ targets, selected, onSelect, onImport, importing, draft }
   );
 }
 
-// ── Step 4: CyberLab Writeup Import ──────────────────────────────────────────
-function Step4Writeup({ writeups, selected, onSelect, onImport, importing }: {
+// ── Step 4: Writeup Import ────────────────────────────────────────────────────
+function Step4Writeup({ writeups, selected, onSelect, onImport, importing, ghostExport, onImportGhost, importingGhost }: {
   writeups: WriteupFile[];
   selected: string;
   onSelect: (path: string) => void;
   onImport: () => void;
   importing: boolean;
+  ghostExport: { sessionName: string; notes: string; exportedAt: string } | null;
+  onImportGhost: () => void;
+  importingGhost: boolean;
 }) {
+  function timeAgo(iso: string): string {
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <p style={{ color: 'var(--text-dim)', fontSize: 13 }}>
-        Optionally import a writeup from your CyberLab Obsidian vault as a starting point for the Executive Summary.
-      </p>
-      {writeups.length === 0 ? (
-        <div style={{ padding: 14, background: 'var(--bg)', borderRadius: 6, color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>
-          No writeup files found. Check your CyberLab Obsidian vault path in the ecosystem config.
-        </div>
-      ) : (
-        <>
-          <select value={selected} onChange={e => onSelect(e.target.value)} style={{ width: '100%' }}>
-            <option value="">— Select a writeup —</option>
-            {writeups.map(w => (
-              <option key={w.path} value={w.path}>{w.name}</option>
-            ))}
-          </select>
-          <button className="btn-primary" disabled={!selected || importing} onClick={onImport} style={{ alignSelf: 'flex-start' }}>
-            {importing ? 'Importing…' : 'Import Writeup'}
-          </button>
-        </>
-      )}
+      {/* GhostVault import */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <p style={{ color: 'var(--text-dim)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+          Import from GhostVault
+        </p>
+        {ghostExport ? (
+          <div style={{ padding: '12px 14px', background: 'var(--bg)', borderRadius: 6, border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>
+                GhostVault session: {ghostExport.sessionName}
+              </span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                exported {timeAgo(ghostExport.exportedAt)}
+              </span>
+            </div>
+            <button className="btn-primary" disabled={importingGhost} onClick={onImportGhost}
+              style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
+              {importingGhost ? 'Importing…' : 'Import Notes'}
+            </button>
+          </div>
+        ) : (
+          <div style={{ padding: 12, background: 'var(--bg)', borderRadius: 6, color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>
+            No GhostVault export staged. Use the "Export to Report" button in GhostVault.
+          </div>
+        )}
+      </div>
+
+      <div style={{ height: 1, background: 'var(--border)' }} />
+
+      {/* CyberLab vault writeup */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <p style={{ color: 'var(--text-dim)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+          Import from CyberLab Vault
+        </p>
+        <p style={{ color: 'var(--text-dim)', fontSize: 13, margin: 0 }}>
+          Optionally import a writeup from your CyberLab Obsidian vault as a starting point for the Executive Summary.
+        </p>
+        {writeups.length === 0 ? (
+          <div style={{ padding: 14, background: 'var(--bg)', borderRadius: 6, color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>
+            No writeup files found. Check your CyberLab Obsidian vault path in the ecosystem config.
+          </div>
+        ) : (
+          <>
+            <select value={selected} onChange={e => onSelect(e.target.value)} style={{ width: '100%' }}>
+              <option value="">— Select a writeup —</option>
+              {writeups.map(w => (
+                <option key={w.path} value={w.path}>{w.name}</option>
+              ))}
+            </select>
+            <button className="btn-primary" disabled={!selected || importing} onClick={onImport} style={{ alignSelf: 'flex-start' }}>
+              {importing ? 'Importing…' : 'Import Writeup'}
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 }

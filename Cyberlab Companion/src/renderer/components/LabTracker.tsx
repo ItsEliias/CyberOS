@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store';
-import { load, getByColumn, add, update, remove, moveToColumn, searchLabs, serialize, type Lab, type LabColumn } from '../lib/labtracker';
+import { load, getByColumn, getById, add, update, remove, moveToColumn, searchLabs, serialize, type Lab, type LabColumn } from '../lib/labtracker';
 
 const COLUMNS: Array<{ id: LabColumn; label: string; color: string }> = [
   { id: 'todo',       label: 'To Do',       color: 'var(--text-muted)' },
@@ -43,8 +43,15 @@ export default function LabTracker() {
   }
 
   function moveCard(id: string, column: LabColumn) {
+    const lab = getById(id);
+    const wasCompleted = lab?.column === 'completed';
     moveToColumn(id, column);
     refresh();
+    if (column === 'completed' && !wasCompleted && lab) {
+      (window.electronAPI as Record<string, Function>)
+        .completeLab({ platform: lab.platform, labType: lab.platform })
+        .catch(() => {});
+    }
   }
 
   const filteredIds = new Set(query ? searchLabs(query).map(l => l.id) : []);

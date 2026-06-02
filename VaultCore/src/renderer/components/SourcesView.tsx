@@ -1,7 +1,60 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
-import type { Source, SourceType, ConflictStrategy } from '@shared/types';
+import type { Source, SourceType, ConflictStrategy, SourceHealth } from '@shared/types';
+
+// ── Health indicator ──────────────────────────────────────────────────────────
+
+function HealthDot({ health }: { health?: SourceHealth }) {
+  const [show, setShow] = useState(false);
+  const status = health?.status ?? 'unknown';
+  const colorMap: Record<string, string> = {
+    healthy: '#3fb950',
+    warning: '#d29922',
+    error:   '#f85149',
+    unknown: 'var(--text-dim)',
+  };
+  const color = colorMap[status];
+
+  function fmt(ts?: string) {
+    if (!ts) return 'Never';
+    return new Date(ts).toLocaleString();
+  }
+
+  return (
+    <div className="relative flex items-center" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
+      <span
+        className="w-2 h-2 rounded-full shrink-0 cursor-default"
+        style={{ background: color, boxShadow: status === 'error' ? `0 0 6px ${color}` : undefined }}
+      />
+      {show && (
+        <div
+          className="absolute left-4 top-0 z-50 w-56 rounded-lg p-3 text-[10px] space-y-1 pointer-events-none"
+          style={{ background: 'var(--panel, var(--bg2))', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+          <div className="flex justify-between">
+            <span>Status</span>
+            <span style={{ color }}>{status}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Last success</span>
+            <span>{fmt(health?.lastSuccess)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Failures</span>
+            <span style={{ color: (health?.consecutiveFailures ?? 0) > 0 ? '#f85149' : 'inherit' }}>
+              {health?.consecutiveFailures ?? 0}
+            </span>
+          </div>
+          {health?.lastError && (
+            <div className="pt-1 border-t" style={{ borderColor: 'var(--border)', color: '#f85149' }}>
+              {health.lastError.slice(0, 80)}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const SOURCE_TYPE_LABELS: Record<SourceType, string> = {
   'obsidian-publish': 'Obsidian Publish',
@@ -250,6 +303,9 @@ export default function SourcesView() {
                 layout
                 className="card flex items-center gap-4 p-4"
                 initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}>
+                {/* Health dot */}
+                <HealthDot health={source.health} />
+
                 {/* Type badge */}
                 <div className="shrink-0 text-[10px] font-mono px-2 py-1 rounded font-semibold uppercase"
                   style={{

@@ -54,6 +54,7 @@ export interface Target {
   notes?: string
   ports: Port[]
   credentials: Credential[]
+  flags?: string[]
   timeline: TimelineEvent[]
   createdAt: string
   updatedAt: string

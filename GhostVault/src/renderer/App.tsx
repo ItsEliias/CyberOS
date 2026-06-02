@@ -13,7 +13,7 @@ import {
   NewNoteModal, NewFolderModal, QuickCaptureModal,
   AiOverlay, AiMenu, NoteContextMenu, ToastContainer, useToast,
 } from './components/Modals';
-import type { AiCtx } from '@shared/types';
+import type { AiCtx, ThemeConfig } from '@shared/types';
 
 export default function App() {
   const {
@@ -109,10 +109,8 @@ export default function App() {
   }, [setNotes, setFolders]);
 
   // ── Open note ──────────────────────────────────────────────────────────────
-  const openNote = useCallback(async (notePath: string) => {
-    const content = await window.ghostvault.readNote(notePath);
-    const note    = useStore.getState().notes.find(n => n.path === notePath);
-    if (!note) return;
+  const openNote = useCallback(async (note: import('@shared/types').NoteFile) => {
+    const content = await window.ghostvault.readNote(note.path);
     setActiveNote({ ...note, content });
     setEditorContent(content);
     setDirty(false);
@@ -234,10 +232,12 @@ export default function App() {
   }, [setEditorContent, setDirty, setActiveView]);
 
   // ── Setup wizard ───────────────────────────────────────────────────────────
-  const handleSetupComplete = useCallback(async (path: string) => {
-    await window.ghostvault.saveConfig({ vaultPath: path });
-    setVaultPath(path);
-    const { notes: n, folders: f } = await window.ghostvault.loadVault(path);
+  const handleSetupComplete = useCallback(async (vaultPath: string, theme: ThemeConfig, useExisting: boolean) => {
+    await window.ghostvault.saveConfig({ vaultPath, theme, useExistingStructure: useExisting });
+    document.documentElement.setAttribute('data-core', theme.core);
+    document.documentElement.setAttribute('data-personality', theme.personality);
+    setVaultPath(vaultPath);
+    const { notes: n, folders: f } = await window.ghostvault.loadVault(vaultPath);
     setNotes(n);
     setFolders(f);
     setSetupDone(true);
@@ -253,7 +253,7 @@ export default function App() {
         onOpenNote={openNote}
         onNewNote={() => setShowNewNote(true)}
         onNewFolder={() => setShowNewFolder(true)}
-        onContextMenu={(x, y, path) => setContextMenu({ x, y, path })}
+        onContextMenu={(e, note) => setContextMenu({ x: e.clientX, y: e.clientY, path: note.path })}
       />
 
       <div className="flex-1 overflow-hidden flex flex-col">

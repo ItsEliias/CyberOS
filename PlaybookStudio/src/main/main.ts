@@ -289,6 +289,25 @@ ipcMain.handle('runs:abandon', (_e, runId: string) => {
 
 ipcMain.handle('context:get', () => getSharedContext())
 
+// ─── IPC: Run command in TerminalLink ─────────────────────────────────────────
+
+interface RunCommandPayload {
+  command: string
+  stepTitle: string
+  playbookTitle: string
+  source: string
+  queuedAt: string
+}
+
+ipcMain.handle('playbook:run-command', (_e, payload: RunCommandPayload) => {
+  try {
+    writeCyberToolsConfig({ pending_command: payload })
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 
 app.whenReady().then(() => {

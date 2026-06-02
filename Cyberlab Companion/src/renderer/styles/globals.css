@@ -197,6 +197,11 @@ html, body, #root {
   }
 
   /* Input group */
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
   .input-group label {
     display: block;
     font-size: 11px;

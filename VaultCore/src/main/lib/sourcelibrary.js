@@ -99,15 +99,46 @@ function updateSourceLastScraped(id, timestamp, result) {
     failed: result.failed || 0
   };
 
+  // Update health record on success
+  const prevHealth = sources[idx].health || { consecutiveFailures: 0, status: 'unknown' };
+  sources[idx].health = {
+    lastChecked: timestamp,
+    lastSuccess: timestamp,
+    consecutiveFailures: 0,
+    lastError: undefined,
+    status: 'healthy'
+  };
+
   // Calculate next run
   if (sources[idx].schedule && sources[idx].schedule.cronExpression) {
     try {
-      const cron = require('node-cron');
-      // Simple next run estimation
       sources[idx].schedule.nextRun = estimateNextRun(sources[idx].schedule.cronExpression);
     } catch (_) {}
   }
 
+  writeSources(sources);
+}
+
+function updateSourceHealthFailure(id, errorMessage) {
+  const sources = readSources();
+  const idx = sources.findIndex(s => s.id === id);
+  if (idx === -1) return;
+
+  const prev = sources[idx].health || { consecutiveFailures: 0, status: 'unknown' };
+  const failures = (prev.consecutiveFailures || 0) + 1;
+  let status;
+  if (failures >= 3) status = 'error';
+  else if (failures >= 1) status = 'warning';
+  else status = 'healthy';
+
+  sources[idx].health = {
+    lastChecked: new Date().toISOString(),
+    lastSuccess: prev.lastSuccess,
+    consecutiveFailures: failures,
+    lastError: errorMessage,
+    status
+  };
+  sources[idx].status = 'error';
   writeSources(sources);
 }
 
@@ -212,6 +243,7 @@ module.exports = {
   updateSource,
   deleteSource,
   updateSourceLastScraped,
+  updateSourceHealthFailure,
   clearAll,
   getHealthSummary,
   frequencyToCron

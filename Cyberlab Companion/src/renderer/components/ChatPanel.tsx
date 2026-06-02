@@ -1,129 +1,72 @@
 import { useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import { buildSystemPrompt, parseFindings, createSession } from '../lib/session';
 import { SOUNDS } from '../lib/sounds';
-import type { ChatMessage, Session } from '@shared/types';
+import type { ChatMessage, Session, ScreenshotAttachment } from '@shared/types';
+import LabCloseModal from './LabCloseModal';
+import SessionSetup from './SessionSetup';
+import MarkdownRenderer from './MarkdownRenderer';
+
+// Port/credential regex for ReconDesk quick-save
+const PORT_PATTERN = /\bport[s]?\s+(\d{1,5})\s+(?:is\s+)?(?:open|running|listening)/gi;
+const CRED_PATTERN = /credential[s]?[:\s]+([^\s/]+)\/([^\s,.\n]+)/gi;
 
 function makeId() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
 
-function MarkdownRenderer({ content }: { content: string }) {
-  const html = content
-    .replace(/```(\w*)\n?([\s\S]*?)```/g, (_m, _lang, code) =>
-      `<pre class="code-block text-xs mt-2 mb-2"><code>${code.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</code></pre>`)
-    .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 rounded bg-[var(--code-bg)] text-[var(--accent)] font-mono text-xs border border-[var(--border)]">$1</code>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-    .replace(/^### (.+)$/gm, '<h3 class="text-sm font-semibold text-[var(--text)] mt-3 mb-1">$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2 class="text-sm font-semibold text-[var(--accent-2)] mt-3 mb-1">$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1 class="text-base font-bold text-[var(--accent)] mt-3 mb-2">$1</h1>')
-    .replace(/^[-*] (.+)$/gm, '<li class="ml-4 list-disc mb-1">$1</li>')
-    .replace(/\n\n/g, '</p><p class="mb-2">')
-    .replace(/\n/g, '<br/>');
-
-  return (
-    <div
-      className="prose selectable text-sm"
-      dangerouslySetInnerHTML={{ __html: `<p class="mb-2">${html}</p>` }}
-    />
-  );
-}
-
-interface SessionSetupProps {
-  onStart: (opts: Partial<Session>) => void;
-}
-
-function SessionSetup({ onStart }: SessionSetupProps) {
-  const [labName, setLabName] = useState('');
-  const [platform, setPlatform] = useState<'HTB'|'THM'|'CTF'|'Other'>('HTB');
-  const [difficulty, setDifficulty] = useState<'Easy'|'Medium'|'Hard'|'Insane'|''>('Medium');
-  const [labType, setLabType] = useState('HTB/THM Linux');
-  const [ip, setIp] = useState('');
-  const [timerEnabled, setTimerEnabled] = useState(false);
-  const [timerMins, setTimerMins] = useState(120);
-
-  return (
-    <div className="flex items-center justify-center h-full p-6">
-      <div className="w-[480px] panel p-6">
-        <h2 className="text-base font-semibold text-[var(--accent)] mb-4">New Session</h2>
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="input-group col-span-2">
-            <label>Lab / Machine Name</label>
-            <input type="text" value={labName} onChange={e => setLabName(e.target.value)} placeholder="e.g. Lame, Mr Robot" className="w-full" />
-          </div>
-          <div className="input-group">
-            <label>Platform</label>
-            <select value={platform} onChange={e => setPlatform(e.target.value as never)} className="w-full">
-              {['HTB','THM','CTF','Other'].map(p => <option key={p}>{p}</option>)}
-            </select>
-          </div>
-          <div className="input-group">
-            <label>Difficulty</label>
-            <select value={difficulty} onChange={e => setDifficulty(e.target.value as never)} className="w-full">
-              {['Easy','Medium','Hard','Insane'].map(d => <option key={d}>{d}</option>)}
-            </select>
-          </div>
-          <div className="input-group col-span-2">
-            <label>Lab Type</label>
-            <select value={labType} onChange={e => setLabType(e.target.value)} className="w-full">
-              {['HTB/THM Linux','HTB/THM Windows','CTF','Cisco/Networking','Web App','OSINT/CTF','Other'].map(t => <option key={t}>{t}</option>)}
-            </select>
-          </div>
-          <div className="input-group col-span-2">
-            <label>Target IP (optional)</label>
-            <input type="text" value={ip} onChange={e => setIp(e.target.value)} placeholder="10.10.10.x" className="w-full font-mono" />
-          </div>
-          <div className="col-span-2 flex items-center gap-3">
-            <input type="checkbox" checked={timerEnabled} onChange={e => setTimerEnabled(e.target.checked)} id="timer-cb" />
-            <label htmlFor="timer-cb" className="text-sm text-[var(--text-dim)] cursor-pointer">Exam Mode (timer)</label>
-            {timerEnabled && (
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  value={timerMins}
-                  onChange={e => setTimerMins(parseInt(e.target.value) || 120)}
-                  className="w-20 text-sm"
-                  min={10}
-                  max={600}
-                />
-                <span className="text-xs text-[var(--text-muted)]">mins</span>
-              </div>
-            )}
-          </div>
-        </div>
-        <button
-          className="btn-accent w-full py-2.5"
-          onClick={() => onStart({ name: labName || 'New Session', labName: labName || 'New Session', platform, difficulty, labType: labType as never, ip, timerEnabled, timerMins })}
-        >
-          Start Session
-        </button>
-      </div>
-    </div>
-  );
+interface ReconSuggestion {
+  type: 'port' | 'credential';
+  data: Record<string, unknown>;
+  msgId: string;
 }
 
 export default function ChatPanel() {
-  const { tabs, activeTabId, updateTab, updateSession, addChatMessage } = useStore();
+  const { tabs, activeTabId, updateTab, updateSession, addChatMessage, config } = useStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
   const session = activeTab?.session;
 
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
+  const [reconSuggestions, setReconSuggestions] = useState<ReconSuggestion[]>([]);
+  const [screenshot, setScreenshot] = useState<{ base64: string; id: string } | null>(null);
+  const [screenshotLoading, setScreenshotLoading] = useState(false);
+  const [showCloseModal, setShowCloseModal] = useState(false);
+  const [ecosystemToast, setEcosystemToast] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  function showToast(msg: string) {
+    setEcosystemToast(msg);
+    setTimeout(() => setEcosystemToast(null), 3500);
+  }
+
   const messages = activeTab?.chatHistory || [];
   const isSetup = !session?.labName || session.labName === 'New Session';
+  const aiProvider = config?.aiProvider || 'claude';
+  const claudeModel = config?.claudeModel || 'claude-sonnet-4-6';
+  const ollamaModel = config?.ollamaModel || '';
+  const ollamaEndpoint = config?.ollamaEndpoint || 'http://localhost:11434';
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, streamingContent]);
 
-  function handleSetupDone(opts: Partial<Session>) {
+  async function handleSetupDone(opts: Partial<Session>) {
     if (!activeTabId) return;
     const newSession = createSession(opts);
     updateTab(activeTabId, { session: newSession, chatHistory: [] });
+    // Ecosystem: notify other CyberOS tools that a lab has started
+    try {
+      await (window.electronAPI as Record<string, Function>).startLab({
+        name: newSession.labName,
+        platform: newSession.platform,
+        targetIP: newSession.target.ip || undefined,
+      });
+      showToast('Ecosystem updated — GhostVault and PlaybookStudio notified');
+    } catch {
+      // Non-fatal — session still starts locally
+    }
   }
 
   async function sendMessage() {
@@ -145,26 +88,62 @@ export default function ChatPanel() {
     const history = [...messages, userMsg].map(m => ({ role: m.role, content: m.content }));
 
     try {
-      const response = await window.electronAPI.claudeChat({
-        systemPrompt,
-        messages: history,
-        hintLevel: session.hintLevel,
-      });
+      let responseText = '';
 
+      if (aiProvider === 'ollama') {
+        const ollamaMessages = [
+          { role: 'system', content: systemPrompt },
+          ...history,
+        ];
+        const raw = await (window.electronAPI as Record<string, Function>).ollamaChat({
+          model: ollamaModel,
+          messages: ollamaMessages,
+          endpoint: ollamaEndpoint,
+        }) as { success: boolean; content?: string; error?: string };
+        if (!raw?.success) throw new Error(raw?.error || 'Ollama error');
+        responseText = raw.content || '';
+      } else {
+        const raw = await window.electronAPI.claudeChat({
+          system: systemPrompt,
+          messages: history,
+          model: claudeModel,
+        }) as { success: boolean; data?: { content?: Array<{ text?: string }> }; error?: string };
+        if (!raw?.success) throw new Error(raw?.error || 'Claude API error');
+        responseText = raw.data?.content?.[0]?.text || '';
+      }
+
+      const assistantMsgId = makeId();
       const assistantMsg: ChatMessage = {
-        id: makeId(),
+        id: assistantMsgId,
         role: 'assistant',
-        content: response as string,
+        content: responseText,
         timestamp: new Date().toISOString(),
       };
 
       // Parse findings from response
-      const newFindings = parseFindings(response as string, session);
+      const newFindings = parseFindings(responseText, session);
       if (newFindings.length > 0) {
         SOUNDS.finding();
-        if (newFindings.some(f => f.type === 'FLAG')) SOUNDS.flag();
+        const flagCount = newFindings.filter(f => f.type === 'FLAG').length;
+        if (flagCount > 0) {
+          SOUNDS.flag();
+          (window.electronAPI as Record<string, Function>).incrementFlags(flagCount).catch(() => {});
+        }
         updateSession(activeTabId, { findings: session.findings, updatedAt: new Date().toISOString() });
       }
+
+      // Parse for ReconDesk suggestions
+      const suggestions: ReconSuggestion[] = [];
+      let pm: RegExpExecArray | null;
+      const portPatternCopy = new RegExp(PORT_PATTERN.source, 'gi');
+      while ((pm = portPatternCopy.exec(responseText)) !== null) {
+        suggestions.push({ type: 'port', data: { port: pm[1], source: 'AI analysis' }, msgId: assistantMsgId });
+      }
+      const credPatternCopy = new RegExp(CRED_PATTERN.source, 'gi');
+      while ((pm = credPatternCopy.exec(responseText)) !== null) {
+        suggestions.push({ type: 'credential', data: { username: pm[1], password: pm[2] }, msgId: assistantMsgId });
+      }
+      if (suggestions.length > 0) setReconSuggestions(prev => [...prev, ...suggestions]);
 
       addChatMessage(activeTabId, assistantMsg);
     } catch (e: unknown) {
@@ -172,13 +151,85 @@ export default function ChatPanel() {
       const errMsg: ChatMessage = {
         id: makeId(),
         role: 'assistant',
-        content: `**Error:** ${e instanceof Error ? e.message : 'API request failed. Check your API key in Settings.'}`,
+        content: `**Error:** ${e instanceof Error ? e.message : 'API request failed. Check your settings.'}`,
         timestamp: new Date().toISOString(),
       };
       addChatMessage(activeTabId, errMsg);
     } finally {
       setStreaming(false);
       setStreamingContent('');
+    }
+  }
+
+  function logHint() {
+    if (!session || !activeTabId) return;
+    const stage = session.methodology.activePhase || 'Unknown';
+    const hintLog = [...(session.hintLog || []), { timestamp: new Date().toISOString(), stage }];
+    updateSession(activeTabId, { hintsUsed: (session.hintsUsed || 0) + 1, hintLog });
+    SOUNDS.finding?.();
+  }
+
+  async function takeScreenshot() {
+    setScreenshotLoading(true);
+    try {
+      const res = await (window.electronAPI as Record<string, Function>).takeScreenshot() as { success: boolean; data?: string; error?: string };
+      if (res.success && res.data) {
+        setScreenshot({ base64: res.data, id: makeId() });
+      }
+    } catch (e) {
+      console.error('screenshot error', e);
+    } finally {
+      setScreenshotLoading(false);
+    }
+  }
+
+  async function saveScreenshotToVault() {
+    if (!screenshot || !session) return;
+    try {
+      await (window.electronAPI as Record<string, Function>).saveScreenshot({
+        base64: screenshot.base64,
+        sessionName: session.name,
+        labName: session.labName,
+        vaultPath: config?.obsidianVault || '',
+      });
+      const attachment: ScreenshotAttachment = {
+        id: screenshot.id,
+        path: '',
+        timestamp: new Date().toISOString(),
+        sessionId: session.id,
+        labName: session.labName,
+      };
+      updateSession(activeTabId!, { screenshots: [...(session.screenshots || []), attachment] });
+      setScreenshot(null);
+    } catch (e) {
+      console.error('save screenshot error', e);
+    }
+  }
+
+  async function pushToReconDesk(suggestion: ReconSuggestion) {
+    if (!session) return;
+    try {
+      await (window.electronAPI as Record<string, Function>).pushToReconDesk({
+        targetName: session.labName,
+        finding: { type: suggestion.type, data: suggestion.data },
+      });
+      setReconSuggestions(prev => prev.filter(s => s !== suggestion));
+    } catch (e) {
+      console.error('recondesk push error', e);
+    }
+  }
+
+  async function handleEndSessionConfirm() {
+    setShowCloseModal(false);
+    try {
+      await (window.electronAPI as Record<string, Function>).endLab();
+    } catch {
+      // Non-fatal
+    }
+    // Reset this tab to a blank session
+    if (activeTabId) {
+      const blank = createSession({ name: 'New Session' });
+      updateTab(activeTabId, { session: blank, chatHistory: [] });
     }
   }
 
@@ -193,13 +244,89 @@ export default function ChatPanel() {
 
   return (
     <div className="flex flex-col h-full">
+      {/* Ecosystem toast */}
+      <AnimatePresence>
+        {ecosystemToast && (
+          <motion.div
+            key="ecosystem-toast"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            style={{
+              position: 'fixed',
+              top: '54px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 9999,
+              background: 'var(--panel)',
+              border: '1px solid var(--success)',
+              borderRadius: '6px',
+              padding: '7px 14px',
+              fontSize: '12px',
+              color: 'var(--success)',
+              pointerEvents: 'none',
+              whiteSpace: 'nowrap',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+            }}
+          >
+            {ecosystemToast}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Close modal */}
+      {showCloseModal && (
+        <LabCloseModal
+          labName={session.labName}
+          onConfirm={handleEndSessionConfirm}
+          onCancel={() => setShowCloseModal(false)}
+        />
+      )}
+
       {/* Session bar */}
       <div className="flex items-center gap-3 px-4 py-2 border-b border-[var(--border)] bg-[var(--bg2)] flex-shrink-0">
         <span className="text-xs text-[var(--text-muted)]">
           {session.labName} • {session.platform} • {session.difficulty}
           {session.target.ip && ` • ${session.target.ip}`}
         </span>
+        {/* AI model badge */}
+        <span className="text-[10px] px-1.5 py-0.5 rounded border border-[var(--border)] text-[var(--text-muted)] font-mono">
+          {aiProvider === 'ollama' ? `ollama:${ollamaModel || '?'}` : claudeModel.split('-').slice(1,3).join('-')}
+        </span>
         <div className="flex-1" />
+        {/* End Session button */}
+        <button
+          className="text-xs px-2 py-1 rounded btn-ghost"
+          style={{ color: 'var(--error)', borderColor: 'var(--error)' }}
+          onClick={() => setShowCloseModal(true)}
+          title="End this lab session"
+        >
+          End Session
+        </button>
+        {/* Hint taken button */}
+        <button
+          className="relative flex items-center gap-1 text-xs px-2 py-1 rounded btn-ghost"
+          onClick={logHint}
+          title="Log a hint taken"
+        >
+          <span>?</span>
+          <span>Hint</span>
+          {(session.hintsUsed || 0) > 0 && (
+            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[var(--warning)] text-[10px] text-black flex items-center justify-center font-bold">
+              {session.hintsUsed}
+            </span>
+          )}
+        </button>
+        {/* Screenshot button */}
+        <button
+          className="text-xs px-2 py-1 rounded btn-ghost"
+          onClick={takeScreenshot}
+          disabled={screenshotLoading}
+          title="Capture screenshot"
+        >
+          {screenshotLoading ? '...' : '[ss]'}
+        </button>
         {/* Hint level */}
         <div className="flex items-center gap-1">
           <span className="text-xs text-[var(--text-muted)]">Hint:</span>
@@ -226,6 +353,35 @@ export default function ChatPanel() {
           Teach Me
         </button>
       </div>
+
+      {/* Screenshot preview */}
+      <AnimatePresence>
+        {screenshot && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="border-b border-[var(--border)] bg-[var(--bg3)] px-4 py-2 flex items-center gap-3"
+          >
+            <img
+              src={`data:image/png;base64,${screenshot.base64}`}
+              alt="screenshot"
+              className="w-24 h-16 object-cover rounded border border-[var(--border)] cursor-pointer"
+              onClick={() => {
+                const w = window.open('', '_blank');
+                if (w) w.document.write(`<img src="data:image/png;base64,${screenshot.base64}" style="max-width:100%" />`);
+              }}
+            />
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-[var(--text-muted)]">Screenshot captured — click to expand</span>
+              <div className="flex gap-2">
+                <button className="btn-accent text-xs px-2 py-1" onClick={saveScreenshotToVault}>Save to Vault</button>
+                <button className="btn-ghost text-xs px-2 py-1" onClick={() => setScreenshot(null)}>Discard</button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 scroll-area">
@@ -266,6 +422,27 @@ export default function ChatPanel() {
           </div>
         )}
 
+        {/* ReconDesk quick-save suggestions */}
+        {reconSuggestions.length > 0 && (
+          <div className="space-y-1">
+            {reconSuggestions.map((s, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -4 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="flex items-center gap-2 px-3 py-2 rounded border border-[var(--border)] bg-[var(--bg3)] text-xs"
+              >
+                <span className="text-[var(--accent)]">ReconDesk:</span>
+                <span className="text-[var(--text-dim)]">
+                  {s.type === 'port' ? `Port ${(s.data as Record<string,string>).port} open` : `Credential: ${(s.data as Record<string,string>).username}/${(s.data as Record<string,string>).password}`}
+                </span>
+                <button className="btn-accent px-2 py-0.5 text-xs ml-auto" onClick={() => pushToReconDesk(s)}>Save</button>
+                <button className="btn-ghost px-2 py-0.5 text-xs" onClick={() => setReconSuggestions(p => p.filter((_, j) => j !== i))}>Dismiss</button>
+              </motion.div>
+            ))}
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 
@@ -295,9 +472,14 @@ export default function ChatPanel() {
           <span className="text-xs text-[var(--text-muted)]">
             {session.chat.length} message{session.chat.length !== 1 ? 's' : ''}
           </span>
+          {(session.hintsUsed || 0) > 0 && (
+            <span className="text-xs" style={{ color: 'var(--warning)' }}>
+              Hints: {session.hintsUsed}
+            </span>
+          )}
           {session.findings.flags.length > 0 && (
-            <span className="text-xs text-[var(--success)]">
-              🚩 {session.findings.flags.length} flag{session.findings.flags.length !== 1 ? 's' : ''}
+            <span className="text-xs" style={{ color: 'var(--success)' }}>
+              {session.findings.flags.length} flag{session.findings.flags.length !== 1 ? 's' : ''}
             </span>
           )}
         </div>

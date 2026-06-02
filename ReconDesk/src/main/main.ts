@@ -21,6 +21,7 @@ const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')
 
 let mainWindow: BrowserWindow | null = null
 let statusInterval: NodeJS.Timeout | null = null
+let configWatcher: fs.FSWatcher | null = null
 
 function ensureDataDir(): void {
   const dir = path.dirname(DATA_FILE)
@@ -85,6 +86,19 @@ function writeStatus(data: ReconDeskData): void {
   } catch (e) {
     console.warn('[ReconDesk] status write failed:', (e as Error).message)
   }
+}
+
+function setupConfigWatch(win: BrowserWindow): void {
+  try {
+    configWatcher = fs.watch(CYBERTOOLS_CONFIG, { persistent: false }, () => {
+      setTimeout(() => {
+        try {
+          const data = JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8'))
+          win.webContents.send('config:updated', data)
+        } catch {}
+      }, 100)
+    })
+  } catch {}
 }
 
 function createWindow(): void {
@@ -234,6 +248,18 @@ ipcMain.handle('cve:lookup', (_e, service: string, version: string): Promise<Cve
 
 ipcMain.handle('shell:open', (_e, url: string) => shell.openExternal(url))
 
+ipcMain.handle('flag:captured', () => {
+  try {
+    let shared: Record<string, unknown> = {}
+    if (fs.existsSync(CYBERTOOLS_CONFIG)) {
+      try { shared = JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8')) } catch {}
+    }
+    const profile = (shared.operator_profile as Record<string, unknown>) || {}
+    const current = typeof profile.totalFlags === 'number' ? profile.totalFlags : 0
+    updateOperatorProfile({ totalFlags: current + 1 })
+  } catch {}
+})
+
 ipcMain.handle('export-target', async (_e, payload: { json: string; md: string; defaultName: string }) => {
   const win = BrowserWindow.getFocusedWindow()
   const { filePath, canceled } = await dialog.showSaveDialog(win!, {
@@ -265,6 +291,7 @@ app.whenReady().then(() => {
   _previousData = data  // seed so first save doesn't false-positive on existing credentials
   writeStatus(data)
   emitEvent('ReconDesk', 'app:launched', { version: APP_VERSION })
+  if (mainWindow) setupConfigWatch(mainWindow)
 
   statusInterval = setInterval(() => {
     const d = loadData()
@@ -277,6 +304,8 @@ app.on('window-all-closed', () => {
   emitEvent('ReconDesk', 'app:closed', {})
   if (process.platform !== 'darwin') app.quit()
 })
+
+app.on('before-quit', () => { configWatcher?.close() })
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow()

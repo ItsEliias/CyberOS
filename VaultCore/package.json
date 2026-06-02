@@ -4,11 +4,12 @@
   "description": "Centralized vault intelligence engine — CYBERTOOLS",
   "main": "out/main/index.js",
   "scripts": {
-    "start": "electron-vite dev",
-    "build": "electron-vite build && electron-builder",
-    "build:mac": "electron-vite build && electron-builder --mac",
-    "build:win": "electron-vite build && electron-builder --win",
-    "build:linux": "electron-vite build && electron-builder --linux",
+    "sync-lib": "node -e \"const fs=require('fs'),path=require('path');const FILES=['launcher.js','ecosystem-bus.js','sourcelibrary.js','vaulthealth.js','conflict.js','processor.js','scraper.js'];const dest='out/main/lib';fs.mkdirSync(dest,{recursive:true});FILES.forEach(f=>{if(fs.existsSync(f))fs.copyFileSync(f,path.join(dest,f));});if(fs.existsSync('sources')){const walk=(s,d)=>{fs.mkdirSync(d,{recursive:true});for(const e of fs.readdirSync(s,{withFileTypes:true})){const sp=path.join(s,e.name),dp=path.join(d,e.name);e.isDirectory()?walk(sp,dp):fs.copyFileSync(sp,dp);}};walk('sources','out/main/lib/sources');}console.log('Synced backend JS to out/main/lib/');\"",
+    "start": "npm run sync-lib && electron-vite dev",
+    "build": "npm run sync-lib && electron-vite build && electron-builder",
+    "build:mac": "npm run sync-lib && electron-vite build && electron-builder --mac",
+    "build:win": "npm run sync-lib && electron-vite build && electron-builder --win",
+    "build:linux": "npm run sync-lib && electron-vite build && electron-builder --linux",
     "preview": "electron-vite preview",
     "postinstall": "electron-builder install-app-deps"
   },

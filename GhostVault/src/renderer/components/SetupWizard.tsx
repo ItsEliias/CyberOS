@@ -6,10 +6,10 @@ const CORES:         CoreTheme[]        = ['stealth', 'graphite', 'frost', 'oled
 const PERSONALITIES: PersonalityTheme[] = ['neutral', 'cyberpunk', 'terminal', 'threat'];
 
 interface Props {
-  onFinish: (vaultPath: string, theme: ThemeConfig, useExisting: boolean) => void;
+  onComplete: (vaultPath: string, theme: ThemeConfig, useExisting: boolean) => void;
 }
 
-export default function SetupWizard({ onFinish }: Props) {
+export default function SetupWizard({ onComplete }: Props) {
   const [step, setStep]               = useState(0);
   const [vaultPath, setVaultPath]     = useState('');
   const [useExisting, setUseExisting] = useState(false);
@@ -29,7 +29,7 @@ export default function SetupWizard({ onFinish }: Props) {
 
   function handleFinish() {
     if (!vaultPath) return;
-    onFinish(vaultPath, { core, personality }, useExisting);
+    onComplete(vaultPath, { core, personality }, useExisting);
   }
 
   const steps = [

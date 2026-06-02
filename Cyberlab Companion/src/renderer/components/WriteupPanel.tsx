@@ -4,7 +4,8 @@ import { useStore } from '../store';
 const TEMPLATE = `# {LAB_NAME} — {PLATFORM} ({DIFFICULTY})
 
 **Date:** {DATE}
-**Duration:**
+**Duration:** {DURATION}
+**Hints Used:** {HINTS}
 **Flags:**
 
 ---
@@ -50,17 +51,23 @@ const TEMPLATE = `# {LAB_NAME} — {PLATFORM} ({DIFFICULTY})
 `;
 
 export default function WriteupPanel() {
-  const { tabs, activeTabId } = useStore();
+  const { tabs, activeTabId, config } = useStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
   const session = activeTab?.session;
 
   const [content, setContent] = useState(() => {
     if (!session) return TEMPLATE;
+    const elapsedSecs = session.timer?.elapsed ?? 0;
+    const h = Math.floor(elapsedSecs / 3600);
+    const m = Math.floor((elapsedSecs % 3600) / 60);
+    const duration = elapsedSecs > 0 ? `${h}h ${m}m` : '';
     return TEMPLATE
       .replace('{LAB_NAME}', session.labName || 'Lab')
       .replace('{PLATFORM}', session.platform || 'HTB')
       .replace('{DIFFICULTY}', session.difficulty || 'Medium')
-      .replace('{DATE}', new Date().toLocaleDateString());
+      .replace('{DATE}', new Date().toLocaleDateString())
+      .replace('{DURATION}', duration)
+      .replace('{HINTS}', String(session.hintsUsed || 0));
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -69,13 +76,18 @@ export default function WriteupPanel() {
     if (!session) return;
     setSaving(true);
     try {
-      await window.electronAPI.saveWriteup({
-        sessionId: session.id,
-        labName: session.labName,
+      const result = await window.electronAPI.saveWriteup({
         content,
-      });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+        labName: session.labName,
+        platform: session.platform,
+        vaultPath: config?.obsidianVault || '',
+      }) as { success: boolean; error?: string };
+      if (result?.success) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      } else {
+        console.error('saveWriteup failed:', result?.error);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -86,8 +98,7 @@ export default function WriteupPanel() {
   async function exportPdf() {
     if (!session) return;
     try {
-      await window.electronAPI.exportPdf({
-        sessionId: session.id,
+      await window.electronAPI.exportPDF({
         labName: session.labName,
         content,
       });
@@ -117,6 +128,26 @@ export default function WriteupPanel() {
         style={{ background: 'var(--bg)', border: 'none', outline: 'none', color: 'var(--text)' }}
         spellCheck={false}
       />
+      {/* Session footer stats */}
+      {session && (
+        <div className="flex items-center gap-4 px-4 py-1.5 border-t border-[var(--border)] bg-[var(--bg2)] flex-shrink-0">
+          {session.timer?.elapsed ? (
+            <span className="text-xs text-[var(--text-muted)] font-mono">
+              Time: {Math.floor(session.timer.elapsed / 3600)}h {Math.floor((session.timer.elapsed % 3600) / 60)}m
+            </span>
+          ) : null}
+          {(session.hintsUsed || 0) > 0 && (
+            <span className="text-xs" style={{ color: 'var(--warning)' }}>
+              Hints used: {session.hintsUsed}
+            </span>
+          )}
+          {session.findings.flags.length > 0 && (
+            <span className="text-xs" style={{ color: 'var(--success)' }}>
+              Flags: {session.findings.flags.length}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell, dialog, safeStorage, nativeTheme } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, dialog, safeStorage } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
@@ -6,6 +6,7 @@ import https from 'https';
 import http from 'http';
 import { URL } from 'url';
 import { emitEvent } from './ecosystem-bus.js';
+import { registerExtrasIPC } from './ipc-extras.js';
 
 const APP_VERSION        = '1.0';
 const CONFIG_PATH        = path.join(os.homedir(), 'cybertools-config.json');
@@ -106,10 +107,10 @@ function fetchJSON(url: string, opts: { method?: string; headers?: Record<string
   });
 }
 
-async function callClaude(payload: { system?: string; messages?: unknown[] }): Promise<unknown> {
+async function callClaude(payload: { system?: string; messages?: unknown[]; model?: string }): Promise<unknown> {
   if (!apiKey) throw new Error('No API key configured');
   const body = JSON.stringify({
-    model: CLAUDE_MODEL,
+    model: payload.model || CLAUDE_MODEL,
     max_tokens: 2000,
     system: payload.system || '',
     messages: payload.messages || [],
@@ -208,7 +209,7 @@ function createWindow() {
     title: 'CYBERLAB COMPANION — ItsEliias',
     backgroundColor: '#0e1117',
     webPreferences: {
-      preload: path.join(__dirname, '../preload/preload.mjs'),
+      preload: path.join(__dirname, '../preload/preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
@@ -244,10 +245,17 @@ function registerIPC() {
     const prev = apiKey;
     apiKey = keyToTest;
     try {
-      const r = await callClaude({ system: 'You are a test assistant.', messages: [{ role: 'user', content: 'Say "ok" in one word.' }] }) as Record<string, unknown>;
-      apiKey = keyToTest;
+      await callClaude({ system: 'You are a test assistant.', messages: [{ role: 'user', content: 'Say "ok" in one word.' }] });
       return { success: true };
-    } catch (e: unknown) { apiKey = prev; return { success: false, error: (e as Error).message }; }
+    } catch (e: unknown) {
+      const msg = (e as Error).message || '';
+      // 402 billing error — key is valid, just no credits; save it anyway
+      if (/credit|billing|balance|quota/i.test(msg)) {
+        return { success: true, warning: msg };
+      }
+      apiKey = prev;
+      return { success: false, error: msg };
+    }
   });
 
   ipcMain.handle('claude-chat', async (_, payload) => {
@@ -255,7 +263,7 @@ function registerIPC() {
     catch (e: unknown) { return { success: false, error: (e as Error).message }; }
   });
 
-  ipcMain.handle('save-session', (_, data: { id: string; name?: string; labName?: string }) => {
+  ipcMain.handle('save-session',(_, data: { id: string; name?: string; labName?: string }) => {
     try {
       const fp = path.join(SESSIONS_DIR, `session_${data.id}.json`);
       fs.writeFileSync(fp, JSON.stringify(data, null, 2), 'utf8');
@@ -383,7 +391,23 @@ function registerIPC() {
   });
 
   ipcMain.handle('update-launcher-status', (_, status: Record<string, unknown>) => {
-    try { saveConfig({ cyberlab_status: { ...status, lastActive: new Date().toISOString() } }); } catch {}
+    try {
+      saveConfig({ cyberlab_status: { ...status, lastActive: new Date().toISOString() } });
+      if (status.currentLab) {
+        let shared: Record<string, unknown> = {};
+        if (fs.existsSync(CONFIG_PATH)) {
+          try { shared = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')); } catch {}
+        }
+        const existingCtx = (shared.shared_context as Record<string, unknown>) || {};
+        shared.shared_context = {
+          ...existingCtx,
+          activeLab:   status.currentLab,
+          lastUpdated: new Date().toISOString(),
+          updatedBy:   'CyberLab'
+        };
+        fs.writeFileSync(CONFIG_PATH, JSON.stringify(shared, null, 2), 'utf8');
+      }
+    } catch {}
   });
 
   ipcMain.handle('ecosystem-emit', (_, appName: string, eventType: string, data: unknown) => {
@@ -422,8 +446,9 @@ app.whenReady().then(async () => {
   ensureDirs();
   apiKey = loadApiKeySecure();
   registerIPC();
+  registerExtrasIPC();
   createWindow();
-  saveConfig({ cyberlab: { installed: true, version: APP_VERSION, execPath: app.getPath('exe') } });
+  saveConfig({ cyberlab: { installed: true, version: APP_VERSION, execPath: app.isPackaged ? app.getPath('exe') : app.getAppPath() } });
 
   vpnCheckInterval = setInterval(() => {
     if (mainWindow) mainWindow.webContents.send('vpn-status', checkVPN());

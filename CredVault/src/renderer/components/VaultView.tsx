@@ -4,7 +4,9 @@ import CredentialRow from './CredentialRow'
 import CredentialModal from './CredentialModal'
 import type { Credential } from '@shared/types'
 
-const COL_HEADERS = ['Service', 'Username', 'IP / Port', 'Tags', 'Source', 'Date', 'Status']
+type SortOrder = 'newest' | 'oldest' | null
+
+const COL_HEADERS = ['Service', 'Username', 'IP / Port', 'Tags', 'Source', 'Date', 'Status', 'Age']
 
 export default function VaultView() {
   const credentials    = useStore(s => s.credentials)
@@ -22,6 +24,7 @@ export default function VaultView() {
 
   const [showModal, setShowModal] = useState(false)
   const [editCred, setEditCred]   = useState<Credential | null>(null)
+  const [sortAge, setSortAge]     = useState<SortOrder>(null)
 
   // Collect all unique tags / sources for filter chips
   const allTags    = useMemo(() => [...new Set(credentials.flatMap(c => c.tags))].sort(), [credentials])
@@ -30,7 +33,7 @@ export default function VaultView() {
 
   const filtered = useMemo(() => {
     const q = searchQuery.toLowerCase()
-    return credentials.filter(c => {
+    const result = credentials.filter(c => {
       if (filterTag    && !c.tags.includes(filterTag))       return false
       if (filterStatus && c.status !== filterStatus)          return false
       if (filterSource && c.source !== filterSource)          return false
@@ -41,7 +44,15 @@ export default function VaultView() {
         ...(c.tags ?? [])
       ].some(f => f.toLowerCase().includes(q))
     })
-  }, [credentials, searchQuery, filterTag, filterStatus, filterSource])
+
+    if (sortAge === 'newest') {
+      result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    } else if (sortAge === 'oldest') {
+      result.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    }
+
+    return result
+  }, [credentials, searchQuery, filterTag, filterStatus, filterSource, sortAge])
 
   async function refreshData() {
     const [creds, stats] = await Promise.all([
@@ -133,6 +144,25 @@ export default function VaultView() {
             </button>
           )}
         </div>
+
+        {/* Sort by age toggle */}
+        <button
+          className="btn btn-ghost"
+          style={{
+            fontSize: 11,
+            padding: '2px 8px',
+            border: sortAge ? '1px solid var(--accent)' : '1px solid var(--border)',
+            background: sortAge ? 'var(--accent-dim)' : 'transparent',
+            color: sortAge ? 'var(--accent)' : 'var(--text-dim)',
+            borderRadius: 4,
+            cursor: 'pointer',
+            transition: 'all 0.15s'
+          }}
+          onClick={() => setSortAge(s => s === 'newest' ? 'oldest' : s === 'oldest' ? null : 'newest')}
+          title="Cycle: newest first → oldest first → off"
+        >
+          {sortAge === 'newest' ? 'Age ↑ newest' : sortAge === 'oldest' ? 'Age ↓ oldest' : 'Sort: age'}
+        </button>
 
         <button className="btn btn-accent" style={{ fontSize: 12 }} onClick={() => setShowModal(true)}>
           + Add Credential

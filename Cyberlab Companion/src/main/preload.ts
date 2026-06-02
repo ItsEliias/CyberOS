@@ -10,6 +10,12 @@ const api = {
   hasApiKey:   ()           => ipcRenderer.invoke('has-api-key'),
 
   claudeChat:  (payload: unknown) => ipcRenderer.invoke('claude-chat', payload),
+  ollamaChat:  (payload: unknown) => ipcRenderer.invoke('ollama-chat', payload),
+  ollamaListModels: (endpoint?: string) => ipcRenderer.invoke('ollama-list-models', endpoint),
+  takeScreenshot: () => ipcRenderer.invoke('take-screenshot'),
+  saveScreenshot: (data: unknown) => ipcRenderer.invoke('save-screenshot', data),
+  pushToReconDesk: (data: unknown) => ipcRenderer.invoke('push-to-recondesk', data),
+  getReconDeskTarget: (data: unknown) => ipcRenderer.invoke('get-recondesk-target', data),
 
   saveSession: (data: unknown) => ipcRenderer.invoke('save-session', data),
   loadSession: (id: string)    => ipcRenderer.invoke('load-session', id),
@@ -50,14 +56,26 @@ const api = {
     ipcRenderer.on('focus-window', () => cb());
   },
   onAutosaveTick: (cb: () => void) => {
-    ipcRenderer.on('autosave-tick', () => cb());
+    const listener = () => cb();
+    ipcRenderer.on('autosave-tick', listener);
+    return () => ipcRenderer.removeListener('autosave-tick', listener);
   },
   onVpnStatus: (cb: (data: unknown) => void) => {
-    ipcRenderer.on('vpn-status', (_, data) => cb(data));
+    const listener = (_: unknown, data: unknown) => cb(data);
+    ipcRenderer.on('vpn-status', listener);
+    return () => ipcRenderer.removeListener('vpn-status', listener);
   },
 
   ecosystemEmit: (appName: string, eventType: string, data: unknown) =>
     ipcRenderer.invoke('ecosystem-emit', appName, eventType, data),
+
+  incrementFlags: (count?: number) => ipcRenderer.invoke('increment-flags', count),
+  updateOperatorProfile: (updates: object) => ipcRenderer.invoke('update-operator-profile', updates),
+  completeLab: (opts: { platform: string; labType: string }) => ipcRenderer.invoke('complete-lab', opts),
+
+  startLab: (opts: { name: string; platform: string; targetIP?: string }) =>
+    ipcRenderer.invoke('lab:start', opts),
+  endLab: () => ipcRenderer.invoke('lab:end'),
 
   removeAllListeners: (channel: string) => ipcRenderer.removeAllListeners(channel),
 };

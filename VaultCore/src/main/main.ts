@@ -28,7 +28,10 @@ let vaultNoteCountCache = 0;
 let lastScrapeTimestamp: string | null = null;
 
 const SCRAPE_STATE_FILE = '_scrape_state.json';
-const preloadPath = path.join(__dirname, '..', 'preload', 'preload.mjs');
+// preload.js for CJS packages (no "type":"module"), preload.mjs for ESM packages
+const preloadFile = fs.existsSync(path.join(__dirname, '..', 'preload', 'preload.mjs'))
+  ? 'preload.mjs' : 'preload.js';
+const preloadPath = path.join(__dirname, '..', 'preload', preloadFile);
 
 // ─── Window ───────────────────────────────────────────────────────────────────
 function createWindow() {
@@ -45,8 +48,8 @@ function createWindow() {
     }
   });
 
-  if (process.env.NODE_ENV === 'development') {
-    mainWindow.loadURL('http://localhost:5173');
+  if (process.env['ELECTRON_RENDERER_URL']) {
+    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL']);
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   } else {
     mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
@@ -148,7 +151,9 @@ async function runScheduledScrape(source: Record<string, unknown>) {
   } catch (e) {
     currentScrapeState = null;
     updateTrayMenu();
-    console.error('[scheduler] Scrape failed for', source.name, (e as Error).message);
+    const errMsg = (e as Error).message;
+    sourcelibrary.updateSourceHealthFailure(source.id, errMsg);
+    console.error('[scheduler] Scrape failed for', source.name, errMsg);
   }
 }
 
@@ -184,9 +189,35 @@ function refreshVaultNoteCount() {
   if (vaultPath) setTimeout(() => { vaultNoteCountCache = launcher.countVaultNotes(vaultPath); }, 100);
 }
 
+function buildFolderStats(vaultPath: string): Array<{ folder: string; count: number }> {
+  const stats: Record<string, number> = {};
+  try {
+    const entries = fs.readdirSync(vaultPath, { withFileTypes: true });
+    for (const e of entries) {
+      if (e.name.startsWith('.') || !e.isDirectory()) continue;
+      const dirPath = path.join(vaultPath, e.name);
+      let count = 0;
+      function countMd(dir: string) {
+        try {
+          for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
+            if (f.name.startsWith('.')) continue;
+            if (f.isDirectory()) countMd(path.join(dir, f.name));
+            else if (f.name.endsWith('.md')) count++;
+          }
+        } catch { /* ignore */ }
+      }
+      countMd(dirPath);
+      if (count > 0) stats[e.name] = count;
+    }
+  } catch { /* ignore */ }
+  return Object.entries(stats)
+    .sort((a, b) => b[1] - a[1])
+    .map(([folder, count]) => ({ folder, count }));
+}
+
 // ─── App lifecycle ────────────────────────────────────────────────────────────
 app.whenReady().then(async () => {
-  launcher.registerPresence(app.getPath('exe'));
+  launcher.registerPresence(app.isPackaged ? app.getPath('exe') : app.getAppPath());
   createWindow();
   createTray();
   launcher.startStatusWriter(() => ({
@@ -266,6 +297,8 @@ ipcMain.handle('start-scrape', async (_, config) => {
     currentScrapeState = null;
     updateTrayMenu();
     refreshVaultNoteCount();
+    // Enrich result with folder stats and suggested tags
+    result.folderStats = buildFolderStats(vaultPath);
     if (config.saveToLibrary && config.sourceName) {
       const existing = sourcelibrary.getSourceByName(config.sourceName);
       if (!existing) sourcelibrary.addSource({ name: config.sourceName, type: config.sourceType, url: config.url, config, lastScraped: lastScrapeTimestamp, noteCount: result.saved + result.updated });
@@ -278,8 +311,13 @@ ipcMain.handle('start-scrape', async (_, config) => {
   } catch (e) {
     currentScrapeState = null;
     updateTrayMenu();
-    if (mainWindow) mainWindow.webContents.send('scrape-error', { error: (e as Error).message });
-    return { error: (e as Error).message };
+    const errMsg = (e as Error).message;
+    if (config.saveToLibrary && config.sourceName) {
+      const existing = sourcelibrary.getSourceByName(config.sourceName);
+      if (existing) sourcelibrary.updateSourceHealthFailure(existing.id, errMsg);
+    }
+    if (mainWindow) mainWindow.webContents.send('scrape-error', { error: errMsg });
+    return { error: errMsg };
   }
 });
 

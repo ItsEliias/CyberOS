@@ -14,11 +14,13 @@ import LabTracker from './LabTracker';
 import Progress from './Progress';
 import WriteupPanel from './WriteupPanel';
 import SettingsPanel from './SettingsPanel';
+import TimerHUD from './TimerHUD';
 
 export default function MainLayout() {
   const { tabs, activeTabId } = useStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
   const activePanel = activeTab?.activePanel || 'chat';
+  const hasActiveSession = !!(activeTab?.session?.labName && activeTab.session.labName !== 'New Session');
 
   const panels: Record<string, React.ReactNode> = {
     chat:         <ChatPanel />,
@@ -55,6 +57,12 @@ export default function MainLayout() {
         </main>
       </div>
       <Footer />
+      {/* Timer HUD — floating pill, top-right of main content */}
+      {hasActiveSession && (
+        <div className="fixed top-16 right-4 z-40">
+          <TimerHUD />
+        </div>
+      )}
     </div>
   );
 }

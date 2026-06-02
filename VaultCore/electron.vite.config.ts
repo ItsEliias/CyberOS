@@ -4,8 +4,23 @@ import { resolve } from 'path';
 import fs from 'fs';
 import path from 'path';
 
-// Plugin to copy src/main/lib/ and root sources/ to out/main/lib/ after build
+// Plugin to copy backend JS modules and sources/ to out/main/lib/ after build.
+// Copies (in order, later wins on conflict):
+//   1. Root-level CommonJS backend files (launcher.js, scraper.js, etc.)
+//   2. src/main/lib/  — any TS-migration overrides (optional)
+//   3. sources/       — scraper source handlers
 function copyMainLibPlugin() {
+  // Root-level CJS backend files that the TS main process requires via ./lib/
+  const ROOT_BACKEND_FILES = [
+    'launcher.js',
+    'ecosystem-bus.js',
+    'sourcelibrary.js',
+    'vaulthealth.js',
+    'conflict.js',
+    'processor.js',
+    'scraper.js',
+  ];
+
   function copyDir(src: string, dest: string) {
     if (!fs.existsSync(src)) return;
     fs.mkdirSync(dest, { recursive: true });
@@ -16,12 +31,30 @@ function copyMainLibPlugin() {
       else fs.copyFileSync(s, d);
     }
   }
+
+  function syncLibFiles() {
+    const destLib = resolve('out/main/lib');
+    fs.mkdirSync(destLib, { recursive: true });
+
+    // 1. Sync root-level backend CJS files into out/main/lib/
+    for (const file of ROOT_BACKEND_FILES) {
+      const src = resolve(file);
+      if (fs.existsSync(src)) fs.copyFileSync(src, path.join(destLib, file));
+    }
+
+    // 2. Optional src/main/lib/ overrides (used during TS migration)
+    copyDir(resolve('src/main/lib'), destLib);
+
+    // 3. Scraper source handlers
+    copyDir(resolve('sources'), path.join(destLib, 'sources'));
+  }
+
   return {
     name: 'copy-main-lib',
-    closeBundle() {
-      copyDir(resolve('src/main/lib'), resolve('out/main/lib'));
-      copyDir(resolve('sources'), resolve('out/main/lib/sources'));
-    }
+    // generateBundle fires before write so files are ready when Electron starts
+    generateBundle() { syncLibFiles(); },
+    // closeBundle is a belt-and-suspenders fallback
+    closeBundle()    { syncLibFiles(); }
   };
 }
 

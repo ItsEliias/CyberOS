@@ -32,6 +32,10 @@ interface Store {
   addCredential: (targetId: string, c: Omit<Credential, 'id'>) => void
   removeCredential: (targetId: string, credId: string) => void
 
+  // Flag actions
+  addFlag: (targetId: string, flag: string) => void
+  removeFlag: (targetId: string, flag: string) => void
+
   // Card actions
   addCard: (c: Omit<AttackCard, 'id' | 'createdAt' | 'updatedAt' | 'findings' | 'linkedAssets'>) => void
   updateCard: (id: string, patch: Partial<AttackCard>) => void
@@ -121,6 +125,25 @@ export const useStore = create<Store>((set, get) => ({
     set(s => ({
       targets: s.targets.map(t => t.id === targetId
         ? { ...t, credentials: t.credentials.filter(c => c.id !== credId), updatedAt: new Date().toISOString() }
+        : t)
+    }))
+    get().persist()
+  },
+
+  addFlag: (targetId, flag) => {
+    set(s => ({
+      targets: s.targets.map(t => t.id === targetId
+        ? { ...t, flags: [...(t.flags ?? []), flag], updatedAt: new Date().toISOString() }
+        : t)
+    }))
+    get().persist()
+    window.electronAPI.flagCaptured()
+  },
+
+  removeFlag: (targetId, flag) => {
+    set(s => ({
+      targets: s.targets.map(t => t.id === targetId
+        ? { ...t, flags: (t.flags ?? []).filter(f => f !== flag), updatedAt: new Date().toISOString() }
         : t)
     }))
     get().persist()

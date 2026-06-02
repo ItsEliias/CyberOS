@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 import type { Tab, AppConfig, Session, ChatMessage } from '@shared/types';
-import type { ThemeId } from '@shared/types';
+import type { ThemeId, BgThemeId, AccentThemeId } from '@shared/types';
 import type { ProgressData } from '../lib/progress';
 import type { Lab } from '../lib/labtracker';
 import type { SnippetsData } from '../lib/snippets';
 import { createSession } from '../lib/session';
-import { applyTheme } from '../lib/themes';
+import { applyTheme, applyBgTheme, applyAccentTheme } from '../lib/themes';
 
 function makeTabId() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
 
@@ -32,6 +32,8 @@ interface AppStore {
   // Config & Theme
   config: AppConfig | null;
   theme: ThemeId;
+  bgTheme: BgThemeId;
+  accentTheme: AccentThemeId;
 
   // VPN
   vpnStatus: VpnStatus;
@@ -60,6 +62,8 @@ interface AppStore {
   // Actions — config/theme
   setConfig: (config: AppConfig) => void;
   setTheme: (theme: ThemeId) => void;
+  setBgTheme: (bg: BgThemeId) => void;
+  setAccentTheme: (accent: AccentThemeId) => void;
   setSetupComplete: (v: boolean) => void;
   setApiKeyConfigured: (v: boolean) => void;
 
@@ -82,6 +86,8 @@ export const useStore = create<AppStore>((set, get) => {
     activeTabId: defaultTab.id,
     config: null,
     theme: 'stealth',
+    bgTheme: 'stealth',
+    accentTheme: 'blue',
     vpnStatus: { status: 'unknown' },
     progressData: null,
     labsData: [],
@@ -148,7 +154,13 @@ export const useStore = create<AppStore>((set, get) => {
 
     setConfig(config) {
       set({ config, setupComplete: !!config.setupComplete, apiKeyConfigured: !!config.apiKeyConfigured });
-      if (config.theme) {
+      const bg     = config.bgTheme     || 'stealth';
+      const accent = config.accentTheme || 'blue';
+      if (config.bgTheme || config.accentTheme) {
+        applyBgTheme(bg);
+        applyAccentTheme(accent);
+        set({ bgTheme: bg, accentTheme: accent });
+      } else if (config.theme) {
         applyTheme(config.theme);
         set({ theme: config.theme });
       }
@@ -158,9 +170,21 @@ export const useStore = create<AppStore>((set, get) => {
       applyTheme(theme);
       set({ theme });
       const config = get().config;
-      if (config) {
-        window.electronAPI.saveConfig({ ...config, theme });
-      }
+      if (config) window.electronAPI.saveConfig({ ...config, theme });
+    },
+
+    setBgTheme(bg) {
+      applyBgTheme(bg);
+      set({ bgTheme: bg });
+      const config = get().config;
+      if (config) window.electronAPI.saveConfig({ ...config, bgTheme: bg });
+    },
+
+    setAccentTheme(accent) {
+      applyAccentTheme(accent);
+      set({ accentTheme: accent });
+      const config = get().config;
+      if (config) window.electronAPI.saveConfig({ ...config, accentTheme: accent });
     },
 
     setSetupComplete(v) { set({ setupComplete: v }); },

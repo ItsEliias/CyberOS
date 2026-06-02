@@ -264,6 +264,34 @@ function buildTags(page, config) {
   return [...new Set(tags)];
 }
 
+// ─── Tag Suggestion (for UI pre-save review) ─────────────────────────────────
+
+const TAG_RULES = {
+  '#web-security': ['xss', 'sql injection', 'csrf', 'ssrf', 'rce', 'lfi', 'rfi', 'path traversal'],
+  '#network': ['nmap', 'port scan', 'firewall', 'proxy', 'vpn', 'dns', 'tcp', 'udp'],
+  '#privilege-escalation': ['privesc', 'sudo', 'suid', 'cron', 'path hijacking', 'kernel exploit'],
+  '#active-directory': ['kerberos', 'ldap', 'smb', 'pass the hash', 'mimikatz', 'bloodhound', 'dc'],
+  '#cryptography': ['cipher', 'hash', 'rsa', 'aes', 'base64', 'jwt', 'ssl', 'tls'],
+  '#tools': ['metasploit', 'burp suite', 'wireshark', 'gobuster', 'ffuf', 'hydra', 'john'],
+  '#cve': ['cve-', 'vulnerability', 'exploit', 'patch', 'advisory'],
+  '#linux': ['linux', 'bash', 'chmod', 'systemd', 'cron', '/etc/passwd'],
+  '#windows': ['windows', 'powershell', 'registry', 'active directory', 'ntlm'],
+};
+
+function getSuggestedTags(rawContent) {
+  const lower = (rawContent || '').toLowerCase();
+  const matched = [];
+  for (const [tag, keywords] of Object.entries(TAG_RULES)) {
+    for (const kw of keywords) {
+      if (lower.includes(kw.toLowerCase())) {
+        matched.push(tag);
+        break;
+      }
+    }
+  }
+  return matched;
+}
+
 // ─── Auto-Tagging ─────────────────────────────────────────────────────────────
 
 function autoTag(content, page) {
@@ -645,6 +673,7 @@ function sanitizeFileName(name) {
 module.exports = {
   injectFrontmatter,
   autoTag,
+  getSuggestedTags,
   autoWikilinks,
   generateIndexNote,
   extractCodeSnippets,

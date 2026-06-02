@@ -11,12 +11,67 @@ interface Props {
   onSwitchGraph: (id: string) => void
 }
 
-function nodeColor(openPorts: number): string {
-  if (openPorts === 0) return '#8b949e'
-  if (openPorts <= 2)  return '#3fb950'
-  if (openPorts <= 5)  return '#d29922'
-  return '#ff4444'
+// ─── Port-weighted radius ──────────────────────────────────────────────────
+function nodeRadius(openPorts: number): number {
+  if (openPorts === 0)  return 14
+  if (openPorts <= 2)   return 18
+  if (openPorts <= 5)   return 22
+  if (openPorts <= 10)  return 26
+  return 30
 }
+
+// ─── Platform inference ───────────────────────────────────────────────────
+type Platform = 'windows' | 'linux' | 'web' | 'macos' | 'unknown'
+
+function inferPlatform(node: NetworkNode): Platform {
+  const os = (node.os ?? '').toLowerCase()
+  if (os.includes('win'))    return 'windows'
+  if (os.includes('mac') || os.includes('darwin') || os.includes('osx')) return 'macos'
+  if (os.includes('linux'))  return 'linux'
+
+  // Infer from open service names
+  const services = node.ports
+    .filter(p => p.state === 'open')
+    .map(p => (p.service ?? '').toLowerCase())
+
+  const hasHttp  = services.some(s => s === 'http' || s === 'https' || s === 'www')
+  const hasSMB   = services.some(s => s.includes('smb') || s.includes('microsoft-ds') || s.includes('netbios'))
+  const hasSSH   = services.some(s => s.includes('ssh'))
+
+  // Port-based inference for http/https
+  const openPortNums = node.ports.filter(p => p.state === 'open').map(p => p.port)
+  const hasWebPort   = openPortNums.includes(80) || openPortNums.includes(443)
+  const hasWinPort   = openPortNums.includes(135) || openPortNums.includes(445) || openPortNums.includes(3389)
+
+  if (hasHttp || hasWebPort)  return 'web'
+  if (hasSMB  || hasWinPort)  return 'windows'
+  if (hasSSH)                 return 'linux'
+  return 'unknown'
+}
+
+const PLATFORM_COLORS: Record<Platform, string> = {
+  windows: '#3b82f6',
+  linux:   '#22c55e',
+  web:     '#06b6d4',
+  macos:   '#a855f7',
+  unknown: '#64748b',
+}
+
+const PLATFORM_LABELS: Array<{ platform: Platform; label: string }> = [
+  { platform: 'windows', label: 'Windows' },
+  { platform: 'linux',   label: 'Linux'   },
+  { platform: 'web',     label: 'Web'     },
+  { platform: 'macos',   label: 'macOS'   },
+  { platform: 'unknown', label: 'Unknown' },
+]
+
+const SIZE_SCALE: Array<{ label: string; r: number }> = [
+  { label: '0',    r: 14 },
+  { label: '1–2',  r: 18 },
+  { label: '3–5',  r: 22 },
+  { label: '6–10', r: 26 },
+  { label: '11+',  r: 30 },
+]
 
 export default function GraphCanvas({ graph: initialGraph, savedGraphs, onBack, onSwitchGraph }: Props) {
   const [graph, setGraph]             = useState<NetworkGraph>(() => {
@@ -334,6 +389,10 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, onBack, 
                 {graph.nodes.map(node => {
                   const openPorts = node.ports.filter(p => p.state === 'open').length
                   const isSelected = node.id === selectedId
+                  const r         = nodeRadius(openPorts)
+                  const platform  = inferPlatform(node)
+                  const fillColor = PLATFORM_COLORS[platform]
+                  const selRing   = r + 6
                   return (
                     <g
                       key={node.id}
@@ -343,32 +402,38 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, onBack, 
                       style={{ cursor: 'pointer' }}
                     >
                       {isSelected && (
-                        <circle r={30} fill="rgba(210,153,34,0.1)" stroke="var(--accent)" strokeWidth={1.5} />
+                        <circle r={selRing} fill="rgba(210,153,34,0.1)" stroke="var(--accent)" strokeWidth={1.5} />
                       )}
                       <circle
-                        r={24}
-                        fill={nodeColor(openPorts)}
-                        stroke={isSelected ? 'var(--accent)' : 'transparent'}
-                        strokeWidth={2}
+                        r={r}
+                        fill={fillColor}
+                        stroke={isSelected ? 'var(--accent)' : 'rgba(255,255,255,0.15)'}
+                        strokeWidth={isSelected ? 2 : 1}
                         style={{ opacity: node.status === 'down' ? 0.4 : 1 }}
                       />
-                      {/* Port count badge */}
-                      {openPorts > 0 && (
+                      {/* Port count badge — always shown, white centered text */}
+                      <text
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        fontSize={r >= 22 ? 11 : 10}
+                        fontWeight={700}
+                        fill="white"
+                        style={{ pointerEvents: 'none', textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}
+                      >{openPorts}</text>
+                      {/* Status cross for down nodes */}
+                      {node.status === 'down' && (
                         <text
+                          y={-r - 4}
                           textAnchor="middle"
                           dominantBaseline="central"
                           fontSize={10}
-                          fontWeight={600}
-                          fill="#0d1117"
-                        >{openPorts}</text>
-                      )}
-                      {/* Status dot */}
-                      {node.status === 'down' && (
-                        <text textAnchor="middle" dominantBaseline="central" fontSize={14} fill="#8b949e">✕</text>
+                          fill="#8b949e"
+                          style={{ pointerEvents: 'none' }}
+                        >✕</text>
                       )}
                       {/* IP label */}
                       <text
-                        y={36}
+                        y={r + 12}
                         textAnchor="middle"
                         fontSize={11}
                         fill="var(--text-dim)"
@@ -376,7 +441,7 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, onBack, 
                       >{node.ip}</text>
                       {/* Hostname */}
                       <text
-                        y={47}
+                        y={r + 23}
                         textAnchor="middle"
                         fontSize={9}
                         fill="var(--text-muted)"
@@ -386,6 +451,9 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, onBack, 
                   )
                 })}
               </g>
+
+              {/* ─── Legend (bottom-left, fixed in SVG viewport coords) ── */}
+              <MapLegend />
             </svg>
           )}
         </div>
@@ -412,5 +480,59 @@ function ToolbarBtn({
         opacity: disabled ? 0.5 : 1, cursor: disabled ? 'not-allowed' : 'pointer',
       }}
     >{children}</button>
+  )
+}
+
+// ─── Map Legend ─────────────────────────────────────────────────────────────
+// Rendered inside the SVG using foreignObject so we can use HTML/CSS.
+function MapLegend() {
+  const PAD    = 12
+  const WIDTH  = 148
+  const HEIGHT = 178
+
+  return (
+    <foreignObject x={PAD} y={`calc(100% - ${HEIGHT + PAD}px)`} width={WIDTH} height={HEIGHT}>
+      <div
+        style={{
+          background: 'rgba(13,17,23,0.82)',
+          border: '1px solid var(--border)',
+          borderRadius: 6,
+          padding: '7px 9px',
+          backdropFilter: 'blur(6px)',
+          fontSize: 10,
+          color: 'var(--text-dim)',
+          lineHeight: 1.5,
+          userSelect: 'none',
+        }}
+      >
+        {/* Platform colours */}
+        <div style={{ fontWeight: 600, letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 4, fontSize: 9, textTransform: 'uppercase' }}>Platform</div>
+        {PLATFORM_LABELS.map(({ platform, label }) => (
+          <div key={platform} style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 2 }}>
+            <span style={{
+              width: 10, height: 10, borderRadius: '50%',
+              background: PLATFORM_COLORS[platform],
+              display: 'inline-block', flexShrink: 0,
+            }} />
+            <span>{label}</span>
+          </div>
+        ))}
+
+        {/* Size scale */}
+        <div style={{ fontWeight: 600, letterSpacing: '0.05em', color: 'var(--text-muted)', marginTop: 7, marginBottom: 4, fontSize: 9, textTransform: 'uppercase' }}>Ports (size)</div>
+        {SIZE_SCALE.map(({ label, r }) => (
+          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 2 }}>
+            <span style={{
+              width: r * 0.5, height: r * 0.5,
+              minWidth: r * 0.5,
+              borderRadius: '50%',
+              background: 'var(--text-dim)',
+              display: 'inline-block',
+            }} />
+            <span>{label} ports</span>
+          </div>
+        ))}
+      </div>
+    </foreignObject>
   )
 }

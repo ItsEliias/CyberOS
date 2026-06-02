@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useStore } from '../store';
 import type { CoreTheme, PersonalityTheme, AiCtx } from '@shared/types';
 
@@ -14,6 +15,15 @@ export default function SettingsView({ ollamaModels, onOllamaRefresh }: Props) {
     config, vaultPath, alwaysOnTop, ollamaStatus, aiCtx, ollamaModel,
     setAlwaysOnTop, setAiCtx, setOllamaModel, version
   } = useStore();
+
+  const [captureHotkey, setCaptureHotkey]       = useState('CommandOrControl+Shift+G');
+  const [hotkeyRecording, setHotkeyRecording]   = useState(false);
+  const [hotkeyError, setHotkeyError]           = useState<string | null>(null);
+  const [hotkeySuccess, setHotkeySuccess]       = useState(false);
+
+  useEffect(() => {
+    window.ghostvault.getCaptureHotkey().then(setCaptureHotkey);
+  }, []);
 
   const core        = (config?.theme as { core?: CoreTheme })?.core        || 'stealth';
   const personality = (config?.theme as { personality?: PersonalityTheme })?.personality || 'neutral';
@@ -32,6 +42,36 @@ export default function SettingsView({ ollamaModels, onOllamaRefresh }: Props) {
 
   function setAutosave(val: boolean) {
     window.ghostvault.saveConfig({ autosave: val });
+  }
+
+  function handleHotkeyKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!hotkeyRecording) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (['Meta', 'Control', 'Alt', 'Shift'].includes(e.key)) return;
+
+    const parts: string[] = [];
+    if (e.metaKey || e.ctrlKey) parts.push('CommandOrControl');
+    if (e.altKey)   parts.push('Alt');
+    if (e.shiftKey) parts.push('Shift');
+
+    const key = e.key === ' ' ? 'Space' : e.key.length === 1 ? e.key.toUpperCase() : e.key;
+    parts.push(key);
+    const combo = parts.join('+');
+    setCaptureHotkey(combo);
+    setHotkeyRecording(false);
+  }
+
+  async function saveHotkey() {
+    setHotkeyError(null);
+    setHotkeySuccess(false);
+    const result = await window.ghostvault.setCaptureHotkey(captureHotkey);
+    if (result.ok) {
+      setHotkeySuccess(true);
+      setTimeout(() => setHotkeySuccess(false), 2000);
+    } else {
+      setHotkeyError(result.error || 'Failed to register hotkey');
+    }
   }
 
   async function changeVault() {
@@ -60,6 +100,46 @@ export default function SettingsView({ ollamaModels, onOllamaRefresh }: Props) {
             style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
             Change Vault…
           </button>
+        </div>
+      </section>
+
+      {/* Capture Hotkey */}
+      <section>
+        <h3 className="text-[10px] uppercase tracking-widest font-semibold mb-3" style={{ color: 'var(--text-dim)' }}>Capture Hotkey</h3>
+        <div className="space-y-2">
+          <div className="text-[11px] mb-1" style={{ color: 'var(--text-dim)' }}>
+            Global shortcut to open the capture window from any app.
+          </div>
+          <div className="flex gap-2 items-center">
+            <input
+              readOnly
+              value={hotkeyRecording ? 'Press a key combination…' : captureHotkey}
+              onKeyDown={handleHotkeyKeyDown}
+              onBlur={() => setHotkeyRecording(false)}
+              onClick={() => { setHotkeyRecording(true); setHotkeyError(null); }}
+              className="flex-1 px-3 py-2 rounded-lg text-sm font-mono outline-none cursor-pointer"
+              style={{
+                background  : hotkeyRecording ? 'var(--bg2)' : 'var(--bg3)',
+                border      : `1px solid ${hotkeyRecording ? 'var(--accent)' : 'var(--border)'}`,
+                color       : hotkeyRecording ? 'var(--text-dim)' : 'var(--text)',
+              }}
+            />
+            <button
+              onClick={saveHotkey}
+              className="text-sm px-3 py-2 rounded-lg border transition-colors hover:bg-white/5"
+              style={{
+                borderColor : hotkeySuccess ? 'var(--success,#22c55e)' : 'var(--border)',
+                color       : hotkeySuccess ? '#22c55e' : 'var(--text-muted)',
+              }}>
+              {hotkeySuccess ? 'Saved' : 'Save'}
+            </button>
+          </div>
+          {hotkeyError && (
+            <div className="text-[11px]" style={{ color: 'var(--error,#f85149)' }}>{hotkeyError}</div>
+          )}
+          <div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+            Click the field then press your key combination to record it.
+          </div>
         </div>
       </section>
 

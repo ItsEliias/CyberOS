@@ -42,6 +42,16 @@ const ghostvault = {
                                                             ipcRenderer.invoke('ollama-format', data) as Promise<OllamaFormatResult>,
   closeCapture   : ()                                    => ipcRenderer.invoke('hide-capture') as Promise<void>,
 
+  getCaptureHotkey: ()                                   => ipcRenderer.invoke('get-capture-hotkey') as Promise<string>,
+  setCaptureHotkey: (key: string)                        => ipcRenderer.invoke('set-capture-hotkey', key) as Promise<{ ok: boolean; error?: string }>,
+
+  readClipboard  : ()                                    => ipcRenderer.invoke('read-clipboard') as Promise<string>,
+
+  exportNotes    : (payload: { sessionName: string; notes: string }) =>
+                                                            ipcRenderer.invoke('ghostvault:export-notes', payload) as Promise<boolean>,
+
+  getSessionContext: ()                                  => ipcRenderer.invoke('get-session-context') as Promise<{ currentLab: string | null; activeTarget: string | null; activeIP: string | null } | null>,
+
   onOpenCapture  : (cb: () => void) => {
     const listener = () => cb();
     ipcRenderer.on('quick-capture', listener);

@@ -1,10 +1,35 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import type { CommandEntry } from '@shared/types';
 import ReplayView from './ReplayView';
 
 interface Props {
   commands: CommandEntry[];
   onClear: () => void;
+}
+
+// ─── Highlight matched substring in amber ─────────────────────────────────
+function HighlightedCommand({ command, query }: { command: string; query: string }) {
+  const q = query.trim();
+  if (!q) return <>{command}</>;
+
+  const idx = command.toLowerCase().indexOf(q.toLowerCase());
+  if (idx === -1) return <>{command}</>;
+
+  return (
+    <>
+      {command.slice(0, idx)}
+      <span style={{
+        background: 'rgba(245,158,11,0.2)',
+        color: 'var(--warning)',
+        borderRadius: 2,
+        padding: '0 2px',
+        fontSize: 'inherit',
+      }}>
+        {command.slice(idx, idx + q.length)}
+      </span>
+      {command.slice(idx + q.length)}
+    </>
+  );
 }
 
 function relativeTime(iso: string): string {
@@ -22,6 +47,8 @@ export default function HistoryPanel({ commands, onClear }: Props) {
   const [query,        setQuery]       = useState('');
   const [clearPending, setClearPend]   = useState(false);
   const [replayMode,   setReplayMode]  = useState(false);
+  const panelRef    = useRef<HTMLDivElement>(null);
+  const searchRef   = useRef<HTMLInputElement>(null);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -29,6 +56,14 @@ export default function HistoryPanel({ commands, onClear }: Props) {
     if (!q) return sorted;
     return sorted.filter(c => c.command.toLowerCase().includes(q));
   }, [commands, query]);
+
+  // Cmd+F / Ctrl+F focuses the search input when the panel is focused
+  const handlePanelKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+      e.preventDefault();
+      if (!replayMode) searchRef.current?.focus();
+    }
+  }, [replayMode]);
 
   function handleExport() {
     const text = commands.map(c =>
@@ -50,15 +85,21 @@ export default function HistoryPanel({ commands, onClear }: Props) {
   }
 
   return (
-    <div style={{
-      width: 280,
-      display: 'flex',
-      flexDirection: 'column',
-      background: 'var(--panel)',
-      borderLeft: '1px solid var(--border)',
-      overflow: 'hidden',
-      flexShrink: 0,
-    }}>
+    <div
+      ref={panelRef}
+      tabIndex={-1}
+      onKeyDown={handlePanelKeyDown}
+      style={{
+        width: 280,
+        display: 'flex',
+        flexDirection: 'column',
+        background: 'var(--panel)',
+        borderLeft: '1px solid var(--border)',
+        overflow: 'hidden',
+        flexShrink: 0,
+        outline: 'none',
+      }}
+    >
       {/* Header */}
       <div style={{
         padding: '8px 10px',
@@ -94,24 +135,61 @@ export default function HistoryPanel({ commands, onClear }: Props) {
           </div>
         </div>
 
-        {/* Only show filter input in list mode */}
+        {/* Search input — only in list mode */}
         {!replayMode && (
-          <input
-            type="text"
-            placeholder="Filter commands..."
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            style={{
-              width: '100%',
-              background: 'var(--bg)',
-              border: '1px solid var(--border)',
-              borderRadius: 3,
-              padding: '4px 8px',
-              color: 'var(--text)',
-              fontSize: 12,
-              outline: 'none',
-            }}
-          />
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            {/* Search icon */}
+            <span style={{
+              position: 'absolute',
+              left: 7,
+              fontSize: 11,
+              color: 'var(--text-muted)',
+              pointerEvents: 'none',
+              lineHeight: 1,
+            }}>⌕</span>
+            <input
+              ref={searchRef}
+              type="text"
+              placeholder="Search commands…"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              style={{
+                width: '100%',
+                background: 'var(--bg)',
+                border: '1px solid var(--border)',
+                borderRadius: 3,
+                padding: '4px 24px 4px 22px',
+                color: 'var(--text)',
+                fontSize: 12,
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
+            {/* Clear button */}
+            {query && (
+              <button
+                onClick={() => { setQuery(''); searchRef.current?.focus(); }}
+                title="Clear search"
+                style={{
+                  position: 'absolute',
+                  right: 5,
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  fontSize: 12,
+                  cursor: 'pointer',
+                  padding: '0 2px',
+                  lineHeight: 1,
+                }}
+              >✕</button>
+            )}
+          </div>
+        )}
+        {/* Result count when filter active */}
+        {!replayMode && query.trim() && (
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'right', paddingRight: 2 }}>
+            {filtered.length} of {commands.length} commands
+          </div>
         )}
       </div>
 
@@ -177,7 +255,7 @@ export default function HistoryPanel({ commands, onClear }: Props) {
                   whiteSpace: 'pre-wrap',
                   fontFamily: 'inherit',
                 }}>
-                  {entry.command}
+                  <HighlightedCommand command={entry.command} query={query} />
                 </span>
                 {entry.outputSnippet && (
                   <span style={{

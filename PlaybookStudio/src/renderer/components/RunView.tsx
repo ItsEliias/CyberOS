@@ -23,15 +23,17 @@ function nextStatus(current: StepStatus): StepStatus {
 }
 
 function StepCard({
-  step, runId, isActive,
+  step, runId, isActive, playbookTitle,
 }: {
   step: PlaybookStep
   runId: string
   isActive: boolean
+  playbookTitle: string
 }) {
   const updateRun   = useStore(s => s.updateRun)
   const [expanded, setExpanded] = useState(isActive)
   const [notes, setNotes] = useState(step.operatorNotes ?? '')
+  const [runToast, setRunToast] = useState<string | null>(null)
   const status = step.status ?? 'todo'
 
   async function advanceStatus() {
@@ -61,6 +63,18 @@ function StepCard({
 
   async function copyCmd(cmd: string) {
     await navigator.clipboard.writeText(cmd)
+  }
+
+  async function runCmd(cmd: string) {
+    await window.electronAPI.runCommand({
+      command: cmd,
+      stepTitle: step.title,
+      playbookTitle,
+      source: 'PlaybookStudio',
+      queuedAt: new Date().toISOString(),
+    })
+    setRunToast(`Sent to TerminalLink ✓`)
+    setTimeout(() => setRunToast(null), 2000)
   }
 
   return (
@@ -133,7 +147,17 @@ function StepCard({
 
           {step.commands.filter(Boolean).length > 0 && (
             <div className="flex flex-col gap-1">
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Commands</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Commands</span>
+                {runToast && (
+                  <span
+                    className="text-xs px-1.5 py-0.5 rounded"
+                    style={{ color: 'var(--success)', background: 'rgba(63,185,80,0.1)', border: '1px solid rgba(63,185,80,0.2)', transition: 'opacity 0.3s' }}
+                  >
+                    {runToast}
+                  </span>
+                )}
+              </div>
               {step.commands.filter(Boolean).map((cmd, i) => (
                 <div
                   key={i}
@@ -148,6 +172,14 @@ function StepCard({
                     title="Copy to clipboard"
                   >
                     copy
+                  </button>
+                  <button
+                    onClick={() => runCmd(cmd)}
+                    className="flex-shrink-0 px-1.5 py-0.5 text-[9px] font-semibold rounded transition-colors hover:bg-accent/10"
+                    style={{ color: 'var(--accent)', border: '1px solid rgba(74,158,255,0.3)' }}
+                    title="Send to TerminalLink"
+                  >
+                    ▶ Run
                   </button>
                 </div>
               ))}
@@ -325,6 +357,7 @@ export default function RunView() {
             step={step}
             runId={activeRun.id}
             isActive={idx === 0 && step.status === 'todo'}
+            playbookTitle={activeRun.playbookName}
           />
         ))}
       </div>

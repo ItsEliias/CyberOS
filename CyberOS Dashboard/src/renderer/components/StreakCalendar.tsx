@@ -1,4 +1,4 @@
-// StreakCalendar — GitHub-style 12-week activity grid
+// StreakCalendar — GitHub-style 12-week activity heatmap
 // ItsEliias // CyberOS
 
 const WEEKS   = 12
@@ -25,7 +25,6 @@ function toISODate(d: Date): string {
 /** Build an ordered array of 84 date strings ending today (Mon-aligned grid) */
 function buildDateGrid(): string[] {
   const today = new Date()
-  // Start 83 days ago
   const dates: string[] = []
   for (let i = 83; i >= 0; i--) {
     const d = new Date(today)
@@ -35,30 +34,46 @@ function buildDateGrid(): string[] {
   return dates
 }
 
+/** Map a count of events to an SVG fill and opacity */
+function intensityStyle(count: number): { fill: string; opacity: number; stroke: string; strokeWidth: number } {
+  if (count === 0) return { fill: 'var(--panel)', opacity: 0.8, stroke: 'var(--border)', strokeWidth: 0.6 }
+  if (count === 1) return { fill: 'var(--accent)', opacity: 0.25, stroke: 'none', strokeWidth: 0 }
+  if (count === 2) return { fill: 'var(--accent)', opacity: 0.50, stroke: 'none', strokeWidth: 0 }
+  if (count === 3) return { fill: 'var(--accent)', opacity: 0.75, stroke: 'none', strokeWidth: 0 }
+  return             { fill: 'var(--accent)', opacity: 1.00, stroke: 'none', strokeWidth: 0 }
+}
+
+const LEGEND_LEVELS = [0, 1, 2, 3, 4] as const
+
 export default function StreakCalendar({ activityDates, currentStreak }: StreakCalendarProps) {
-  const activeSet = new Set(activityDates)
-  const grid      = buildDateGrid()   // 84 items, oldest first
+  // Count occurrences per date — multiple entries on the same date = higher intensity
+  const countMap = new Map<string, number>()
+  for (const d of activityDates) {
+    // Normalise to YYYY-MM-DD in case full ISO timestamps are passed
+    const key = d.slice(0, 10)
+    countMap.set(key, (countMap.get(key) ?? 0) + 1)
+  }
+
+  const grid = buildDateGrid()   // 84 items, oldest first
 
   // Pad front so first column starts on Monday
-  // grid[0] is 83 days ago; figure out its weekday (0=Sun … 6=Sat → rebase to Mon=0)
   const firstDate  = new Date(grid[0] + 'T00:00:00')
   const dowSun     = firstDate.getDay()           // 0 Sun – 6 Sat
   const dowMon     = (dowSun + 6) % 7             // 0 Mon – 6 Sun
-  const padCount   = dowMon                       // empty cells at top of first column
-  const totalCells = padCount + grid.length       // may exceed 84 slightly
+  const padCount   = dowMon
+  const totalCells = padCount + grid.length
   const totalCols  = Math.ceil(totalCells / DAYS)
 
   // Build column-major cells array: index = col*DAYS + row
-  const cells: Array<{ date: string | null; active: boolean }> = []
+  const cells: Array<{ date: string | null; count: number }> = []
   for (let i = 0; i < padCount; i++) {
-    cells.push({ date: null, active: false })
+    cells.push({ date: null, count: 0 })
   }
   for (const d of grid) {
-    cells.push({ date: d, active: activeSet.has(d) })
+    cells.push({ date: d, count: countMap.get(d) ?? 0 })
   }
-  // Pad end to fill last column
   while (cells.length < totalCols * DAYS) {
-    cells.push({ date: null, active: false })
+    cells.push({ date: null, count: 0 })
   }
 
   const svgW = totalCols * STEP - GAP + 14  // +14 for day labels
@@ -70,7 +85,7 @@ export default function StreakCalendar({ activityDates, currentStreak }: StreakC
         width={svgW}
         height={svgH}
         viewBox={`0 0 ${svgW} ${svgH}`}
-        aria-label="Activity streak calendar"
+        aria-label="Activity streak heatmap"
       >
         {/* Day-of-week labels (left) */}
         {DAY_LABELS.map((lbl, row) => (
@@ -92,14 +107,11 @@ export default function StreakCalendar({ activityDates, currentStreak }: StreakC
           Array.from({ length: DAYS }, (_, row) => {
             const idx  = col * DAYS + row
             const cell = cells[idx]
-            if (!cell) return null
+            if (!cell || cell.date === null) return null
+
             const x = 14 + col * STEP
             const y = row * STEP
-
-            if (cell.date === null) {
-              // padding cell — invisible
-              return null
-            }
+            const { fill, opacity, stroke, strokeWidth } = intensityStyle(cell.count)
 
             return (
               <rect
@@ -109,11 +121,13 @@ export default function StreakCalendar({ activityDates, currentStreak }: StreakC
                 width={CELL}
                 height={CELL}
                 rx="1.5"
-                fill={cell.active ? 'var(--accent)' : 'var(--panel)'}
-                stroke={cell.active ? 'none' : 'var(--border)'}
-                strokeWidth="0.6"
-                opacity={cell.active ? 1 : 0.8}
-              />
+                fill={fill}
+                stroke={stroke}
+                strokeWidth={strokeWidth}
+                opacity={opacity}
+              >
+                <title>{cell.date}: {cell.count} event{cell.count !== 1 ? 's' : ''}</title>
+              </rect>
             )
           })
         )}
@@ -124,6 +138,30 @@ export default function StreakCalendar({ activityDates, currentStreak }: StreakC
         <span className="text-accent font-semibold">{currentStreak}</span>
         <span className="text-muted/70 ml-1">day streak</span>
       </p>
+
+      {/* Intensity legend */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
+        <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>Less</span>
+        {LEGEND_LEVELS.map(level => {
+          const { fill, opacity, stroke, strokeWidth } = intensityStyle(level)
+          return (
+            <svg key={level} width={CELL} height={CELL} style={{ flexShrink: 0 }}>
+              <rect
+                x={0}
+                y={0}
+                width={CELL}
+                height={CELL}
+                rx="1.5"
+                fill={fill}
+                stroke={stroke}
+                strokeWidth={strokeWidth}
+                opacity={opacity}
+              />
+            </svg>
+          )
+        })}
+        <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>More</span>
+      </div>
     </div>
   )
 }
