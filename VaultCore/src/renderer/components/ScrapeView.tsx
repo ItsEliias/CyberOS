@@ -41,7 +41,7 @@ export default function ScrapeView() {
   const [showPostScrape, setShowPostScrape] = useState(false);
   // Per-source config
   const [depth, setDepth]           = useState(3);
-  const [maxPages, setMaxPages]     = useState(100);
+  const [maxPages, setMaxPages]     = useState(600);
   const [delay, setDelay]           = useState(800);
   const [branch, setBranch]         = useState('main');
   const [maxVideos, setMaxVideos]   = useState(50);

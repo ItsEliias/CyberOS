@@ -19,10 +19,20 @@ td.addRule('highlight', {
 });
 
 async function scrape(browser, newPage, config, vaultPath, log, scrapeState, ctrl) {
-  const baseUrl = (config.url || 'https://publish.obsidian.md/addielamarr').replace(/\/$/, '');
+  const inputUrl = (config.url || 'https://publish.obsidian.md/addielamarr').replace(/\/$/, '');
+  // Normalise to site root: https://publish.obsidian.md/{sitename}
+  // so that any specific-page URL entered still crawls the whole site
+  const siteRoot = (() => {
+    try {
+      const u = new URL(inputUrl);
+      const parts = u.pathname.split('/').filter(Boolean); // ['addielamarr', ...]
+      return `${u.origin}/${parts[0]}`;
+    } catch (_) { return inputUrl; }
+  })();
+  const baseUrl = siteRoot;
   const visited = new Set();
   const pages = [];
-  const queue = [baseUrl];
+  const queue = [inputUrl];
   const maxPages = config.maxPages || 500;
 
   log('info', `Scraping Obsidian Publish: ${baseUrl}`);
