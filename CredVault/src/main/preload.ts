@@ -14,29 +14,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Credentials CRUD
   getCredentials:  (): Promise<Credential[]>                           => ipcRenderer.invoke('vault:get-credentials'),
-  addCredential:   (c: Omit<Credential, 'id' | 'createdAt' | 'updatedAt'>): Promise<Credential | null>
-    => ipcRenderer.invoke('vault:add-credential', c),
-  updateCredential:(id: string, patch: Partial<Credential>): Promise<boolean>
-    => ipcRenderer.invoke('vault:update-credential', id, patch),
+  addCredential:   (c: Omit<Credential, 'id' | 'createdAt' | 'updatedAt'>) => ipcRenderer.invoke('vault:add-credential', c) as Promise<Credential | null>,
+  updateCredential:(id: string, patch: Partial<Credential>) => ipcRenderer.invoke('vault:update-credential', id, patch) as Promise<boolean>,
   deleteCredential:(id: string): Promise<boolean>                      => ipcRenderer.invoke('vault:delete-credential', id),
-  importCredentials:(creds: Omit<Credential, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<number>
-    => ipcRenderer.invoke('vault:import-credentials', creds),
+  importCredentials:(creds: Omit<Credential, 'id' | 'createdAt' | 'updatedAt'>[]) => ipcRenderer.invoke('vault:import-credentials', creds) as Promise<number>,
 
   // Stats
   getStats:        (): Promise<VaultStats | null>                      => ipcRenderer.invoke('vault:get-stats'),
 
   // Clipboard
-  copySecure:      (text: string, clearAfterMs?: number): Promise<boolean>
-    => ipcRenderer.invoke('clipboard:copy-secure', text, clearAfterMs),
+  copySecure:      (text: string, clearAfterMs?: number) => ipcRenderer.invoke('clipboard:copy-secure', text, clearAfterMs) as Promise<boolean>,
 
   // ReconDesk import
   getReconTargets: (): Promise<unknown[]>                              => ipcRenderer.invoke('recon:get-targets'),
 
   // Backup
-  exportBackup:    (payload: ExportBackupPayload): Promise<{ ok: boolean; error?: string }>
-    => ipcRenderer.invoke('vault:export-backup', payload),
-  importBackup:    (importPassword: string): Promise<{ ok: boolean; count?: number; error?: string }>
-    => ipcRenderer.invoke('vault:import-backup', importPassword),
+  exportBackup:    (payload: ExportBackupPayload) => ipcRenderer.invoke('vault:export-backup', payload) as Promise<{ ok: boolean; error?: string }>,
+  importBackup:    (importPassword: string) => ipcRenderer.invoke('vault:import-backup', importPassword) as Promise<{ ok: boolean; count?: number; error?: string }>,
 
   // Meta
   getVersion:      (): Promise<string>                                 => ipcRenderer.invoke('app:version'),
@@ -46,8 +40,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   offVaultLocked:  (cb: () => void) => ipcRenderer.removeListener('vault:locked', cb),
 
   // Cross-app search (for completeness, same-process use)
-  credvaultSearch: (q: { ip?: string; targetName?: string }): Promise<SearchResult[]>
-    => ipcRenderer.invoke('credvault-search', q),
+  credvaultSearch: (q: { ip?: string; targetName?: string }) => ipcRenderer.invoke('credvault-search', q) as Promise<SearchResult[]>,
 
   // Live Queue — pending credentials from ReconDesk
   pending: {

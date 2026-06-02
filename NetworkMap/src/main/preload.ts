@@ -16,7 +16,7 @@ interface PushNodeResult {
   reason?: string
 }
 
-interface ReconDeskGraphResult {
+type ReconDeskGraphResult = {
   name: string
   nodes: Array<{ id: string; label: string; ip: string; ports: Array<{ number: number; protocol: string; service?: string; state: string }> }>
   edges: unknown[]
