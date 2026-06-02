@@ -65,8 +65,11 @@ export default function SkillRadar({ skills }: SkillRadarProps) {
       angle >= 15 && angle <= 165 ? 'end'    :
       angle >= 195 && angle <= 345 ? 'start'  :
       'middle'
-    return { x: pt.x, y: pt.y, label: s.label, anchor: ta }
+    const score = skills[s.key] ?? 0
+    return { x: pt.x, y: pt.y, label: s.label, anchor: ta, score }
   })
+
+  const scores = SKILLS.map(s => skills[s.key] ?? 0)
 
   return (
     <svg
@@ -124,7 +127,9 @@ export default function SkillRadar({ skills }: SkillRadarProps) {
           cy={p.y.toFixed(2)}
           r="2.5"
           fill="var(--accent)"
-        />
+        >
+          <title>{SKILLS[i].label}: {scores[i]}</title>
+        </circle>
       ))}
 
       {/* Axis labels */}
@@ -140,6 +145,7 @@ export default function SkillRadar({ skills }: SkillRadarProps) {
           letterSpacing="0.04em"
         >
           {lb.label}
+          <title>{lb.label}: {lb.score}</title>
         </text>
       ))}
 

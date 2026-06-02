@@ -107,7 +107,7 @@ export default function SettingsView() {
           {pwMsg && (
             <p style={{ fontSize: 12, color: pwMsg.ok ? 'var(--success)' : 'var(--error)' }}>{pwMsg.text}</p>
           )}
-          <button type="submit" className="btn btn-accent" style={{ alignSelf: 'flex-start' }} disabled={pwLoading || !curPw || !newPw}>
+          <button type="submit" className="btn btn-accent" style={{ alignSelf: 'flex-start' }} disabled={pwLoading || !curPw || !newPw || !confPw}>
             {pwLoading ? 'Changing…' : 'Change Password'}
           </button>
         </form>

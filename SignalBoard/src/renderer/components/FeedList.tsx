@@ -18,7 +18,7 @@ function timeAgo(iso: string): string {
   return `${Math.floor(diff / 86400_000)}d ago`
 }
 
-function FeedCard({ item, selected }: { item: FeedItem; selected: boolean }) {
+function FeedCard({ item, selected, threshold }: { item: FeedItem; selected: boolean; threshold: number }) {
   const setSelectedId = useStore(s => s.setSelectedId)
   const patchItem     = useStore(s => s.patchItem)
   const sources       = useStore(s => s.sources)
@@ -52,7 +52,7 @@ function FeedCard({ item, selected }: { item: FeedItem; selected: boolean }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
             <span className="text-[10px] font-medium" style={{ color: sourceColor }}>{item.sourceName}</span>
-            {item.relevanceScore >= 20 && (
+            {item.relevanceScore >= threshold && (
               <span className="text-[9px] px-1 py-px bg-warning/15 text-warning border border-warning/20 rounded">
                 relevant
               </span>
@@ -72,17 +72,21 @@ function FeedCard({ item, selected }: { item: FeedItem; selected: boolean }) {
   )
 }
 
+const THRESHOLD_OPTIONS = [10, 20, 30, 40, 50]
+
 export default function FeedList() {
-  const items          = useStore(s => s.items)
-  const sources        = useStore(s => s.sources)
-  const selectedId     = useStore(s => s.selectedId)
-  const activeSourceId = useStore(s => s.activeSourceId)
-  const activeTab      = useStore(s => s.activeTab)
-  const search         = useStore(s => s.search)
-  const refreshing     = useStore(s => s.refreshing)
-  const lastRefreshed  = useStore(s => s.lastRefreshed)
-  const setActiveTab   = useStore(s => s.setActiveTab)
-  const setSearch      = useStore(s => s.setSearch)
+  const items               = useStore(s => s.items)
+  const sources             = useStore(s => s.sources)
+  const selectedId          = useStore(s => s.selectedId)
+  const activeSourceId      = useStore(s => s.activeSourceId)
+  const activeTab           = useStore(s => s.activeTab)
+  const search              = useStore(s => s.search)
+  const refreshing          = useStore(s => s.refreshing)
+  const lastRefreshed       = useStore(s => s.lastRefreshed)
+  const relevanceThreshold  = useStore(s => s.relevanceThreshold)
+  const setActiveTab        = useStore(s => s.setActiveTab)
+  const setSearch           = useStore(s => s.setSearch)
+  const setRelevanceThreshold = useStore(s => s.setRelevanceThreshold)
 
   const enabledSourceIds = useMemo(
     () => new Set(sources.filter(s => s.enabled).map(s => s.id)),
@@ -94,19 +98,19 @@ export default function FeedList() {
     if (activeSourceId)  list = list.filter(i => i.sourceId === activeSourceId)
     if (activeTab === 'unread')   list = list.filter(i => !i.read)
     if (activeTab === 'saved')    list = list.filter(i => i.saved)
-    if (activeTab === 'relevant') list = list.filter(i => i.relevanceScore >= 20)
+    if (activeTab === 'relevant') list = list.filter(i => i.relevanceScore >= relevanceThreshold)
     if (search) {
       const q = search.toLowerCase()
       list = list.filter(i => i.title.toLowerCase().includes(q) || i.summary.toLowerCase().includes(q))
     }
     return list
-  }, [items, enabledSourceIds, activeSourceId, activeTab, search])
+  }, [items, enabledSourceIds, activeSourceId, activeTab, search, relevanceThreshold])
 
   const counts = useMemo(() => ({
     unread:   items.filter(i => !i.read && enabledSourceIds.has(i.sourceId)).length,
     saved:    items.filter(i => i.saved && enabledSourceIds.has(i.sourceId)).length,
-    relevant: items.filter(i => i.relevanceScore >= 20 && enabledSourceIds.has(i.sourceId)).length,
-  }), [items, enabledSourceIds])
+    relevant: items.filter(i => i.relevanceScore >= relevanceThreshold && enabledSourceIds.has(i.sourceId)).length,
+  }), [items, enabledSourceIds, relevanceThreshold])
 
   function formatRefreshed(ts: string): string {
     const diff = Date.now() - new Date(ts).getTime()
@@ -152,19 +156,34 @@ export default function FeedList() {
       </div>
 
       {/* Status bar */}
-      <div className="px-3 py-1.5 border-b border-border flex items-center justify-between">
-        <span className="text-[10px] text-muted/60">
+      <div className="px-3 py-1.5 border-b border-border flex items-center justify-between gap-2">
+        <span className="text-[10px] text-muted/60 flex-shrink-0">
           {filtered.length} item{filtered.length !== 1 ? 's' : ''}
         </span>
-        <div className="flex items-center gap-2">
-          {refreshing && <span className="text-[10px] text-accent animate-pulse">Refreshing…</span>}
+        <div className="flex items-center gap-2 flex-1 justify-end">
+          {activeTab === 'relevant' && (
+            <div className="flex items-center gap-1">
+              <span className="text-[9px] text-muted/50">min score</span>
+              <select
+                value={relevanceThreshold}
+                onChange={e => setRelevanceThreshold(Number(e.target.value))}
+                className="bg-bg border border-border rounded px-1 text-[10px] text-muted focus:outline-none focus:border-accent transition-colors no-drag"
+                style={{ paddingTop: 1, paddingBottom: 1 }}
+              >
+                {THRESHOLD_OPTIONS.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {refreshing && <span className="text-[10px] text-accent animate-pulse flex-shrink-0">Refreshing…</span>}
           {!refreshing && lastRefreshed && (
-            <span className="text-[10px] text-muted/60">Updated {formatRefreshed(lastRefreshed)}</span>
+            <span className="text-[10px] text-muted/60 flex-shrink-0">Updated {formatRefreshed(lastRefreshed)}</span>
           )}
           <button
             onClick={() => window.electronAPI.refresh()}
             disabled={refreshing}
-            className="text-[10px] text-muted hover:text-text transition-colors no-drag disabled:opacity-40"
+            className="text-[10px] text-muted hover:text-text transition-colors no-drag disabled:opacity-40 flex-shrink-0"
           >
             ↻
           </button>
@@ -176,13 +195,15 @@ export default function FeedList() {
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full">
             <p className="text-xs text-muted/60 text-center px-4">
-              {refreshing ? 'Loading feeds…' : activeTab === 'relevant' ? 'No relevant items.\nLaunch CyberLab or ReconDesk\nto set context.' : 'No items found.'}
+              {refreshing ? 'Loading feeds…' : activeTab === 'relevant' ? (
+                <>No relevant items.<br />Launch CyberLab or ReconDesk<br />to set context.</>
+              ) : 'No items found.'}
             </p>
           </div>
         ) : (
           <AnimatePresence mode="popLayout" initial={false}>
             {filtered.map(item => (
-              <FeedCard key={item.id} item={item} selected={item.id === selectedId} />
+              <FeedCard key={item.id} item={item} selected={item.id === selectedId} threshold={relevanceThreshold} />
             ))}
           </AnimatePresence>
         )}

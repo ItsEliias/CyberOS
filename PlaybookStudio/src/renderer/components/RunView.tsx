@@ -271,7 +271,11 @@ export default function RunView() {
   const pct    = total > 0 ? Math.round((done / total) * 100) : 0
 
   async function handleComplete() {
-    if (!confirm('Mark this run as complete?')) return
+    const requiredLeft = steps.filter(s => s.required && s.status === 'todo')
+    if (requiredLeft.length > 0) {
+      const names = requiredLeft.map(s => `"${s.title}"`).join(', ')
+      if (!confirm(`${requiredLeft.length} required step${requiredLeft.length !== 1 ? 's' : ''} not yet done: ${names}.\n\nComplete anyway?`)) return
+    } else if (!confirm('Mark this run as complete?')) return
     const res = await window.electronAPI.completeRun(activeRun!.id)
     if (res.ok && res.run) {
       updateRun(res.run)

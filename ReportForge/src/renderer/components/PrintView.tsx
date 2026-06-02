@@ -1,6 +1,47 @@
 import { useEffect } from 'react';
 import type { Report } from '@shared/types';
 
+function esc(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function renderMarkdown(md: string): string {
+  if (!md.trim()) return '';
+  let h = md;
+  h = h.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) =>
+    `<pre style="background:#f4f4f4;padding:10px 14px;border-radius:4px;font-size:11px;overflow-x:auto;margin:8px 0"><code>${esc(code.trim())}</code></pre>`
+  );
+  h = h.replace(/`([^`]+)`/g, (_, c) => `<code style="background:#f0f0f0;padding:1px 5px;border-radius:3px;font-size:12px">${esc(c)}</code>`);
+  h = h.replace(/^#{6}\s+(.+)$/gm, '<h6 style="font-size:12px;margin:10px 0 4px">$1</h6>');
+  h = h.replace(/^#{5}\s+(.+)$/gm, '<h5 style="font-size:13px;margin:10px 0 4px">$1</h5>');
+  h = h.replace(/^#{4}\s+(.+)$/gm, '<h4 style="font-size:14px;margin:12px 0 4px">$1</h4>');
+  h = h.replace(/^#{3}\s+(.+)$/gm, '<h3 style="font-size:15px;margin:14px 0 6px">$1</h3>');
+  h = h.replace(/^#{2}\s+(.+)$/gm, '<h2 style="font-size:16px;font-weight:700;margin:16px 0 6px">$1</h2>');
+  h = h.replace(/^#{1}\s+(.+)$/gm, '<h1 style="font-size:18px;font-weight:700;margin:16px 0 6px">$1</h1>');
+  h = h.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  h = h.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  h = h.replace(/~~(.+?)~~/g, '<del>$1</del>');
+  h = h.replace(/^[-*+] (.+)$/gm, '<li style="margin-left:20px">$1</li>');
+  h = h.replace(/^(\d+)\. (.+)$/gm, '<li style="margin-left:20px">$2</li>');
+  h = h.replace(/(<li[\s\S]*?<\/li>)/g, block => `<ul style="margin:6px 0;padding:0">${block}</ul>`);
+  h = h.replace(/((?:\|[^\n]+\|\n)+)/g, (tb) => {
+    const rows = tb.trim().split('\n').filter(r => !/^\|[-| :]+\|$/.test(r.trim()));
+    if (!rows.length) return tb;
+    const parseRow = (r: string) => r.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+    const [head, ...body] = rows;
+    const thCells = parseRow(head).map(c => `<th style="border:1px solid #ccc;padding:5px 10px;background:#f5f5f5;text-align:left">${c}</th>`).join('');
+    const tbRows  = body.map(r => `<tr>${parseRow(r).map(c => `<td style="border:1px solid #ccc;padding:5px 10px">${c}</td>`).join('')}</tr>`).join('');
+    return `<table style="border-collapse:collapse;width:100%;margin:10px 0"><thead><tr>${thCells}</tr></thead><tbody>${tbRows}</tbody></table>`;
+  });
+  h = h.replace(/\n\n+/g, '</p><p style="margin:8px 0">');
+  h = `<p style="margin:8px 0">${h}</p>`;
+  h = h.replace(/<p[^>]*>\s*<\/p>/g, '');
+  h = h.replace(/<p[^>]*>(<(?:h[1-6]|pre|ul|ol|table)[^>]*>)/g, '$1');
+  h = h.replace(/(<\/(?:h[1-6]|pre|ul|ol|table)>)<\/p>/g, '$1');
+  return h;
+}
+
 const SEVERITY_ORDER = ['critical', 'high', 'medium', 'low', 'info'] as const;
 
 const SEV_PRINT_COLORS: Record<string, string> = {
@@ -79,7 +120,7 @@ export default function PrintView({ report, onReady }: Props) {
         return (
           <section key={s.id} style={{ marginBottom: 32 }}>
             <h2 style={{ fontSize: 18, fontWeight: 700, borderBottom: '1px solid #ddd', paddingBottom: 6, marginBottom: 12 }}>{s.title}</h2>
-            <div style={{ fontSize: 13, whiteSpace: 'pre-wrap' }}>{s.content}</div>
+            <div style={{ fontSize: 13 }} dangerouslySetInnerHTML={{ __html: renderMarkdown(s.content) }} />
           </section>
         );
       })}

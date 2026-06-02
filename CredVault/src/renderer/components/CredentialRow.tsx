@@ -35,6 +35,7 @@ export default function CredentialRow({ cred, onEdit, onDelete }: Props) {
   const [copyMsg, setCopyMsg]         = useState<string | null>(null)
   const [countdown, setCountdown]     = useState(0)
   const [showPw, setShowPw]           = useState(false)
+  const [rowHovered, setRowHovered]   = useState(false)
 
   // Clipboard countdown
   useEffect(() => {
@@ -64,6 +65,8 @@ export default function CredentialRow({ cred, onEdit, onDelete }: Props) {
       {/* Main row */}
       <tr
         onClick={() => setExpanded(e => !e)}
+        onMouseEnter={() => setRowHovered(true)}
+        onMouseLeave={() => setRowHovered(false)}
         style={{
           cursor: 'pointer',
           background: expanded ? 'rgba(247,129,102,0.04)' : undefined,
@@ -73,7 +76,22 @@ export default function CredentialRow({ cred, onEdit, onDelete }: Props) {
       >
         <td style={{ padding: '9px 14px', fontSize: 12, color: 'var(--text-dim)' }}>{cred.service}</td>
         <td style={{ padding: '9px 14px', fontSize: 12, fontFamily: 'monospace', color: 'var(--text)' }}>
-          {cred.username}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>{cred.username}</span>
+            {rowHovered && (
+              <button
+                onClick={e => { e.stopPropagation(); copyValue(cred.username, 'Username') }}
+                title="Copy username"
+                style={{
+                  padding: '1px 5px', fontSize: 10, borderRadius: 3,
+                  background: 'var(--panel)', border: '1px solid var(--border)',
+                  color: 'var(--text-muted)', cursor: 'pointer',
+                }}
+              >
+                copy
+              </button>
+            )}
+          </div>
         </td>
         <td style={{ padding: '9px 14px', fontSize: 11, color: 'var(--text-muted)' }}>
           {cred.ip ? `${cred.ip}${cred.port ? ':' + cred.port : ''}` : '—'}

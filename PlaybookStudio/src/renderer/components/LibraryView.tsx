@@ -62,7 +62,6 @@ function PlaybookCard({ pb }: { pb: Playbook }) {
   }
 
   const catColor = CAT_COLORS[pb.category] ?? 'var(--text-muted)'
-  const lastRun  = undefined // could be derived from runs store if needed
 
   return (
     <div

@@ -25,16 +25,36 @@ export function FlagsSection({ targetId }: { targetId: string }) {
     }
   }
 
+  const [copied, setCopied] = useState(false)
+
+  async function copyAll() {
+    await navigator.clipboard.writeText(flags.join('\n'))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
   return (
     <section>
       <div className="flex items-center justify-between mb-2">
         <span className="text-[11px] font-semibold text-muted uppercase tracking-widest">Flags</span>
-        <button
-          onClick={() => setAdding(v => !v)}
-          className="w-5 h-5 flex items-center justify-center text-muted hover:text-text hover:bg-border rounded transition-colors text-sm"
-        >
-          {adding ? '✕' : '+'}
-        </button>
+        <div className="flex items-center gap-1">
+          {flags.length >= 2 && (
+            <button
+              onClick={copyAll}
+              className="h-5 px-1.5 flex items-center text-[9px] font-medium rounded transition-colors"
+              style={{ color: copied ? 'var(--success)' : 'var(--text-muted)', background: copied ? 'rgba(63,185,80,0.1)' : 'transparent' }}
+              title="Copy all flags"
+            >
+              {copied ? 'copied!' : 'copy all'}
+            </button>
+          )}
+          <button
+            onClick={() => setAdding(v => !v)}
+            className="w-5 h-5 flex items-center justify-center text-muted hover:text-text hover:bg-border rounded transition-colors text-sm"
+          >
+            {adding ? '✕' : '+'}
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>
