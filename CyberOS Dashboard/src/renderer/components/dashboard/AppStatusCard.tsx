@@ -57,8 +57,9 @@ export default function AppStatusCard({ card, index }: AppStatusCardProps) {
   const secondaryMetrics = card.metrics.slice(1)
 
   // Determine if primary metric value is a status string vs a number
+  const STATUS_STRINGS = ['Running', 'Inactive', 'No active session', 'Idle', 'Locked', 'Unlocked', 'Active', 'Offline', 'Online']
   const isStatusString = typeof primaryMetric?.value === 'string' &&
-    ['Running', 'Inactive', 'No active session', 'Idle', 'Locked', 'Unlocked'].includes(primaryMetric.value as string)
+    STATUS_STRINGS.includes(primaryMetric.value as string)
 
   return (
     <motion.div
@@ -79,6 +80,7 @@ export default function AppStatusCard({ card, index }: AppStatusCardProps) {
             style={{
               backgroundColor: card.accentColor,
               '--pulse-color': `${card.accentColor}66`,
+              '--pulse-color-fade': `${card.accentColor}00`,
             } as React.CSSProperties}
           />
           <span className="text-[11px] font-semibold text-text-primary">{card.name}</span>
@@ -92,7 +94,7 @@ export default function AppStatusCard({ card, index }: AppStatusCardProps) {
       {primaryMetric && (
         <div className="mb-1.5">
           {isStatusString ? (
-            <span className="text-xs text-text-secondary">{primaryMetric.value}</span>
+            <span className="text-xs" style={{ color: '#8b949e' }}>{primaryMetric.value}</span>
           ) : (
             <span
               className="text-lg font-bold tabular-nums metric-glow"
@@ -109,13 +111,14 @@ export default function AppStatusCard({ card, index }: AppStatusCardProps) {
         </div>
       )}
 
-      {/* SVG Area Chart Sparkline — compact */}
+      {/* SVG Area Chart Sparkline — 48px min height */}
       <div className="mb-1.5">
         <svg
           width={svgPath.width}
           height={svgPath.height}
           viewBox={`0 0 ${svgPath.width} ${svgPath.height}`}
-          className="w-full h-6"
+          className="w-full"
+          style={{ height: '48px', minHeight: '48px' }}
           preserveAspectRatio="none"
         >
           <defs>
@@ -142,11 +145,11 @@ export default function AppStatusCard({ card, index }: AppStatusCardProps) {
         <div className="space-y-0.5">
           {secondaryMetrics.map((metric) => {
             const isSecondaryStatus = typeof metric.value === 'string' &&
-              ['Running', 'Inactive', 'No active session', 'Idle', 'Locked', 'Unlocked'].includes(metric.value as string)
+              STATUS_STRINGS.includes(metric.value as string)
             return (
               <div key={metric.label} className="flex items-center justify-between">
                 <span className="text-[9px] text-text-muted">{metric.label}</span>
-                <span className={`text-[10px] font-mono tabular-nums ${isSecondaryStatus ? 'text-text-secondary' : 'text-text-primary'}`}>
+                <span className={`text-[10px] font-mono tabular-nums ${isSecondaryStatus ? '' : 'text-text-primary'}`} style={isSecondaryStatus ? { color: '#8b949e' } : undefined}>
                   {metric.value}
                 </span>
               </div>

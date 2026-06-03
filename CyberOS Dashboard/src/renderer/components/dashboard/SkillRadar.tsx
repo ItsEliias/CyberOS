@@ -1,6 +1,6 @@
 // CyberOS Dashboard — Skill Radar Component
 // SVG spider/radar chart with 7 axes, animated draw from center
-// Enhanced: 20% fill opacity, glow filter, minimum 250px diameter support
+// Fix #2: fillColor/strokeColor props, labels text-xs font-mono text-secondary
 
 import { motion } from 'framer-motion'
 import { useMemo } from 'react'
@@ -10,15 +10,24 @@ interface SkillRadarProps {
   size?: number
   showLabels?: boolean
   historicalSkills?: Record<string, number>
+  fillColor?: string
+  strokeColor?: string
 }
 
 const SKILL_KEYS = ['web', 'network', 'activeDirectory', 'linux', 'windows', 'crypto', 'forensics']
 const SKILL_LABELS = ['Web', 'Network', 'AD', 'Linux', 'Windows', 'Crypto', 'Forensics']
 const MAX_VALUE = 100
 
-export default function SkillRadar({ skills, size = 250, showLabels = true, historicalSkills }: SkillRadarProps) {
+export default function SkillRadar({
+  skills,
+  size = 280,
+  showLabels = true,
+  historicalSkills,
+  fillColor = 'rgba(74, 158, 255, 0.15)',
+  strokeColor = '#4a9eff',
+}: SkillRadarProps) {
   const center = size / 2
-  const radius = (size / 2) - (showLabels ? 35 : 12)
+  const radius = (size / 2) - (showLabels ? 38 : 12)
   const angleStep = (2 * Math.PI) / SKILL_KEYS.length
 
   const getPoint = (index: number, value: number): [number, number] => {
@@ -48,7 +57,7 @@ export default function SkillRadar({ skills, size = 250, showLabels = true, hist
   const rings = [0.25, 0.5, 0.75, 1]
 
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="mx-auto radar-glow">
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="mx-auto">
       <defs>
         <filter id="radarGlow">
           <feGaussianBlur stdDeviation="2" result="coloredBlur" />
@@ -57,10 +66,6 @@ export default function SkillRadar({ skills, size = 250, showLabels = true, hist
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
-        <radialGradient id="radarFill" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#4a9eff" stopOpacity="0.25" />
-          <stop offset="100%" stopColor="#4a9eff" stopOpacity="0.1" />
-        </radialGradient>
       </defs>
 
       {/* Grid rings */}
@@ -104,11 +109,11 @@ export default function SkillRadar({ skills, size = 250, showLabels = true, hist
         />
       )}
 
-      {/* Data polygon — 20% opacity fill, accent stroke, glow */}
+      {/* Data polygon — configurable fill/stroke with glow */}
       <motion.polygon
         points={polygonPoints}
-        fill="rgba(74, 158, 255, 0.2)"
-        stroke="#4a9eff"
+        fill={fillColor}
+        stroke={strokeColor}
         strokeWidth="2"
         filter="url(#radarGlow)"
         initial={{ opacity: 0, scale: 0 }}
@@ -127,7 +132,7 @@ export default function SkillRadar({ skills, size = 250, showLabels = true, hist
             cx={x}
             cy={y}
             r="3.5"
-            fill="#4a9eff"
+            fill={strokeColor}
             stroke="#0a0a0f"
             strokeWidth="1.5"
             filter="url(#radarGlow)"
@@ -140,10 +145,10 @@ export default function SkillRadar({ skills, size = 250, showLabels = true, hist
         )
       })}
 
-      {/* Labels */}
+      {/* Labels — text-xs font-mono text-secondary at each axis point */}
       {showLabels &&
         SKILL_KEYS.map((key, i) => {
-          const [x, y] = getPoint(i, MAX_VALUE + 18)
+          const [x, y] = getPoint(i, MAX_VALUE + 20)
           const val = skills[key] ?? 0
           return (
             <text
@@ -152,10 +157,15 @@ export default function SkillRadar({ skills, size = 250, showLabels = true, hist
               y={y}
               textAnchor="middle"
               dominantBaseline="middle"
-              className="fill-text-secondary"
-              style={{ fontSize: '10px', fontFamily: 'Inter, sans-serif', fontWeight: 500 }}
+              style={{
+                fontSize: '10px',
+                fontFamily: "'JetBrains Mono', monospace",
+                fontWeight: 400,
+                fill: '#8b949e',
+              }}
             >
-              {SKILL_LABELS[i]} <tspan className="fill-text-muted" style={{ fontSize: '9px' }}>{val}</tspan>
+              {SKILL_LABELS[i]}
+              <tspan style={{ fontSize: '9px', fill: '#6e7681' }}> {val}</tspan>
             </text>
           )
         })}

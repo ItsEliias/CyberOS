@@ -157,7 +157,7 @@ export default function ActivityFeed() {
                       </span>
                       {/* Dedup counter badge */}
                       {event.count > 1 && (
-                        <span className="text-[8px] font-mono font-bold text-text-muted bg-bg-interactive px-1 py-0 rounded">
+                        <span className="text-[10px] font-mono text-text-muted bg-bg-interactive px-1 rounded">
                           &times;{event.count}
                         </span>
                       )}

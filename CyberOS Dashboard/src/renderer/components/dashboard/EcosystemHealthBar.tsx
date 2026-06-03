@@ -40,6 +40,7 @@ export default function EcosystemHealthBar() {
                 backgroundColor: card.accentColor,
                 opacity: card.active ? 1 : 0.3,
                 '--pulse-color': `${card.accentColor}66`,
+                '--pulse-color-fade': `${card.accentColor}00`,
                 boxShadow: card.active ? `0 0 6px ${card.accentColor}88` : 'none',
               } as React.CSSProperties}
             />

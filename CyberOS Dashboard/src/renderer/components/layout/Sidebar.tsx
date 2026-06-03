@@ -107,30 +107,33 @@ export default function Sidebar() {
         </button>
       </nav>
 
-      {/* Active session context strip — only visible when shared_context.activeLab is set */}
+      {/* Active session context strip — slim panel above status bar */}
       {ecosystemContext.activeLab && (
-        <motion.div
-          initial={{ height: 0, opacity: 0 }}
-          animate={{ height: 'auto', opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }}
-          transition={{ duration: 0.2, ease: 'easeOut' }}
-          className="mx-3"
+        <div
+          className="font-mono text-xs"
+          style={{
+            background: 'rgba(74, 158, 255, 0.05)',
+            borderTop: '1px solid rgba(42, 51, 71, 0.6)',
+            padding: '8px 12px',
+          }}
         >
-          <div className="px-3 py-2.5 bg-accent/10 rounded-md border-l-[3px] border-l-[#b44fff]">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="w-2 h-2 rounded-full bg-danger animate-pulse" />
-              <span className="text-[10px] text-text-secondary font-medium uppercase tracking-wider">Active Session</span>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="text-text-muted w-[50px] shrink-0 text-[10px] uppercase">Target</span>
+              <span className="text-text-primary truncate">{ecosystemContext.activeTarget ?? ecosystemContext.activeLab}</span>
             </div>
-            <p className="text-xs text-text-primary font-semibold truncate">
-              Lab: {ecosystemContext.activeLab}
-            </p>
             {ecosystemContext.activeIP && (
-              <p className="text-[10px] text-text-secondary font-mono mt-0.5">
-                Target: {ecosystemContext.activeIP}
-              </p>
+              <div className="flex items-center gap-2">
+                <span className="text-text-muted w-[50px] shrink-0 text-[10px] uppercase">IP</span>
+                <span className="text-text-primary">{ecosystemContext.activeIP}</span>
+              </div>
             )}
+            <div className="flex items-center gap-2">
+              <span className="text-text-muted w-[50px] shrink-0 text-[10px] uppercase">Lab</span>
+              <span className="text-text-primary truncate">Active Session</span>
+            </div>
           </div>
-        </motion.div>
+        </div>
       )}
 
       {/* Spacer */}
@@ -154,6 +157,7 @@ export default function Sidebar() {
                 backgroundColor: card.accentColor,
                 opacity: card.active ? 1 : 0.3,
                 '--pulse-color': `${card.accentColor}66`,
+                '--pulse-color-fade': `${card.accentColor}00`,
               } as React.CSSProperties}
               title={`${card.name}: ${card.active ? 'Online' : 'Offline'}`}
             />

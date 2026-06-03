@@ -1,6 +1,7 @@
 // CyberOS Dashboard — Operator Profile Card (Hero Panel)
-// Fix #2: Radar centrepiece with blue glow, operator name below, 4 hero metrics in #4a9eff
-// Card fills the entire left panel height
+// Fix #2: 280px radar centrepiece, fill rgba(74,158,255,0.15), stroke #4a9eff
+// Glow: drop-shadow(0 0 8px rgba(74,158,255,0.4)), labels text-xs font-mono
+// Below: 2×2 metric grid (Total Labs / Flags / Credentials / Streak)
 
 import { useDashboardStore } from '../../stores/useDashboardStore'
 import { getStreakStatus } from '../../utils/timeAgo'
@@ -19,20 +20,22 @@ export default function OperatorProfileCard() {
 
   return (
     <div className="glass-card overflow-hidden p-4 flex flex-col h-full">
-      {/* Skill Radar — Centrepiece with blue glow */}
+      {/* Skill Radar — Centrepiece, 280px, with blue glow */}
       <div
         className="flex justify-center flex-1 items-center"
-        style={{ filter: 'drop-shadow(0 0 6px rgba(74, 158, 255, 0.5))' }}
+        style={{ filter: 'drop-shadow(0 0 8px rgba(74, 158, 255, 0.4))' }}
       >
         <SkillRadar
           skills={profile?.skillProgress ?? {}}
-          size={250}
+          size={280}
           showLabels={true}
+          fillColor="rgba(74, 158, 255, 0.15)"
+          strokeColor="#4a9eff"
         />
       </div>
 
       {/* Operator identity — below radar */}
-      <div className="text-center mt-3 mb-4">
+      <div className="text-center mt-2 mb-3">
         <h3 className="text-sm font-bold text-text-primary">{operatorName}</h3>
         <div className="flex items-center justify-center gap-1.5 mt-1">
           <span
@@ -48,12 +51,12 @@ export default function OperatorProfileCard() {
         </div>
       </div>
 
-      {/* Hero Metrics — 4 columns, text-2xl in #4a9eff with glow */}
-      <div className="grid grid-cols-4 gap-2 pt-3 border-t border-border-subtle/40">
-        <HeroMetric label="Streak" value={streak} suffix="d" />
+      {/* 2×2 Metric Grid */}
+      <div className="grid grid-cols-2 gap-2 pt-3 border-t border-border-subtle/40">
+        <HeroMetric label="Total Labs" value={labs} />
         <HeroMetric label="Flags" value={flags} />
-        <HeroMetric label="Labs" value={labs} />
-        <HeroMetric label="Creds" value={creds} />
+        <HeroMetric label="Credentials" value={creds} />
+        <HeroMetric label="Streak" value={streak} suffix="d" />
       </div>
     </div>
   )
@@ -69,12 +72,12 @@ function HeroMetric({
   suffix?: string
 }) {
   return (
-    <div className="text-center">
+    <div className="text-center py-2 rounded-md" style={{ background: 'rgba(74, 158, 255, 0.05)' }}>
       <span
-        className="text-2xl font-bold tabular-nums block"
+        className="text-xl font-bold tabular-nums block"
         style={{
           color: '#4a9eff',
-          textShadow: '0 0 10px rgba(74, 158, 255, 0.4)',
+          textShadow: '0 0 10px rgba(74, 158, 255, 0.35)',
         }}
       >
         {value}{suffix}

@@ -14,11 +14,13 @@ export default function SkillRadarLarge() {
         Skill Radar
       </p>
 
-      <div className="flex justify-center">
+      <div className="flex justify-center" style={{ filter: 'drop-shadow(0 0 8px rgba(74, 158, 255, 0.4))' }}>
         <SkillRadar
           skills={skills}
           size={300}
           showLabels={true}
+          fillColor="rgba(74, 158, 255, 0.15)"
+          strokeColor="#4a9eff"
         />
       </div>
 

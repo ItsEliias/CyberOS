@@ -14,7 +14,7 @@ export default function AppStatusGrid() {
       <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-widest mb-2">
         Ecosystem Applications
       </p>
-      <div className="grid grid-cols-3 gap-2.5">
+      <div className="grid grid-cols-3 gap-2">
         {cards.map((card, index) => (
           <AppStatusCard key={card.id} card={card} index={index} />
         ))}
