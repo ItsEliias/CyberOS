@@ -2,25 +2,85 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── CyberOS Design Bible — Global Styles ────────────────────────────────── */
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body, #root {
   height: 100%;
   overflow: hidden;
-  background: #0e1117;
-  color: #c9d1d9;
+  background: #0a0a0f;
+  color: #e2e8f0;
   font-family: 'Inter', 'SF Pro Display', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-  user-select: none;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.drag-region  { -webkit-app-region: drag; }
-.no-drag      { -webkit-app-region: no-drag; }
+/* ─── Selection ───────────────────────────────────────────────────────────── */
 
-::-webkit-scrollbar       { width: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #30363d; border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: #484f58; }
+::selection {
+  background: rgba(74, 158, 255, 0.25);
+  color: inherit;
+}
 
-::selection { background: rgba(74,158,255,0.25); }
-input, textarea, button, select { user-select: text; }
+*:not(input):not(textarea):not(select) {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input, textarea, select, button {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* ─── Drag Regions (macOS frameless) ──────────────────────────────────────── */
+
+.drag-region {
+  -webkit-app-region: drag;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* ─── Scrollbars ──────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(42, 51, 71, 0.5);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(42, 51, 71, 0.8);
+}
+
+/* ─── Focus Styles ────────────────────────────────────────────────────────── */
+
+*:focus-visible {
+  outline: 1px solid rgba(74, 158, 255, 0.5);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+/* ─── Tabular Nums ────────────────────────────────────────────────────────── */
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Transitions ─────────────────────────────────────────────────────────── */
+
+button, a, input, select {
+  transition: all 0.15s ease-out;
+}

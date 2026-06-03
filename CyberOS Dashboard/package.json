@@ -1,7 +1,7 @@
 {
   "name": "cyberos-dashboard",
-  "version": "1.0.0",
-  "description": "Unified ecosystem operations dashboard — CYBERTOOLS",
+  "version": "2.0.0",
+  "description": "Unified ecosystem operations dashboard — CyberOS",
   "main": "out/main/main.js",
   "type": "module",
   "author": "ItsEliias",
