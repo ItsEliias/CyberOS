@@ -51,7 +51,7 @@ export default function Sidebar() {
   const ecosystemContext = useDashboardStore((s) => s.ecosystemContext)
 
   return (
-    <div className="w-[220px] bg-bg-elevated border-r border-border-subtle flex flex-col shrink-0">
+    <div className="w-[200px] flex flex-col shrink-0 border-r border-border-subtle/50" style={{ background: 'rgba(18, 19, 26, 0.8)' }}>
       {/* Context strip — only visible when active context exists */}
       {ecosystemContext.activeLab && (
         <motion.div

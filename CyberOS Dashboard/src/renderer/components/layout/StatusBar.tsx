@@ -18,7 +18,7 @@ export default function StatusBar() {
   const hasWarnings = activeAlerts.length > 0
 
   return (
-    <div className="h-6 bg-bg-base border-t border-border-subtle flex items-center px-4 text-xs shrink-0">
+    <div className="h-6 border-t border-border-subtle/50 flex items-center px-4 text-xs shrink-0" style={{ background: 'rgba(10, 10, 15, 0.9)' }}>
       {/* Ecosystem status */}
       <div className="flex items-center gap-2">
         <span

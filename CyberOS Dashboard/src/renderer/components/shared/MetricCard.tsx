@@ -1,5 +1,6 @@
 // CyberOS Dashboard — Metric Card Component
 // Numeric KPI card with icon, large number, and optional delta
+// Glassmorphism + metric glow styling
 
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion'
 import { useEffect, useRef } from 'react'
@@ -38,20 +39,24 @@ export default function MetricCard({ label, value, icon, delta, accentColor = '#
   }, [rounded])
 
   return (
-    <div className="bg-bg-elevated/75 backdrop-blur-sm border border-border-default/60 rounded-lg p-4">
+    <div className="glass-card p-4">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs text-text-secondary font-medium">{label}</span>
-        <span className="text-text-secondary">{icon}</span>
+        <span className="text-[11px] text-text-secondary font-medium uppercase tracking-wider">{label}</span>
+        <span className="text-text-muted">{icon}</span>
       </div>
       <span
         ref={displayRef}
-        className="text-2xl font-bold text-text-primary tabular-nums"
-        style={{ textShadow: `0 0 20px ${accentColor}66, 0 0 40px ${accentColor}1a` }}
+        className="text-lg font-bold tabular-nums metric-glow"
+        style={{
+          color: accentColor,
+          '--glow-color': `${accentColor}80`,
+          textShadow: `0 0 12px ${accentColor}66, 0 0 24px ${accentColor}1a`,
+        } as React.CSSProperties}
       >
         {value}
       </span>
       {delta && (
-        <p className="text-xs text-text-secondary mt-1">{delta}</p>
+        <p className="text-[10px] text-text-muted mt-1">{delta}</p>
       )}
     </div>
   )

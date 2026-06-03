@@ -10,6 +10,7 @@ html, body, #root {
   height: 100%;
   overflow: hidden;
   background: #0a0a0f;
+  background-image: radial-gradient(ellipse at 20% 0%, rgba(74, 158, 255, 0.04) 0%, #0a0a0f 50%);
   color: #e2e8f0;
   font-family: 'Inter', 'SF Pro Display', system-ui, sans-serif;
   font-size: 14px;
@@ -83,4 +84,48 @@ input, textarea, select, button {
 
 button, a, input, select {
   transition: all 0.15s ease-out;
+}
+
+/* ─── Glassmorphism Card ──────────────────────────────────────────────────── */
+
+.glass-card {
+  background: rgba(22, 27, 39, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(42, 51, 71, 0.6);
+  border-radius: 8px;
+}
+
+/* ─── Status Pulse Glow Animation ─────────────────────────────────────────── */
+
+@keyframes statusPulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--pulse-color, rgba(63, 185, 80, 0.4));
+  }
+  70% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+.status-dot-pulse {
+  animation: statusPulse 2s ease-out infinite;
+}
+
+/* ─── Metric Glow ─────────────────────────────────────────────────────────── */
+
+.metric-glow {
+  filter: drop-shadow(0 0 8px var(--glow-color, rgba(74, 158, 255, 0.5)));
+}
+
+.radar-glow {
+  filter: drop-shadow(0 0 4px rgba(74, 158, 255, 0.6));
+}
+
+/* ─── Accent Left Border Utility ──────────────────────────────────────────── */
+
+.accent-border-left {
+  border-left: 3px solid var(--accent-color, #4a9eff);
 }

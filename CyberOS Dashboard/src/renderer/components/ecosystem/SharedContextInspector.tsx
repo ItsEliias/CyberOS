@@ -18,7 +18,7 @@ export default function SharedContextInspector() {
   ]
 
   return (
-    <div className="bg-bg-elevated/75 backdrop-blur-sm border border-border-default/60 rounded-lg p-4">
+    <div className="glass-card p-4">
       <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-widest mb-3">
         Shared Context
       </p>

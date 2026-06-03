@@ -30,6 +30,22 @@ export default {
         warning: '#d29922',
         danger: '#f85149',
 
+        // ─── App Accent Colors ───────────────────────────────────────────
+        app: {
+          ghostvault: '#7bb8ff',
+          recondesk: '#d29922',
+          vaultcore: '#3fb950',
+          signalboard: '#ff6b6b',
+          credvault: '#f78166',
+          cyberlab: '#b44fff',
+          networkmap: '#d29922',
+          terminallink: '#00ff41',
+          playbookstudio: '#4a9eff',
+          reportforge: '#3fb950',
+          dashboard: '#4a9eff',
+          launcher: '#b44fff',
+        },
+
         // ─── Legacy compatibility ────────────────────────────────────────
         panel: '#161b22',
         muted: '#8b949e',
@@ -47,15 +63,16 @@ export default {
       boxShadow: {
         glow: '0 0 20px rgba(74, 158, 255, 0.15)',
         'glow-sm': '0 0 10px rgba(74, 158, 255, 0.1)',
+        'glow-accent': '0 0 8px rgba(74, 158, 255, 0.5)',
       },
       animation: {
         statusPulse: 'statusPulse 2s ease-out infinite',
       },
       keyframes: {
         statusPulse: {
-          '0%': { opacity: '1', transform: 'scale(1)' },
-          '50%': { opacity: '0.6', transform: 'scale(1.3)' },
-          '100%': { opacity: '1', transform: 'scale(1)' },
+          '0%': { boxShadow: '0 0 0 0 var(--pulse-color, rgba(63, 185, 80, 0.4))' },
+          '70%': { boxShadow: '0 0 0 6px transparent' },
+          '100%': { boxShadow: '0 0 0 0 transparent' },
         },
       },
     },

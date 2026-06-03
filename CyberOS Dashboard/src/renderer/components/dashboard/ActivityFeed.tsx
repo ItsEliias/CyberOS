@@ -1,5 +1,6 @@
 // CyberOS Dashboard — Activity Feed
 // Right panel showing live ecosystem events, newest first
+// Enhanced: accent left border per event, monospace timestamps, glassmorphism
 
 import { useRef, useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -40,15 +41,15 @@ export default function ActivityFeed() {
     : true
 
   return (
-    <div className="w-[300px] bg-bg-elevated border-l border-border-subtle flex flex-col shrink-0">
+    <div className="w-[280px] border-l border-border-subtle/50 flex flex-col shrink-0" style={{ background: 'rgba(18, 19, 26, 0.6)' }}>
       {/* Header */}
-      <div className="px-4 py-3 border-b border-border-subtle flex items-center justify-between">
+      <div className="px-4 py-3 border-b border-border-subtle/50 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-widest">
-            Activity Feed
+            Activity
           </p>
           {isStale && (
-            <span className="w-2 h-2 rounded-full bg-warning" title="No events in 30+ minutes" />
+            <span className="w-2 h-2 rounded-full bg-warning animate-pulse" title="No events in 30+ minutes" />
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -56,10 +57,10 @@ export default function ActivityFeed() {
           <div className="relative">
             <button
               onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-              className="text-xs text-text-secondary hover:text-text-primary px-2 py-1 rounded hover:bg-bg-interactive transition-colors"
+              className="text-[10px] text-text-muted hover:text-text-primary px-1.5 py-0.5 rounded hover:bg-bg-interactive transition-colors font-mono"
             >
-              {feedFilter ?? 'All'}
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="inline ml-1">
+              {feedFilter ?? 'ALL'}
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="inline ml-0.5">
                 <polyline points="6 9 12 15 18 9" />
               </svg>
             </button>
@@ -67,11 +68,11 @@ export default function ActivityFeed() {
               <motion.div
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="absolute right-0 top-full mt-1 bg-bg-elevated border border-border-default rounded-md shadow-lg z-50 py-1 min-w-[120px]"
+                className="absolute right-0 top-full mt-1 glass-card shadow-lg z-50 py-1 min-w-[120px]"
               >
                 <button
                   onClick={() => { setFeedFilter(null); setShowFilterDropdown(false) }}
-                  className="w-full text-left px-3 py-1.5 text-xs text-text-primary hover:bg-bg-interactive"
+                  className="w-full text-left px-3 py-1.5 text-[10px] text-text-primary hover:bg-bg-interactive"
                 >
                   All Apps
                 </button>
@@ -79,7 +80,8 @@ export default function ActivityFeed() {
                   <button
                     key={app}
                     onClick={() => { setFeedFilter(app); setShowFilterDropdown(false) }}
-                    className="w-full text-left px-3 py-1.5 text-xs text-text-primary hover:bg-bg-interactive"
+                    className="w-full text-left px-3 py-1.5 text-[10px] hover:bg-bg-interactive"
+                    style={{ color: getAppAccentColor(app) }}
                   >
                     {app}
                   </button>
@@ -87,16 +89,6 @@ export default function ActivityFeed() {
               </motion.div>
             )}
           </div>
-
-          {/* Mark all read */}
-          <button
-            className="text-[10px] text-text-muted hover:text-text-primary transition-colors"
-            title="Mark all read"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-          </button>
         </div>
       </div>
 
@@ -105,49 +97,52 @@ export default function ActivityFeed() {
         <AnimatePresence initial={false}>
           {displayed.length === 0 ? (
             <div className="px-4 py-8 text-center">
-              <p className="text-xs text-text-muted">No events yet</p>
+              <p className="text-[10px] text-text-muted">No events yet</p>
             </div>
           ) : (
-            displayed.map((event) => (
-              <motion.div
-                key={event.id}
-                initial={{ x: 20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: -20, opacity: 0 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
-                className="px-4 py-2.5 border-b border-border-subtle hover:bg-bg-interactive/30 transition-colors"
-                style={{ borderLeftWidth: '2px', borderLeftColor: getAppAccentColor(event.app) }}
-              >
-                <div className="flex items-center justify-between mb-0.5">
-                  <span
-                    className="text-xs font-medium"
-                    style={{ color: getAppAccentColor(event.app) }}
-                  >
-                    {event.app}
-                  </span>
-                  <span className="text-[10px] text-text-muted font-mono">
-                    {timeAgo(event.timestamp)}
-                  </span>
-                </div>
-                <p className="text-xs text-text-primary">{humanizeEventType(event.event)}</p>
-                {event.data && Object.keys(event.data).length > 0 && (
-                  <p className="text-[10px] text-text-secondary mt-0.5 truncate">
-                    {Object.entries(event.data)
-                      .slice(0, 2)
-                      .map(([k, v]) => `${k}: ${v}`)
-                      .join(' • ')}
-                  </p>
-                )}
-              </motion.div>
-            ))
+            displayed.map((event) => {
+              const accentColor = getAppAccentColor(event.app)
+              return (
+                <motion.div
+                  key={event.id}
+                  initial={{ x: 20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: -20, opacity: 0 }}
+                  transition={{ duration: 0.15, ease: 'easeOut' }}
+                  className="px-3 py-2 border-b border-border-subtle/30 hover:bg-bg-interactive/20 transition-colors"
+                  style={{ borderLeft: `2px solid ${accentColor}` }}
+                >
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span
+                      className="text-[10px] font-semibold"
+                      style={{ color: accentColor }}
+                    >
+                      {event.app}
+                    </span>
+                    <span className="text-[9px] text-text-muted font-mono tabular-nums">
+                      {timeAgo(event.timestamp)}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-text-primary leading-tight">{humanizeEventType(event.event)}</p>
+                  {event.data && Object.keys(event.data).length > 0 && (
+                    <p className="text-[9px] text-text-muted mt-0.5 truncate font-mono">
+                      {Object.entries(event.data)
+                        .slice(0, 2)
+                        .map(([k, v]) => `${k}: ${v}`)
+                        .join(' · ')}
+                    </p>
+                  )}
+                </motion.div>
+              )
+            })
           )}
         </AnimatePresence>
       </div>
 
       {/* Footer count */}
-      <div className="px-4 py-2 border-t border-border-subtle">
-        <span className="text-[10px] text-text-muted">
-          {displayed.length} of {normalized.length} events
+      <div className="px-3 py-2 border-t border-border-subtle/50">
+        <span className="text-[9px] text-text-muted font-mono">
+          {displayed.length}/{normalized.length} events
         </span>
       </div>
     </div>

@@ -96,12 +96,12 @@ export default function App() {
               className="flex flex-1 min-h-0"
             >
               {/* Center pane */}
-              <div className="flex-1 p-5 overflow-y-auto">
+              <div className="flex-1 p-4 overflow-y-auto">
                 <ActiveSessionBanner />
 
-                <div className="grid grid-cols-[1fr_2fr] gap-5 mb-5">
+                <div className="grid grid-cols-[1fr_2fr] gap-4 mb-4">
                   <OperatorProfileCard />
-                  <div className="space-y-5">
+                  <div className="space-y-3">
                     <EcosystemHealthBar />
                     <AppStatusGrid />
                   </div>

@@ -12,7 +12,7 @@ export default function SettingsView() {
       <h1 className="text-xl font-bold text-text-primary">Settings</h1>
 
       {/* General */}
-      <section className="bg-bg-elevated/75 backdrop-blur-sm border border-border-default/60 rounded-lg p-5">
+      <section className="glass-card p-5">
         <h2 className="text-sm font-semibold text-text-primary mb-4">General</h2>
         <div className="space-y-4">
           {/* Operator name */}
@@ -66,7 +66,7 @@ export default function SettingsView() {
       </section>
 
       {/* Notifications */}
-      <section className="bg-bg-elevated/75 backdrop-blur-sm border border-border-default/60 rounded-lg p-5">
+      <section className="glass-card p-5">
         <h2 className="text-sm font-semibold text-text-primary mb-4">Notifications</h2>
         <div className="space-y-4">
           <ToggleRow
@@ -85,7 +85,7 @@ export default function SettingsView() {
       </section>
 
       {/* Display */}
-      <section className="bg-bg-elevated/75 backdrop-blur-sm border border-border-default/60 rounded-lg p-5">
+      <section className="glass-card p-5">
         <h2 className="text-sm font-semibold text-text-primary mb-4">Display</h2>
         <div className="space-y-4">
           <ToggleRow
@@ -115,7 +115,7 @@ export default function SettingsView() {
       </section>
 
       {/* Config Paths */}
-      <section className="bg-bg-elevated/75 backdrop-blur-sm border border-border-default/60 rounded-lg p-5">
+      <section className="glass-card p-5">
         <h2 className="text-sm font-semibold text-text-primary mb-4">Config Paths</h2>
         <div className="space-y-3">
           <PathRow

@@ -19,7 +19,7 @@ export default function AppStatusTable() {
   }
 
   return (
-    <div className="bg-bg-elevated/75 backdrop-blur-sm border border-border-default/60 rounded-lg overflow-hidden">
+    <div className="glass-card overflow-hidden">
       <div className="px-4 py-3 border-b border-border-subtle">
         <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-widest">
           App Status Table

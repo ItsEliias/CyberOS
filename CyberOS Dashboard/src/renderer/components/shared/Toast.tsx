@@ -51,7 +51,7 @@ export default function Toast({ variant, message, onDismiss }: ToastProps) {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 20, opacity: 0 }}
       transition={{ duration: 0.2, ease: 'easeOut' }}
-      className={`w-[320px] p-3 rounded-lg border ${variantStyles[variant]} flex items-start gap-3`}
+      className={`w-[320px] p-3 rounded-lg border backdrop-blur-md ${variantStyles[variant]} flex items-start gap-3`}
     >
       <span className="mt-0.5">{variantIcons[variant]}</span>
       <p className="text-sm text-text-primary flex-1">{message}</p>

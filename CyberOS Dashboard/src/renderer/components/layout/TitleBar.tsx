@@ -16,7 +16,7 @@ export default function TitleBar() {
   }
 
   return (
-    <div className="h-10 bg-bg-base border-b border-border-subtle flex items-center px-4 drag-region shrink-0">
+    <div className="h-10 border-b border-border-subtle/50 flex items-center px-4 drag-region shrink-0" style={{ background: 'rgba(10, 10, 15, 0.9)' }}>
       {/* Traffic light spacer (macOS) */}
       <div className="w-[70px] no-drag" />
 

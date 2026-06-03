@@ -9,7 +9,7 @@ export default function SkillRadarLarge() {
   const skills = config.operator_profile?.skillProgress ?? {}
 
   return (
-    <div className="bg-bg-elevated/75 backdrop-blur-sm border border-border-default/60 rounded-lg p-6">
+    <div className="glass-card p-4">
       <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-widest mb-4">
         Skill Radar
       </p>

@@ -19,7 +19,7 @@ export default function ActiveSessionBanner() {
       transition={{ duration: 0.25, ease: 'easeOut' }}
       className="mb-5"
     >
-      <div className="bg-accent/10 border border-accent/20 border-l-[3px] border-l-accent rounded-lg px-4 py-3 flex items-center gap-4">
+      <div className="glass-card border-l-[3px] border-l-accent px-4 py-3 flex items-center gap-4" style={{ background: 'rgba(74, 158, 255, 0.06)' }}>
         {/* Pulse dot */}
         <span className="w-2.5 h-2.5 rounded-full bg-danger animate-[statusPulse_2s_ease-out_infinite] shrink-0" />
 
