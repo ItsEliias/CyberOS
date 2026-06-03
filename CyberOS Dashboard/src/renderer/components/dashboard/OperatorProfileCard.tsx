@@ -1,5 +1,6 @@
 // CyberOS Dashboard — Operator Profile Card (Hero Panel)
-// Dominates the left panel with large skill radar centrepiece and glowing display numbers
+// Fix #2: Radar centrepiece with blue glow, operator name below, 4 hero metrics in #4a9eff
+// Card fills the entire left panel height
 
 import { useDashboardStore } from '../../stores/useDashboardStore'
 import { getStreakStatus } from '../../utils/timeAgo'
@@ -17,34 +18,12 @@ export default function OperatorProfileCard() {
   const streakStatus = getStreakStatus(profile?.lastActiveDate)
 
   return (
-    <div className="glass-card overflow-hidden p-4">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-4">
-        {/* Avatar */}
-        <div className="w-10 h-10 rounded-full bg-accent/20 border-2 border-accent/40 flex items-center justify-center">
-          <span className="text-sm font-bold text-accent">
-            {operatorName.slice(0, 2).toUpperCase()}
-          </span>
-        </div>
-        <div>
-          <h3 className="text-sm font-bold text-text-primary">{operatorName}</h3>
-          <div className="flex items-center gap-1.5">
-            <span
-              className="w-2 h-2 rounded-full bg-success status-dot-pulse"
-              style={{ '--pulse-color': 'rgba(63, 185, 80, 0.4)' } as React.CSSProperties}
-            />
-            <span className="text-[10px] text-text-secondary">Active Operator</span>
-          </div>
-        </div>
-        {streakStatus === 'at_risk' && (
-          <span className="ml-auto text-[10px] text-warning bg-warning/10 px-2 py-0.5 rounded font-medium">
-            STREAK AT RISK
-          </span>
-        )}
-      </div>
-
-      {/* Skill Radar — Centrepiece */}
-      <div className="flex justify-center mb-4">
+    <div className="glass-card overflow-hidden p-4 flex flex-col h-full">
+      {/* Skill Radar — Centrepiece with blue glow */}
+      <div
+        className="flex justify-center flex-1 items-center"
+        style={{ filter: 'drop-shadow(0 0 6px rgba(74, 158, 255, 0.5))' }}
+      >
         <SkillRadar
           skills={profile?.skillProgress ?? {}}
           size={250}
@@ -52,29 +31,29 @@ export default function OperatorProfileCard() {
         />
       </div>
 
-      {/* Hero Metrics — Large display numbers */}
-      <div className="grid grid-cols-4 gap-3">
-        <HeroMetric
-          label="Streak"
-          value={streak}
-          suffix="d"
-          color="#d29922"
-        />
-        <HeroMetric
-          label="Flags"
-          value={flags}
-          color="#3fb950"
-        />
-        <HeroMetric
-          label="Labs"
-          value={labs}
-          color="#4a9eff"
-        />
-        <HeroMetric
-          label="Creds"
-          value={creds}
-          color="#f78166"
-        />
+      {/* Operator identity — below radar */}
+      <div className="text-center mt-3 mb-4">
+        <h3 className="text-sm font-bold text-text-primary">{operatorName}</h3>
+        <div className="flex items-center justify-center gap-1.5 mt-1">
+          <span
+            className="w-2 h-2 rounded-full bg-success status-dot-pulse"
+            style={{ '--pulse-color': 'rgba(63, 185, 80, 0.4)' } as React.CSSProperties}
+          />
+          <span className="text-[10px] text-text-secondary">Active Operator</span>
+          {streakStatus === 'at_risk' && (
+            <span className="text-[9px] text-warning bg-warning/10 px-1.5 py-0.5 rounded font-medium ml-2">
+              STREAK AT RISK
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Hero Metrics — 4 columns, text-2xl in #4a9eff with glow */}
+      <div className="grid grid-cols-4 gap-2 pt-3 border-t border-border-subtle/40">
+        <HeroMetric label="Streak" value={streak} suffix="d" />
+        <HeroMetric label="Flags" value={flags} />
+        <HeroMetric label="Labs" value={labs} />
+        <HeroMetric label="Creds" value={creds} />
       </div>
     </div>
   )
@@ -84,26 +63,23 @@ function HeroMetric({
   label,
   value,
   suffix = '',
-  color,
 }: {
   label: string
   value: number
   suffix?: string
-  color: string
 }) {
   return (
     <div className="text-center">
       <span
-        className="text-2xl font-bold tabular-nums block metric-glow"
+        className="text-2xl font-bold tabular-nums block"
         style={{
-          color,
-          '--glow-color': `${color}80`,
-          textShadow: `0 0 12px ${color}55`,
-        } as React.CSSProperties}
+          color: '#4a9eff',
+          textShadow: '0 0 10px rgba(74, 158, 255, 0.4)',
+        }}
       >
         {value}{suffix}
       </span>
-      <span className="text-[10px] text-text-muted uppercase tracking-wider">{label}</span>
+      <span className="text-[9px] text-text-muted uppercase tracking-wider">{label}</span>
     </div>
   )
 }

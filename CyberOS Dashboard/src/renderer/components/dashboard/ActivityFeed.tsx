@@ -1,12 +1,21 @@
 // CyberOS Dashboard — Activity Feed
 // Right panel showing live ecosystem events, newest first
-// Enhanced: accent left border per event, monospace timestamps, glassmorphism
+// Fix #7: Deduplication — cap duplicate events from same app to 1 entry with ×N badge
 
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useDashboardStore } from '../../stores/useDashboardStore'
 import { normalizeEvents, humanizeEventType, getAppAccentColor } from '../../utils/eventParser'
 import { timeAgo } from '../../utils/timeAgo'
+
+interface DeduplicatedEvent {
+  id: string
+  app: string
+  event: string
+  timestamp: string
+  data: Record<string, unknown>
+  count: number
+}
 
 export default function ActivityFeed() {
   const events = useDashboardStore((s) => s.events)
@@ -20,7 +29,33 @@ export default function ActivityFeed() {
   const filtered = feedFilter
     ? normalized.filter((e) => e.app.toLowerCase() === feedFilter.toLowerCase())
     : normalized
-  const displayed = filtered.slice(0, settings.feedMaxItems)
+
+  // Deduplication: collapse consecutive same app+event into one entry with count
+  const deduplicated = useMemo(() => {
+    const result: DeduplicatedEvent[] = []
+    const maxItems = settings.feedMaxItems ?? 50
+    const topItems = filtered.slice(0, maxItems)
+
+    for (const event of topItems) {
+      const key = `${event.app}::${event.event}`
+      const existing = result.find((r) => `${r.app}::${r.event}` === key)
+      if (existing) {
+        existing.count += 1
+      } else {
+        result.push({
+          id: event.id,
+          app: event.app,
+          event: event.event,
+          timestamp: event.timestamp,
+          data: event.data,
+          count: 1,
+        })
+      }
+    }
+
+    // Only show top 20 unique entries
+    return result.slice(0, 20)
+  }, [filtered, settings.feedMaxItems])
 
   // Auto-scroll to top when new events arrive
   const prevCountRef = useRef(events.length)
@@ -43,7 +78,7 @@ export default function ActivityFeed() {
   return (
     <div className="w-[280px] border-l border-border-subtle/50 flex flex-col shrink-0" style={{ background: 'rgba(18, 19, 26, 0.6)' }}>
       {/* Header */}
-      <div className="px-4 py-3 border-b border-border-subtle/50 flex items-center justify-between">
+      <div className="px-3 py-2.5 border-b border-border-subtle/50 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-widest">
             Activity
@@ -95,12 +130,12 @@ export default function ActivityFeed() {
       {/* Event list */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         <AnimatePresence initial={false}>
-          {displayed.length === 0 ? (
+          {deduplicated.length === 0 ? (
             <div className="px-4 py-8 text-center">
               <p className="text-[10px] text-text-muted">No events yet</p>
             </div>
           ) : (
-            displayed.map((event) => {
+            deduplicated.map((event) => {
               const accentColor = getAppAccentColor(event.app)
               return (
                 <motion.div
@@ -113,12 +148,20 @@ export default function ActivityFeed() {
                   style={{ borderLeft: `2px solid ${accentColor}` }}
                 >
                   <div className="flex items-center justify-between mb-0.5">
-                    <span
-                      className="text-[10px] font-semibold"
-                      style={{ color: accentColor }}
-                    >
-                      {event.app}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className="text-[10px] font-semibold"
+                        style={{ color: accentColor }}
+                      >
+                        {event.app}
+                      </span>
+                      {/* Dedup counter badge */}
+                      {event.count > 1 && (
+                        <span className="text-[8px] font-mono font-bold text-text-muted bg-bg-interactive px-1 py-0 rounded">
+                          &times;{event.count}
+                        </span>
+                      )}
+                    </div>
                     <span className="text-[9px] text-text-muted font-mono tabular-nums">
                       {timeAgo(event.timestamp)}
                     </span>
@@ -142,7 +185,7 @@ export default function ActivityFeed() {
       {/* Footer count */}
       <div className="px-3 py-2 border-t border-border-subtle/50">
         <span className="text-[9px] text-text-muted font-mono">
-          {displayed.length}/{normalized.length} events
+          {deduplicated.length} unique / {normalized.length} total events
         </span>
       </div>
     </div>

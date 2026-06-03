@@ -1,8 +1,9 @@
 // CyberOS Dashboard — Sidebar Navigation
-// Left sidebar with nav items and ecosystem context strip
+// Fix #4: Active session context strip + mini ecosystem summary at bottom
 
 import { motion } from 'framer-motion'
 import { useDashboardStore } from '../../stores/useDashboardStore'
+import { buildAppCards } from '../../utils/configParser'
 import type { ViewId } from '../../types/ecosystem'
 
 interface NavItem {
@@ -49,37 +50,16 @@ export default function Sidebar() {
   const activeView = useDashboardStore((s) => s.activeView)
   const setActiveView = useDashboardStore((s) => s.setActiveView)
   const ecosystemContext = useDashboardStore((s) => s.ecosystemContext)
+  const config = useDashboardStore((s) => s.config)
+
+  // Build app cards for mini ecosystem summary
+  const cards = buildAppCards(config)
+  const activeCount = cards.filter((c) => c.active).length
 
   return (
     <div className="w-[200px] flex flex-col shrink-0 border-r border-border-subtle/50" style={{ background: 'rgba(18, 19, 26, 0.8)' }}>
-      {/* Context strip — only visible when active context exists */}
-      {ecosystemContext.activeLab && (
-        <motion.div
-          initial={{ height: 0, opacity: 0 }}
-          animate={{ height: 'auto', opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }}
-          transition={{ duration: 0.2, ease: 'easeOut' }}
-          className="border-b border-border-subtle"
-        >
-          <div className="px-4 py-3 bg-accent/10 border-l-[3px] border-l-accent">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="w-2 h-2 rounded-full bg-danger animate-pulse" />
-              <span className="text-xs text-text-secondary font-medium">Active Lab</span>
-            </div>
-            <p className="text-sm text-text-primary font-semibold truncate">
-              {ecosystemContext.activeLab}
-            </p>
-            {ecosystemContext.activeIP && (
-              <p className="text-xs text-text-secondary font-mono mt-0.5">
-                {ecosystemContext.activeIP}
-              </p>
-            )}
-          </div>
-        </motion.div>
-      )}
-
       {/* Navigation items */}
-      <nav className="flex-1 px-3 py-4">
+      <nav className="px-3 py-4">
         <div className="space-y-1">
           {navItems.map((item) => {
             const isActive = activeView === item.id
@@ -87,7 +67,7 @@ export default function Sidebar() {
               <button
                 key={item.id}
                 onClick={() => setActiveView(item.id)}
-                className={`w-full h-10 flex items-center gap-3 px-3 rounded-md text-sm font-medium transition-colors relative ${
+                className={`w-full h-9 flex items-center gap-3 px-3 rounded-md text-sm font-medium transition-colors relative ${
                   isActive
                     ? 'text-text-primary bg-bg-interactive'
                     : 'text-text-secondary hover:text-text-primary hover:bg-bg-interactive/50'
@@ -108,12 +88,12 @@ export default function Sidebar() {
         </div>
 
         {/* Divider */}
-        <div className="my-4 border-t border-border-subtle" />
+        <div className="my-3 border-t border-border-subtle" />
 
         {/* Settings */}
         <button
           onClick={() => setActiveView('settings')}
-          className={`w-full h-10 flex items-center gap-3 px-3 rounded-md text-sm font-medium transition-colors ${
+          className={`w-full h-9 flex items-center gap-3 px-3 rounded-md text-sm font-medium transition-colors ${
             activeView === 'settings'
               ? 'text-text-primary bg-bg-interactive'
               : 'text-text-secondary hover:text-text-primary hover:bg-bg-interactive/50'
@@ -127,11 +107,57 @@ export default function Sidebar() {
         </button>
       </nav>
 
-      {/* Ecosystem mini status */}
-      <div className="px-4 py-3 border-t border-border-subtle">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-success animate-[statusPulse_2s_ease-out_infinite]" />
-          <span className="text-xs text-text-secondary">Ecosystem Online</span>
+      {/* Active session context strip — only visible when shared_context.activeLab is set */}
+      {ecosystemContext.activeLab && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.2, ease: 'easeOut' }}
+          className="mx-3"
+        >
+          <div className="px-3 py-2.5 bg-accent/10 rounded-md border-l-[3px] border-l-[#b44fff]">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-2 h-2 rounded-full bg-danger animate-pulse" />
+              <span className="text-[10px] text-text-secondary font-medium uppercase tracking-wider">Active Session</span>
+            </div>
+            <p className="text-xs text-text-primary font-semibold truncate">
+              Lab: {ecosystemContext.activeLab}
+            </p>
+            {ecosystemContext.activeIP && (
+              <p className="text-[10px] text-text-secondary font-mono mt-0.5">
+                Target: {ecosystemContext.activeIP}
+              </p>
+            )}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Spacer */}
+      <div className="flex-1" />
+
+      {/* Mini ecosystem summary — bottom of sidebar */}
+      <div className="px-3 py-3 border-t border-border-subtle/50">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[10px] text-text-muted uppercase tracking-wider">Ecosystem</span>
+          <span className="text-[10px] font-mono text-text-secondary">
+            <span className="text-success">{activeCount}</span>/{cards.length}
+          </span>
+        </div>
+        {/* Colored dot row */}
+        <div className="flex items-center gap-1 flex-wrap">
+          {cards.map((card) => (
+            <span
+              key={card.id}
+              className={`w-2 h-2 rounded-full ${card.active ? 'status-dot-pulse' : ''}`}
+              style={{
+                backgroundColor: card.accentColor,
+                opacity: card.active ? 1 : 0.3,
+                '--pulse-color': `${card.accentColor}66`,
+              } as React.CSSProperties}
+              title={`${card.name}: ${card.active ? 'Online' : 'Offline'}`}
+            />
+          ))}
         </div>
       </div>
     </div>
