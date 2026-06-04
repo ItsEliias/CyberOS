@@ -7,6 +7,9 @@ import ActiveRunsList from './ActiveRunsList';
 import LastRunSummary from './LastRunSummary';
 import VaultCompositionChart from './VaultCompositionChart';
 import DiffViewer from '../diff/DiffViewer';
+import SectionHeader from '../ui/SectionHeader';
+import Button from '../ui/Button';
+import LiveDot from '../ui/LiveDot';
 import type { ScrapeRun, ScrapingSource } from '../../types/vaultcore';
 
 function timeAgo(iso: string): string {
@@ -33,7 +36,6 @@ export default function DashboardView() {
   const [diffViewRun, setDiffViewRun] = useState<ScrapeRun | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Derive vault stats from main store if available (fallback to IPC call)
   useEffect(() => {
     async function loadStats() {
       if (!vaultPath) return;
@@ -46,33 +48,23 @@ export default function DashboardView() {
             addedToday: 0,
           });
         }
-      } catch {
-        // ignore
-      }
+      } catch { /* ignore */ }
     }
     loadStats();
   }, [vaultPath]);
 
-  // Seed sources from legacy store if VaultCore store is empty
   useEffect(() => {
     if (sources.length === 0 && legacySources.length > 0) {
       const mapped: ScrapingSource[] = legacySources.map((s) => ({
-        id: s.id,
-        name: s.name,
-        type: s.type,
-        url: s.url ?? '',
-        enabled: s.schedule?.enabled ?? true,
-        interval: 'daily',
-        outputPath: '',
+        id: s.id, name: s.name, type: s.type, url: s.url ?? '',
+        enabled: s.schedule?.enabled ?? true, interval: 'daily', outputPath: '',
         consecutiveFailures: s.health?.consecutiveFailures ?? 0,
         health: (s.health?.status === 'healthy' ? 'healthy'
           : s.health?.status === 'warning' ? 'warning'
           : s.health?.status === 'error' ? 'error'
           : 'healthy') as ScrapingSource['health'],
-        totalNotesSaved: s.noteCount ?? 0,
-        tags: [],
-        lastScrapeAt: s.lastScraped,
-        lastSuccessAt: s.health?.lastSuccess,
+        totalNotesSaved: s.noteCount ?? 0, tags: [],
+        lastScrapeAt: s.lastScraped, lastSuccessAt: s.health?.lastSuccess,
         lastError: s.health?.lastError,
       }));
       setSources(mapped);
@@ -80,9 +72,7 @@ export default function DashboardView() {
   }, [legacySources]);
 
   const lastCompletedRun = runs.find((r) => r.status !== 'running');
-  const lastRunAgo = lastCompletedRun?.completedAt
-    ? timeAgo(lastCompletedRun.completedAt)
-    : null;
+  const lastRunAgo = lastCompletedRun?.completedAt ? timeAgo(lastCompletedRun.completedAt) : null;
 
   async function handleScrapeAll() {
     if (isScrapingAll || !vaultPath) return;
@@ -90,13 +80,7 @@ export default function DashboardView() {
     const enabledSources = sources.filter((s) => s.enabled);
     for (const src of enabledSources) {
       const runId = Math.random().toString(36).slice(2);
-      addRun({
-        id: runId,
-        sourceId: src.id,
-        sourceName: src.name,
-        startedAt: new Date().toISOString(),
-        status: 'running',
-      });
+      addRun({ id: runId, sourceId: src.id, sourceName: src.name, startedAt: new Date().toISOString(), status: 'running' });
       try {
         const res = await window.electronAPI.scrapeSourceNow(src.id);
         const completedAt = new Date().toISOString();
@@ -113,7 +97,6 @@ export default function DashboardView() {
       removeActiveRunId(runId);
     }
     setIsScrapingAll(false);
-    // Refresh stats after all done
     const stats = await window.electronAPI.getVaultStats();
     if (stats) {
       setVaultStats({
@@ -150,41 +133,40 @@ export default function DashboardView() {
 
   return (
     <div className="h-full overflow-auto">
-      <div className="p-5 space-y-6 max-w-4xl">
+      <div className="p-5 space-y-5 max-w-4xl">
         {/* Toolbar */}
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Dashboard</div>
-            <div className="text-[11px] mt-0.5" style={{ color: 'var(--text-dim)' }}>
-              {sources.length} source{sources.length !== 1 ? 's' : ''} configured
+        <SectionHeader
+          title="Dashboard"
+          subtitle={`${sources.length} source${sources.length !== 1 ? 's' : ''} configured`}
+          actions={
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRefreshStats}
+                disabled={refreshing || noVault}
+                loading={refreshing}
+              >
+                {!refreshing && '↺'} Refresh
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleScrapeAll}
+                disabled={isScrapingAll || isScraping || noVault || sources.filter((s) => s.enabled).length === 0}
+              >
+                {isScrapingAll ? (
+                  <>
+                    <LiveDot status="online" size={5} />
+                    Scraping…
+                  </>
+                ) : (
+                  '▶ Scrape All'
+                )}
+              </Button>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleRefreshStats}
-              disabled={refreshing || noVault}
-              className="px-3 py-1.5 rounded-lg text-xs border transition-all hover:bg-white/5 disabled:opacity-40"
-              style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-            >
-              {refreshing ? '↺ Refreshing…' : '↺ Refresh'}
-            </button>
-            <button
-              onClick={handleScrapeAll}
-              disabled={isScrapingAll || isScraping || noVault || sources.filter((s) => s.enabled).length === 0}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-40"
-              style={{ background: 'var(--accent)', color: '#fff' }}
-            >
-              {isScrapingAll ? (
-                <>
-                  <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#fff' }} />
-                  Scraping…
-                </>
-              ) : (
-                '▶ Scrape All'
-              )}
-            </button>
-          </div>
-        </div>
+          }
+        />
 
         {/* No vault prompt */}
         {noVault && (
@@ -192,13 +174,13 @@ export default function DashboardView() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="rounded-lg p-6 text-center border-2 border-dashed"
-            style={{ borderColor: 'var(--accent)', background: 'color-mix(in srgb, var(--accent) 4%, transparent)' }}
+            style={{ borderColor: 'rgba(63,185,80,0.30)', background: 'rgba(63,185,80,0.04)' }}
           >
             <div className="text-2xl mb-2">🗂</div>
-            <div className="text-sm font-medium" style={{ color: 'var(--text)' }}>
+            <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
               No Obsidian vault configured
             </div>
-            <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
+            <div className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>
               Go to Settings to select your vault path
             </div>
           </motion.div>
@@ -212,25 +194,24 @@ export default function DashboardView() {
         />
 
         {/* Active runs */}
-        <ActiveRunsList
-          runs={runs}
-          onCancel={handleCancelRun}
-        />
+        <ActiveRunsList runs={runs} onCancel={handleCancelRun} />
 
-        {/* Last run summary + vault chart side by side */}
+        {/* Last run + vault chart */}
         <div className="grid grid-cols-5 gap-5">
           <div className="col-span-3">
             <LastRunSummary runs={runs} onViewDiff={setDiffViewRun} />
           </div>
           {vaultStats && vaultStats.byFolder.length > 0 && (
-            <div className="col-span-2 rounded-lg border p-4" style={{ background: 'var(--bg2)', borderColor: 'var(--border)' }}>
+            <div
+              className="col-span-2 rounded-lg border p-4"
+              style={{ background: 'var(--surface-1)', borderColor: 'var(--border-default)' }}
+            >
               <VaultCompositionChart byFolder={vaultStats.byFolder} />
             </div>
           )}
         </div>
       </div>
 
-      {/* Diff Viewer Modal */}
       {diffViewRun && (
         <DiffViewer run={diffViewRun} onClose={() => setDiffViewRun(null)} />
       )}
