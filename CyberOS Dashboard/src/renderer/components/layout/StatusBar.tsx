@@ -3,17 +3,35 @@
 import { useState, useEffect, useRef } from 'react'
 import { useDashboardStore } from '../../stores/useDashboardStore'
 
+/** Simulate latency: drifts around a base value with small random variation */
+function simulateLatency(base: number): number {
+  return Math.round(base + (Math.random() - 0.5) * base * 0.4)
+}
+
+function latencyColor(ms: number): string {
+  if (ms < 40) return '#3fb950'
+  if (ms < 100) return '#d29922'
+  return '#f85149'
+}
+
 export default function StatusBar() {
   const alerts = useDashboardStore((s) => s.alerts)
   const dismissedIds = useDashboardStore((s) => s.dismissedAlertIds)
   const events = useDashboardStore((s) => s.events)
   const [utcTime, setUtcTime] = useState(getUTC())
   const [newEventFlash, setNewEventFlash] = useState(false)
+  const [latencyMs, setLatencyMs] = useState(() => simulateLatency(28))
   const prevEventCountRef = useRef(events.length)
 
   useEffect(() => {
     const interval = setInterval(() => setUtcTime(getUTC()), 1000)
     return () => clearInterval(interval)
+  }, [])
+
+  // Update mock latency every 3 seconds
+  useEffect(() => {
+    const id = setInterval(() => setLatencyMs(simulateLatency(28)), 3000)
+    return () => clearInterval(id)
   }, [])
 
   // Flash indicator on new event
@@ -84,6 +102,22 @@ export default function StatusBar() {
       </div>
 
       <div className="flex-1" />
+
+      {/* Network latency */}
+      <div className="flex items-center gap-1.5">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+          style={{ color: latencyColor(latencyMs) }}>
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+        </svg>
+        <span
+          className="font-mono tabular-nums"
+          style={{ color: latencyColor(latencyMs) }}
+        >
+          {latencyMs}ms
+        </span>
+      </div>
+
+      <span className="mx-2.5 text-text-muted/30 select-none">|</span>
 
       {/* UTC clock */}
       <span className="font-mono text-text-muted tabular-nums">{utcTime}</span>

@@ -6,6 +6,9 @@ import { useDashboardStore } from '../../stores/useDashboardStore'
 import { buildAppCards } from '../../utils/configParser'
 import { timeAgo } from '../../utils/timeAgo'
 
+// Number of segments in the progress bar
+const SEGMENTS = 20
+
 export default function EcosystemHealthBar() {
   const config = useDashboardStore((s) => s.config)
   const cards = buildAppCards(config)
@@ -14,6 +17,9 @@ export default function EcosystemHealthBar() {
   const activeCount = cards.filter((c) => c.active).length
   const healthPct = cards.length > 0 ? Math.round((activeCount / cards.length) * 100) : 0
   const healthColor = healthPct >= 75 ? '#3fb950' : healthPct >= 40 ? '#d29922' : '#f85149'
+
+  // How many segments should be filled
+  const filledSegments = Math.round((healthPct / 100) * SEGMENTS)
 
   return (
     <div
@@ -27,37 +33,88 @@ export default function EcosystemHealthBar() {
       }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-2.5">
         <span className="text-[10px] font-semibold text-text-muted uppercase tracking-widest">
           Ecosystem Health
         </span>
         <div className="flex items-center gap-2.5">
-          {/* Health percentage label */}
           <span
             className="text-[11px] font-bold font-mono tabular-nums"
-            style={{
-              color: healthColor,
-              textShadow: `0 0 8px ${healthColor}66`,
-            }}
+            style={{ color: healthColor, textShadow: `0 0 8px ${healthColor}66` }}
           >
             {healthPct}%
           </span>
-          {/* Health bar — wider, taller, spring-animated */}
-          <div
-            className="w-32 h-2 rounded-full overflow-hidden"
-            style={{ background: 'rgba(42,51,71,0.55)' }}
-          >
-            <motion.div
-              className="h-full rounded-full"
-              style={{ background: `linear-gradient(90deg, ${healthColor}cc, ${healthColor})`, boxShadow: `0 0 8px ${healthColor}88` }}
-              initial={{ width: 0 }}
-              animate={{ width: `${healthPct}%` }}
-              transition={{ duration: 0.9, type: 'spring', stiffness: 60, damping: 14 }}
-            />
-          </div>
           <span className="text-[10px] font-mono tabular-nums text-text-muted">
             {activeCount}/{cards.length}
           </span>
+        </div>
+      </div>
+
+      {/* Segmented progress bar with tick marks */}
+      <div className="mb-3">
+        <div className="relative flex items-center gap-px h-3">
+          {Array.from({ length: SEGMENTS }).map((_, idx) => {
+            const isFilled = idx < filledSegments
+            const isLast = idx === filledSegments - 1
+            return (
+              <motion.div
+                key={idx}
+                className="flex-1 h-full rounded-[2px] relative overflow-hidden"
+                style={{
+                  background: isFilled ? 'transparent' : 'rgba(42,51,71,0.45)',
+                }}
+                initial={{ opacity: 0, scaleY: 0.4 }}
+                animate={{ opacity: 1, scaleY: 1 }}
+                transition={{ delay: idx * 0.025, duration: 0.25, ease: 'easeOut' }}
+              >
+                {isFilled && (
+                  <motion.div
+                    className="absolute inset-0 rounded-[2px]"
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: 1 }}
+                    transition={{
+                      delay: idx * 0.03,
+                      duration: 0.35,
+                      type: 'spring',
+                      stiffness: 80,
+                      damping: 14,
+                    }}
+                    style={{
+                      background: `linear-gradient(90deg, ${healthColor}cc, ${healthColor})`,
+                      boxShadow: isLast ? `0 0 6px ${healthColor}99` : 'none',
+                      transformOrigin: 'left center',
+                    }}
+                  />
+                )}
+              </motion.div>
+            )
+          })}
+
+          {/* Tick marks at 25%, 50%, 75% */}
+          {[5, 10, 15].map((tick) => (
+            <div
+              key={tick}
+              className="absolute top-0 bottom-0 w-px pointer-events-none"
+              style={{
+                left: `${(tick / SEGMENTS) * 100}%`,
+                background: 'rgba(255,255,255,0.08)',
+                zIndex: 1,
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Tick labels */}
+        <div className="relative flex mt-0.5" style={{ height: '10px' }}>
+          {[25, 50, 75].map((pct) => (
+            <span
+              key={pct}
+              className="absolute text-[8px] text-text-muted font-mono"
+              style={{ left: `${pct}%`, transform: 'translateX(-50%)' }}
+            >
+              {pct}
+            </span>
+          ))}
         </div>
       </div>
 

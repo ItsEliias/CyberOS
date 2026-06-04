@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useDashboardStore } from '../../stores/useDashboardStore'
 import { normalizeEvents, humanizeEventType, getAppAccentColor, filterEvents } from '../../utils/eventParser'
-import { formatTimestamp, formatDate } from '../../utils/timeAgo'
+import { formatTimestamp, formatDate, timeAgo } from '../../utils/timeAgo'
 
 export default function EventLog() {
   const events = useDashboardStore((s) => s.events)
@@ -107,8 +107,11 @@ export default function EventLog() {
                   style={{ borderBottom: '1px solid rgba(42,51,71,0.2)' }}
                   onClick={() => setExpandedId(isExpanded ? null : event.id)}
                 >
-                  <span className="text-[10px] text-text-muted font-mono w-[52px] shrink-0 tabular-nums">
-                    {formatTimestamp(event.timestamp)}
+                  <span
+                    className="text-[10px] text-text-muted font-mono w-[52px] shrink-0 tabular-nums cursor-default"
+                    title={formatTimestamp(event.timestamp)}
+                  >
+                    {timeAgo(event.timestamp)}
                   </span>
                   <span
                     className="text-[10px] font-semibold w-[80px] shrink-0 truncate"

@@ -127,23 +127,47 @@ export default function AppStatusCard({ card, index }: AppStatusCardProps) {
           </div>
         )}
 
-        {/* Sparkline */}
-        <div className="mb-2">
+        {/* Sparkline — gradient fill: dark base → accent at line */}
+        <div className="mb-2 relative overflow-hidden rounded-sm">
           <svg
             width={svgPath.width}
             height={svgPath.height}
             viewBox={`0 0 ${svgPath.width} ${svgPath.height}`}
             className="w-full"
-            style={{ height: '34px' }}
+            style={{ height: '34px', display: 'block' }}
             preserveAspectRatio="none"
           >
             <defs>
               <linearGradient id={`g-${card.id}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={card.accentColor} stopOpacity={card.active ? '0.35' : '0.1'} />
-                <stop offset="100%" stopColor={card.accentColor} stopOpacity="0" />
+                <stop offset="0%"   stopColor={card.accentColor} stopOpacity={card.active ? '0.58' : '0.15'} />
+                <stop offset="55%"  stopColor={card.accentColor} stopOpacity={card.active ? '0.2' : '0.06'} />
+                <stop offset="100%" stopColor="#0a0d17" stopOpacity="0" />
               </linearGradient>
+              {/* Shimmer sweep — only rendered when card is active */}
+              {card.active && (
+                <linearGradient id={`shim-${card.id}`} x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%"   stopColor="transparent" />
+                  <stop offset="40%"  stopColor="white" stopOpacity="0.05" />
+                  <stop offset="60%"  stopColor="white" stopOpacity="0.12" />
+                  <stop offset="100%" stopColor="transparent" />
+                  <animateTransform
+                    attributeName="gradientTransform"
+                    type="translate"
+                    from="-1 0"
+                    to="2 0"
+                    dur="2s"
+                    repeatCount="indefinite"
+                  />
+                </linearGradient>
+              )}
             </defs>
+            {/* Area fill */}
             <path d={svgPath.areaPath} fill={`url(#g-${card.id})`} />
+            {/* Shimmer overlay */}
+            {card.active && (
+              <rect x="0" y="0" width={svgPath.width} height={svgPath.height} fill={`url(#shim-${card.id})`} />
+            )}
+            {/* Stroke line */}
             <path
               d={svgPath.linePath}
               fill="none"

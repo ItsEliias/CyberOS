@@ -7,6 +7,62 @@ import { useDashboardStore } from '../../stores/useDashboardStore'
 import { normalizeEvents, humanizeEventType, getAppAccentColor } from '../../utils/eventParser'
 import { timeAgo } from '../../utils/timeAgo'
 
+// ─── Event type classification ───────────────────────────────────────────────
+
+type EventCategory = 'network' | 'auth' | 'alert' | 'info'
+
+function classifyEvent(eventType: string): EventCategory {
+  const t = eventType.toLowerCase()
+  if (t.includes('vault') || t.includes('credential') || t.includes('session') || t.includes('unlock') || t.includes('lock')) return 'auth'
+  if (t.includes('signal') || t.includes('network') || t.includes('graph') || t.includes('scan') || t.includes('command') || t.includes('scrape')) return 'network'
+  if (t.includes('alert') || t.includes('flag') || t.includes('error') || t.includes('warn')) return 'alert'
+  return 'info'
+}
+
+const CATEGORY_META: Record<EventCategory, { color: string; icon: JSX.Element }> = {
+  network: {
+    color: '#d29922',
+    icon: (
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="2" y="7" width="6" height="6" rx="1" />
+        <rect x="16" y="7" width="6" height="6" rx="1" />
+        <rect x="9" y="14" width="6" height="6" rx="1" />
+        <path d="M5 7V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2" />
+        <line x1="12" y1="7" x2="12" y2="14" />
+      </svg>
+    ),
+  },
+  auth: {
+    color: '#4a9eff',
+    icon: (
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+      </svg>
+    ),
+  },
+  alert: {
+    color: '#f85149',
+    icon: (
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+        <line x1="12" y1="9" x2="12" y2="13" />
+        <line x1="12" y1="17" x2="12.01" y2="17" />
+      </svg>
+    ),
+  },
+  info: {
+    color: '#8b949e',
+    icon: (
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg>
+    ),
+  },
+}
+
 interface DeduplicatedEvent {
   id: string
   app: string
@@ -165,6 +221,8 @@ export default function ActivityFeed() {
           ) : (
             deduplicated.map((event, i) => {
               const accentColor = getAppAccentColor(event.app)
+              const category = classifyEvent(event.event)
+              const meta = CATEGORY_META[category]
               return (
                 <motion.div
                   key={event.id}
@@ -180,6 +238,16 @@ export default function ActivityFeed() {
                 >
                   <div className="flex items-center justify-between mb-0.5">
                     <div className="flex items-center gap-1.5">
+                      {/* Type icon with per-category colour */}
+                      <span
+                        className="flex items-center justify-center w-4 h-4 rounded shrink-0"
+                        style={{
+                          color: meta.color,
+                          background: `${meta.color}18`,
+                        }}
+                      >
+                        {meta.icon}
+                      </span>
                       <span className="text-[10px] font-semibold" style={{ color: accentColor }}>
                         {event.app}
                       </span>

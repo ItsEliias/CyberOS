@@ -36,11 +36,28 @@ export default function OperatorProfileCard() {
         }}
       />
 
-      {/* Radar — centrepiece */}
+      {/* Radar — centrepiece with graph-paper background texture */}
       <div
         className="flex justify-center flex-1 items-center pt-4 relative"
         style={{ filter: 'drop-shadow(0 0 10px rgba(74,158,255,0.35))' }}
       >
+        {/* Graph-paper grid texture */}
+        <svg
+          className="absolute inset-0 w-full h-full pointer-events-none"
+          xmlns="http://www.w3.org/2000/svg"
+          style={{ opacity: 0.18 }}
+        >
+          <defs>
+            <pattern id="radar-grid-small" width="12" height="12" patternUnits="userSpaceOnUse">
+              <path d="M 12 0 L 0 0 0 12" fill="none" stroke="rgba(74,158,255,0.4)" strokeWidth="0.5" />
+            </pattern>
+            <pattern id="radar-grid-large" width="60" height="60" patternUnits="userSpaceOnUse">
+              <rect width="60" height="60" fill="url(#radar-grid-small)" />
+              <path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(74,158,255,0.7)" strokeWidth="0.75" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#radar-grid-large)" />
+        </svg>
         <SkillRadar
           skills={profile?.skillProgress ?? {}}
           size={260}

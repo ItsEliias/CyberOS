@@ -3,6 +3,7 @@
 // ItsEliias // v2.0
 
 import { AnimatePresence, motion } from 'framer-motion'
+import { useState, useEffect } from 'react'
 import { useDashboardStore } from './stores/useDashboardStore'
 import { useConfigWatcher } from './hooks/useConfigWatcher'
 import { useEventFeed } from './hooks/useEventFeed'
@@ -40,6 +41,38 @@ import AppTabsView from './views/AppTabsView'
 
 // Design system reference (Phase A sign-off)
 import StyleReferenceView from './views/StyleReferenceView'
+
+// ─── Last Updated Chip ───────────────────────────────────────────────────────
+
+function LastUpdatedChip() {
+  const [elapsed, setElapsed] = useState(0)
+  const [mountTime] = useState(() => Date.now())
+
+  useEffect(() => {
+    const id = setInterval(() => setElapsed(Math.floor((Date.now() - mountTime) / 1000)), 1000)
+    return () => clearInterval(id)
+  }, [mountTime])
+
+  const fmt = (s: number) => {
+    if (s < 60) return `${s}s ago`
+    if (s < 3600) return `${Math.floor(s / 60)}m ago`
+    return `${Math.floor(s / 3600)}h ago`
+  }
+
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 text-[9px] font-mono px-2 py-0.5 rounded-full"
+      style={{
+        background: 'rgba(74,158,255,0.07)',
+        border: '1px solid rgba(74,158,255,0.18)',
+        color: 'var(--text-muted)',
+      }}
+    >
+      <span className="w-1 h-1 rounded-full bg-accent animate-pulse" style={{ background: 'var(--accent)' }} />
+      Updated {fmt(elapsed)}
+    </span>
+  )
+}
 
 // ─── Transition variants ─────────────────────────────────────────────────────
 
@@ -106,6 +139,11 @@ export default function App() {
               {/* Center pane */}
               <div className="flex-1 p-4 overflow-y-auto">
                 <ActiveSessionBanner />
+
+                {/* Last-updated chip */}
+                <div className="flex justify-end mb-2">
+                  <LastUpdatedChip />
+                </div>
 
                 <div className="grid grid-cols-[1fr_2fr] gap-4 mb-4">
                   <OperatorProfileCard />

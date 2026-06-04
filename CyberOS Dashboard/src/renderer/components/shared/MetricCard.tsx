@@ -8,10 +8,12 @@ interface MetricCardProps {
   value: number
   icon: JSX.Element
   delta?: string
+  /** true = value went up (green ↑), false = down (red ↓), undefined = neutral */
+  deltaUp?: boolean
   accentColor?: string
 }
 
-export default function MetricCard({ label, value, icon, delta, accentColor = '#4a9eff' }: MetricCardProps) {
+export default function MetricCard({ label, value, icon, delta, deltaUp, accentColor = '#4a9eff' }: MetricCardProps) {
   const count = useMotionValue(0)
   const rounded = useTransform(count, (v) => Math.round(v))
   const displayRef = useRef<HTMLSpanElement>(null)
@@ -78,7 +80,22 @@ export default function MetricCard({ label, value, icon, delta, accentColor = '#
       </span>
 
       {delta && (
-        <p className="text-[10px] text-text-muted mt-2 relative">{delta}</p>
+        <div className="flex items-center gap-1 mt-2 relative">
+          {deltaUp !== undefined && (
+            <span
+              className="text-[11px] font-bold leading-none"
+              style={{ color: deltaUp ? '#3fb950' : '#f85149' }}
+            >
+              {deltaUp ? '↑' : '↓'}
+            </span>
+          )}
+          <p
+            className="text-[10px] font-mono"
+            style={{ color: deltaUp === undefined ? 'var(--text-muted)' : deltaUp ? '#3fb950' : '#f85149' }}
+          >
+            {delta}
+          </p>
+        </div>
       )}
     </div>
   )

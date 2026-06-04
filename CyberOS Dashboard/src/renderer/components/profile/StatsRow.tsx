@@ -18,6 +18,8 @@ export default function StatsRow() {
             <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18" />
           </svg>
         }
+        delta="+2 this week"
+        deltaUp={true}
       />
       <MetricCard
         label="Total Flags"
@@ -29,6 +31,8 @@ export default function StatsRow() {
           </svg>
         }
         accentColor="#3fb950"
+        delta="+5 this week"
+        deltaUp={true}
       />
       <MetricCard
         label="Total Credentials"
@@ -39,6 +43,8 @@ export default function StatsRow() {
           </svg>
         }
         accentColor="#f78166"
+        delta="+3 today"
+        deltaUp={true}
       />
       <MetricCard
         label="Current Streak"
@@ -49,6 +55,8 @@ export default function StatsRow() {
           </svg>
         }
         accentColor="#d29922"
+        delta={profile?.currentStreak ? 'active' : '-1 day'}
+        deltaUp={!!(profile?.currentStreak && profile.currentStreak > 0)}
       />
     </div>
   )
