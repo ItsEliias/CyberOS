@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import type { ScrapingSource } from '../../types/vaultcore';
 import SourceListItem from './SourceListItem';
@@ -9,7 +10,36 @@ interface Props {
   onAdd: () => void;
 }
 
+/** Renders source name with matched substring wrapped in an amber <mark> */
+function HighlightedName({ name, query }: { name: string; query: string }) {
+  if (!query) return <>{name}</>;
+  const idx = name.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return <>{name}</>;
+  return (
+    <>
+      {name.slice(0, idx)}
+      <mark
+        style={{
+          background: 'rgba(210,153,34,0.3)',
+          color: '#d29922',
+          borderRadius: 2,
+          padding: '0 1px',
+        }}
+      >
+        {name.slice(idx, idx + query.length)}
+      </mark>
+      {name.slice(idx + query.length)}
+    </>
+  );
+}
+
 export default function SourceList({ sources, selectedId, onSelect, onAdd }: Props) {
+  const [search, setSearch] = useState('');
+
+  const filtered = search.trim()
+    ? sources.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()))
+    : sources;
+
   return (
     <div
       className="flex flex-col border-r h-full"
@@ -23,6 +53,22 @@ export default function SourceList({ sources, selectedId, onSelect, onAdd }: Pro
         <span className="text-[11px] uppercase tracking-widest font-medium tabular-nums" style={{ color: 'var(--text-dim)' }}>
           Sources ({sources.length})
         </span>
+      </div>
+
+      {/* Search input */}
+      <div className="px-3 py-2 border-b shrink-0" style={{ borderColor: 'var(--border)' }}>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Filter sources…"
+          className="w-full px-2.5 py-1.5 rounded-lg text-xs outline-none"
+          style={{
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border-default)',
+            color: 'var(--text-primary)',
+          }}
+        />
       </div>
 
       {/* List */}
@@ -41,8 +87,12 @@ export default function SourceList({ sources, selectedId, onSelect, onAdd }: Pro
               </div>
             </div>
           </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex items-center justify-center h-20 text-xs" style={{ color: 'var(--text-dim)' }}>
+            No matches for "{search}"
+          </div>
         ) : (
-          sources.map((src, idx) => (
+          filtered.map((src, idx) => (
             <motion.div
               key={src.id}
               initial={{ opacity: 0, x: -8 }}
@@ -53,6 +103,8 @@ export default function SourceList({ sources, selectedId, onSelect, onAdd }: Pro
                 source={src}
                 selected={src.id === selectedId}
                 onClick={() => onSelect(src.id)}
+                highlightQuery={search}
+                HighlightedName={HighlightedName}
               />
             </motion.div>
           ))

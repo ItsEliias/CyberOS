@@ -227,15 +227,25 @@ function HealthyRow({ source, runs }: { source: ScrapingSource; runs: ScrapeRun[
   );
 }
 
+type SortMode = 'worst' | 'best' | 'alpha';
+
 export default function SourceHealthView() {
   const { sources, runs, updateSource, addRun, updateRun, removeActiveRunId } = useVaultCoreStore();
   const { addLog } = useStore();
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [sortMode, setSortMode] = useState<SortMode>('worst');
 
-  const errorSources  = sources.filter((s) => s.health === 'error');
-  const warnSources   = sources.filter((s) => s.health === 'warning');
-  const healthySources = sources.filter((s) => s.health === 'healthy');
+  const sortedSources = [...sources].sort((a, b) => {
+    if (sortMode === 'alpha') return a.name.localeCompare(b.name);
+    const scoreA = healthScore(a);
+    const scoreB = healthScore(b);
+    return sortMode === 'worst' ? scoreA - scoreB : scoreB - scoreA;
+  });
+
+  const errorSources  = sortedSources.filter((s) => s.health === 'error');
+  const warnSources   = sortedSources.filter((s) => s.health === 'warning');
+  const healthySources = sortedSources.filter((s) => s.health === 'healthy');
 
   async function handleRetry(source: ScrapingSource) {
     setRetryingId(source.id);
@@ -316,14 +326,31 @@ export default function SourceHealthView() {
             <span style={{ color: '#3fb950' }}>{healthySources.length} healthy</span>
           </div>
         </div>
-        <button
-          onClick={handleRefreshAll}
-          disabled={refreshing}
-          className="px-3 py-1.5 rounded-lg text-xs border transition-all hover:bg-white/5 disabled:opacity-40"
-          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-        >
-          {refreshing ? '↺ Refreshing…' : 'Refresh All ↺'}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Sort control */}
+          <div className="flex items-center gap-1 rounded-lg border px-1.5 py-1" style={{ borderColor: 'var(--border)', background: 'var(--surface-glass)' }}>
+            {([['worst', 'Worst first'], ['best', 'Best first'], ['alpha', 'A–Z']] as [SortMode, string][]).map(([mode, label]) => (
+              <button
+                key={mode}
+                onClick={() => setSortMode(mode)}
+                className="px-2 py-0.5 rounded text-[10px] font-medium transition-all"
+                style={sortMode === mode
+                  ? { background: 'rgba(63,185,80,0.15)', color: '#3fb950' }
+                  : { color: 'var(--text-muted)' }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={handleRefreshAll}
+            disabled={refreshing}
+            className="px-3 py-1.5 rounded-lg text-xs border transition-all hover:bg-white/5 disabled:opacity-40"
+            style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+          >
+            {refreshing ? '↺ Refreshing…' : 'Refresh All ↺'}
+          </button>
+        </div>
       </div>
 
       {/* Content */}

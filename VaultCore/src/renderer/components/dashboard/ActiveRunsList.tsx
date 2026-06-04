@@ -2,6 +2,43 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { ScrapeRun } from '../../types/vaultcore';
 
+/** Formats seconds into "Xm Ys" or "Ys" */
+function formatEta(seconds: number): string {
+  if (seconds <= 0) return '0s';
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
+/** ETA display below progress bar */
+function EtaLabel({ startedAt, itemsDone, total }: { startedAt: string; itemsDone: number; total: number }) {
+  const [eta, setEta] = useState<string | null>(null);
+
+  useEffect(() => {
+    const tick = () => {
+      const elapsed = (Date.now() - new Date(startedAt).getTime()) / 1000;
+      if (itemsDone < 5) {
+        setEta('Calculating…');
+        return;
+      }
+      const rate = itemsDone / elapsed;
+      if (rate <= 0) { setEta('Calculating…'); return; }
+      const remaining = (total - itemsDone) / rate;
+      setEta(`Est. ${formatEta(remaining)} remaining`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [startedAt, itemsDone, total]);
+
+  if (!eta) return null;
+  return (
+    <div className="text-[9px] font-mono mt-1" style={{ color: 'var(--text-dim)' }}>
+      {eta}
+    </div>
+  );
+}
+
 interface Props {
   runs: ScrapeRun[];
   onCancel: (runId: string) => void;
@@ -122,6 +159,11 @@ export default function ActiveRunsList({ runs, onCancel }: Props) {
                   transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
                 />
               </div>
+              <EtaLabel
+                startedAt={run.startedAt}
+                itemsDone={run.result?.newNotes ?? 0}
+                total={run.result?.totalNotes ?? 0}
+              />
             </motion.div>
           ))}
         </AnimatePresence>

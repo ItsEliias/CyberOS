@@ -4,6 +4,8 @@ interface Props {
   source: ScrapingSource;
   selected: boolean;
   onClick: () => void;
+  highlightQuery?: string;
+  HighlightedName?: React.ComponentType<{ name: string; query: string }>;
 }
 
 function timeAgo(iso: string): string {
@@ -132,7 +134,7 @@ function SourceTypeIcon({ type }: { type: SourceType }) {
   }
 }
 
-export default function SourceListItem({ source, selected, onClick }: Props) {
+export default function SourceListItem({ source, selected, onClick, highlightQuery, HighlightedName }: Props) {
   return (
     <button
       onClick={onClick}
@@ -163,7 +165,9 @@ export default function SourceListItem({ source, selected, onClick }: Props) {
             className="text-sm font-medium truncate"
             style={{ color: selected ? 'var(--accent)' : 'var(--text)' }}
           >
-            {source.name}
+            {HighlightedName && highlightQuery
+              ? <HighlightedName name={source.name} query={highlightQuery} />
+              : source.name}
           </div>
           <div className="text-[10px] mt-0.5 flex items-center gap-1.5 flex-wrap" style={{ color: 'var(--text-dim)' }}>
             <SourceTypeIcon type={source.type} />

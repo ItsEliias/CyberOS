@@ -2,6 +2,25 @@ import { useEffect, useRef } from 'react';
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import type { ScrapingSource } from '../../types/vaultcore';
 
+/** Returns ▲ or ▼ arrow with green/red color when value changed from previous render */
+function TrendArrow({ value, accent }: { value: number; accent?: boolean }) {
+  const prevRef = useRef<number | null>(null);
+  const prev = prevRef.current;
+  prevRef.current = value;
+
+  if (prev === null || prev === value) return null;
+
+  const up = value > prev;
+  return (
+    <span
+      className="text-[11px] font-bold"
+      style={{ color: up ? '#3fb950' : '#f85149', lineHeight: 1 }}
+    >
+      {up ? '▲' : '▼'}
+    </span>
+  );
+}
+
 // Mock 7-day trend data per card (units vary per metric)
 const MOCK_TRENDS: Record<string, number[]> = {
   sources:  [3, 3, 4, 4, 5, 5, 5],
@@ -117,16 +136,19 @@ function MetricCard({
         />
       )}
       <div className="flex items-start justify-between gap-2">
-        <div
-          className="text-2xl font-bold font-mono tabular-nums"
-          style={{
-            color: accent ? 'var(--accent)' : 'var(--text)',
-            textShadow: accent ? '0 0 20px rgba(63,185,80,0.35)' : undefined,
-          }}
-        >
-          {numericValue !== null
-            ? <AnimatedNumber value={numericValue} />
-            : <span className="tabular-nums">{value}</span>}
+        <div className="flex items-baseline gap-1.5">
+          <div
+            className="text-2xl font-bold font-mono tabular-nums"
+            style={{
+              color: accent ? 'var(--accent)' : 'var(--text)',
+              textShadow: accent ? '0 0 20px rgba(63,185,80,0.35)' : undefined,
+            }}
+          >
+            {numericValue !== null
+              ? <AnimatedNumber value={numericValue} />
+              : <span className="tabular-nums">{value}</span>}
+          </div>
+          {numericValue !== null && <TrendArrow value={numericValue} accent={accent} />}
         </div>
         {trendData && (
           <div className="mt-1">

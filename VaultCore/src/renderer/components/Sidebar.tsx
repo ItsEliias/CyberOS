@@ -131,9 +131,12 @@ export default function Sidebar() {
                     onClick={() => setActiveView(item.id)}
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-left"
                     style={{
-                      background  : isActive ? 'rgba(63,185,80,0.10)' : 'transparent',
+                      background  : isActive
+                        ? 'linear-gradient(90deg, rgba(63,185,80,0.14), rgba(63,185,80,0.06))'
+                        : 'transparent',
                       color       : isActive ? '#3fb950' : 'var(--text-muted)',
                       borderLeft  : isActive ? '2px solid #3fb950' : '2px solid transparent',
+                      boxShadow   : isActive ? 'inset 0 0 8px rgba(63,185,80,0.06)' : undefined,
                       fontFamily  : 'var(--font-display)',
                       transition  : 'background 180ms var(--ease), color 180ms var(--ease), border-color 180ms var(--ease)',
                     }}
