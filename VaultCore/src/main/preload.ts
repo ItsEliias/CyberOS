@@ -120,6 +120,43 @@ const api = {
   // ── Ecosystem ─────────────────────────────────────────────────────────────
   ecosystemEmit: (appName: string, eventType: string, data: Record<string, unknown>) =>
     ipcRenderer.invoke('ecosystem-emit', appName, eventType, data) as Promise<void>,
+
+  // ── Secret Detection ──────────────────────────────────────────────────────
+  scanDirectory: (dirPath: string) =>
+    ipcRenderer.invoke('scan-directory', dirPath) as Promise<{ results?: Array<{ filePath: string; lineNumber: number; patternType: string; rawValue: string }>; filesScanned?: number; duration?: number; error?: string }>,
+
+  gitBranches: (repoPath: string) =>
+    ipcRenderer.invoke('git-branches', repoPath) as Promise<{ branches?: string[]; error?: string }>,
+
+  gitCurrentBranch: (repoPath: string) =>
+    ipcRenderer.invoke('git-current-branch', repoPath) as Promise<{ branch?: string; error?: string }>,
+
+  gitDiffBranches: (repoPath: string, branch1: string, branch2: string) =>
+    ipcRenderer.invoke('git-diff-branches', repoPath, branch1, branch2) as Promise<{ diff?: string; error?: string }>,
+
+  gitPull: (repoPath: string) =>
+    ipcRenderer.invoke('git-pull', repoPath) as Promise<{ success?: boolean; output?: string; error?: string }>,
+
+  gitFindConflicts: (repoPath: string) =>
+    ipcRenderer.invoke('git-find-conflicts', repoPath) as Promise<{ conflictFiles?: string[]; error?: string }>,
+
+  resolveConflictFile: (filePath: string, resolvedContent: string) =>
+    ipcRenderer.invoke('resolve-conflict-file', filePath, resolvedContent) as Promise<{ success?: boolean; error?: string }>,
+
+  getCertExpiry: (certPath: string) =>
+    ipcRenderer.invoke('get-cert-expiry', certPath) as Promise<{ expiresAt?: string; error?: string }>,
+
+  exportBackup: (secrets: unknown[], password: string) =>
+    ipcRenderer.invoke('export-backup', secrets, password) as Promise<{ success?: boolean; filePath?: string; canceled?: boolean; error?: string }>,
+
+  importBackup: (password: string) =>
+    ipcRenderer.invoke('import-backup', password) as Promise<{ success?: boolean; data?: unknown; canceled?: boolean; error?: string }>,
+
+  credvaultRead: () =>
+    ipcRenderer.invoke('credvault-read') as Promise<{ success?: boolean; data?: unknown; error?: string }>,
+
+  credvaultPush: (entries: unknown[]) =>
+    ipcRenderer.invoke('credvault-push', entries) as Promise<{ success?: boolean; error?: string }>,
 };
 
 contextBridge.exposeInMainWorld('electronAPI', api);

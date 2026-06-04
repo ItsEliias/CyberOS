@@ -16,7 +16,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@types/js-yaml": "^4.0.9",
     "framer-motion": "^11.0.0",
+    "js-yaml": "^4.2.0",
     "zustand": "^4.5.0"
   },
   "devDependencies": {
@@ -32,26 +34,49 @@
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "tailwindcss": "^3.0.0",
-    "typescript": "^5.0.0",
+    "typescript": "^5.9.3",
     "vite": "^5.0.0"
   },
   "build": {
     "appId": "com.itsEliias.playbookstudio",
     "productName": "PlaybookStudio",
     "copyright": "Copyright © 2025 ItsEliias",
-    "directories": { "output": "dist" },
-    "files": ["out/**/*", "assets/**/*"],
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*",
+      "assets/**/*"
+    ],
     "mac": {
-      "target": [{ "target": "dmg", "arch": ["x64", "arm64"] }],
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
       "icon": "assets/icon.icns",
       "category": "public.app-category.developer-tools"
     },
     "win": {
-      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "icon": "assets/icon.ico"
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "icon": "assets/icon.png",
       "category": "Development"
     }

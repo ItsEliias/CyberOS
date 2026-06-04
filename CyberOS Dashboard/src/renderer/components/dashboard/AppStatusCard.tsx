@@ -7,6 +7,7 @@ import { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import type { AppCardData } from '../../types/ecosystem'
 import { timeAgo } from '../../utils/timeAgo'
+import { useDashboardStore } from '../../stores/useDashboardStore'
 
 interface AppStatusCardProps {
   card: AppCardData
@@ -15,6 +16,7 @@ interface AppStatusCardProps {
 
 export default function AppStatusCard({ card, index }: AppStatusCardProps) {
   const [hovered, setHovered] = useState(false)
+  const liveStats = useDashboardStore((s) => s.liveStats)
 
   const handleLaunch = () => {
     if (card.execPath) {
@@ -22,15 +24,20 @@ export default function AppStatusCard({ card, index }: AppStatusCardProps) {
     }
   }
 
-  // Generate pseudo-random sparkline data based on app id
+  // Use real live history if available, otherwise fall back to seed-based points
   const sparklinePoints = useMemo(() => {
+    const history = liveStats[card.id]?.history
+    if (history && history.length >= 2) {
+      return history.map((s) => s.value)
+    }
+    // Seed-based fallback (static visual placeholder)
     const seed = card.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
     const points: number[] = []
     for (let i = 0; i < 12; i++) {
       points.push(30 + Math.sin(seed + i * 0.8) * 20 + Math.cos(seed * 0.3 + i) * 10)
     }
     return points
-  }, [card.id])
+  }, [card.id, liveStats])
 
   // Build SVG path for area chart
   const svgPath = useMemo(() => {

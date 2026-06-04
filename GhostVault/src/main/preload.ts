@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type {
   GhostVaultConfig, NoteFile, NewNoteResult, SaveCaptureResult,
-  OllamaStatus, OllamaFormatResult, ThemeConfig
+  OllamaStatus, OllamaFormatResult, ThemeConfig, NoteVersion
 } from '../shared/types.js';
 
 const ghostvault = {
@@ -52,6 +52,17 @@ const ghostvault = {
 
   getSessionContext: ()                                  => ipcRenderer.invoke('get-session-context') as Promise<{ currentLab: string | null; activeTarget: string | null; activeIP: string | null } | null>,
 
+  moveNote       : (srcPath: string, destFolder: string) => ipcRenderer.invoke('move-note', srcPath, destFolder) as Promise<boolean>,
+
+  noteVersionsList: (notePath: string)                  => ipcRenderer.invoke('note:versions:list', notePath) as Promise<NoteVersion[]>,
+  noteVersionsSave: (notePath: string, content: string) => ipcRenderer.invoke('note:versions:save', notePath, content) as Promise<void>,
+
+  lockNote       : (notePath: string, password: string) => ipcRenderer.invoke('ghostvault:note:lock', notePath, password) as Promise<{ ok: boolean; error?: string }>,
+  unlockNote     : (notePath: string, password: string) => ipcRenderer.invoke('ghostvault:note:unlock', notePath, password) as Promise<{ ok: boolean; content?: string; error?: string }>,
+
+  exportAsHtml   : (html: string, noteName: string)     => ipcRenderer.invoke('note:export:html', html, noteName) as Promise<boolean>,
+  exportAsPdf    : (html: string, noteName: string)      => ipcRenderer.invoke('note:export:pdf', html, noteName) as Promise<boolean>,
+
   onOpenCapture  : (cb: () => void) => {
     const listener = () => cb();
     ipcRenderer.on('quick-capture', listener);
@@ -94,8 +105,27 @@ const electronAPI = {
     ipcRenderer.invoke('ecosystem-emit', appName, eventType, data) as Promise<void>,
 };
 
+// Spec-canonical channel names (ghostvault:*) exposed as a separate namespace
+// so spec-aligned code can use them directly if needed
+const ghostvaultSpec = {
+  vaultList:      (vaultPath: string)                           => ipcRenderer.invoke('ghostvault:vault:list', vaultPath),
+  noteRead:       (filePath: string)                            => ipcRenderer.invoke('ghostvault:note:read', filePath),
+  noteWrite:      (filePath: string, content: string)           => ipcRenderer.invoke('ghostvault:note:write', filePath, content),
+  noteDelete:     (filePath: string)                            => ipcRenderer.invoke('ghostvault:note:delete', filePath),
+  noteSearch:     (vaultPath: string, query: string)            => ipcRenderer.invoke('ghostvault:note:search', vaultPath, query),
+  configRead:     ()                                            => ipcRenderer.invoke('ghostvault:config:read'),
+  eventEmit:      (event: { appName: string; eventType: string; data: Record<string, unknown> }) =>
+                                                                   ipcRenderer.invoke('ghostvault:event:emit', event),
+  clipboardRead:  ()                                            => ipcRenderer.invoke('ghostvault:clipboard:read'),
+  ollamaModels:   ()                                            => ipcRenderer.invoke('ghostvault:ollama:models'),
+  ollamaChat:     (model: string, messages: { role: string; content: string }[]) =>
+                                                                   ipcRenderer.invoke('ghostvault:ollama:chat', model, messages),
+};
+
 contextBridge.exposeInMainWorld('ghostvault', ghostvault);
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
+contextBridge.exposeInMainWorld('ghostvaultSpec', ghostvaultSpec);
 
-export type GhostVaultAPI = typeof ghostvault;
-export type ElectronAPI   = typeof electronAPI;
+export type GhostVaultAPI     = typeof ghostvault;
+export type ElectronAPI       = typeof electronAPI;
+export type GhostVaultSpecAPI = typeof ghostvaultSpec;

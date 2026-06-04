@@ -5,6 +5,29 @@ import { makeBlankFinding, SEVERITIES } from '../lib/defaults';
 import { SeverityBadge } from './SeverityBadge';
 import type { Finding, Severity } from '@shared/types';
 
+// ── CVE Lookup ────────────────────────────────────────────────────────────────
+async function lookupCVE(cveId: string): Promise<{ description: string; cvss: string } | null> {
+  const clean = cveId.trim().toUpperCase();
+  if (!/^CVE-\d{4}-\d+$/.test(clean)) return null;
+  try {
+    const res = await fetch(`https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=${clean}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const vuln = data?.vulnerabilities?.[0]?.cve;
+    if (!vuln) return null;
+    const desc = vuln.descriptions?.find((d: { lang: string }) => d.lang === 'en')?.value ?? '';
+    const metrics = vuln.metrics;
+    let cvssStr = '';
+    const m31 = metrics?.cvssMetricV31?.[0]?.cvssData;
+    const m30 = metrics?.cvssMetricV30?.[0]?.cvssData;
+    const m2  = metrics?.cvssMetricV2?.[0]?.cvssData;
+    if (m31)     cvssStr = `${m31.baseScore} (${m31.baseSeverity})`;
+    else if (m30) cvssStr = `${m30.baseScore} (${m30.baseSeverity})`;
+    else if (m2)  cvssStr = `${m2.baseScore} (${m2.baseSeverity ?? 'N/A'})`;
+    return { description: desc, cvss: cvssStr };
+  } catch { return null; }
+}
+
 interface Props {
   findingId: string | null;
   onClose: () => void;
@@ -16,11 +39,35 @@ export default function FindingEditor({ findingId, onClose }: Props) {
 
   const [form, setForm] = useState<Finding>(() => existing ?? makeBlankFinding());
   const [refInput, setRefInput] = useState('');
+  const [cveInput, setCveInput] = useState('');
+  const [cveLookingUp, setCveLookingUp] = useState(false);
+  const [cveError, setCveError] = useState('');
 
   useEffect(() => {
     setForm(existing ?? makeBlankFinding());
     setRefInput('');
+    setCveInput('');
+    setCveError('');
   }, [findingId]);
+
+  async function handleCveLookup() {
+    const id = cveInput.trim();
+    if (!id) return;
+    setCveLookingUp(true);
+    setCveError('');
+    const result = await lookupCVE(id);
+    setCveLookingUp(false);
+    if (!result) {
+      setCveError('CVE not found or NVD API unavailable');
+      return;
+    }
+    patch({
+      description: form.description || result.description,
+      cvss       : result.cvss || form.cvss,
+      references : form.references.includes(id) ? form.references : [...form.references, id],
+    });
+    setCveError('');
+  }
 
   function patch(p: Partial<Finding>) {
     setForm(f => ({ ...f, ...p }));
@@ -85,21 +132,66 @@ export default function FindingEditor({ findingId, onClose }: Props) {
             <input value={form.cvss || ''} onChange={e => patch({ cvss: e.target.value })} placeholder='e.g. "7.5 (High)"' style={{ width: '100%' }} />
           </F>
 
+          <F label="CVE Lookup">
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <input
+                value={cveInput}
+                onChange={e => { setCveInput(e.target.value); setCveError(''); }}
+                onKeyDown={e => e.key === 'Enter' && handleCveLookup()}
+                placeholder="CVE-2023-12345"
+                style={{ flex: 1, fontFamily: '"SF Mono", monospace', fontSize: 12 }}
+              />
+              <button
+                className="btn-ghost"
+                style={{ padding: '5px 12px', fontSize: 12, flexShrink: 0 }}
+                onClick={handleCveLookup}
+                disabled={!cveInput.trim() || cveLookingUp}
+              >
+                {cveLookingUp ? 'Looking up…' : 'Lookup'}
+              </button>
+            </div>
+            {cveError && <span style={{ fontSize: 11, color: 'var(--error)' }}>{cveError}</span>}
+            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+              Fetches description + CVSS from NVD (services.nvd.nist.gov). Requires internet.
+            </span>
+          </F>
+
           <F label="Description">
-            <textarea value={form.description} onChange={e => patch({ description: e.target.value })} placeholder="What was found?" rows={3} style={{ width: '100%' }} />
+            <textarea spellCheck value={form.description} onChange={e => patch({ description: e.target.value })} placeholder="What was found?" rows={3} style={{ width: '100%' }} />
           </F>
 
           <F label="Evidence">
-            <textarea value={form.evidence} onChange={e => patch({ evidence: e.target.value })} placeholder="Proof — commands, screenshots, output…" rows={3} style={{ width: '100%' }} />
+            <textarea spellCheck value={form.evidence} onChange={e => patch({ evidence: e.target.value })} placeholder="Proof — commands, screenshots, output…" rows={3} style={{ width: '100%' }} />
           </F>
 
           <F label="Impact">
-            <textarea value={form.impact} onChange={e => patch({ impact: e.target.value })} placeholder="Business/security impact" rows={2} style={{ width: '100%' }} />
+            <textarea spellCheck value={form.impact} onChange={e => patch({ impact: e.target.value })} placeholder="Business/security impact" rows={2} style={{ width: '100%' }} />
           </F>
 
           <F label="Recommendation">
-            <textarea value={form.recommendation} onChange={e => patch({ recommendation: e.target.value })} placeholder="How to fix it" rows={2} style={{ width: '100%' }} />
+            <textarea spellCheck value={form.recommendation} onChange={e => patch({ recommendation: e.target.value })} placeholder="How to fix it" rows={2} style={{ width: '100%' }} />
           </F>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <F label="Likelihood (1-5, Risk Matrix)">
+              <input
+                type="number" min={1} max={5}
+                value={form.likelihood ?? ''}
+                onChange={e => patch({ likelihood: e.target.value ? Number(e.target.value) : undefined })}
+                placeholder="1–5"
+                style={{ width: '100%' }}
+              />
+            </F>
+            <F label="Impact Score (1-5, Risk Matrix)">
+              <input
+                type="number" min={1} max={5}
+                value={form.impactScore ?? ''}
+                onChange={e => patch({ impactScore: e.target.value ? Number(e.target.value) : undefined })}
+                placeholder="1–5"
+                style={{ width: '100%' }}
+              />
+            </F>
+          </div>
 
           <F label="References">
             <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>

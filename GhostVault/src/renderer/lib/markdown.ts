@@ -4,16 +4,101 @@ function escHtml(s: string): string {
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-export function parseMarkdown(md: string): string {
+// ── Syntax highlighter ────────────────────────────────────────────────────────
+
+const JS_KEYWORDS   = /\b(const|let|var|function|class|return|if|else|for|while|do|switch|case|break|continue|import|export|default|new|typeof|instanceof|async|await|try|catch|finally|throw|void|delete|in|of|from|interface|type|enum|extends|implements|public|private|protected|readonly|static)\b/g;
+const PY_KEYWORDS   = /\b(def|class|return|if|elif|else|for|while|import|from|as|with|try|except|finally|raise|pass|break|continue|lambda|yield|and|or|not|in|is|True|False|None|async|await|self)\b/g;
+const BASH_KEYWORDS = /\b(echo|cd|ls|mkdir|rm|cp|mv|cat|grep|awk|sed|find|curl|wget|sudo|chmod|chown|export|source|alias|function|if|then|else|fi|for|do|done|while|case|esac)\b/g;
+
+function highlightJs(code: string): string {
+  let r = code;
+  r = r.replace(/\/\/.*/g, m => `<span class="syn-comment">${m}</span>`);
+  r = r.replace(/(\/\*[\s\S]*?\*\/)/g, m => `<span class="syn-comment">${m}</span>`);
+  r = r.replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)/g, m => `<span class="syn-string">${m}</span>`);
+  r = r.replace(JS_KEYWORDS, m => `<span class="syn-kw">${m}</span>`);
+  return r;
+}
+
+function highlightPy(code: string): string {
+  let r = code;
+  r = r.replace(/#.*/g, m => `<span class="syn-comment">${m}</span>`);
+  r = r.replace(/("""[\s\S]*?"""|'''[\s\S]*?'''|"[^"]*"|'[^']*')/g, m => `<span class="syn-string">${m}</span>`);
+  r = r.replace(PY_KEYWORDS, m => `<span class="syn-kw">${m}</span>`);
+  return r;
+}
+
+function highlightBash(code: string): string {
+  let r = code;
+  r = r.replace(/#.*/g, m => `<span class="syn-comment">${m}</span>`);
+  r = r.replace(/("(?:[^"\\]|\\.)*"|'[^']*')/g, m => `<span class="syn-string">${m}</span>`);
+  r = r.replace(BASH_KEYWORDS, m => `<span class="syn-kw">${m}</span>`);
+  r = r.replace(/(-{1,2}[\w-]+)/g, m => `<span class="syn-flag">${m}</span>`);
+  return r;
+}
+
+function highlightCode(lang: string, code: string): string {
+  const escaped = escHtml(code.trim());
+  if (!lang) return escaped;
+  const l = lang.toLowerCase();
+  if (l === 'js' || l === 'javascript' || l === 'ts' || l === 'typescript') return highlightJs(escaped);
+  if (l === 'py' || l === 'python') return highlightPy(escaped);
+  if (l === 'sh' || l === 'bash' || l === 'zsh' || l === 'shell') return highlightBash(escaped);
+  return escaped;
+}
+
+// ── Table parser ──────────────────────────────────────────────────────────────
+
+function parseTable(block: string): string {
+  const rows = block.trim().split('\n').filter(r => r.trim());
+  if (rows.length < 2) return escHtml(block);
+
+  const isSeperator = (r: string) => /^\|[-| :]+\|$/.test(r.trim());
+  const parseRow = (r: string) =>
+    r.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+
+  let html = '<table>';
+  let headDone = false;
+  let inBody   = false;
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    if (isSeperator(row)) {
+      if (!headDone) { html += '</thead>'; headDone = true; html += '<tbody>'; inBody = true; }
+      continue;
+    }
+    const cells = parseRow(row);
+    if (!headDone && !inBody) {
+      html += '<thead><tr>' + cells.map(c => `<th>${c}</th>`).join('') + '</tr>';
+    } else {
+      html += '<tr>' + cells.map((c, ci) => `<td${ci % 2 === 0 ? '' : ''}>${c}</td>`).join('') + '</tr>';
+    }
+  }
+  if (inBody) html += '</tbody>';
+  return html + '</table>';
+}
+
+// ── Wiki-link renderer (with optional note opener) ────────────────────────────
+
+let _noteOpener: ((name: string) => void) | null = null;
+
+export function setWikiLinkOpener(fn: (name: string) => void) {
+  _noteOpener = fn;
+}
+
+// ── Main markdown parser ──────────────────────────────────────────────────────
+
+export function parseMarkdown(md: string, openNote?: (name: string) => void): string {
+  if (openNote) _noteOpener = openNote;
+
   if (!md) return '<div class="empty-state"><div class="empty-icon">👻</div><div class="empty-title">Nothing here yet</div><div class="empty-sub">Start typing in the editor to see a live preview.</div></div>';
 
   let html = md;
 
-  // Fenced code blocks
+  // Fenced code blocks — syntax highlighted
   html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
-    const escaped  = escHtml(code.trim());
-    const langLabel = lang ? `<span class="code-lang">${escHtml(lang)}</span>` : '';
-    return `<pre>${langLabel}<code>${escaped}</code></pre>`;
+    const highlighted = highlightCode(lang, code.trim());
+    const langLabel   = lang ? `<span class="code-lang">${escHtml(lang)}</span>` : '';
+    return `<pre>${langLabel}<code class="syn-block">${highlighted}</code></pre>`;
   });
 
   // Inline code
@@ -41,32 +126,25 @@ export function parseMarkdown(md: string): string {
   html = html.replace(/\_(.+?)\_/g,         '<em>$1</em>');
   html = html.replace(/~~(.+?)~~/g,         '<del>$1</del>');
 
-  // Wiki-links [[page]]
-  html = html.replace(/\[\[([^\]]+)\]\]/g, (_, page) =>
-    `<span class="wiki-link" title="Wiki link: ${escHtml(page)}">[[${escHtml(page)}]]</span>`
-  );
+  // Tables — GitHub style
+  html = html.replace(/((?:\|[^\n]+\|\n?)+)/g, (block) => {
+    const rows = block.trim().split('\n');
+    if (rows.length < 2) return block;
+    const hasSeperator = rows.some(r => /^\|[-| :]+\|$/.test(r.trim()));
+    if (!hasSeperator) return block;
+    return parseTable(block);
+  });
+
+  // Wiki-links [[Note Name]]
+  html = html.replace(/\[\[([^\]]+)\]\]/g, (_, page) => {
+    const safePage = escHtml(page);
+    return `<span class="wiki-link" data-page="${safePage}" onclick="(function(){var e=document.querySelector('[data-wiki-root]');if(e){var ev=new CustomEvent('open-note',{detail:'${safePage.replace(/'/g, "\\'")}',bubbles:true});e.dispatchEvent(ev);}else{console.log('open:${safePage.replace(/'/g, "\\'")}');}})()">[[${safePage}]]</span>`;
+  });
 
   // Tags #tag
   html = html.replace(/(?<!\w)#([\w-]+)/g, (_, tag) =>
     `<span class="md-tag">#${escHtml(tag)}</span>`
   );
-
-  // Tables
-  html = html.replace(/((?:\|[^\n]+\|\n)+)/g, (tableBlock) => {
-    const rows = tableBlock.trim().split('\n');
-    if (rows.length < 2) return tableBlock;
-    const isHeader = (r: string) => /^\|[-| :]+\|$/.test(r.trim());
-    const parseRow = (r: string) => r.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
-    let thtml = '<table>'; let inBody = false;
-    for (let i = 0; i < rows.length; i++) {
-      if (isHeader(rows[i])) { inBody = true; thtml += '<tbody>'; continue; }
-      const cells = parseRow(rows[i]);
-      if (i === 0) thtml += '<thead><tr>' + cells.map(c => `<th>${c}</th>`).join('') + '</tr></thead>';
-      else         thtml += '<tr>' + cells.map(c => `<td>${c}</td>`).join('') + '</tr>';
-    }
-    if (inBody) thtml += '</tbody>';
-    return thtml + '</table>';
-  });
 
   // Checkboxes
   html = html.replace(/^(\s*)- \[x\] (.+)$/gim, '$1<div class="md-check done">☑ $2</div>');
@@ -106,4 +184,11 @@ export function parseMarkdown(md: string): string {
   html = html.replace(/(<\/(?:h[1-6]|pre|ul|ol|table|blockquote|div|hr)>)<\/p>/g, '$1');
 
   return html;
+}
+
+// ── Extract wiki-links from markdown ─────────────────────────────────────────
+
+export function extractWikiLinks(md: string): string[] {
+  const matches = md.matchAll(/\[\[([^\]]+)\]\]/g);
+  return [...matches].map(m => m[1]);
 }

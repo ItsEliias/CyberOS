@@ -1,6 +1,15 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { Report, ExportResult, WriteupFile, ReconDeskTarget, CyberToolsSharedConfig } from '../shared/types.js';
 
+interface ExportOptions {
+  format?: 'markdown' | 'pdf';
+  includeToc?: boolean;
+  includeFindingsTable?: boolean;
+  includeCredentials?: boolean;
+  redactCredentials?: boolean;
+  includeRawNmap?: boolean;
+}
+
 const reportforge = {
   getVersion     : ()                         => ipcRenderer.invoke('get-version') as Promise<string>,
   minimizeWindow : ()                         => ipcRenderer.invoke('minimize-window') as Promise<void>,
@@ -16,7 +25,7 @@ const reportforge = {
   listWriteupFiles   : ()                     => ipcRenderer.invoke('list-writeup-files') as Promise<WriteupFile[]>,
   readWriteupFile    : (p: string)            => ipcRenderer.invoke('read-writeup-file', p) as Promise<string>,
 
-  exportMarkdown : (r: Report)                => ipcRenderer.invoke('export-markdown', r) as Promise<ExportResult>,
+  exportMarkdown : (r: Report, opts?: ExportOptions) => ipcRenderer.invoke('export-markdown', r, opts) as Promise<ExportResult>,
   exportPDF      : (r: Report)                => ipcRenderer.invoke('export-pdf', r) as Promise<ExportResult>,
   signalPrintReady: ()                        => ipcRenderer.invoke('signal-print-ready') as Promise<boolean>,
 

@@ -3,12 +3,16 @@ import { useStore } from '../store';
 import { makeBlankFinding, SEVERITIES, SEV_COLORS } from '../lib/defaults';
 import { SeverityBadge, SeveritySummary } from './SeverityBadge';
 import FindingEditor from './FindingEditor';
+import ImportFindingsModal from './ImportFindingsModal';
+import SeverityChart from './SeverityChart';
 import type { Severity } from '@shared/types';
 
 export default function FindingsPanel() {
   const { activeReport, setActiveFindingId, activeFindingId, removeFinding } = useStore();
   const [showEditor, setShowEditor] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [showImport, setShowImport] = useState(false);
+  const [showChart, setShowChart] = useState(false);
 
   if (!activeReport) return null;
 
@@ -38,22 +42,38 @@ export default function FindingsPanel() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Header */}
       <div style={{
-        padding: '12px 16px', borderBottom: '1px solid var(--border)',
+        padding: '10px 16px', borderBottom: '1px solid var(--border)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0
       }}>
         <div>
           <span style={{ fontWeight: 600, fontSize: 13 }}>Findings</span>
           <span style={{ color: 'var(--text-muted)', marginLeft: 6, fontSize: 12 }}>({findings.length})</span>
         </div>
-        <button className="btn-primary" style={{ padding: '4px 12px', fontSize: 12 }} onClick={openNew}>
-          + Add
-        </button>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {findings.length > 0 && (
+            <button
+              className="btn-ghost"
+              style={{ padding: '3px 10px', fontSize: 11, color: showChart ? 'var(--accent)' : undefined }}
+              onClick={() => setShowChart(v => !v)}
+              title="Toggle severity chart"
+            >
+              Chart
+            </button>
+          )}
+          <button className="btn-ghost" style={{ padding: '3px 10px', fontSize: 11 }} onClick={() => setShowImport(true)} title="Import findings from ReconDesk">
+            Import
+          </button>
+          <button className="btn-primary" style={{ padding: '4px 12px', fontSize: 12 }} onClick={openNew}>
+            + Add
+          </button>
+        </div>
       </div>
 
-      {/* Severity summary */}
+      {/* Severity summary + chart */}
       {findings.length > 0 && (
         <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
           <SeveritySummary findings={findings} />
+          {showChart && <SeverityChart findings={findings} />}
         </div>
       )}
 
@@ -117,6 +137,10 @@ export default function FindingsPanel() {
 
       {showEditor && (
         <FindingEditor findingId={editingId} onClose={closeEditor} />
+      )}
+
+      {showImport && (
+        <ImportFindingsModal onClose={() => setShowImport(false)} />
       )}
     </div>
   );

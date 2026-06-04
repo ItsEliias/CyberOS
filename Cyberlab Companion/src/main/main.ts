@@ -16,6 +16,8 @@ const ENCRYPTED_KEY_FILE = path.join(DATA_DIR, 'apikey.enc');
 const PROGRESS_FILE      = path.join(DATA_DIR, 'progress.json');
 const LAB_TRACKER_FILE   = path.join(DATA_DIR, 'labs.json');
 const SNIPPETS_FILE      = path.join(DATA_DIR, 'snippets.json');
+const KNOWLEDGE_FILE     = path.join(DATA_DIR, 'knowledgebase.json');
+const LAB_REVIEWS_FILE   = path.join(DATA_DIR, 'lab-reviews.json');
 const CLAUDE_API_URL     = 'https://api.anthropic.com/v1/messages';
 const CLAUDE_MODEL       = 'claude-sonnet-4-20250514';
 const UPDATE_CHECK_URL   = 'https://api.github.com/repos/ItsEliias/cyberlab-companion/releases/latest';
@@ -440,6 +442,40 @@ function registerIPC() {
   ipcMain.handle('open-external', (_, url: string) => shell.openExternal(url));
   ipcMain.handle('get-version', () => APP_VERSION);
   ipcMain.handle('get-platform', () => process.platform);
+
+  ipcMain.handle('save-knowledge-base', (_, data: unknown) => {
+    try { fs.writeFileSync(KNOWLEDGE_FILE, JSON.stringify(data, null, 2), 'utf8'); return true; } catch { return false; }
+  });
+  ipcMain.handle('load-knowledge-base', () => {
+    try { if (fs.existsSync(KNOWLEDGE_FILE)) return JSON.parse(fs.readFileSync(KNOWLEDGE_FILE, 'utf8')); } catch {}
+    return null;
+  });
+  ipcMain.handle('save-lab-reviews', (_, data: unknown) => {
+    try { fs.writeFileSync(LAB_REVIEWS_FILE, JSON.stringify(data, null, 2), 'utf8'); return true; } catch { return false; }
+  });
+  ipcMain.handle('load-lab-reviews', () => {
+    try { if (fs.existsSync(LAB_REVIEWS_FILE)) return JSON.parse(fs.readFileSync(LAB_REVIEWS_FILE, 'utf8')); } catch {}
+    return null;
+  });
+  ipcMain.handle('export-html', async (_, { content, labName, meta }: { content: string; labName: string; meta: Record<string, string> }) => {
+    try {
+      const { filePath } = await dialog.showSaveDialog({
+        defaultPath: `${labName || 'writeup'}.html`,
+        filters: [{ name: 'HTML', extensions: ['html'] }],
+      });
+      if (!filePath) return { success: false, error: 'Cancelled' };
+      const metaRows = Object.entries(meta).map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('');
+      const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>${labName} Writeup</title>
+<style>body{font-family:monospace;background:#0a0a0f;color:#e6edf3;padding:2rem;max-width:900px;margin:0 auto}
+h1,h2,h3{color:#b44fff}table{border-collapse:collapse;width:100%;margin:1rem 0}
+th,td{padding:6px 10px;border:1px solid #2a3347;text-align:left}code,pre{background:#161b27;padding:2px 6px;border-radius:3px}
+pre{padding:1rem;overflow:auto}</style></head>
+<body><h1>${labName}</h1><table>${metaRows}</table><hr>
+<div id="content"><pre>${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre></div></body></html>`;
+      fs.writeFileSync(filePath, html, 'utf8');
+      return { success: true, path: filePath };
+    } catch (e: unknown) { return { success: false, error: (e as Error).message }; }
+  });
 }
 
 app.whenReady().then(async () => {

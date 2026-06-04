@@ -2,128 +2,304 @@
 @tailwind components;
 @tailwind utilities;
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* ─── CyberOS Design Bible — CSS Custom Properties ───────────────────────── */
+
+:root {
+  --bg:           #0a0a0f;
+  --bg-elevated:  #12131a;
+  --panel:        #161b22;
+  --border:       #2a3347;
+  --border-subtle:#1e2030;
+
+  --text:         #e2e8f0;
+  --text-dim:     #8b949e;
+  --text-muted:   #4a5568;
+
+  --accent:       #f78166;
+  --accent-dim:   rgba(247, 129, 102, 0.08);
+  --accent-border:rgba(247, 129, 102, 0.3);
+
+  --success:      #3fb950;
+  --warning:      #d29922;
+  --error:        #f85149;
+  --info:         #4a9eff;
 }
+
+/* ─── CyberOS Design Bible — Global Styles ────────────────────────────────── */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body, #root {
   height: 100%;
+  min-height: 100vh;
   overflow: hidden;
-  background: var(--bg);
-  color: var(--text);
+  background-color: #0a0a0f !important;
+  background: radial-gradient(ellipse at 20% 0%, rgba(247, 129, 102, 0.04) 0%, #0a0a0f 50%) !important;
+  color: #e2e8f0;
   font-family: 'Inter', 'SF Pro Display', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Selection ───────────────────────────────────────────────────────────── */
+
+::selection {
+  background: rgba(247, 129, 102, 0.25);
+  color: inherit;
+}
+
+*:not(input):not(textarea):not(select) {
   user-select: none;
+  -webkit-user-select: none;
 }
 
-:root {
-  --bg:         #0e1117;
-  --panel:      #161b22;
-  --border:     #30363d;
-  --text:       #c9d1d9;
-  --text-dim:   #8b949e;
-  --text-muted: #484f58;
-  --accent:     #f78166;
-  --accent-dim: rgba(247, 129, 102, 0.15);
-  --success:    #3fb950;
-  --error:      #f85149;
-  --warning:    #d29922;
+input, textarea, select, button {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #30363d; border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: #484f58; }
+/* ─── Drag Regions (macOS frameless) ──────────────────────────────────────── */
 
-/* Selection */
-::selection { background: rgba(247, 129, 102, 0.25); }
+.drag-region {
+  -webkit-app-region: drag;
+}
 
-input, textarea, button, select { user-select: text; }
+.no-drag {
+  -webkit-app-region: no-drag;
+}
 
-/* Input base */
+/* ─── Scrollbars ──────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(42, 51, 71, 0.5);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(42, 51, 71, 0.8);
+}
+
+/* ─── Focus Styles ────────────────────────────────────────────────────────── */
+
+*:focus-visible {
+  outline: 1px solid rgba(247, 129, 102, 0.5);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+/* ─── Tabular Nums ────────────────────────────────────────────────────────── */
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Transitions ─────────────────────────────────────────────────────────── */
+
+button, a, input, select {
+  transition: all 0.15s ease-out;
+}
+
+/* ─── Glassmorphism Card ──────────────────────────────────────────────────── */
+
+.glass-card {
+  background: rgba(22, 27, 39, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(42, 51, 71, 0.6);
+  border-radius: 8px;
+}
+
+/* ─── Status Pulse Glow Animation ─────────────────────────────────────────── */
+
+@keyframes statusPulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--pulse-color, rgba(247, 129, 102, 0.4));
+  }
+  70% {
+    box-shadow: 0 0 0 6px var(--pulse-color-fade, rgba(247, 129, 102, 0));
+  }
+  100% {
+    box-shadow: 0 0 0 0 var(--pulse-color-fade, rgba(247, 129, 102, 0));
+  }
+}
+
+.status-dot-pulse {
+  animation: statusPulse 2s ease-out infinite;
+}
+
+/* ─── Shake animation ─────────────────────────────────────────────────────── */
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  15%       { transform: translateX(-4px); }
+  45%       { transform: translateX(4px); }
+  75%       { transform: translateX(-4px); }
+}
+
+.animate-shake {
+  animation: shake 0.3s ease-out;
+}
+
+/* ─── Metric Glow ─────────────────────────────────────────────────────────── */
+
+.metric-glow {
+  filter: drop-shadow(0 0 8px var(--glow-color, rgba(247, 129, 102, 0.5)));
+}
+
+/* ─── Accent Left Border Utility ──────────────────────────────────────────── */
+
+.accent-border-left {
+  border-left: 3px solid var(--accent-color, #f78166);
+}
+
+/* ─── Input base (override Tailwind) ─────────────────────────────────────── */
+
 input[type="text"],
 input[type="password"],
 input[type="number"],
+input[type="email"],
 textarea,
 select {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  color: var(--text);
+  background: rgba(18, 19, 26, 0.8);
+  border: 1px solid rgba(42, 51, 71, 0.6);
+  color: #e2e8f0;
   border-radius: 6px;
-  padding: 6px 10px;
+  padding: 7px 11px;
   font-size: 13px;
   outline: none;
   width: 100%;
   transition: border-color 0.15s;
+  font-family: inherit;
 }
 
 input[type="text"]:focus,
 input[type="password"]:focus,
 input[type="number"]:focus,
+input[type="email"]:focus,
 textarea:focus,
 select:focus {
-  border-color: var(--accent);
+  border-color: rgba(247, 129, 102, 0.6);
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: var(--text-muted);
+  color: #4a5568;
 }
 
-/* Btn base */
+select option {
+  background: #12131a;
+  color: #e2e8f0;
+}
+
+/* ─── Button Components ───────────────────────────────────────────────────── */
+
 .btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 6px 12px;
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
+  font-family: inherit;
   cursor: pointer;
-  border: none;
-  transition: opacity 0.15s, background 0.15s;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-dim);
+  transition: all 0.15s ease-out;
   white-space: nowrap;
   user-select: none;
+  -webkit-user-select: none;
+  outline: none;
 }
 
-.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 
 .btn-accent {
   background: var(--accent);
-  color: #0e1117;
+  color: #0a0a0f;
+  border-color: var(--accent);
 }
-.btn-accent:hover:not(:disabled) { opacity: 0.85; }
+
+.btn-accent:hover:not(:disabled) {
+  opacity: 0.85;
+}
 
 .btn-ghost {
   background: transparent;
   color: var(--text-dim);
-  border: 1px solid var(--border);
+  border-color: var(--border);
 }
-.btn-ghost:hover:not(:disabled) { background: var(--panel); color: var(--text); }
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--accent-dim);
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
 
 .btn-danger {
-  background: rgba(248, 81, 73, 0.15);
+  background: transparent;
   color: var(--error);
-  border: 1px solid rgba(248, 81, 73, 0.25);
+  border-color: rgba(248, 81, 73, 0.35);
 }
-.btn-danger:hover:not(:disabled) { background: rgba(248, 81, 73, 0.25); }
 
-/* Tag chip */
+.btn-danger:hover:not(:disabled) {
+  background: rgba(248, 81, 73, 0.1);
+  border-color: var(--error);
+}
+
+/* ─── Tag Chip ────────────────────────────────────────────────────────────── */
+
 .tag-chip {
   display: inline-block;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 500;
   background: var(--accent-dim);
   color: var(--accent);
-  border: 1px solid rgba(247, 129, 102, 0.3);
-  cursor: default;
+  border: 1px solid var(--accent-border);
+  white-space: nowrap;
 }
 
-/* Status badges */
-.status-active  { color: var(--success); }
-.status-rotated { color: var(--warning); }
-.status-invalid { color: var(--text-muted); }
+/* ─── Hover utility ───────────────────────────────────────────────────────── */
+
+.hover\:bg-accent-dim:hover {
+  background: var(--accent-dim) !important;
+}
+
+/* ─── Pulse animation ─────────────────────────────────────────────────────── */
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+/* ─── Password Strength Bar ───────────────────────────────────────────────── */
+
+.pw-strength-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.pw-strength-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}

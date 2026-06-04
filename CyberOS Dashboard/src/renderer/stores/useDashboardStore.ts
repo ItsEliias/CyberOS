@@ -10,6 +10,8 @@ import type {
   DashboardSettings,
   SharedContext,
   OperatorProfile,
+  AppLiveStats,
+  MetricSnapshot,
 } from '../types/ecosystem'
 
 interface DashboardState {
@@ -38,11 +40,15 @@ interface DashboardState {
   // Settings
   settings: DashboardSettings
 
+  // Live stats history (in-memory ring buffers per app)
+  liveStats: Record<string, AppLiveStats>
+
   // Dismissed alerts
   dismissedAlertIds: Set<string>
 
   // Actions
   setConfig: (cfg: EcosystemConfig) => void
+  appendLiveSnapshot: (appKey: string, value: number) => void
   setEvents: (events: EcosystemEvent[]) => void
   setAlerts: (alerts: Alert[]) => void
   setActiveView: (view: ViewId) => void
@@ -73,6 +79,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   config: {},
   events: [],
   alerts: [],
+  liveStats: {},
   activeView: 'dashboard',
   isFullscreen: false,
   isLoading: true,
@@ -101,6 +108,14 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       },
       isLoading: false,
       error: null,
+    }),
+
+  appendLiveSnapshot: (appKey, value) =>
+    set((state) => {
+      const existing = state.liveStats[appKey] ?? { appKey, history: [] }
+      const snapshot: MetricSnapshot = { timestamp: Date.now(), value }
+      const history = [...existing.history, snapshot].slice(-20)
+      return { liveStats: { ...state.liveStats, [appKey]: { appKey, history } } }
     }),
 
   setEvents: (events) => set({ events }),

@@ -1,6 +1,8 @@
 // NetworkMap — PasteXmlModal.tsx
+// Uses renderer-side DOMParser (per spec: no external XML library)
 import { useState } from 'react'
 import type { NetworkNode } from '@shared/types'
+import { parseNmapXml } from '../lib/nmapParser'
 
 interface Props {
   onClose: () => void
@@ -13,17 +15,20 @@ export default function PasteXmlModal({ onClose, onImport }: Props) {
   const [error, setError]       = useState<string | null>(null)
   const [parsing, setParsing]   = useState(false)
 
-  async function handleParse() {
+  function handleParse() {
     if (!xml.trim()) { setError('Please paste nmap XML content.'); return }
     setParsing(true)
     setError(null)
     try {
-      const nodes = await window.electronAPI.parseNmapXml(xml)
-      if (nodes.length === 0) {
-        setError('No hosts found. Make sure this is a valid nmap XML output.')
+      const result = parseNmapXml(xml)
+      if (result.errors.length > 0 && result.nodes.length === 0) {
+        setError(result.errors[0])
+        setPreview(null)
+      } else if (result.nodes.length === 0) {
+        setError('No hosts found. Make sure this is valid nmap XML output (-oX format).')
         setPreview(null)
       } else {
-        setPreview(nodes)
+        setPreview(result.nodes)
       }
     } catch (e) {
       setError((e as Error).message)
@@ -38,12 +43,13 @@ export default function PasteXmlModal({ onClose, onImport }: Props) {
   }
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0,
-      background: 'rgba(0,0,0,0.7)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      zIndex: 100,
-    }}
+    <div
+      style={{
+        position: 'fixed', inset: 0,
+        background: 'rgba(0,0,0,0.7)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 100,
+      }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div style={{
@@ -141,7 +147,7 @@ export default function PasteXmlModal({ onClose, onImport }: Props) {
               color: 'var(--text)',
               opacity: parsing || !xml.trim() ? 0.5 : 1,
             }}
-          >{parsing ? 'Parsing...' : 'Parse'}</button>
+          >{parsing ? 'Parsing…' : 'Parse'}</button>
           {preview && (
             <button
               onClick={handleImport}
@@ -152,7 +158,7 @@ export default function PasteXmlModal({ onClose, onImport }: Props) {
                 color: '#0d1117',
                 fontWeight: 600,
               }}
-            >Import {preview.length} hosts</button>
+            >Import {preview.length} {preview.length === 1 ? 'host' : 'hosts'}</button>
           )}
         </div>
       </div>

@@ -4,30 +4,77 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Stealth theme (default) — matches ecosystem palette
-        bg:        '#0e1117',
-        panel:     '#161b22',
-        border:    '#30363d',
-        accent:    '#4a9eff',
-        accent2:   '#7bb8ff',
-        text:      '#c9d1d9',
-        muted:     '#8b949e',
-        // Status colors
-        success:   '#3fb950',
-        warning:   '#d29922',
-        danger:    '#f85149',
+        // ─── CyberOS Design Bible — Core Palette ─────────────────────────
+        bg: {
+          base: '#0a0a0f',
+          elevated: '#12131a',
+          interactive: '#1a1b26',
+        },
+        border: {
+          subtle: '#1e2030',
+          default: '#2a3347',
+        },
+        text: {
+          primary: '#e2e8f0',
+          secondary: '#8b949e',
+          muted: '#4a5568',
+        },
+
+        // ─── Accent Colors ───────────────────────────────────────────────
+        accent: {
+          DEFAULT: '#d29922',
+          emphasis: '#e8b84b',
+        },
+        info: '#4a9eff',
+        success: '#3fb950',
+        warning: '#d29922',
+        danger: '#f85149',
+
+        // ─── App Accent Colors ───────────────────────────────────────────
+        app: {
+          ghostvault: '#7bb8ff',
+          recondesk: '#d29922',
+          vaultcore: '#3fb950',
+          signalboard: '#ff6b6b',
+          credvault: '#f78166',
+          cyberlab: '#b44fff',
+          networkmap: '#d29922',
+          terminallink: '#00ff41',
+          playbookstudio: '#4a9eff',
+          reportforge: '#3fb950',
+          dashboard: '#4a9eff',
+          launcher: '#b44fff',
+        },
+
+        // ─── Legacy compatibility ────────────────────────────────────────
+        panel: '#161b22',
+        muted: '#8b949e',
       },
       fontFamily: {
         sans: ['Inter', 'SF Pro Display', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'SF Mono', 'Menlo', 'monospace'],
       },
+      fontSize: {
+        '2xs': ['0.625rem', { lineHeight: '0.875rem' }],
+      },
       borderRadius: {
         DEFAULT: '6px',
       },
       boxShadow: {
-        panel: '0 1px 3px rgba(0,0,0,0.4)',
-        glow:  '0 0 12px rgba(74,158,255,0.15)',
-      }
+        glow: '0 0 20px rgba(210, 153, 34, 0.15)',
+        'glow-sm': '0 0 10px rgba(210, 153, 34, 0.1)',
+        'glow-accent': '0 0 8px rgba(210, 153, 34, 0.5)',
+      },
+      animation: {
+        statusPulse: 'statusPulse 2s ease-out infinite',
+      },
+      keyframes: {
+        statusPulse: {
+          '0%': { boxShadow: '0 0 0 0 var(--pulse-color, rgba(210, 153, 34, 0.4))' },
+          '70%': { boxShadow: '0 0 0 6px transparent' },
+          '100%': { boxShadow: '0 0 0 0 transparent' },
+        },
+      },
     },
   },
   plugins: [],

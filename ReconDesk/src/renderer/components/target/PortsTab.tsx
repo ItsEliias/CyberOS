@@ -1,0 +1,241 @@
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useRecondeskStore } from '../../stores/useRecondeskStore'
+import ImportNmapModal from './ImportNmapModal'
+import type { PortState } from '../../types/recondesk'
+
+const STATE_BADGE: Record<PortState, string> = {
+  open:     'text-[#3fb950] bg-[#3fb950]/10 border-[#3fb950]/25',
+  filtered: 'text-[#d29922] bg-[#d29922]/10 border-[#d29922]/25',
+  closed:   'text-[#4a5568] bg-[#4a5568]/10 border-[#4a5568]/25',
+}
+
+const SORT_OPTIONS = ['port', 'service', 'state'] as const
+type SortKey = typeof SORT_OPTIONS[number]
+
+export default function PortsTab({ targetId }: { targetId: string }) {
+  const targets     = useRecondeskStore(s => s.targets)
+  const addPort     = useRecondeskStore(s => s.addPort)
+  const updatePort  = useRecondeskStore(s => s.updatePort)
+  const deletePort  = useRecondeskStore(s => s.deletePort)
+
+  const target = targets.find(t => t.id === targetId)
+  const ports  = target?.ports ?? []
+
+  const [showImport,  setShowImport]  = useState(false)
+  const [showAdd,     setShowAdd]     = useState(false)
+  const [expandedId,  setExpandedId]  = useState<string | null>(null)
+  const [sortBy,      setSortBy]      = useState<SortKey>('port')
+
+  const [addForm, setAddForm] = useState({
+    port: '', protocol: 'tcp' as 'tcp' | 'udp',
+    service: '', version: '', state: 'open' as PortState, notes: '',
+  })
+
+  const sorted = [...ports].sort((a, b) => {
+    if (sortBy === 'port')    return a.port - b.port
+    if (sortBy === 'service') return (a.service || '').localeCompare(b.service || '')
+    if (sortBy === 'state')   return a.state.localeCompare(b.state)
+    return 0
+  })
+
+  function submitAdd(e: React.FormEvent) {
+    e.preventDefault()
+    const portNum = parseInt(addForm.port)
+    if (!portNum || portNum < 1 || portNum > 65535) return
+    addPort(targetId, {
+      port:     portNum,
+      protocol: addForm.protocol,
+      state:    addForm.state,
+      service:  addForm.service,
+      version:  addForm.version,
+      notes:    addForm.notes,
+      source:   'manual',
+    })
+    setAddForm({ port: '', protocol: 'tcp', service: '', version: '', state: 'open', notes: '' })
+    setShowAdd(false)
+  }
+
+  const openCount = ports.filter(p => p.state === 'open').length
+  const inputCls  = "bg-[#0a0a0f] border border-[#2a3347] rounded px-2 py-1.5 text-xs text-[#e2e8f0] placeholder-[#4a5568] focus:outline-none focus:border-[#d29922] transition-colors"
+
+  return (
+    <div className="flex-1 flex flex-col min-h-0">
+      {/* Header bar */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#2a3347] flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-[#e2e8f0]">
+            Ports <span className="text-[#4a5568] text-xs font-normal">({openCount} open)</span>
+          </span>
+          <div className="flex items-center gap-1 ml-2">
+            {SORT_OPTIONS.map(s => (
+              <button
+                key={s}
+                onClick={() => setSortBy(s)}
+                className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                  sortBy === s
+                    ? 'bg-[#d29922]/15 text-[#d29922] border border-[#d29922]/25'
+                    : 'text-[#4a5568] hover:text-[#8b949e]'
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowImport(true)}
+            className="px-2.5 py-1.5 text-xs border border-[#2a3347] text-[#8b949e] rounded hover:text-[#d29922] hover:border-[#d29922]/30 transition-colors"
+          >
+            Import nmap XML
+          </button>
+          <button
+            onClick={() => setShowAdd(v => !v)}
+            className="px-2.5 py-1.5 text-xs bg-[#d29922]/10 border border-[#d29922]/20 text-[#d29922] rounded hover:bg-[#d29922]/20 transition-colors"
+          >
+            {showAdd ? 'Cancel' : '+ Add'}
+          </button>
+        </div>
+      </div>
+
+      {/* Add form */}
+      <AnimatePresence>
+        {showAdd && (
+          <motion.form
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            onSubmit={submitAdd}
+            className="overflow-hidden border-b border-[#2a3347] flex-shrink-0"
+          >
+            <div className="p-4 flex flex-wrap gap-2 items-end bg-[#0d0d14]">
+              <div>
+                <label className="block text-[9px] text-[#4a5568] uppercase tracking-widest mb-1">Port</label>
+                <input
+                  autoFocus type="number" min={1} max={65535} placeholder="80"
+                  value={addForm.port}
+                  onChange={e => setAddForm(f => ({ ...f, port: e.target.value }))}
+                  className={`${inputCls} w-20 font-mono`}
+                />
+              </div>
+              <div>
+                <label className="block text-[9px] text-[#4a5568] uppercase tracking-widest mb-1">Protocol</label>
+                <select value={addForm.protocol} onChange={e => setAddForm(f => ({ ...f, protocol: e.target.value as 'tcp'|'udp' }))} className={inputCls}>
+                  <option>tcp</option><option>udp</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[9px] text-[#4a5568] uppercase tracking-widest mb-1">State</label>
+                <select value={addForm.state} onChange={e => setAddForm(f => ({ ...f, state: e.target.value as PortState }))} className={inputCls}>
+                  <option>open</option><option>filtered</option><option>closed</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[9px] text-[#4a5568] uppercase tracking-widest mb-1">Service</label>
+                <input placeholder="http" value={addForm.service} onChange={e => setAddForm(f => ({ ...f, service: e.target.value }))} className={`${inputCls} w-28`} />
+              </div>
+              <div>
+                <label className="block text-[9px] text-[#4a5568] uppercase tracking-widest mb-1">Version</label>
+                <input placeholder="Apache 2.4" value={addForm.version} onChange={e => setAddForm(f => ({ ...f, version: e.target.value }))} className={`${inputCls} w-36`} />
+              </div>
+              <button type="submit" className="px-3 py-1.5 bg-[#d29922]/15 hover:bg-[#d29922]/25 border border-[#d29922]/30 text-[#d29922] text-xs rounded transition-colors">
+                Add Port
+              </button>
+            </div>
+          </motion.form>
+        )}
+      </AnimatePresence>
+
+      {/* Table */}
+      <div className="flex-1 overflow-y-auto">
+        {ports.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <p className="text-sm text-[#4a5568]">No ports recorded</p>
+              <p className="text-xs text-[#4a5568]/60 mt-1">Import nmap XML or add manually</p>
+            </div>
+          </div>
+        ) : (
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-[#2a3347]">
+                <th className="px-4 py-2 text-left text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest w-20">Port</th>
+                <th className="px-2 py-2 text-left text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest w-16">Proto</th>
+                <th className="px-2 py-2 text-left text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest">Service</th>
+                <th className="px-2 py-2 text-left text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest">Version</th>
+                <th className="px-2 py-2 text-left text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest w-20">State</th>
+                <th className="px-4 py-2 w-16" />
+              </tr>
+            </thead>
+            <tbody>
+              <AnimatePresence initial={false}>
+                {sorted.map((port, i) => (
+                  <>
+                    <motion.tr
+                      key={port.id}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ delay: i * 0.02, duration: 0.15 }}
+                      className="group border-b border-[#2a3347]/50 hover:bg-[#2a3347]/20 cursor-pointer transition-colors"
+                      onClick={() => setExpandedId(expandedId === port.id ? null : port.id)}
+                    >
+                      <td className="px-4 py-2.5 font-mono font-bold text-[#e2e8f0]">{port.port}</td>
+                      <td className="px-2 py-2.5 font-mono text-[#8b949e]">{port.protocol}</td>
+                      <td className="px-2 py-2.5 text-[#e2e8f0]">{port.service || <span className="text-[#4a5568]">—</span>}</td>
+                      <td className="px-2 py-2.5 text-[#8b949e] max-w-[200px] truncate">{port.version || <span className="text-[#4a5568]">—</span>}</td>
+                      <td className="px-2 py-2.5">
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${STATE_BADGE[port.state]}`}>
+                          {port.state}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={e => { e.stopPropagation(); setExpandedId(port.id) }}
+                            className="text-[#4a5568] hover:text-[#8b949e] text-[10px] px-1 py-0.5 rounded hover:bg-[#2a3347] transition-colors"
+                            title="Edit notes"
+                          >
+                            ✎
+                          </button>
+                          <button
+                            onClick={e => { e.stopPropagation(); deletePort(targetId, port.id) }}
+                            className="text-[#4a5568] hover:text-[#f85149] text-[10px] px-1 py-0.5 rounded hover:bg-[#f85149]/10 transition-colors"
+                            title="Delete port"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </td>
+                    </motion.tr>
+                    {expandedId === port.id && (
+                      <tr key={`${port.id}-notes`} className="bg-[#0d0d14]">
+                        <td colSpan={6} className="px-4 py-3">
+                          <textarea
+                            value={port.notes}
+                            onChange={e => updatePort(targetId, port.id, { notes: e.target.value })}
+                            placeholder="Notes for this port..."
+                            rows={2}
+                            className="w-full bg-[#0a0a0f] border border-[#2a3347] rounded px-2.5 py-1.5 text-xs text-[#e2e8f0] placeholder-[#4a5568] focus:outline-none focus:border-[#d29922] resize-none transition-colors"
+                            onClick={e => e.stopPropagation()}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                ))}
+              </AnimatePresence>
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Import nmap modal */}
+      <AnimatePresence>
+        {showImport && <ImportNmapModal targetId={targetId} onClose={() => setShowImport(false)} />}
+      </AnimatePresence>
+    </div>
+  )
+}

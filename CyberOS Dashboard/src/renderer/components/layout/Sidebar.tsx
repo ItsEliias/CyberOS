@@ -44,6 +44,20 @@ const navItems: NavItem[] = [
       </svg>
     ),
   },
+  {
+    id: 'apps',
+    label: 'App Details',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="2" y="3" width="6" height="6" rx="1" />
+        <rect x="9" y="3" width="6" height="6" rx="1" />
+        <rect x="16" y="3" width="6" height="6" rx="1" />
+        <rect x="2" y="11" width="6" height="6" rx="1" />
+        <rect x="9" y="11" width="6" height="6" rx="1" />
+        <rect x="16" y="11" width="6" height="6" rx="1" />
+      </svg>
+    ),
+  },
 ]
 
 export default function Sidebar() {

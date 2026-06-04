@@ -4,6 +4,13 @@ import type {
   EditorMode, ViewId, AiCtx, OllamaStatus
 } from '@shared/types';
 
+export type LayoutMode = '1col' | '2col' | '3col';
+
+export interface NoteVersion {
+  timestamp: number;
+  content: string;
+}
+
 interface GhostVaultStore {
   config       : GhostVaultConfig | null;
   vaultPath    : string | null;
@@ -21,6 +28,14 @@ interface GhostVaultStore {
   aiCtx        : AiCtx;
   ollamaModel  : string;
   version      : string;
+  layoutMode   : LayoutMode;
+  showPreview  : boolean;
+  showHistory  : boolean;
+  selectedPaths: Set<string>;
+  presentMode  : boolean;
+  presentTheme : 'dark' | 'light';
+  noteOrder    : string[];
+  lockedNotes  : Set<string>;
 
   setConfig       : (c: GhostVaultConfig) => void;
   setVaultPath    : (p: string | null) => void;
@@ -39,6 +54,15 @@ interface GhostVaultStore {
   setOllamaModel  : (m: string) => void;
   setVersion      : (v: string) => void;
   togglePin       : (path: string) => void;
+  setLayoutMode   : (m: LayoutMode) => void;
+  setShowPreview  : (v: boolean) => void;
+  setShowHistory  : (v: boolean) => void;
+  toggleSelection : (path: string) => void;
+  clearSelection  : () => void;
+  setPresentMode  : (v: boolean) => void;
+  setPresentTheme : (t: 'dark' | 'light') => void;
+  setNoteOrder    : (order: string[]) => void;
+  toggleLocked    : (path: string) => void;
 }
 
 export const useStore = create<GhostVaultStore>((set) => ({
@@ -58,6 +82,14 @@ export const useStore = create<GhostVaultStore>((set) => ({
   aiCtx        : 'work',
   ollamaModel  : 'mistral',
   version      : '',
+  layoutMode   : '2col',
+  showPreview  : false,
+  showHistory  : false,
+  selectedPaths: new Set(),
+  presentMode  : false,
+  presentTheme : 'dark',
+  noteOrder    : [],
+  lockedNotes  : new Set(),
 
   setConfig        : (config)        => set({ config }),
   setVaultPath     : (vaultPath)     => set({ vaultPath }),
@@ -79,5 +111,22 @@ export const useStore = create<GhostVaultStore>((set) => ({
     const next = new Set(s.pinnedPaths);
     if (next.has(path)) next.delete(path); else next.add(path);
     return { pinnedPaths: next };
+  }),
+  setLayoutMode    : (layoutMode)    => set({ layoutMode }),
+  setShowPreview   : (showPreview)   => set({ showPreview }),
+  setShowHistory   : (showHistory)   => set({ showHistory }),
+  toggleSelection  : (path) => set(s => {
+    const next = new Set(s.selectedPaths);
+    if (next.has(path)) next.delete(path); else next.add(path);
+    return { selectedPaths: next };
+  }),
+  clearSelection   : ()              => set({ selectedPaths: new Set() }),
+  setPresentMode   : (presentMode)   => set({ presentMode }),
+  setPresentTheme  : (presentTheme)  => set({ presentTheme }),
+  setNoteOrder     : (noteOrder)     => set({ noteOrder }),
+  toggleLocked     : (path) => set(s => {
+    const next = new Set(s.lockedNotes);
+    if (next.has(path)) next.delete(path); else next.add(path);
+    return { lockedNotes: next };
   }),
 }));

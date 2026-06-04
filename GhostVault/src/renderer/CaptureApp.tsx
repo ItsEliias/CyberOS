@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface SessionCtx {
   currentLab:   string | null;
@@ -153,18 +154,42 @@ export default function CaptureApp() {
 
       {/* Session banner */}
       {session && (
-        <div className="no-drag px-3 py-2 flex items-center justify-between gap-2"
-          style={{ background: 'rgba(var(--accent-rgb,99,102,241),.12)', borderBottom: '1px solid var(--border)' }}>
-          <span className="text-xs truncate" style={{ color: 'var(--text-dim)' }}>
-            Active session: <span style={{ color: 'var(--accent)' }}>{sessionLabel}</span>
-          </span>
-          <button
-            onClick={applySessionTemplate}
-            className="text-[10px] px-2 py-0.5 rounded whitespace-nowrap font-medium transition-all hover:opacity-80"
-            style={{ background: 'var(--accent)', color: '#fff' }}>
-            Use template
-          </button>
-        </div>
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          className="no-drag px-3 py-2"
+          style={{
+            background: 'rgba(123,184,255,0.10)',
+            borderBottom: '1px solid var(--border)',
+            borderLeft: '3px solid #7bb8ff',
+          }}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span
+                  className="w-2 h-2 rounded-full flex-shrink-0 status-dot-pulse"
+                  style={{ background: '#ef4444', '--pulse-color': 'rgba(239,68,68,0.4)' } as React.CSSProperties}
+                />
+                <span className="text-xs font-medium truncate" style={{ color: 'var(--text)' }}>
+                  Active Lab: {session.currentLab || session.activeTarget}
+                </span>
+              </div>
+              {(session.activeTarget || session.activeIP) && (
+                <div className="text-[10px] pl-3.5" style={{ color: 'var(--text-dim)' }}>
+                  Auto-linking to: {[session.activeTarget, session.activeIP].filter(Boolean).join(' · ')}
+                </div>
+              )}
+            </div>
+            <button
+              onClick={applySessionTemplate}
+              className="text-[10px] px-2 py-0.5 rounded whitespace-nowrap font-medium transition-all hover:opacity-80 flex-shrink-0"
+              style={{ background: '#7bb8ff', color: '#0a0a0f' }}>
+              Use template
+            </button>
+          </div>
+        </motion.div>
       )}
 
       {/* Form */}

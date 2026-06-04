@@ -233,4 +233,16 @@ export interface DashboardSettings {
 
 // ─── Navigation ──────────────────────────────────────────────────────────────
 
-export type ViewId = 'dashboard' | 'profile' | 'ecosystem' | 'settings'
+export type ViewId = 'dashboard' | 'profile' | 'ecosystem' | 'settings' | 'apps'
+
+// ─── Live Stats ───────────────────────────────────────────────────────────────
+
+export interface MetricSnapshot {
+  timestamp: number
+  value: number
+}
+
+export interface AppLiveStats {
+  appKey: string
+  history: MetricSnapshot[]  // up to 20 most-recent snapshots
+}

@@ -17,6 +17,8 @@ export interface GhostVaultConfig {
   firstRun?: boolean;
   captureHotkey?: string;
   labSessionTemplate?: string;
+  academicMode?: boolean;
+  academicAuthor?: string;
 }
 
 export interface CyberLabStatus {
@@ -46,7 +48,7 @@ export type CoreTheme = 'stealth' | 'graphite' | 'frost' | 'oled';
 export type PersonalityTheme = 'neutral' | 'cyberpunk' | 'terminal' | 'threat';
 export type AiCtx = 'work' | 'cyber' | 'personal';
 export type EditorMode = 'edit' | 'split' | 'preview';
-export type ViewId = 'notes' | 'capture' | 'vault' | 'templates' | 'settings';
+export type ViewId = 'notes' | 'capture' | 'vault' | 'templates' | 'settings' | 'search' | 'tags' | 'ai' | 'graph' | 'fullsearch';
 
 export interface NoteFile {
   name: string;
@@ -56,6 +58,34 @@ export interface NoteFile {
   folder: string;
   mtime: number;
   size: number;
+  tags?: string[];
+  firstLine?: string;
+  wordCount?: number;
+  encrypted?: boolean;
+  pinned?: boolean;
+  links?: string[];
+}
+
+// Spec-defined aliases (used by spec component architecture)
+export type VaultNote = NoteFile;
+
+export interface SearchResult {
+  note: NoteFile;
+  matches: { line: number; text: string; highlight: [number, number] }[];
+  score: number;
+}
+
+export interface TagStats {
+  tag: string;
+  count: number;
+}
+
+export interface Template {
+  id: string;
+  name: string;
+  content: string;
+  isBuiltIn: boolean;
+  createdAt: string;
 }
 
 export interface ActiveNote extends NoteFile {
@@ -89,4 +119,9 @@ export interface OllamaFormatResult {
 export interface CaptureTheme {
   core: CoreTheme;
   personality: PersonalityTheme;
+}
+
+export interface NoteVersion {
+  timestamp: number;
+  content: string;
 }

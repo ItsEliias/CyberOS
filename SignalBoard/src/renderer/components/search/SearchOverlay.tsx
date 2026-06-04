@@ -1,0 +1,184 @@
+// SearchOverlay — Cmd+K full-text search with snippet context
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useStore } from '../../store'
+import type { FeedItem } from '../../../shared/types'
+
+const SNIPPET_RADIUS = 80
+
+function getSnippet(text: string, query: string): string {
+  const lc = text.toLowerCase()
+  const qi = lc.indexOf(query.toLowerCase())
+  if (qi === -1) return text.slice(0, 160)
+  const start = Math.max(0, qi - SNIPPET_RADIUS)
+  const end   = Math.min(text.length, qi + query.length + SNIPPET_RADIUS)
+  return (start > 0 ? '…' : '') + text.slice(start, end) + (end < text.length ? '…' : '')
+}
+
+function highlightMatch(text: string, query: string): React.ReactNode {
+  if (!query) return text
+  const parts = text.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'))
+  return parts.map((part, i) =>
+    part.toLowerCase() === query.toLowerCase()
+      ? <mark key={i} className="bg-accent/30 text-accent rounded-sm px-px">{part}</mark>
+      : part
+  )
+}
+
+interface SearchResult {
+  item: FeedItem
+  snippet: string
+}
+
+interface GroupedResult {
+  sourceName: string
+  results: SearchResult[]
+}
+
+function groupBySource(results: SearchResult[]): GroupedResult[] {
+  const map = new Map<string, SearchResult[]>()
+  results.forEach(r => {
+    const arr = map.get(r.item.sourceName) ?? []
+    arr.push(r)
+    map.set(r.item.sourceName, arr)
+  })
+  return [...map.entries()].map(([sourceName, rs]) => ({ sourceName, results: rs }))
+}
+
+export default function SearchOverlay({ onClose }: { onClose: () => void }) {
+  const items         = useStore(s => s.items)
+  const setSelectedId = useStore(s => s.setSelectedId)
+  const setActiveView = useStore(s => s.setActiveView)
+  const patchItem     = useStore(s => s.patchItem)
+  const [query, setQuery] = useState('')
+  const [selected, setSelected] = useState(0)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
+
+  useEffect(() => {
+    setSelected(0)
+  }, [query])
+
+  const results = useMemo((): SearchResult[] => {
+    const q = query.trim()
+    if (q.length < 2) return []
+    const lq = q.toLowerCase()
+    return items
+      .filter(i => i.title.toLowerCase().includes(lq) || i.summary.toLowerCase().includes(lq))
+      .slice(0, 50)
+      .map(item => ({
+        item,
+        snippet: getSnippet(`${item.title} ${item.summary}`, q),
+      }))
+  }, [items, query])
+
+  const grouped = useMemo(() => groupBySource(results), [results])
+  const flatResults = useMemo(() => grouped.flatMap(g => g.results), [grouped])
+
+  function selectItem(item: FeedItem) {
+    setActiveView('feed')
+    setSelectedId(item.id)
+    if (!item.read) {
+      window.electronAPI.markRead(item.id)
+      patchItem(item.id, { read: true })
+    }
+    onClose()
+  }
+
+  function handleKey(e: React.KeyboardEvent) {
+    if (e.key === 'Escape') { onClose(); return }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setSelected(s => Math.min(s + 1, flatResults.length - 1)) }
+    if (e.key === 'ArrowUp')   { e.preventDefault(); setSelected(s => Math.max(s - 1, 0)) }
+    if (e.key === 'Enter' && flatResults[selected]) selectItem(flatResults[selected].item)
+  }
+
+  let globalIndex = 0
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-black/70 backdrop-blur-sm"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <motion.div
+        initial={{ scale: 0.96, opacity: 0, y: -8 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.96, opacity: 0 }}
+        transition={{ duration: 0.14 }}
+        className="w-[600px] max-h-[60vh] flex flex-col rounded-xl overflow-hidden shadow-glow"
+        style={{ background: '#161b27', border: '1px solid rgba(42,51,71,0.8)' }}
+        onKeyDown={handleKey}
+      >
+        {/* Search input */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-border/50">
+          <svg className="w-4 h-4 text-muted/60 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Search all feed items…"
+            className="flex-1 bg-transparent text-sm text-text placeholder-muted/40 outline-none"
+          />
+          <span className="text-[10px] text-muted/40 px-1.5 py-0.5 bg-border/30 rounded font-mono">ESC</span>
+        </div>
+
+        {/* Results */}
+        <div className="flex-1 overflow-y-auto">
+          {query.length >= 2 && results.length === 0 && (
+            <div className="px-4 py-6 text-center text-xs text-muted/40">No results for "{query}"</div>
+          )}
+
+          {query.length < 2 && (
+            <div className="px-4 py-6 text-center text-xs text-muted/30">Type at least 2 characters to search</div>
+          )}
+
+          <AnimatePresence>
+            {grouped.map(group => (
+              <div key={group.sourceName}>
+                <div className="sticky top-0 px-4 py-1.5 border-b border-border/30 bg-bg/80 backdrop-blur-sm">
+                  <span className="text-[9px] font-semibold uppercase tracking-widest text-muted/50">{group.sourceName}</span>
+                  <span className="ml-2 text-[9px] font-mono text-muted/30">{group.results.length}</span>
+                </div>
+                {group.results.map(r => {
+                  const gi = globalIndex++
+                  const isSelected = gi === selected
+                  return (
+                    <button
+                      key={r.item.id}
+                      onClick={() => selectItem(r.item)}
+                      className={`w-full text-left px-4 py-2.5 border-b border-border/20 last:border-0 transition-colors ${isSelected ? 'bg-accent/8' : 'hover:bg-white/[0.03]'}`}
+                      style={{ background: isSelected ? 'rgba(255,107,107,0.06)' : undefined }}
+                    >
+                      <p className="text-xs font-medium text-text/90 leading-snug mb-1">
+                        {highlightMatch(r.item.title, query.trim())}
+                      </p>
+                      <p className="text-[11px] text-muted/55 leading-relaxed">
+                        {highlightMatch(r.snippet, query.trim())}
+                      </p>
+                    </button>
+                  )
+                })}
+              </div>
+            ))}
+          </AnimatePresence>
+        </div>
+
+        {/* Footer */}
+        {results.length > 0 && (
+          <div className="px-4 py-2 border-t border-border/30 flex items-center gap-4 text-[10px] text-muted/40">
+            <span>{results.length} result{results.length !== 1 ? 's' : ''}</span>
+            <span>↑↓ navigate · Enter select</span>
+          </div>
+        )}
+      </motion.div>
+    </motion.div>
+  )
+}

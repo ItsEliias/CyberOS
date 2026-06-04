@@ -1,4 +1,9 @@
+// NetworkMap — D3 Force Simulation
+// Uses d3 forceManyBody(-300) + tick(200) per spec
+import * as d3 from 'd3'
 import type { NetworkNode, NetworkEdge } from '@shared/types'
+
+type SimNode = NetworkNode & d3.SimulationNodeDatum
 
 export function runSimulation(
   nodes: NetworkNode[],
@@ -6,56 +11,41 @@ export function runSimulation(
   width: number,
   height: number
 ): NetworkNode[] {
-  // Clone nodes
-  const ns = nodes.map(n => ({
+  if (nodes.length === 0) return []
+
+  // Deep clone nodes so we don't mutate originals
+  const simNodes: SimNode[] = nodes.map(n => ({
     ...n,
-    x: n.x || width / 2 + (Math.random() - 0.5) * 200,
-    y: n.y || height / 2 + (Math.random() - 0.5) * 200,
-    vx: 0,
-    vy: 0,
-  })) as (NetworkNode & { vx: number; vy: number })[]
+    x: (n.fx != null ? n.fx : null) ?? (n.x !== 0 ? n.x : width / 2 + (Math.random() - 0.5) * 200),
+    y: (n.fy != null ? n.fy : null) ?? (n.y !== 0 ? n.y : height / 2 + (Math.random() - 0.5) * 200),
+    fx: n.fx ?? null,
+    fy: n.fy ?? null,
+  }))
 
-  const REPULSION   = 3000
-  const SPRING      = 0.05
-  const SPRING_LEN  = 180
-  const DAMPING     = 0.85
-  const CENTER_PULL = 0.01
+  // Build edge objects — d3 mutates source/target to node objects after simulation
+  const simLinks: d3.SimulationLinkDatum<SimNode>[] = edges.flatMap(e => {
+    const src = simNodes.find(n => n.id === e.source)
+    const tgt = simNodes.find(n => n.id === e.target)
+    if (!src || !tgt) return []
+    return [{ source: src as unknown as SimNode, target: tgt as unknown as SimNode }]
+  })
 
-  for (let iter = 0; iter < 200; iter++) {
-    // Repulsion between all pairs
-    for (let i = 0; i < ns.length; i++) {
-      for (let j = i + 1; j < ns.length; j++) {
-        const dx   = ns[j].x - ns[i].x
-        const dy   = ns[j].y - ns[i].y
-        const dist = Math.sqrt(dx * dx + dy * dy) || 1
-        const force = REPULSION / (dist * dist)
-        const fx   = (dx / dist) * force
-        const fy   = (dy / dist) * force
-        ns[i].vx -= fx; ns[i].vy -= fy
-        ns[j].vx += fx; ns[j].vy += fy
-      }
-    }
-    // Spring attraction along edges
-    for (const edge of edges) {
-      const a = ns.find(n => n.id === edge.source)
-      const b = ns.find(n => n.id === edge.target)
-      if (!a || !b) continue
-      const dx = b.x - a.x, dy = b.y - a.y
-      const dist = Math.sqrt(dx * dx + dy * dy) || 1
-      const stretch = (dist - SPRING_LEN) * SPRING
-      const fx = (dx / dist) * stretch, fy = (dy / dist) * stretch
-      a.vx += fx; a.vy += fy; b.vx -= fx; b.vy -= fy
-    }
-    // Center pull + damping + position update
-    for (const n of ns) {
-      n.vx += (width / 2 - n.x) * CENTER_PULL
-      n.vy += (height / 2 - n.y) * CENTER_PULL
-      n.vx *= DAMPING; n.vy *= DAMPING
-      n.x += n.vx; n.y += n.vy
-      // Clamp to canvas
-      n.x = Math.max(60, Math.min(width - 60, n.x))
-      n.y = Math.max(60, Math.min(height - 60, n.y))
-    }
-  }
-  return ns.map(({ vx: _vx, vy: _vy, ...n }) => n)
+  const simulation = d3.forceSimulation<SimNode>(simNodes)
+    .force('link', d3.forceLink<SimNode, d3.SimulationLinkDatum<SimNode>>(simLinks)
+      .id(d => d.id)
+      .distance(100)
+    )
+    .force('charge', d3.forceManyBody<SimNode>().strength(-300))
+    .force('center', d3.forceCenter(width / 2, height / 2))
+    .force('collision', d3.forceCollide<SimNode>().radius(40))
+    .stop()
+
+  // Run 200 iterations before rendering — graph appears already settled
+  simulation.tick(200)
+
+  return simNodes.map(n => ({
+    ...n,
+    x: Math.max(60, Math.min(width - 60, n.x ?? width / 2)),
+    y: Math.max(60, Math.min(height - 60, n.y ?? height / 2)),
+  }))
 }

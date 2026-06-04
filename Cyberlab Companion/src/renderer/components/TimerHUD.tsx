@@ -4,11 +4,33 @@ import { useStore } from '../store';
 
 function pad(n: number) { return String(n).padStart(2, '0'); }
 
+function formatMmSs(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${pad(m)}:${pad(s)}`;
+}
+
 function formatTime(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
   return `${pad(h)}:${pad(m)}:${pad(s)}`;
+}
+
+function playOvertimeBeep() {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(660, ctx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.5);
+  } catch {}
 }
 
 type TimerMode = 'countup' | 'countdown';
@@ -25,35 +47,28 @@ export default function TimerHUD() {
   const [showControls, setShowControls] = useState(false);
   const [editingTarget, setEditingTarget] = useState(false);
   const [targetInput, setTargetInput] = useState('');
+  const overtimeBeeped = useRef(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Sync elapsed from session on mount / tab change
   useEffect(() => {
     setElapsed(session?.timer?.elapsed ?? 0);
     setCountdownTarget(session?.timer?.totalSeconds ?? 7200);
-    const sessionRunning = session?.timer?.running ?? false;
-    setRunning(sessionRunning);
+    setRunning(session?.timer?.running ?? false);
+    overtimeBeeped.current = false;
   }, [activeTabId]);
 
-  // Auto-start when session is active and has a lab
   useEffect(() => {
     const hasActiveLab = session?.labName && session.labName !== 'New Session';
-    if (hasActiveLab && !running && elapsed === 0) {
-      setRunning(true);
-    }
+    if (hasActiveLab && !running && elapsed === 0) setRunning(true);
   }, [activeTabId]);
 
-  // Tick
   useEffect(() => {
     if (running) {
       intervalRef.current = setInterval(() => {
         setElapsed(prev => {
           const next = prev + 1;
-          // Persist to session every 10s
           if (next % 10 === 0 && activeTabId && session) {
-            updateSession(activeTabId, {
-              timer: { ...session.timer, elapsed: next, running: true },
-            });
+            updateSession(activeTabId, { timer: { ...session.timer, elapsed: next, running: true } });
           }
           return next;
         });
@@ -64,18 +79,31 @@ export default function TimerHUD() {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [running]);
 
-  // Persist running state
   useEffect(() => {
     if (activeTabId && session) {
-      updateSession(activeTabId, {
-        timer: { ...session.timer, elapsed, running },
-      });
+      updateSession(activeTabId, { timer: { ...session.timer, elapsed, running } });
     }
   }, [running]);
+
+  // Overtime beep — fires once when elapsed crosses countdownTarget
+  const isOvertime = mode === 'countdown'
+    ? elapsed >= countdownTarget && countdownTarget > 0
+    : false;
+
+  const isCountdownOvertime = mode === 'countdown' && elapsed >= countdownTarget && countdownTarget > 0;
+
+  useEffect(() => {
+    if (isCountdownOvertime && running && !overtimeBeeped.current) {
+      overtimeBeeped.current = true;
+      playOvertimeBeep();
+    }
+    if (!isCountdownOvertime) overtimeBeeped.current = false;
+  }, [isCountdownOvertime, running]);
 
   function reset() {
     setRunning(false);
     setElapsed(0);
+    overtimeBeeped.current = false;
     if (activeTabId && session) {
       updateSession(activeTabId, { timer: { ...session.timer, elapsed: 0, running: false } });
     }
@@ -89,6 +117,7 @@ export default function TimerHUD() {
     else secs = (parts[0] || 0) * 60;
     if (secs > 0) {
       setCountdownTarget(secs);
+      overtimeBeeped.current = false;
       if (activeTabId && session) {
         updateSession(activeTabId, { timer: { ...session.timer, totalSeconds: secs } });
       }
@@ -98,7 +127,10 @@ export default function TimerHUD() {
 
   const displaySeconds = mode === 'countup' ? elapsed : Math.max(0, countdownTarget - elapsed);
   const isWarning = mode === 'countdown' && displaySeconds < 300 && displaySeconds > 0;
-  const isExpired = mode === 'countdown' && displaySeconds === 0 && elapsed > 0;
+  const isExpired = isCountdownOvertime;
+  const borderColor = isExpired || isWarning ? 'var(--error)' : 'var(--border)';
+  const textColor = isExpired || isWarning ? 'var(--error)' : 'var(--text)';
+  const overtimeExtra = isExpired ? elapsed - countdownTarget : 0;
 
   return (
     <div
@@ -108,21 +140,17 @@ export default function TimerHUD() {
     >
       <motion.div
         className="flex items-center gap-2 px-3 py-1.5 rounded-full cursor-pointer select-none"
-        style={{
-          background: 'var(--bg3)',
-          border: `1px solid ${isWarning || isExpired ? 'var(--error)' : 'var(--border)'}`,
-          color: isWarning || isExpired ? 'var(--error)' : 'var(--text)',
-        }}
-        animate={isWarning ? { scale: [1, 1.02, 1] } : {}}
-        transition={{ duration: 1, repeat: isWarning ? Infinity : 0 }}
+        style={{ background: 'var(--bg3)', border: `1px solid ${borderColor}`, color: textColor }}
+        animate={isExpired ? { opacity: [1, 0.5, 1] } : isWarning ? { scale: [1, 1.02, 1] } : {}}
+        transition={{ duration: 0.8, repeat: isExpired || isWarning ? Infinity : 0 }}
         onClick={() => setMode(m => m === 'countup' ? 'countdown' : 'countup')}
       >
-        <div
-          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-          style={{ background: running ? 'var(--success)' : 'var(--text-muted)' }}
-        />
-        <span className="font-mono text-xs tabular-nums">{formatTime(displaySeconds)}</span>
-        <span className="text-[10px] opacity-50">{mode === 'countup' ? '+' : '-'}</span>
+        <div className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+          style={{ background: running ? (isExpired ? 'var(--error)' : 'var(--success)') : 'var(--text-muted)' }} />
+        <span className="font-mono text-xs tabular-nums">
+          {isExpired ? `+${formatMmSs(overtimeExtra)}` : formatMmSs(displaySeconds)}
+        </span>
+        <span className="text-[10px] opacity-50">{isExpired ? 'OT' : mode === 'countup' ? '+' : '-'}</span>
       </motion.div>
 
       <AnimatePresence>
@@ -153,7 +181,7 @@ export default function TimerHUD() {
                   className={`flex-1 text-xs px-1 py-1 rounded transition-colors ${mode === m ? 'bg-[var(--accent-dim)] text-[var(--accent)]' : 'btn-ghost'}`}
                   onClick={e => { e.stopPropagation(); setMode(m); }}
                 >
-                  {m === 'countup' ? 'Count Up' : 'Count Down'}
+                  {m === 'countup' ? 'Count Up' : 'Countdown'}
                 </button>
               ))}
             </div>

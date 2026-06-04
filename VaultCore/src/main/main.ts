@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import fs from 'fs';
+import { registerSecretIpc } from './secretIpc';
 
 const __dirname  = path.dirname(fileURLToPath(import.meta.url));
 const _require   = createRequire(import.meta.url);
@@ -424,4 +425,21 @@ ipcMain.handle('clear-scrape-resume-state', () => {
 ipcMain.handle('ecosystem-emit', (_, appName: string, eventType: string, data: Record<string, unknown>) => {
   ecosystemBus.emitEvent(appName, eventType, data);
   return true;
+});
+
+// ─── Secret Detection IPC ────────────────────────────────────────────────────
+registerSecretIpc(() => mainWindow);
+
+// Override credvault handlers registered by secretIpc to use ecosystemBus
+ipcMain.removeHandler('credvault-read');
+ipcMain.removeHandler('credvault-push');
+ipcMain.handle('credvault-read', async () => {
+  try {
+    const data = (ecosystemBus.readSharedData?.('GhostVault') ?? ecosystemBus.readSharedData?.('CredVault')) ?? {};
+    return { success: true, data };
+  } catch (e) { return { error: (e as Error).message }; }
+});
+ipcMain.handle('credvault-push', async (_, entries: unknown[]) => {
+  try { ecosystemBus.emitEvent('VaultCore', 'vaultcore.credvault.push', { entries }); return { success: true }; }
+  catch (e) { return { error: (e as Error).message }; }
 });

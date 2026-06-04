@@ -1,7 +1,8 @@
 export type ThemeId    = 'stealth' | 'terminal' | 'cyberpunk' | 'graphite' | 'oled' | 'threat';
 export type BgThemeId = 'stealth' | 'graphite' | 'oled' | 'threat' | 'cyber';
 export type AccentThemeId = 'blue' | 'terminal' | 'purple' | 'red' | 'cyan';
-export type PanelId = 'chat' | 'commands' | 'reverseshell' | 'encoder' | 'cheatsheets' | 'labtracker' | 'progress' | 'snippets' | 'writeup' | 'settings';
+export type PanelId = 'chat' | 'commands' | 'reverseshell' | 'encoder' | 'cheatsheets' | 'labtracker' | 'progress' | 'snippets' | 'writeup' | 'settings' | 'findings' | 'history' | 'knowledgebase' | 'stats';
+export type CTFCategory = 'Web' | 'Pwn' | 'Crypto' | 'Forensics' | 'Rev' | 'OSINT' | 'Misc';
 export type Platform = 'HTB' | 'THM' | 'CTF' | 'Other';
 export type Difficulty = 'Easy' | 'Medium' | 'Hard' | 'Insane' | '';
 export type LabType = 'HTB/THM Linux' | 'HTB/THM Windows' | 'CTF' | 'Cisco/Networking' | 'Web App' | 'OSINT/CTF' | 'Other';
@@ -93,6 +94,14 @@ export interface Session {
   screenshots: ScreenshotAttachment[];
   createdAt: string;
   updatedAt: string;
+  // Feature extensions
+  ctfFlags?: CTFFlag[];
+  sessionHints?: SessionHint[];
+  writeupContent?: string;
+  writeupTemplate?: string;
+  detectedTags?: DetectedTag[];
+  review?: LabReview | null;
+  category?: CTFCategory;
 }
 
 export interface Tab {
@@ -184,4 +193,46 @@ export interface VpnStatus {
   status: 'active' | 'off' | 'unknown';
   interface?: string;
   ip?: string;
+}
+
+export interface CTFFlag {
+  id: string;
+  value: string;
+  category: CTFCategory;
+  points: number;
+  submittedAt: string;
+  correct: boolean;
+  format: string;
+}
+
+export interface SessionHint {
+  id: string;
+  text: string;
+  cost: number;
+  revealed: boolean;
+}
+
+export interface LabReview {
+  labId: string;
+  labName: string;
+  platform: string;
+  stars: number;
+  notes: string;
+  reviewedAt: string;
+}
+
+export interface KnowledgeNote {
+  id: string;
+  title: string;
+  content: string;
+  category: 'Commands' | 'Payloads' | 'Theory' | 'References';
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DetectedTag {
+  type: 'cve' | 'mitre';
+  value: string;
+  url: string;
 }

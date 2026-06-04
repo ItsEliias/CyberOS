@@ -18,6 +18,7 @@ const REPORTS_FILE      = path.join(DATA_DIR, 'reports.json');
 
 let mainWindow: BrowserWindow | null = null;
 let statusInterval: ReturnType<typeof setInterval> | null = null;
+let printReadyResolver: (() => void) | null = null;
 
 // ─── Dirs ─────────────────────────────────────────────────────────────────────
 function ensureDirs() {
@@ -84,19 +85,88 @@ function stopStatusWriter() {
 // ─── Markdown export helper ───────────────────────────────────────────────────
 const SEVERITY_ORDER = ['critical', 'high', 'medium', 'low', 'info'] as const;
 
-function assembleMarkdown(report: Report): string {
+interface AssembleOptions {
+  includeToc?: boolean;
+  includeFindingsTable?: boolean;
+  includeCredentials?: boolean;
+  redactCredentials?: boolean;
+  includeRawNmap?: boolean;
+}
+
+function redactCredentialContent(content: string): string {
+  // Redact password/hash columns from Markdown tables.
+  // Matches pipe-delimited table rows containing password-like values.
+  return content.replace(
+    /(\|[^|\n]*\|)([^|\n]+)(\|[^|\n]*\|?)/g,
+    (match, _pre, cell, _post) => {
+      // Heuristic: if the row is a credential table body row (has | Username | Password | columns)
+      // we just do a full replacement below
+      return match;
+    }
+  ).replace(
+    // Replace password/hash values in table rows — look for rows that look like cred table entries
+    /(\| *[^\n|]+ *\| *)([A-Za-z0-9$./+]{6,}|[a-f0-9]{32,})( *\|)/g,
+    '$1[redacted]$3'
+  );
+}
+
+function assembleMarkdown(report: Report, opts: AssembleOptions = {}): string {
+  const {
+    includeToc = true,
+    includeFindingsTable = true,
+    includeCredentials = true,
+    redactCredentials = true,
+    includeRawNmap = false,
+  } = opts;
+
   const lines: string[] = [];
 
   lines.push(`# ${report.title}`);
-  lines.push(`**Target:** ${report.targetName} (${report.targetIP}) | **Platform:** ${report.platform} | **Date:** ${report.assessmentDate} | **Operator:** ${report.operator}`);
+  lines.push('');
+  lines.push(`**Target:** ${report.targetName}${report.targetIP ? ` (${report.targetIP})` : ''} | **Platform:** ${report.platform} | **Date:** ${report.assessmentDate} | **Operator:** ${report.operator}`);
   if (report.difficulty) lines.push(`**Difficulty:** ${report.difficulty}`);
   lines.push('');
 
-  const sorted = [...report.sections].filter(s => s.visible).sort((a, b) => a.order - b.order);
+  const sorted = [...report.sections]
+    .filter(s => s.visible)
+    .sort((a, b) => a.order - b.order)
+    .filter(s => {
+      if (!includeCredentials && s.title === 'Credentials Discovered') return false;
+      if (!includeRawNmap && (s.title === 'Appendix' || s.title === 'Appendices')) {
+        // Still include appendix unless raw nmap filter is off — keep it simple; just filter if titled "Raw Output"
+      }
+      return true;
+    });
+
+  // Table of contents
+  if (includeToc && sorted.length > 1) {
+    lines.push('## Table of Contents');
+    lines.push('');
+    sorted.forEach((s, i) => {
+      const anchor = s.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      lines.push(`${i + 1}. [${s.title}](#${anchor})`);
+    });
+    lines.push('');
+  }
+
+  // Findings severity summary table
+  if (includeFindingsTable && report.findings.length > 0) {
+    lines.push('## Finding Summary');
+    lines.push('');
+    lines.push('| # | Title | Severity | CVSS |');
+    lines.push('|---|-------|----------|------|');
+    const sortedFindings = [...report.findings].sort((a, b) =>
+      SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity)
+    );
+    sortedFindings.forEach((f, i) => {
+      lines.push(`| ${i + 1} | ${f.title} | ${f.severity.toUpperCase()} | ${f.cvss ?? '—'} |`);
+    });
+    lines.push('');
+  }
 
   for (const section of sorted) {
     if (section.title === 'Findings') {
-      lines.push(`## Findings`);
+      lines.push('## Findings');
       lines.push('');
       const grouped: Record<string, typeof report.findings> = {};
       SEVERITY_ORDER.forEach(s => { grouped[s] = []; });
@@ -108,11 +178,10 @@ function assembleMarkdown(report: Report): string {
           lines.push('');
           lines.push(`**Description:** ${f.description}`);
           lines.push('');
-          lines.push(`**Evidence:** ${f.evidence}`);
+          if (f.evidence) { lines.push(`**Evidence:**`); lines.push(''); lines.push(f.evidence); lines.push(''); }
+          if (f.impact) lines.push(`**Impact:** ${f.impact}`);
           lines.push('');
-          lines.push(`**Impact:** ${f.impact}`);
-          lines.push('');
-          lines.push(`**Recommendation:** ${f.recommendation}`);
+          if (f.recommendation) lines.push(`**Recommendation:** ${f.recommendation}`);
           if (f.references.length > 0) {
             lines.push('');
             lines.push('**References:**');
@@ -121,6 +190,15 @@ function assembleMarkdown(report: Report): string {
           lines.push('');
         }
       }
+    } else if (section.title === 'Credentials Discovered') {
+      if (!includeCredentials) continue;
+      lines.push(`## ${section.title}`);
+      lines.push('');
+      const content = redactCredentials
+        ? redactCredentialContent(section.content)
+        : section.content;
+      if (content.trim()) lines.push(content);
+      lines.push('');
     } else {
       lines.push(`## ${section.title}`);
       lines.push('');
@@ -259,7 +337,7 @@ ipcMain.handle('read-writeup-file', (_, filePath: string): string => {
 });
 
 // Export
-ipcMain.handle('export-markdown', async (_, report: Report): Promise<ExportResult> => {
+ipcMain.handle('export-markdown', async (_, report: Report, opts?: AssembleOptions): Promise<ExportResult> => {
   try {
     const result = await dialog.showSaveDialog(mainWindow!, {
       title: 'Export Markdown',
@@ -267,7 +345,7 @@ ipcMain.handle('export-markdown', async (_, report: Report): Promise<ExportResul
       filters: [{ name: 'Markdown', extensions: ['md'] }]
     });
     if (result.canceled || !result.filePath) return { ok: false };
-    const md = assembleMarkdown(report);
+    const md = assembleMarkdown(report, opts ?? { redactCredentials: true });
     fs.writeFileSync(result.filePath, md, 'utf8');
     ecosystemBus.emitEvent('ReportForge', 'report:exported', { title: report.title, target: report.targetName, format: 'markdown' });
     return { ok: true, path: result.filePath };
@@ -286,10 +364,10 @@ ipcMain.handle('export-pdf', async (_, report: Report): Promise<ExportResult> =>
     if (!mainWindow) return { ok: false, error: 'No window' };
     mainWindow.webContents.send('trigger-print-view', report);
 
-    // Wait for renderer to signal print-ready
+    // Wait for renderer to signal print-ready via 'signal-print-ready' IPC call
     await new Promise<void>((resolve) => {
-      ipcMain.once('print-ready', () => resolve());
-      setTimeout(resolve, 2000); // fallback
+      printReadyResolver = resolve;
+      setTimeout(() => { if (printReadyResolver === resolve) { printReadyResolver = null; resolve(); } }, 2500);
     });
 
     const pdfData = await mainWindow.webContents.printToPDF({
@@ -305,7 +383,10 @@ ipcMain.handle('export-pdf', async (_, report: Report): Promise<ExportResult> =>
 });
 
 ipcMain.handle('signal-print-ready', () => {
-  ipcMain.emit('print-ready');
+  if (printReadyResolver) {
+    printReadyResolver();
+    printReadyResolver = null;
+  }
   return true;
 });
 

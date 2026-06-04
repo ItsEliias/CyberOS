@@ -1,6 +1,6 @@
 export type CoreTheme        = 'stealth' | 'graphite' | 'frost' | 'oled';
 export type PersonalityTheme = 'neutral' | 'cyberpunk' | 'terminal' | 'threat';
-export type ViewId           = 'scrape' | 'sources' | 'health' | 'settings' | 'schedules' | 'logs';
+export type ViewId           = 'dashboard' | 'scrape' | 'sources' | 'history' | 'health' | 'settings' | 'schedules' | 'logs';
 
 export type SourceType =
   | 'obsidian-publish' | 'website' | 'github' | 'youtube'

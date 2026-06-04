@@ -198,6 +198,19 @@ export function registerExtrasIPC() {
     } catch (e: unknown) { return { success: false, error: (e as Error).message }; }
   });
 
+  // Save annotated screenshot to userData
+  ipcMain.handle('save-annotated-screenshot', (_, { base64, sessionId, labName }: { base64: string; sessionId: string; labName: string }) => {
+    try {
+      const { app } = require('electron');
+      const dir = path.join(app.getPath('userData'), 'screenshots', sessionId);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      const ts = new Date().toISOString().replace(/[:.]/g, '-');
+      const fp = path.join(dir, `${ts}.png`);
+      fs.writeFileSync(fp, Buffer.from(base64.replace(/^data:image\/png;base64,/, ''), 'base64'));
+      return { success: true, path: fp, id: ts };
+    } catch (e: unknown) { return { success: false, error: (e as Error).message }; }
+  });
+
   // Push finding to ReconDesk config
   ipcMain.handle('push-to-recondesk', (_, { targetName, finding }: { targetName: string; finding: { type: string; data: Record<string, unknown> } }) => {
     try {
@@ -233,7 +246,7 @@ export function registerExtrasIPC() {
 
   // ── Lab orchestration ────────────────────────────────────────────────────────
 
-  ipcMain.handle('lab:start', (_, { name, platform, targetIP }: { name: string; platform: string; targetIP?: string }) => {
+  ipcMain.handle('lab:start', (_, { name, platform, targetIP, findingsCount }: { name: string; platform: string; targetIP?: string; findingsCount?: number }) => {
     try {
       const now = new Date().toISOString();
       let existing: Record<string, unknown> = {};
@@ -251,8 +264,31 @@ export function registerExtrasIPC() {
         updatedBy: 'CyberLab',
       };
       existing.lab_session = { name, platform, startedAt: now, status: 'active' };
+      existing.cyberlab_status = {
+        active: true,
+        currentLab: name,
+        sessionActive: true,
+        findingsCount: typeof findingsCount === 'number' ? findingsCount : 0,
+        lastActive: now,
+      };
       fs.writeFileSync(CONFIG_PATH, JSON.stringify(existing, null, 2), 'utf8');
       emitEvent('CyberLab', 'lab:started', { name, platform, startedAt: now });
+      return { success: true };
+    } catch (e: unknown) {
+      return { success: false, error: (e as Error).message };
+    }
+  });
+
+  ipcMain.handle('lab:update-findings', (_, { findingsCount }: { findingsCount: number }) => {
+    try {
+      const now = new Date().toISOString();
+      let existing: Record<string, unknown> = {};
+      if (fs.existsSync(CONFIG_PATH)) {
+        try { existing = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')); } catch {}
+      }
+      const existingStatus = (existing.cyberlab_status as Record<string, unknown>) || {};
+      existing.cyberlab_status = { ...existingStatus, findingsCount, lastActive: now };
+      fs.writeFileSync(CONFIG_PATH, JSON.stringify(existing, null, 2), 'utf8');
       return { success: true };
     } catch (e: unknown) {
       return { success: false, error: (e as Error).message };
@@ -277,6 +313,13 @@ export function registerExtrasIPC() {
       };
       const existingSession = (existing.lab_session as Record<string, unknown>) || {};
       existing.lab_session = { ...existingSession, status: 'completed', completedAt: now };
+      existing.cyberlab_status = {
+        active: false,
+        currentLab: null,
+        sessionActive: false,
+        findingsCount: 0,
+        lastActive: now,
+      };
       const profile = (existing.operator_profile as Record<string, unknown>) || {};
       const totalLabs = typeof profile.totalLabsCompleted === 'number' ? profile.totalLabsCompleted : 0;
       const today = now.slice(0, 10);

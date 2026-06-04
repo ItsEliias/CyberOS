@@ -1,7 +1,18 @@
 import { create } from 'zustand';
-import type { Report, Finding, ReportSection } from '@shared/types';
+import type { Report, Finding, ReportSection, ReportVersion, ReportVariables } from '@shared/types';
 
 type View = 'library' | 'editor' | 'wizard';
+
+const MAX_VERSIONS = 20;
+
+function makeVersionSnapshot(r: Report, label?: string): ReportVersion {
+  return {
+    id          : crypto.randomUUID(),
+    label       : label ?? `Snapshot ${new Date().toLocaleString()}`,
+    createdAt   : new Date().toISOString(),
+    sectionCount: r.sections.length,
+  };
+}
 
 interface AppState {
   view: View;
@@ -25,6 +36,8 @@ interface AppState {
   removeFinding: (id: string) => void;
   reorderSections: (sections: ReportSection[]) => void;
   patchReportMeta: (patch: Partial<Report>) => void;
+  snapshotVersion: (label?: string) => void;
+  updateVariables: (vars: Partial<ReportVariables>) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -96,5 +109,21 @@ export const useStore = create<AppState>((set, get) => ({
     const { activeReport } = get();
     if (!activeReport) return;
     set({ activeReport: { ...activeReport, ...patch }, dirty: true });
+  },
+
+  snapshotVersion: (label) => {
+    const { activeReport } = get();
+    if (!activeReport) return;
+    const snap = makeVersionSnapshot(activeReport, label);
+    const prev = activeReport.versions ?? [];
+    const versions = [snap, ...prev].slice(0, MAX_VERSIONS);
+    set({ activeReport: { ...activeReport, versions }, dirty: true });
+  },
+
+  updateVariables: (vars) => {
+    const { activeReport } = get();
+    if (!activeReport) return;
+    const variables = { ...(activeReport.variables ?? {}), ...vars } as import('@shared/types').ReportVariables;
+    set({ activeReport: { ...activeReport, variables }, dirty: true });
   },
 }));

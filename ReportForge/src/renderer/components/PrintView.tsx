@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 import type { Report } from '@shared/types';
+import { injectPrintStyles, removePrintStyles, watermarkStyle } from '../utils/printStyles';
+import { applyVariables } from '../utils/variables';
 
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -59,12 +61,25 @@ interface Props {
 
 export default function PrintView({ report, onReady }: Props) {
   useEffect(() => {
-    // Signal main after a brief render delay
-    const t = setTimeout(() => {
-      onReady();
-    }, 400);
-    return () => clearTimeout(t);
-  }, [onReady]);
+    injectPrintStyles();
+
+    // Inject watermark if set
+    const wm = report.watermark && report.watermark !== 'none' ? report.watermark : null;
+    let wmStyle: HTMLStyleElement | null = null;
+    if (wm) {
+      wmStyle = document.createElement('style');
+      wmStyle.id = 'reportforge-watermark';
+      wmStyle.textContent = watermarkStyle(wm);
+      document.head.appendChild(wmStyle);
+    }
+
+    const t = setTimeout(() => { onReady(); }, 600);
+    return () => {
+      clearTimeout(t);
+      removePrintStyles();
+      wmStyle?.remove();
+    };
+  }, [onReady, report.watermark]);
 
   const sortedSections = [...report.sections]
     .filter(s => s.visible)
@@ -116,11 +131,49 @@ export default function PrintView({ report, onReady }: Props) {
             </section>
           );
         }
-        if (!s.content.trim()) return null;
+        // Cover section
+        if (s.type === 'cover' && s.coverData) {
+          const cd = s.coverData;
+          return (
+            <section key={s.id} style={{ marginBottom: 40, paddingBottom: 24, borderBottom: '2px solid #2a7a36' }}>
+              {cd.logoBase64 && <img src={cd.logoBase64} alt="logo" style={{ height: 48, marginBottom: 12, objectFit: 'contain' }} />}
+              <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#cc0000', border: '1px solid #cc0000', display: 'inline-block', padding: '2px 8px', borderRadius: 3, marginBottom: 12 }}>{cd.classification}</div>
+              <h1 style={{ fontSize: 26, fontWeight: 700, marginBottom: 6 }}>{cd.title || report.title}</h1>
+              <div style={{ fontSize: 13, color: '#555', display: 'flex', flexWrap: 'wrap', gap: '4px 20px' }}>
+                {cd.clientName && <span>Client: <strong>{cd.clientName}</strong></span>}
+                {cd.testerName && <span>Prepared by: <strong>{cd.testerName}</strong></span>}
+                {cd.date       && <span>Date: <strong>{cd.date}</strong></span>}
+              </div>
+            </section>
+          );
+        }
+
+        // Signature block section
+        if (s.type === 'signature' && s.signatureBlock) {
+          const sb = s.signatureBlock;
+          return (
+            <section key={s.id} style={{ marginBottom: 32 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 700, borderBottom: '1px solid #ddd', paddingBottom: 6, marginBottom: 12 }}>{s.title}</h2>
+              <div style={{ borderTop: '1px solid #1a1a1a', paddingTop: 10, marginTop: 20, display: 'inline-block' }}>
+                {sb.signatureData && (
+                  sb.signatureData.startsWith('data:')
+                    ? <img src={sb.signatureData} alt="signature" style={{ height: 40, marginBottom: 4, display: 'block' }} />
+                    : <div style={{ fontSize: 22, fontFamily: 'cursive', marginBottom: 4 }}>{sb.signatureData}</div>
+                )}
+                <div style={{ fontSize: 13, fontWeight: 700 }}>{sb.preparedBy}</div>
+                <div style={{ fontSize: 12, color: '#555' }}>{sb.role}</div>
+                <div style={{ fontSize: 12, color: '#555' }}>{sb.date}</div>
+              </div>
+            </section>
+          );
+        }
+
+        const resolvedContent = applyVariables(s.content, report.variables);
+        if (!resolvedContent.trim()) return null;
         return (
           <section key={s.id} style={{ marginBottom: 32 }}>
             <h2 style={{ fontSize: 18, fontWeight: 700, borderBottom: '1px solid #ddd', paddingBottom: 6, marginBottom: 12 }}>{s.title}</h2>
-            <div style={{ fontSize: 13 }} dangerouslySetInnerHTML={{ __html: renderMarkdown(s.content) }} />
+            <div style={{ fontSize: 13 }} dangerouslySetInnerHTML={{ __html: renderMarkdown(resolvedContent) }} />
           </section>
         );
       })}

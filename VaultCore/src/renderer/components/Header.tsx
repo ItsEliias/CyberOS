@@ -9,7 +9,11 @@ function applyTheme(core: CoreTheme, personality: PersonalityTheme) {
   document.documentElement.setAttribute('data-personality', personality);
 }
 
-export default function Header() {
+interface HeaderProps {
+  onHelp?: () => void
+}
+
+export default function Header({ onHelp }: HeaderProps) {
   const { isScraping, progress, updateInfo, theme, setTheme, vaultPath } = useStore();
 
   async function changeCore(core: CoreTheme) {
@@ -32,7 +36,13 @@ export default function Header() {
 
       {/* Brand */}
       <div className="flex items-center gap-2 shrink-0">
-        <span className="text-[10px] uppercase tracking-widest" style={{ color: 'var(--accent)' }}>CYBERTOOLS</span>
+        <span
+          className="flex items-center gap-1 text-[9px] font-semibold tracking-widest uppercase px-2 py-0.5 rounded-full"
+          style={{ background: 'rgba(74,158,255,0.08)', color: '#4a5568', border: '1px solid rgba(74,158,255,0.12)' }}
+        >
+          <span>⬡</span>
+          <span>CYBERTOOLS</span>
+        </span>
         <span style={{ color: 'var(--border)' }}>/</span>
         <span className="text-sm font-bold" style={{ color: 'var(--text)' }}>VAULTCORE</span>
         <span className="hidden sm:inline text-[10px]" style={{ color: 'var(--text-dim)' }}>// ItsEliias</span>
@@ -98,6 +108,31 @@ export default function Header() {
           </button>
         ))}
       </div>
+
+      {/* Help button */}
+      {onHelp && (
+        <button
+          onClick={onHelp}
+          title="Help & onboarding"
+          className="text-[9px] px-1.5 py-0.5 rounded capitalize transition-all border shrink-0"
+          style={{
+            background: 'transparent',
+            borderColor: 'var(--border)',
+            color: 'var(--text-dim)',
+            fontSize: 12,
+            fontWeight: 700,
+            width: 22,
+            height: 22,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = 'var(--accent)'; el.style.color = 'var(--accent)' }}
+          onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = 'var(--border)'; el.style.color = 'var(--text-dim)' }}
+        >
+          ?
+        </button>
+      )}
     </header>
   );
 }

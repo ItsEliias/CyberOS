@@ -1,10 +1,11 @@
 // NetworkMap — main.ts
 // ItsEliias // v1.0
 
-import { app, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import os from 'os'
+import { exec } from 'child_process'
 import { emitEvent } from './ecosystem-bus'
 import type { NetworkNode, NetworkPort, NetworkGraph, GraphSummary } from '../shared/types'
 
@@ -77,7 +78,10 @@ function parseNmapXml(xml: string): NetworkNode[] {
       })
     }
 
-    nodes.push({ id: ip, ip, hostname, os, status, ports, x: 0, y: 0 })
+    const openPortCount = ports.filter(p => p.state === 'open').length
+    // Per spec: only include hosts with at least 1 open port
+    if (openPortCount === 0) continue
+    nodes.push({ id: ip, ip, hostname, os, status, ports, openPortCount, x: 0, y: 0 })
   }
   return nodes
 }
@@ -143,6 +147,41 @@ ipcMain.handle('load-nmap-file', async (): Promise<NetworkNode[] | null> => {
   }
 })
 
+ipcMain.handle('load-nmap-file-raw', async (): Promise<{ content: string; filename: string } | null> => {
+  if (!mainWindow) return null
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Open Nmap XML',
+    filters: [{ name: 'XML', extensions: ['xml'] }],
+    properties: ['openFile'],
+  })
+  if (result.canceled || result.filePaths.length === 0) return null
+  try {
+    const filePath = result.filePaths[0]
+    const content  = fs.readFileSync(filePath, 'utf8')
+    const filename = path.basename(filePath, '.xml')
+    return { content, filename }
+  } catch (e) {
+    console.error('[NetworkMap] load-nmap-file-raw failed:', (e as Error).message)
+    return null
+  }
+})
+
+ipcMain.handle('export-svg', async (_e, svgContent: string, name: string): Promise<void> => {
+  if (!mainWindow) return
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: 'Export SVG',
+    defaultPath: `${name.replace(/[^a-z0-9_-]/gi, '_')}.svg`,
+    filters: [{ name: 'SVG', extensions: ['svg'] }],
+  })
+  if (result.canceled || !result.filePath) return
+  try {
+    fs.writeFileSync(result.filePath, svgContent, 'utf8')
+    emitEvent('NetworkMap', 'graph:exported', { name, format: 'svg' })
+  } catch (e) {
+    console.error('[NetworkMap] export-svg failed:', (e as Error).message)
+  }
+})
+
 ipcMain.handle('import-from-recondesk', (): NetworkNode[] => {
   try {
     const cfg = readCyberToolsConfig()
@@ -169,6 +208,7 @@ ipcMain.handle('import-from-recondesk', (): NetworkNode[] => {
         }))
       : []
 
+    const openPortCount = ports.filter(p => p.state === 'open').length
     const node: NetworkNode = {
       id: ip,
       ip,
@@ -176,6 +216,7 @@ ipcMain.handle('import-from-recondesk', (): NetworkNode[] => {
       os: target['os'] as string | undefined,
       status: 'up',
       ports,
+      openPortCount,
       x: 0,
       y: 0,
     }
@@ -201,12 +242,22 @@ ipcMain.handle('load-graphs', (): GraphSummary[] => {
   try {
     ensureGraphsDir()
     const files = fs.readdirSync(GRAPHS_DIR).filter(f => f.endsWith('.json'))
-    return files.map(f => {
-      try {
-        const g = JSON.parse(fs.readFileSync(path.join(GRAPHS_DIR, f), 'utf8')) as NetworkGraph
-        return { id: g.id, name: g.name, createdAt: g.createdAt, nodeCount: g.nodes.length }
-      } catch { return null }
-    }).filter((s): s is GraphSummary => s !== null)
+    return files
+      .map(f => {
+        try {
+          const g = JSON.parse(fs.readFileSync(path.join(GRAPHS_DIR, f), 'utf8')) as NetworkGraph
+          return {
+            id:           g.id,
+            name:         g.name,
+            createdAt:    g.createdAt,
+            nodeCount:    g.nodes.length,
+            edgeCount:    g.edges.length,
+            importSource: g.metadata?.importSource,
+          } satisfies GraphSummary
+        } catch { return null }
+      })
+      .filter((s): s is GraphSummary => s !== null)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   } catch { return [] }
 })
 
@@ -229,6 +280,7 @@ ipcMain.handle('delete-graph', (_e, id: string): void => {
 })
 
 ipcMain.handle('app:version', () => APP_VERSION)
+ipcMain.handle('open-external', (_e, url: string) => shell.openExternal(url))
 
 // ─── ReconDesk Sync Handlers ──────────────────────────────────────────────────
 
@@ -296,6 +348,52 @@ ipcMain.handle('recondesk:generate-graph', () => {
     console.error('[NetworkMap] recondesk:generate-graph failed:', (e as Error).message)
     return null
   }
+})
+
+ipcMain.handle('export-png', async (_e, dataUrl: string, name: string): Promise<void> => {
+  if (!mainWindow) return
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: 'Export PNG',
+    defaultPath: `${name.replace(/[^a-z0-9_-]/gi, '_')}.png`,
+    filters: [{ name: 'PNG', extensions: ['png'] }],
+  })
+  if (result.canceled || !result.filePath) return
+  try {
+    const base64 = dataUrl.replace(/^data:image\/png;base64,/, '')
+    fs.writeFileSync(result.filePath, Buffer.from(base64, 'base64'))
+    emitEvent('NetworkMap', 'graph:exported', { name, format: 'png' })
+  } catch (e) { console.error('[NetworkMap] export-png failed:', (e as Error).message) }
+})
+
+ipcMain.handle('export-json', async (_e, json: string, name: string): Promise<void> => {
+  if (!mainWindow) return
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: 'Export JSON',
+    defaultPath: `${name.replace(/[^a-z0-9_-]/gi, '_')}.json`,
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+  })
+  if (result.canceled || !result.filePath) return
+  try {
+    fs.writeFileSync(result.filePath, json, 'utf8')
+    emitEvent('NetworkMap', 'graph:exported', { name, format: 'json' })
+  } catch (e) { console.error('[NetworkMap] export-json failed:', (e as Error).message) }
+})
+
+ipcMain.handle('terminallink:set-target', (_e, ip: string): void => {
+  try {
+    writeCyberToolsConfig({ shared_context: { activeIP: ip, setBy: 'NetworkMap', setAt: new Date().toISOString() } })
+    emitEvent('NetworkMap', 'terminallink:target-set', { ip })
+  } catch (e) { console.error('[NetworkMap] terminallink:set-target failed:', (e as Error).message) }
+})
+
+ipcMain.handle('nmap:run', (_e, ip: string): Promise<void> => {
+  return new Promise(resolve => {
+    const cmd = `nmap -sV -sC ${ip} -oN /tmp/networkmap-rescan-${ip.replace(/\./g, '_')}.txt`
+    exec(cmd, { timeout: 120000 }, (err) => {
+      if (err) console.error('[NetworkMap] nmap:run failed:', err.message)
+      resolve()
+    })
+  })
 })
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────

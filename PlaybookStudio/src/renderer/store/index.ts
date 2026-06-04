@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { Playbook, PlaybookRun, SharedContext } from '@shared/types'
 
-export type View = 'library' | 'editor' | 'run' | 'history'
+export type View = 'library' | 'editor' | 'run' | 'history' | 'settings'
 
 interface Store {
   // Data

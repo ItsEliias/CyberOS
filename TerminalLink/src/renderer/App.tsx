@@ -1,214 +1,334 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import TerminalPane from './components/TerminalPane';
-import HistoryPanel from './components/HistoryPanel';
-import type { CommandEntry, SessionContext } from '@shared/types';
+import { useEffect, useRef, useCallback, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import TitleBar       from './components/layout/TitleBar';
+import TabBar         from './components/layout/TabBar';
+import StatusBar      from './components/layout/StatusBar';
+import ContextBar     from './components/terminal/ContextBar';
+import TerminalSplit  from './components/terminal/TerminalSplit';
+import HistoryPanel   from './components/HistoryPanel';
+import SessionsView   from './components/SessionsView';
+import SettingsView   from './components/settings/SettingsView';
+import SnippetPanel   from './components/SnippetPanel';
+import CommandPalette from './components/CommandPalette';
+import ToolLauncher   from './components/ToolLauncher';
+import AlertToast     from './components/AlertToast';
+import AiPanel        from './components/AiPanel';
+import { useTerminalLinkStore } from './stores/useTerminalLinkStore';
+import type { CommandEntry } from '@shared/types';
+import OnboardingModal, { useOnboarding } from './components/OnboardingModal';
+import type { PaletteItem } from './components/CommandPalette';
 
-// Stable pane IDs for the session
-const PANE_IDS = {
-  1: `pane1-${Date.now()}`,
-  2: `pane2-${Date.now() + 1}`,
-} as const;
+const PANE_LEFT_ID  = `pane-left-${Date.now()}`;
+const PANE_RIGHT_ID = `pane-right-${Date.now() + 1}`;
 
 export default function App() {
-  const [splitMode,     setSplitMode]     = useState(false);
-  const [activePane,    setActivePane]    = useState<1 | 2>(1);
-  const [commandLog,    setCommandLog]    = useState<CommandEntry[]>([]);
-  const [historyOpen,   setHistoryOpen]   = useState(false);
-  const [sessionCtx,    setSessionCtx]    = useState<SessionContext>({});
-  const [version,       setVersion]       = useState('');
-  const logQueueRef = useRef<CommandEntry[]>([]);
-  const flushTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onboarding = useOnboarding();
+  const {
+    sessions, activeSessionId, commandHistory, sharedContext,
+    activeView, historyPanelOpen, splitModeEnabled, settings,
+    broadcastMode, snippets, sshProfiles, snippetsPanelOpen,
+    activeAlerts, commandPaletteOpen, toolLauncherOpen,
+    createSession, setActiveSession, removeSession,
+    renameSession, setSessionColor,
+    addCommand, toggleHistoryPanel, toggleSplitMode,
+    setActiveView, updateSettings, loadSharedContext,
+    toggleBroadcastMode, toggleSnippetsPanel,
+    addSnippet, removeSnippet,
+    addSshProfile, removeSshProfile,
+    setCommandPaletteOpen, setToolLauncherOpen,
+    pushAlert, dismissAlert,
+  } = useTerminalLinkStore();
 
-  // Boot
+  const versionRef = useRef('');
+  const [activePane, setActivePane] = useState<'left' | 'right'>('left');
+  const [lastCommand, setLastCommand] = useState('');
+  const [lastOutput,  setLastOutput]  = useState('');
+  const [statusCwd,   setStatusCwd]   = useState('');
+  const [statusExit,  setStatusExit]  = useState<number | null>(null);
+  // Ref to write into active terminal (used by snippets/palette/ssh)
+  const writeToTermRef = useRef<((data: string) => void) | null>(null);
+
   useEffect(() => {
     (async () => {
-      const [ctx, ver] = await Promise.all([
-        window.electronAPI.getSessionContext(),
-        window.electronAPI.getVersion(),
-      ]);
-      setSessionCtx(ctx);
-      setVersion(ver);
+      await loadSharedContext();
+      try {
+        const ver = await window.electronAPI.getVersion();
+        versionRef.current = ver;
+      } catch { /* ignore */ }
     })();
+    if (sessions.length === 0) createSession();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Debounced log flush to main
-  const flushLog = useCallback((entries: CommandEntry[]) => {
-    if (entries.length === 0) return;
-    window.electronAPI.logCommands(entries).catch(console.error);
-  }, []);
+  useEffect(() => {
+    const handle = setInterval(() => { loadSharedContext().catch(() => undefined); }, 10_000);
+    return () => clearInterval(handle);
+  }, [loadSharedContext]);
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    function handler(e: KeyboardEvent) {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.shiftKey && e.key === 'p') { e.preventDefault(); setCommandPaletteOpen(true); }
+      if (mod && e.shiftKey && e.key === 'b') { e.preventDefault(); handleBroadcastToggle(); }
+      if (mod && e.key === 'l') { e.preventDefault(); setToolLauncherOpen(true); }
+      if (mod && e.key === 't') { e.preventDefault(); handleNewSession(); }
+      if (e.key === 'Escape') {
+        if (commandPaletteOpen) setCommandPaletteOpen(false);
+        if (toolLauncherOpen)   setToolLauncherOpen(false);
+      }
+    }
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [broadcastMode, commandPaletteOpen, toolLauncherOpen]);
 
   const handleCommand = useCallback((entry: CommandEntry) => {
-    setCommandLog(prev => [...prev, entry]);
-    logQueueRef.current.push(entry);
-    if (flushTimer.current) clearTimeout(flushTimer.current);
-    flushTimer.current = setTimeout(() => {
-      flushLog(logQueueRef.current);
-      logQueueRef.current = [];
-    }, 2000);
-  }, [flushLog]);
+    addCommand({ command: entry.command, pane: entry.pane, outputSnippet: entry.outputSnippet });
+    setLastCommand(entry.command);
+  }, [addCommand]);
 
-  const handleClearLog = useCallback(() => {
-    setCommandLog([]);
-    logQueueRef.current = [];
+  const handleOutputData = useCallback((data: string) => {
+    setLastOutput(prev => (prev + data).slice(-500));
   }, []);
 
-  // Badge helpers
-  const sessionBadge = [
-    sessionCtx.activeLab    && `LAB: ${sessionCtx.activeLab}`,
-    sessionCtx.activeTarget && `TARGET: ${sessionCtx.activeTarget}`,
-    sessionCtx.activeIP     && sessionCtx.activeIP,
-  ].filter(Boolean).join('  ·  ');
+  const handleNewSession = useCallback(() => { createSession(); }, [createSession]);
+
+  const handleBroadcastToggle = useCallback(() => {
+    if (!broadcastMode) {
+      if (!confirm('Enable broadcast mode? All keystrokes will go to ALL open sessions.')) return;
+    }
+    toggleBroadcastMode();
+  }, [broadcastMode, toggleBroadcastMode]);
+
+  const handlePasteToTerminal = useCallback((cmd: string) => {
+    writeToTermRef.current?.(cmd);
+  }, []);
+
+  const handleSshConnect = useCallback((cmd: string) => {
+    handleNewSession();
+    setTimeout(() => writeToTermRef.current?.(`${cmd}\r`), 300);
+  }, [handleNewSession]);
+
+  const handleExportSession = useCallback(async (rec: import('./types/terminallink').RecordedSession, fmt: 'cast' | 'txt') => {
+    let content: string;
+    if (fmt === 'cast') {
+      const header = { version: 2, width: 220, height: 50, timestamp: Math.floor(new Date(rec.startedAt).getTime() / 1000), title: rec.sessionName };
+      const events = rec.events.map(e => [e.ts / 1000, 'o', e.data]);
+      content = JSON.stringify(header) + '\n' + events.map(e => JSON.stringify(e)).join('\n');
+    } else {
+      content = rec.events.map(e => e.data).join('');
+    }
+    try {
+      await window.electronAPI.exportSession({ content, defaultName: `${rec.sessionName}-${Date.now()}.${fmt}`, ext: fmt });
+    } catch (e) { console.error('[App] exportSession error:', e); }
+  }, []);
+
+  // Build command palette items
+  const paletteItems: PaletteItem[] = [
+    { id: 'split',     label: 'Toggle Split View',    category: 'Action',  action: toggleSplitMode },
+    { id: 'history',   label: 'Toggle History Panel', category: 'Action',  action: toggleHistoryPanel },
+    { id: 'broadcast', label: broadcastMode ? 'Disable Broadcast' : 'Enable Broadcast', category: 'Action', action: handleBroadcastToggle },
+    { id: 'snippets',  label: 'Toggle Snippets Panel', category: 'Action', action: toggleSnippetsPanel },
+    { id: 'sessions',  label: 'View Sessions',         category: 'Nav',    action: () => setActiveView('sessions') },
+    { id: 'settings',  label: 'Open Settings',         category: 'Nav',    action: () => setActiveView('settings') },
+    { id: 'terminal',  label: 'Back to Terminal',      category: 'Nav',    action: () => setActiveView('terminal') },
+    { id: 'newterm',   label: 'New Session',           category: 'Action', action: handleNewSession },
+    { id: 'launcher',  label: 'Open Tool Launcher',    category: 'Action', action: () => setToolLauncherOpen(true) },
+    ...snippets.map(s => ({
+      id:          `snip-${s.id}`,
+      label:       s.title,
+      description: s.command,
+      category:    s.category,
+      action:      () => handlePasteToTerminal(s.command),
+    })),
+    ...sshProfiles.map(p => ({
+      id:          `ssh-${p.id}`,
+      label:       p.name,
+      description: `${p.username}@${p.host}:${p.port}`,
+      category:    'SSH',
+      action:      () => handleSshConnect(`ssh ${p.identityFile ? `-i ${p.identityFile} ` : ''}-p ${p.port} ${p.username}@${p.host}`),
+    })),
+  ];
+
+  const activeSession = sessions.find(s => s.id === activeSessionId) ?? null;
+  const sessionName   = activeSession?.name ?? 'Session 1';
+  const sessionCtx = {
+    activeLab:    sharedContext?.activeLab,
+    activeTarget: sharedContext?.activeTarget,
+    activeIP:     sharedContext?.activeIP,
+    sessions:     sharedContext?.sessions,
+  };
+  const allPaneIds = [PANE_LEFT_ID, ...(splitModeEnabled ? [PANE_RIGHT_ID] : [])];
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      width: '100%',
-      height: '100%',
-      overflow: 'hidden',
-      background: 'var(--bg)',
-      color: 'var(--text)',
-    }}>
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden', background: 'var(--bg)', color: 'var(--text)' }}>
 
-      {/* ── Header ── */}
-      <div style={{
-        height: 32,
-        display: 'flex',
-        alignItems: 'center',
-        padding: '0 12px',
-        background: 'var(--panel)',
-        borderBottom: '1px solid var(--border)',
-        flexShrink: 0,
-        gap: 10,
-        WebkitAppRegion: 'drag' as unknown as undefined,
-        userSelect: 'none',
-      }}>
-        {/* macOS traffic lights spacer */}
-        <div style={{ width: 60, flexShrink: 0 }} />
+      <TitleBar
+        sessionCtx={sessionCtx}
+        commandCount={commandHistory.length}
+        splitMode={splitModeEnabled}
+        historyOpen={historyPanelOpen}
+        activeView={activeView}
+        broadcastMode={broadcastMode}
+        snippetsOpen={snippetsPanelOpen}
+        onToggleSplit={toggleSplitMode}
+        onToggleHistory={toggleHistoryPanel}
+        onSetView={setActiveView}
+        onToggleBroadcast={handleBroadcastToggle}
+        onToggleSnippets={toggleSnippetsPanel}
+        onOpenPalette={() => setCommandPaletteOpen(true)}
+        onOpenLauncher={() => setToolLauncherOpen(true)}
+        version={versionRef.current}
+        onHelp={onboarding.open}
+      />
 
-        {/* App name */}
-        <span style={{
-          fontSize: 11,
-          fontWeight: 700,
-          letterSpacing: 2,
-          textTransform: 'uppercase',
-          color: 'var(--accent)',
-        }}>
-          TerminalLink
-        </span>
+      {/* Tab bar */}
+      {activeView === 'terminal' && (
+        <TabBar
+          sessions={sessions}
+          activeSessionId={activeSessionId}
+          onSelect={setActiveSession}
+          onNew={handleNewSession}
+          onClose={removeSession}
+          onRename={renameSession}
+          onColorChange={(id, color) => setSessionColor(id, color as Parameters<typeof setSessionColor>[1])}
+        />
+      )}
 
-        {/* Session badge */}
-        {sessionBadge && (
-          <span style={{
-            fontSize: 10,
-            color: 'var(--text-muted)',
-            background: 'var(--bg)',
-            border: '1px solid var(--border)',
-            borderRadius: 3,
-            padding: '1px 6px',
-            maxWidth: 400,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}>
-            {sessionBadge}
-          </span>
-        )}
+      {activeView === 'terminal' && settings.showContextBar && (
+        <ContextBar sessionCtx={sessionCtx} sessionName={sessionName} />
+      )}
 
-        <div style={{ flex: 1 }} />
-
-        {/* Command count */}
-        {commandLog.length > 0 && (
-          <span style={{
-            fontSize: 10,
-            color: 'var(--success)',
-            background: 'rgba(0,255,65,0.1)',
-            border: '1px solid rgba(0,255,65,0.3)',
-            borderRadius: 3,
-            padding: '1px 6px',
-          }}>
-            {commandLog.length} cmd{commandLog.length !== 1 ? 's' : ''}
-          </span>
-        )}
-
-        {/* Split toggle */}
-        <button
-          onClick={() => setSplitMode(m => !m)}
-          title={splitMode ? 'Single pane' : 'Split panes'}
-          style={{
-            fontSize: 10,
-            padding: '3px 8px',
-            borderRadius: 3,
-            background: splitMode ? 'var(--accent-dim)' : 'var(--bg)',
-            border: `1px solid ${splitMode ? 'var(--accent)' : 'var(--border)'}`,
-            color: splitMode ? 'var(--accent)' : 'var(--text-dim)',
-            WebkitAppRegion: 'no-drag' as unknown as undefined,
-          }}
-        >
-          {splitMode ? '⊟ Split' : '⊞ Split'}
-        </button>
-
-        {/* History toggle */}
-        <button
-          onClick={() => setHistoryOpen(h => !h)}
-          title="Command history"
-          style={{
-            fontSize: 10,
-            padding: '3px 8px',
-            borderRadius: 3,
-            background: historyOpen ? 'var(--accent-dim)' : 'var(--bg)',
-            border: `1px solid ${historyOpen ? 'var(--accent)' : 'var(--border)'}`,
-            color: historyOpen ? 'var(--accent)' : 'var(--text-dim)',
-            WebkitAppRegion: 'no-drag' as unknown as undefined,
-          }}
-        >
-          History
-        </button>
-
-        {/* Version */}
-        {version && (
-          <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>v{version}</span>
-        )}
-      </div>
-
-      {/* ── Body ── */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        {/* Snippets panel */}
+        <AnimatePresence>
+          {snippetsPanelOpen && activeView === 'terminal' && (
+            <motion.div
+              key="snippets"
+              initial={{ x: -280, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -280, opacity: 0 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              style={{ display: 'flex', flexShrink: 0, overflow: 'hidden' }}
+            >
+              <SnippetPanel
+                snippets={snippets}
+                onPaste={handlePasteToTerminal}
+                onClose={toggleSnippetsPanel}
+                onAdd={s => addSnippet(s)}
+                onRemove={removeSnippet}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* Terminal area */}
-        <div style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'row',
-          gap: 4,
-          padding: 6,
-          overflow: 'hidden',
-        }}>
-          <TerminalPane
-            paneId={PANE_IDS[1]}
-            paneNumber={1}
-            active={activePane === 1}
-            onCommand={handleCommand}
-            onFocus={() => setActivePane(1)}
-          />
-          {splitMode && (
-            <TerminalPane
-              paneId={PANE_IDS[2]}
-              paneNumber={2}
-              active={activePane === 2}
+        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+          {activeView === 'terminal' && (
+            <TerminalSplit
+              paneLeftId={PANE_LEFT_ID}
+              paneRightId={PANE_RIGHT_ID}
+              splitMode={splitModeEnabled}
+              activePane={activePane}
+              activeSessionId={activeSessionId}
+              broadcastMode={broadcastMode}
+              allPaneIds={allPaneIds}
+              alertRules={settings.outputAlerts}
+              sessionColor={activeSession?.color}
+              themeName={activeSession?.theme}
               onCommand={handleCommand}
-              onFocus={() => setActivePane(2)}
+              onFocusPane={setActivePane}
+              onAlert={msg => pushAlert(msg)}
+              onOutputData={handleOutputData}
+              onCwdChange={setStatusCwd}
+              onExitCode={setStatusExit}
+              writeToTermRef={writeToTermRef}
             />
+          )}
+
+          {activeView === 'sessions' && (
+            <SessionsView
+              sessions={sessions}
+              activeSessionId={activeSessionId}
+              onSelectSession={setActiveSession}
+              onNewSession={createSession}
+              sshProfiles={sshProfiles}
+              onAddSsh={addSshProfile}
+              onRemoveSsh={removeSshProfile}
+              onSshConnect={handleSshConnect}
+              recordedSessions={useTerminalLinkStore.getState().recordedSessions}
+              onExportSession={handleExportSession}
+            />
+          )}
+
+          {activeView === 'settings' && (
+            <SettingsView settings={settings} onUpdate={updateSettings} />
           )}
         </div>
 
-        {/* History panel */}
-        {historyOpen && (
-          <HistoryPanel
-            commands={commandLog}
-            onClear={handleClearLog}
-          />
-        )}
+        <AnimatePresence>
+          {historyPanelOpen && (
+            <motion.div
+              key="history-panel"
+              initial={{ x: 300, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 300, opacity: 0 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              style={{ display: 'flex', flexShrink: 0, overflow: 'hidden' }}
+            >
+              <HistoryPanel
+                commands={commandHistory}
+                onClear={() => useTerminalLinkStore.getState().clearHistory()}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
+
+      {/* AI panel */}
+      {activeView === 'terminal' && settings.ollamaEnabled && (
+        <AiPanel
+          ollamaUrl={settings.ollamaUrl}
+          lastCommand={lastCommand}
+          lastOutput={lastOutput}
+          onUse={cmd => handlePasteToTerminal(cmd)}
+        />
+      )}
+
+      <StatusBar
+        sessionCtx={sessionCtx}
+        commandCount={commandHistory.length}
+        sessionName={sessionName}
+        cwd={statusCwd}
+        exitCode={statusExit}
+      />
+
+      {/* Overlays */}
+      {commandPaletteOpen && (
+        <CommandPalette
+          items={paletteItems}
+          onClose={() => setCommandPaletteOpen(false)}
+        />
+      )}
+
+      {toolLauncherOpen && (
+        <ToolLauncher
+          target={sharedContext?.activeTarget || sharedContext?.activeIP}
+          onLaunch={cmd => { handlePasteToTerminal(`${cmd}\r`); }}
+          onClose={() => setToolLauncherOpen(false)}
+        />
+      )}
+
+      {/* Alert toast for the most recent active alert */}
+      <AlertToast
+        message={activeAlerts[activeAlerts.length - 1] ?? null}
+        onDismiss={() => {
+          const msg = activeAlerts[activeAlerts.length - 1];
+          if (msg) dismissAlert(msg);
+        }}
+      />
+
+      {onboarding.show && <OnboardingModal onClose={onboarding.close} />}
     </div>
   );
 }

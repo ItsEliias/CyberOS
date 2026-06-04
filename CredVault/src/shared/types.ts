@@ -2,11 +2,14 @@
 
 export type CredentialStatus = 'active' | 'rotated' | 'invalid'
 export type HashType = 'ntlm' | 'sha256' | 'md5' | 'bcrypt' | 'sha1' | 'lm' | 'other'
+export type CredentialType = 'credential' | 'note'
+export type CredentialCategory = 'SSH' | 'API Key' | 'Web' | 'Database' | 'Certificate' | 'Token' | 'Other'
 
 export interface Credential {
   id: string
   createdAt: string
   updatedAt: string
+  type?: CredentialType      // 'credential' | 'note' — defaults to 'credential'
   // Identity
   username: string
   password?: string
@@ -21,12 +24,22 @@ export interface Credential {
   source: string
   labName?: string
   targetName?: string
+  // Organization
+  category?: CredentialCategory
+  folder?: string
   // Metadata
   tags: string[]
-  notes?: string
+  notes?: string            // also used as secure note body when type === 'note'
   // Status
   verified: boolean
   status: CredentialStatus
+  // Expiry
+  expiresAt?: string        // ISO date string
+  // TOTP
+  totpSecret?: string       // base32 secret for TOTP generation (renderer-side)
+  // Usage tracking
+  lastUsed?: string         // ISO datetime of last copy
+  useCount?: number
 }
 
 export interface VaultData {
@@ -105,4 +118,15 @@ export interface PendingCredential {
   type: string
   service?: string
   queuedAt: string
+}
+
+export interface BreachCheckResult {
+  ok: boolean
+  breachCount?: number
+  error?: string
+  checkedAt?: string
+}
+
+export interface BreachCache {
+  [credId: string]: BreachCheckResult & { checkedAt: string }
 }

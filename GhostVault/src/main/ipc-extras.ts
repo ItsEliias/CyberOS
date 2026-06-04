@@ -142,5 +142,23 @@ export function registerExtras(ctx: ConfigAccessors) {
       return { result: result.trim() };
     } catch (e) { return { error: (e as Error).message }; }
   });
+
+  // ── Spec-canonical Ollama aliases ───────────────────────────────────────────
+  ipcMain.handle('ghostvault:ollama:models', async () => {
+    const running = await checkOllamaRunning();
+    if (!running) return { running: false, models: [] };
+    try { return { running: true, models: await fetchTags() }; }
+    catch { return { running: true, models: [] }; }
+  });
+
+  ipcMain.handle('ghostvault:ollama:chat', async (_, model: string, messages: { role: string; content: string }[]) => {
+    try {
+      if (!await checkOllamaRunning()) return { error: 'ollama_not_running' };
+      // Flatten messages into a single prompt
+      const prompt = messages.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n');
+      const result = await callOllama(model || 'mistral', prompt);
+      return { result: result.trim() };
+    } catch (e) { return { error: (e as Error).message }; }
+  });
 }
 

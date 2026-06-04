@@ -2,6 +2,9 @@ import { useEffect, useState, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useStore } from './store';
 import { localAiProcess } from './lib/local-ai';
+import TitleBar from './components/layout/TitleBar';
+import OnboardingModal, { useOnboarding } from './components/OnboardingModal';
+import StatusBar from './components/layout/StatusBar';
 import SetupWizard from './components/SetupWizard';
 import Sidebar from './components/Sidebar';
 import EditorView from './components/EditorView';
@@ -9,11 +12,18 @@ import CaptureView from './components/CaptureView';
 import VaultView from './components/VaultView';
 import TemplatesView from './components/TemplatesView';
 import SettingsView from './components/SettingsView';
+import SearchView from './components/SearchView';
+import TagsView from './components/TagsView';
+import AIAssistantPanel from './components/AIAssistantPanel';
+import GraphView from './components/GraphView';
+import FullSearchView from './components/FullSearchView';
+import NotePasswordModal from './components/NotePasswordModal';
 import {
   NewNoteModal, NewFolderModal, QuickCaptureModal,
   AiOverlay, AiMenu, NoteContextMenu, ToastContainer, useToast,
 } from './components/Modals';
-import type { AiCtx, ThemeConfig } from '@shared/types';
+import NoteList from './components/notes/NoteList';
+import type { AiCtx, NoteFile, ThemeConfig } from '@shared/types';
 
 export default function App() {
   const {
@@ -21,7 +31,7 @@ export default function App() {
     setConfig, setVaultPath, setNotes, setFolders, setActiveNote,
     setEditorContent, setDirty, setPinnedPaths, setAlwaysOnTop,
     setActiveView, setOllamaStatus, setAiCtx, setOllamaModel, setVersion,
-    togglePin,
+    togglePin, toggleLocked, lockedNotes,
   } = useStore();
 
   const { toasts, addToast, removeToast } = useToast();
@@ -34,6 +44,8 @@ export default function App() {
   const [contextMenu, setContextMenu]     = useState<{ x: number; y: number; path: string } | null>(null);
   const [ollamaModels, setOllamaModels]   = useState<string[]>([]);
   const [setupDone, setSetupDone]         = useState(false);
+  const [passwordModal, setPasswordModal] = useState<{ path: string; name: string; mode: 'lock' | 'unlock' } | null>(null);
+  const onboarding = useOnboarding();
 
   // ── Bootstrap ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -89,6 +101,8 @@ export default function App() {
       if (e.metaKey && e.key === 'n') { e.preventDefault(); setShowNewNote(true); }
       if (e.metaKey && e.key === 'p') { e.preventDefault(); setShowCapture(true); }
       if (e.metaKey && e.key === '/') { e.preventDefault(); setAiMenuOpen(v => !v); }
+      if (e.metaKey && e.key === 'f') { e.preventDefault(); setActiveView('search'); }
+      if (e.metaKey && e.shiftKey && e.key === 'F') { e.preventDefault(); setActiveView('fullsearch'); }
     }
     window.addEventListener('keydown', handleKey);
 
@@ -224,6 +238,39 @@ export default function App() {
     setOllamaModels(status?.models || []);
   }, [setOllamaStatus]);
 
+  // ── Note encryption ────────────────────────────────────────────────────────
+  const handleLockNote = useCallback(async (path: string, password: string) => {
+    const res = await window.ghostvault.lockNote(path, password);
+    if (res.ok) {
+      toggleLocked(path);
+      addToast('Note locked', 'success');
+      const { activeNote } = useStore.getState();
+      if (activeNote?.path === path) { setEditorContent(''); setDirty(false); }
+    } else {
+      addToast(res.error || 'Lock failed', 'error');
+    }
+    setPasswordModal(null);
+  }, [toggleLocked, addToast, setEditorContent, setDirty]);
+
+  const handleUnlockNote = useCallback(async (path: string, password: string) => {
+    const res = await window.ghostvault.unlockNote(path, password);
+    if (res.ok && res.content !== undefined) {
+      toggleLocked(path);
+      const { notes } = useStore.getState();
+      const note = notes.find(n => n.path === path);
+      if (note) {
+        setActiveNote({ ...note, content: res.content });
+        setEditorContent(res.content);
+        setDirty(false);
+        setActiveView('notes');
+      }
+      addToast('Note unlocked', 'success');
+    } else {
+      addToast(res.error || 'Wrong password', 'error');
+    }
+    setPasswordModal(null);
+  }, [toggleLocked, addToast, setActiveNote, setEditorContent, setDirty, setActiveView]);
+
   // ── Insert template ────────────────────────────────────────────────────────
   const insertTemplate = useCallback((content: string) => {
     setEditorContent(content);
@@ -248,36 +295,72 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
-      <Sidebar
-        onOpenNote={openNote}
-        onNewNote={() => setShowNewNote(true)}
-        onNewFolder={() => setShowNewFolder(true)}
-        onContextMenu={(e, note) => setContextMenu({ x: e.clientX, y: e.clientY, path: note.path })}
-      />
+    <div className="flex flex-col h-screen overflow-hidden" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
+      {/* Custom title bar */}
+      <TitleBar onHelp={onboarding.open} />
 
-      <div className="flex-1 overflow-hidden flex flex-col">
-        {activeView === 'notes' && (
-          <EditorView
-            onSave={saveNote}
-            onAiMenu={() => setAiMenuOpen(true)}
-            onTemplate={() => setActiveView('templates')}
-            onTogglePin={handleTogglePin}
-            onToggleAot={handleToggleAot}
-            onCapture={() => setShowCapture(true)}
-          />
-        )}
-        {activeView === 'capture' && (
-          <CaptureView onSaved={refreshVault} />
-        )}
-        {activeView === 'vault' && <VaultView />}
-        {activeView === 'templates' && (
-          <TemplatesView onInsert={insertTemplate} />
-        )}
-        {activeView === 'settings' && (
-          <SettingsView ollamaModels={ollamaModels} onOllamaRefresh={refreshOllama} />
-        )}
+      {/* Main content area */}
+      <div className="flex flex-1 overflow-hidden min-h-0">
+        <Sidebar
+          onOpenNote={openNote}
+          onNewNote={() => setShowNewNote(true)}
+          onNewFolder={() => setShowNewFolder(true)}
+          onContextMenu={(e, note) => setContextMenu({ x: e.clientX, y: e.clientY, path: note.path })}
+        />
+
+        <div className="flex-1 overflow-hidden flex flex-col min-w-0">
+          {activeView === 'notes' && (
+            <div className="flex flex-1 min-h-0 overflow-hidden">
+              <NoteList
+                onOpenNote={openNote}
+                onDeleteNote={deleteNote}
+                onRenameNote={renameNote}
+              />
+              <div className="flex-1 overflow-hidden flex flex-col min-w-0">
+                <EditorView
+                  onSave={saveNote}
+                  onAiMenu={() => setAiMenuOpen(true)}
+                  onTemplate={() => setActiveView('templates')}
+                  onTogglePin={handleTogglePin}
+                  onToggleAot={handleToggleAot}
+                  onCapture={() => setShowCapture(true)}
+                  onOpenNote={openNote}
+                />
+              </div>
+            </div>
+          )}
+          {activeView === 'search' && (
+            <SearchView onOpenNote={openNote} />
+          )}
+          {activeView === 'tags' && (
+            <TagsView onOpenNote={openNote} />
+          )}
+          {activeView === 'capture' && (
+            <CaptureView onSaved={refreshVault} />
+          )}
+          {activeView === 'vault' && (
+            <VaultView onOpenNote={openNote} />
+          )}
+          {activeView === 'templates' && (
+            <TemplatesView onInsert={insertTemplate} />
+          )}
+          {activeView === 'ai' && (
+            <AIAssistantPanel />
+          )}
+          {activeView === 'graph' && (
+            <GraphView onOpenNote={openNote} />
+          )}
+          {activeView === 'fullsearch' && (
+            <FullSearchView onOpenNote={openNote} />
+          )}
+          {activeView === 'settings' && (
+            <SettingsView ollamaModels={ollamaModels} onOllamaRefresh={refreshOllama} />
+          )}
+        </div>
       </div>
+
+      {/* Status bar */}
+      <StatusBar />
 
       <AnimatePresence>
         {showNewNote && (
@@ -312,11 +395,37 @@ export default function App() {
               window.ghostvault.revealInFinder(contextMenu.path);
               setContextMenu(null);
             }}
+            onPin={() => {
+              const { notes } = useStore.getState();
+              const note = notes.find(n => n.path === contextMenu.path);
+              if (note) { togglePin(contextMenu.path); window.ghostvault.saveConfig({ pins: JSON.stringify([...useStore.getState().pinnedPaths]) }); }
+              setContextMenu(null);
+            }}
+            onLock={() => {
+              const { notes } = useStore.getState();
+              const note = notes.find(n => n.path === contextMenu.path);
+              const isLocked = lockedNotes.has(contextMenu.path);
+              const noteName = note?.name || '';
+              setPasswordModal({ path: contextMenu.path, name: noteName, mode: isLocked ? 'unlock' : 'lock' });
+              setContextMenu(null);
+            }}
+          />
+        )}
+        {passwordModal && (
+          <NotePasswordModal
+            noteName={passwordModal.name}
+            mode={passwordModal.mode}
+            onSubmit={(pw) => {
+              if (passwordModal.mode === 'lock') handleLockNote(passwordModal.path, pw);
+              else handleUnlockNote(passwordModal.path, pw);
+            }}
+            onClose={() => setPasswordModal(null)}
           />
         )}
       </AnimatePresence>
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
+      {onboarding.show && <OnboardingModal onClose={onboarding.close} />}
     </div>
   );
 }

@@ -301,17 +301,22 @@ export function AiMenu({ open, onClose, onAction }: {
 }
 
 // ─── Note Context Menu ────────────────────────────────────────────────────────
-export function NoteContextMenu({ x, y, path, onClose, onDelete, onRename, onReveal }: {
+export function NoteContextMenu({ x, y, path, onClose, onDelete, onRename, onReveal, onPin, onLock }: {
   x: number; y: number; path: string;
   onClose: () => void;
   onDelete: () => void;
   onRename: (newName: string) => void;
   onReveal: () => void;
+  onPin?: () => void;
+  onLock?: () => void;
 }) {
+  const { pinnedPaths, lockedNotes } = useStore();
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName]   = useState('');
   const renameRef = useRef<HTMLInputElement>(null);
   const noteName  = path.split('/').pop()?.replace('.md', '') || '';
+  const isPinned  = pinnedPaths.has(path);
+  const isLocked  = lockedNotes.has(path);
 
   function startRename() {
     setNewName(noteName);
@@ -331,9 +336,9 @@ export function NoteContextMenu({ x, y, path, onClose, onDelete, onRename, onRev
       <motion.div
         className="fixed z-50 rounded-lg border py-1 shadow-xl"
         style={{
-          left: Math.min(x, window.innerWidth - 176),
-          top: Math.min(y, window.innerHeight - 200),
-          width: 168,
+          left: Math.min(x, window.innerWidth - 192),
+          top: Math.min(y, window.innerHeight - 260),
+          width: 184,
           background: 'var(--bg3)', borderColor: 'var(--border)'
         }}
         initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
@@ -358,6 +363,20 @@ export function NoteContextMenu({ x, y, path, onClose, onDelete, onRename, onRev
             <button onClick={startRename}
               className="w-full text-left px-4 py-2 text-sm transition-colors hover:bg-white/10"
               style={{ color: 'var(--text-muted)' }}>Rename</button>
+            {onPin && (
+              <button onClick={onPin}
+                className="w-full text-left px-4 py-2 text-sm transition-colors hover:bg-white/10"
+                style={{ color: 'var(--text-muted)' }}>
+                {isPinned ? 'Unpin' : 'Pin to top'}
+              </button>
+            )}
+            {onLock && (
+              <button onClick={onLock}
+                className="w-full text-left px-4 py-2 text-sm transition-colors hover:bg-white/10"
+                style={{ color: 'var(--text-muted)' }}>
+                {isLocked ? 'Unlock note' : 'Lock note'}
+              </button>
+            )}
             <button onClick={onReveal}
               className="w-full text-left px-4 py-2 text-sm transition-colors hover:bg-white/10"
               style={{ color: 'var(--text-muted)' }}>Reveal in Finder</button>

@@ -1,0 +1,187 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── CyberOS Design Bible — Global Styles ────────────────────────────────── */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  min-height: 100vh;
+  overflow: hidden;
+  background-color: #0a0a0f !important;
+  background: radial-gradient(ellipse at 20% 0%, rgba(63, 185, 80, 0.04) 0%, #0a0a0f 50%) !important;
+  color: #e2e8f0;
+  font-family: 'Inter', 'SF Pro Display', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Selection ───────────────────────────────────────────────────────────── */
+
+::selection {
+  background: rgba(63, 185, 80, 0.25);
+  color: inherit;
+}
+
+*:not(input):not(textarea):not(select) {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input, textarea, select, button {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* ─── Drag Regions (macOS frameless) ──────────────────────────────────────── */
+
+.drag-region {
+  -webkit-app-region: drag;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* ─── Scrollbars ──────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(42, 51, 71, 0.5);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(42, 51, 71, 0.8);
+}
+
+/* ─── Focus Styles ────────────────────────────────────────────────────────── */
+
+*:focus-visible {
+  outline: 1px solid rgba(63, 185, 80, 0.5);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+/* ─── Tabular Nums ────────────────────────────────────────────────────────── */
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Transitions ─────────────────────────────────────────────────────────── */
+
+button, a, input, select {
+  transition: all 0.15s ease-out;
+}
+
+/* ─── Glassmorphism Card ──────────────────────────────────────────────────── */
+
+.glass-card {
+  background: rgba(22, 27, 39, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(42, 51, 71, 0.6);
+  border-radius: 8px;
+}
+
+/* ─── Status Pulse Glow Animation ─────────────────────────────────────────── */
+
+@keyframes statusPulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--pulse-color, rgba(63, 185, 80, 0.4));
+  }
+  70% {
+    box-shadow: 0 0 0 6px var(--pulse-color-fade, rgba(63, 185, 80, 0));
+  }
+  100% {
+    box-shadow: 0 0 0 0 var(--pulse-color-fade, rgba(63, 185, 80, 0));
+  }
+}
+
+.status-dot-pulse {
+  animation: statusPulse 2s ease-out infinite;
+}
+
+/* ─── Metric Glow ─────────────────────────────────────────────────────────── */
+
+.metric-glow {
+  filter: drop-shadow(0 0 8px var(--glow-color, rgba(63, 185, 80, 0.5)));
+}
+
+/* ─── Accent Left Border Utility ──────────────────────────────────────────── */
+
+.accent-border-left {
+  border-left: 3px solid var(--accent-color, #3fb950);
+}
+
+/* ─── Form inputs ─────────────────────────────────────────────────────────── */
+
+input, textarea, select {
+  background: rgba(10, 10, 15, 0.8);
+  color: #e2e8f0;
+  border: 1px solid rgba(42, 51, 71, 0.8);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: #3fb950;
+  box-shadow: 0 0 0 2px rgba(63, 185, 80, 0.15);
+}
+
+input::placeholder, textarea::placeholder {
+  color: #4a5568;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+select option {
+  background: #12131a;
+  color: #e2e8f0;
+}
+
+/* ─── Severity badges ─────────────────────────────────────────────────────── */
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.badge-critical { background: rgba(255, 68, 68, 0.15); color: #ff4444; border: 1px solid rgba(255, 68, 68, 0.3); }
+.badge-high     { background: rgba(255, 107, 53, 0.15); color: #ff6b35; border: 1px solid rgba(255, 107, 53, 0.3); }
+.badge-medium   { background: rgba(240, 165, 0, 0.15);  color: #f0a500; border: 1px solid rgba(240, 165, 0, 0.3); }
+.badge-low      { background: rgba(63, 185, 80, 0.15);  color: #3fb950; border: 1px solid rgba(63, 185, 80, 0.3); }
+.badge-info     { background: rgba(139, 148, 158, 0.15); color: #8b949e; border: 1px solid rgba(139, 148, 158, 0.3); }
+
+/* ─── Print / PDF ─────────────────────────────────────────────────────────── */
+
+@media print {
+  html, body { overflow: visible; height: auto; background: #fff !important; }
+  #root { height: auto; overflow: visible; }
+  .no-print { display: none !important; }
+  .print-page { display: block !important; }
+}

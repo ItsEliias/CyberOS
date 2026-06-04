@@ -1,7 +1,12 @@
-import type { Report, ReportSection, Finding, Severity, ReportTemplate } from '@shared/types';
+import type { Report, ReportSection, Finding, Severity, ReportTemplate, ReportVariables } from '@shared/types';
 
 export function makeId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  // RFC 4122 UUID v4
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
 }
 
 export function makeDefaultSections(): ReportSection[] {
@@ -24,6 +29,16 @@ export function makeDefaultSections(): ReportSection[] {
   }));
 }
 
+export function makeDefaultVariables(): ReportVariables {
+  return {
+    client_name    : '',
+    test_date      : new Date().toISOString().slice(0, 10),
+    tester_name    : '',
+    scope          : '',
+    engagement_type: '',
+  };
+}
+
 export function makeBlankReport(overrides: Partial<Report> = {}): Report {
   const now = new Date().toISOString();
   return {
@@ -36,8 +51,12 @@ export function makeBlankReport(overrides: Partial<Report> = {}): Report {
     platform      : 'THM',
     assessmentDate: new Date().toISOString().slice(0, 10),
     operator      : '',
+    status        : 'draft',
     sections      : makeDefaultSections(),
     findings      : [],
+    variables     : makeDefaultVariables(),
+    versions      : [],
+    watermark     : 'none',
     ...overrides,
   };
 }
@@ -119,6 +138,77 @@ export const REPORT_TEMPLATES: TemplateDef[] = [
       'Tools Used',
     ],
   },
+  {
+    id         : 'network-pentest',
+    name       : 'Network Pentest',
+    description: 'Internal/external network penetration test report',
+    sectionTitles: [
+      'Executive Summary',
+      'Scope and Objectives',
+      'Network Architecture',
+      'Methodology',
+      'Findings',
+      'Vulnerability Summary',
+      'Remediation Plan',
+      'Appendix',
+    ],
+  },
+  {
+    id         : 'active-directory',
+    name       : 'Active Directory',
+    description: 'Active Directory / domain compromise assessment',
+    sectionTitles: [
+      'Executive Summary',
+      'Domain Overview',
+      'Scope',
+      'Attack Path',
+      'Findings',
+      'Credentials Discovered',
+      'Domain Hardening Recommendations',
+      'Appendix',
+    ],
+  },
+  {
+    id         : 'api-security',
+    name       : 'API Security',
+    description: 'REST/GraphQL API security assessment report',
+    sectionTitles: [
+      'Executive Summary',
+      'API Inventory',
+      'Scope',
+      'Methodology',
+      'OWASP API Top 10 Coverage',
+      'Findings',
+      'Remediation Summary',
+      'Appendix',
+    ],
+  },
+  {
+    id         : 'mobile-app',
+    name       : 'Mobile App',
+    description: 'iOS/Android mobile application security assessment',
+    sectionTitles: [
+      'Executive Summary',
+      'Application Overview',
+      'Scope',
+      'Static Analysis',
+      'Dynamic Analysis',
+      'Findings',
+      'Remediation Summary',
+      'Appendix',
+    ],
+  },
+  {
+    id         : 'executive-summary',
+    name       : 'Executive Summary Only',
+    description: 'Concise management-level summary report',
+    sectionTitles: [
+      'Executive Summary',
+      'Risk Overview',
+      'Key Findings',
+      'Recommendations',
+    ],
+  },
 ];
 
 const PTES_CONTENT: Record<string, string> = {
@@ -166,10 +256,64 @@ const HTB_CONTENT: Record<string, string> = {
     'List of tools and commands used throughout.',
 };
 
+const NETWORK_PENTEST_CONTENT: Record<string, string> = {
+  'Executive Summary':
+    'Prepared for {{client_name}} by {{tester_name}}.\n\nEngagement type: {{engagement_type}}\nTest date: {{test_date}}\nScope: {{scope}}\n\nHigh-level assessment overview for management.',
+  'Network Architecture':
+    'Diagram description and network topology overview.',
+  'Scope and Objectives':
+    'IP ranges, excluded systems, test objectives, and rules of engagement.',
+  'Methodology':
+    'PTES phases applied: Reconnaissance, Enumeration, Exploitation, Post-Exploitation, Reporting.',
+  'Vulnerability Summary':
+    '| Severity | Count |\n|---|---|\n| Critical | 0 |\n| High | 0 |\n| Medium | 0 |\n| Low | 0 |',
+  'Remediation Plan':
+    'Prioritised remediation steps with 30/60/90-day timelines.',
+};
+
+const AD_CONTENT: Record<string, string> = {
+  'Executive Summary':
+    'Active Directory assessment for {{client_name}}.\n\nTest date: {{test_date}}, Tester: {{tester_name}}.',
+  'Domain Overview':
+    '| Field | Value |\n|---|---|\n| Domain | |\n| DCs | |\n| Users | |\n| Computers | |',
+  'Attack Path':
+    'Describe the attack chain used to achieve domain compromise.',
+  'Domain Hardening Recommendations':
+    '- Implement tiered administration model\n- Enable Protected Users security group\n- Audit Kerberoastable accounts\n- Enforce SMB signing across all systems',
+};
+
+const API_CONTENT: Record<string, string> = {
+  'API Inventory':
+    '| Endpoint | Method | Auth Required | Tested |\n|---|---|---|---|\n| /api/v1/users | GET | Yes | |\n| /api/v1/auth | POST | No | |',
+  'OWASP API Top 10 Coverage':
+    '| Category | Tested | Result |\n|---|---|---|\n| API1 Broken Object Level Authorization | | |\n| API2 Broken Authentication | | |\n| API3 Broken Object Property Level Auth | | |\n| API4 Unrestricted Resource Consumption | | |\n| API5 Broken Function Level Authorization | | |\n| API6 Unrestricted Access to Sensitive Business Flows | | |\n| API7 Server Side Request Forgery | | |\n| API8 Security Misconfiguration | | |\n| API9 Improper Inventory Management | | |\n| API10 Unsafe Consumption of APIs | | |',
+};
+
+const MOBILE_CONTENT: Record<string, string> = {
+  'Application Overview':
+    '| Field | Value |\n|---|---|\n| App Name | |\n| Platform | iOS / Android |\n| Version | |\n| Build | |\n| Bundle ID | |',
+  'Static Analysis':
+    'Findings from decompilation, permission review, hardcoded secrets scan.',
+  'Dynamic Analysis':
+    'Runtime testing: traffic interception, session management, API calls.',
+};
+
+const EXEC_CONTENT: Record<string, string> = {
+  'Risk Overview':
+    'Overall risk rating: **High / Medium / Low**\n\nSummary of risk posture and business impact.',
+  'Key Findings':
+    'Top 5 findings and their business implications.',
+};
+
 function contentForTemplate(template: ReportTemplate, title: string): string {
-  if (template === 'ptes')      return PTES_CONTENT[title]  ?? '';
-  if (template === 'owasp-web') return OWASP_CONTENT[title] ?? '';
-  if (template === 'htb-machine') return HTB_CONTENT[title] ?? '';
+  if (template === 'ptes')            return PTES_CONTENT[title]           ?? '';
+  if (template === 'owasp-web')       return OWASP_CONTENT[title]          ?? '';
+  if (template === 'htb-machine')     return HTB_CONTENT[title]            ?? '';
+  if (template === 'network-pentest') return NETWORK_PENTEST_CONTENT[title] ?? '';
+  if (template === 'active-directory') return AD_CONTENT[title]            ?? '';
+  if (template === 'api-security')    return API_CONTENT[title]            ?? '';
+  if (template === 'mobile-app')      return MOBILE_CONTENT[title]         ?? '';
+  if (template === 'executive-summary') return EXEC_CONTENT[title]         ?? '';
   return '';
 }
 
@@ -184,6 +328,8 @@ export function makeReportFromTemplate(
     content: contentForTemplate(template, title),
     order  : i,
     visible: true,
+    type   : 'body' as const,
+    comments: [],
   }));
   const now = new Date().toISOString();
   return {
@@ -196,8 +342,12 @@ export function makeReportFromTemplate(
     platform      : 'THM',
     assessmentDate: now.slice(0, 10),
     operator      : '',
+    status        : 'draft',
     sections,
     findings      : [],
+    variables     : makeDefaultVariables(),
+    versions      : [],
+    watermark     : 'none',
     ...overrides,
   };
 }

@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useDashboardStore } from './stores/useDashboardStore'
 import { useConfigWatcher } from './hooks/useConfigWatcher'
 import { useEventFeed } from './hooks/useEventFeed'
+import { useLiveStats } from './hooks/useLiveStats'
 
 // Layout
 import TitleBar from './components/layout/TitleBar'
@@ -34,6 +35,9 @@ import SharedContextInspector from './components/ecosystem/SharedContextInspecto
 // Settings screen
 import SettingsView from './views/SettingsView'
 
+// Apps screen
+import AppTabsView from './views/AppTabsView'
+
 // ─── Transition variants ─────────────────────────────────────────────────────
 
 const pageVariants = {
@@ -52,6 +56,7 @@ export default function App() {
   // Initialize data watchers
   useConfigWatcher()
   useEventFeed()
+  useLiveStats()
 
   // Error state
   if (error && !isLoading) {
@@ -152,6 +157,20 @@ export default function App() {
               className="flex-1 p-6 overflow-y-auto"
             >
               <SettingsView />
+            </motion.div>
+          )}
+
+          {activeView === 'apps' && (
+            <motion.div
+              key="apps"
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+              className="flex-1 overflow-y-auto"
+            >
+              <AppTabsView />
             </motion.div>
           )}
         </AnimatePresence>

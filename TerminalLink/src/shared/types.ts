@@ -1,9 +1,10 @@
 export interface CommandEntry {
   id: string
+  sessionId?: string       // session this command belongs to
   timestamp: string
   command: string
   outputSnippet?: string   // first 200 chars of output
-  pane: 1 | 2
+  pane: 'left' | 'right'
 }
 
 export interface TerminalSession {

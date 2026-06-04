@@ -2,72 +2,178 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Default theme vars (stealth) ─────────────────────────────────────────── */
-:root {
-  --bg: #0e1117;
-  --bg-secondary: #161b22;
-  --bg2: #0d1017;
-  --bg3: #181e2a;
-  --bg4: #1e2535;
-  --panel: #161b22;
-  --panel-alt: #1c2128;
-  --border: #30363d;
-  --border2: #252d3d;
-  --input-bg: #131926;
-  --input-border: #21262d;
-  --accent: #4a9eff;
-  --accent-2: #7bb8ff;
-  --accent-dim: rgba(74, 158, 255, 0.12);
-  --accent-glow: rgba(74, 158, 255, 0.3);
-  --accent-2-glow: rgba(123, 184, 255, 0.2);
-  --text: #c9d1d9;
-  --text-dim: #8b949e;
-  --text-muted: #8b949e;
-  --btn-border: #4a9eff;
-  --btn-text: #4a9eff;
-  --btn-glow: rgba(74, 158, 255, 0.3);
-  --btn-hover-bg: rgba(74, 158, 255, 0.1);
-  --code-bg: #0d1017;
-  --sidebar-bg: #0d1017;
-  --card-bg: #141a24;
-  --chat-user-bg: rgba(74, 158, 255, 0.12);
-  --chat-ai-bg: #161b22;
-  --chat-ai-border: #4a9eff;
-  --scrollbar: #30363d;
-  --progress-start: #4a9eff;
-  --progress-end: #7bb8ff;
-  --danger: #f85149;
-  --error: #ff4a6e;
-  --success: #3ddc84;
-  --warning: #ffb347;
-  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-}
+/* ─── CyberOS Design Bible — CyberLab Companion Globals ──────────────────── */
 
-/* ── Base resets ───────────────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body, #root {
   height: 100%;
+  min-height: 100vh;
   overflow: hidden;
-  background-color: var(--bg);
-  color: var(--text);
-  font-family: var(--font-family);
+  background-color: #0a0a0f !important;
+  background: radial-gradient(ellipse at 20% 0%, rgba(180, 79, 255, 0.04) 0%, #0a0a0f 50%) !important;
+  color: #e2e8f0;
+  font-family: 'Inter', 'SF Pro Display', system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-  user-select: none;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* ── Scrollbar ────────────────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+/* ─── Legacy CSS vars (used by existing components) ──────────────────────── */
+:root {
+  --bg: #0a0a0f;
+  --bg-secondary: #12131a;
+  --bg2: #0a0a0f;
+  --bg3: #12131a;
+  --bg4: #1a1b26;
+  --panel: #12131a;
+  --panel-alt: #1a1b26;
+  --border: #2a3347;
+  --border2: #2a3347;
+  --input-bg: #0d0e1a;
+  --input-border: #2a3347;
+  --accent: #b44fff;
+  --accent-2: #cb80ff;
+  --accent-dim: rgba(180, 79, 255, 0.12);
+  --accent-glow: rgba(180, 79, 255, 0.3);
+  --accent-2-glow: rgba(203, 128, 255, 0.2);
+  --text: #e2e8f0;
+  --text-dim: #8b949e;
+  --text-muted: #8b949e;
+  --btn-border: #b44fff;
+  --btn-text: #b44fff;
+  --btn-glow: rgba(180, 79, 255, 0.3);
+  --btn-hover-bg: rgba(180, 79, 255, 0.1);
+  --code-bg: #0a0c14;
+  --sidebar-bg: #0a0a0f;
+  --card-bg: #12131a;
+  --chat-user-bg: rgba(180, 79, 255, 0.1);
+  --chat-ai-bg: #12131a;
+  --chat-ai-border: #2a3347;
+  --scrollbar: #2a3347;
+  --progress-start: #b44fff;
+  --progress-end: #cb80ff;
+  --danger: #f85149;
+  --error: #f85149;
+  --success: #3fb950;
+  --warning: #d29922;
+  --font-family: 'Inter', 'SF Pro Display', system-ui, sans-serif;
+}
 
-/* ── Text selectable in chat/code areas ───────────────────────────────────── */
-.selectable, textarea, input, pre, code { user-select: text; }
+/* ─── Selection ───────────────────────────────────────────────────────────── */
 
-/* ── Tailwind layer overrides ─────────────────────────────────────────────── */
+::selection {
+  background: rgba(180, 79, 255, 0.25);
+  color: inherit;
+}
+
+*:not(input):not(textarea):not(select) {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input, textarea, select, button {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* ─── Drag Regions (macOS frameless) ──────────────────────────────────────── */
+
+.drag-region {
+  -webkit-app-region: drag;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* ─── Scrollbars ──────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(42, 51, 71, 0.5);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(42, 51, 71, 0.8);
+}
+
+/* ─── Focus Styles ────────────────────────────────────────────────────────── */
+
+*:focus-visible {
+  outline: 1px solid rgba(180, 79, 255, 0.5);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+/* ─── Tabular Nums ────────────────────────────────────────────────────────── */
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Transitions ─────────────────────────────────────────────────────────── */
+
+button, a, input, select {
+  transition: all 0.15s ease-out;
+}
+
+/* ─── Glassmorphism Card ──────────────────────────────────────────────────── */
+
+.glass-card {
+  background: rgba(22, 27, 39, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(42, 51, 71, 0.6);
+  border-radius: 8px;
+}
+
+/* ─── Status Pulse Glow Animation ─────────────────────────────────────────── */
+
+@keyframes statusPulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--pulse-color, rgba(180, 79, 255, 0.4));
+  }
+  70% {
+    box-shadow: 0 0 0 6px var(--pulse-color-fade, rgba(180, 79, 255, 0));
+  }
+  100% {
+    box-shadow: 0 0 0 0 var(--pulse-color-fade, rgba(180, 79, 255, 0));
+  }
+}
+
+.status-dot-pulse {
+  animation: statusPulse 2s ease-out infinite;
+}
+
+/* ─── Metric Glow ─────────────────────────────────────────────────────────── */
+
+.metric-glow {
+  filter: drop-shadow(0 0 8px var(--glow-color, rgba(180, 79, 255, 0.5)));
+}
+
+/* ─── Accent Left Border Utility ──────────────────────────────────────────── */
+
+.accent-border-left {
+  border-left: 3px solid var(--accent-color, #b44fff);
+}
+
+/* ─── Base Resets ─────────────────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ─── Tailwind layer overrides ────────────────────────────────────────────── */
+
 @layer base {
   h1, h2, h3, h4, h5, h6 { color: var(--text); }
   a { color: var(--accent); text-decoration: none; }
@@ -145,7 +251,7 @@ html, body, #root {
     font-weight: 500;
     background: var(--accent-dim);
     color: var(--accent);
-    border: 1px solid rgba(74, 158, 255, 0.25);
+    border: 1px solid rgba(180, 79, 255, 0.25);
   }
 
   /* Code blocks */
@@ -154,7 +260,7 @@ html, body, #root {
     border: 1px solid var(--border);
     border-radius: 6px;
     padding: 10px 12px;
-    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+    font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
     font-size: 12px;
     color: var(--text);
     overflow-x: auto;
@@ -239,20 +345,15 @@ html, body, #root {
 
   /* Finding tags */
   .finding-port     { background: rgba(74, 158, 255, 0.15); color: #4a9eff; border-color: rgba(74,158,255,0.3); }
-  .finding-cred     { background: rgba(255, 179, 71, 0.15); color: #ffb347; border-color: rgba(255,179,71,0.3); }
-  .finding-flag     { background: rgba(61, 220, 132, 0.15); color: #3ddc84; border-color: rgba(61,220,132,0.3); }
-  .finding-cve      { background: rgba(248, 81, 73, 0.15);  color: #f85149; border-color: rgba(248,81,73,0.3); }
+  .finding-cred     { background: rgba(248, 81, 73, 0.15);  color: #f85149; border-color: rgba(248,81,73,0.3); }
+  .finding-flag     { background: rgba(63, 185, 80, 0.15);  color: #3fb950; border-color: rgba(63,185,80,0.3); }
+  .finding-cve      { background: rgba(210, 153, 34, 0.15); color: #d29922; border-color: rgba(210,153,34,0.3); }
   .finding-user     { background: rgba(180, 79, 255, 0.15); color: #b44fff; border-color: rgba(180,79,255,0.3); }
   .finding-hash     { background: rgba(255, 122, 0, 0.15);  color: #ff7a00; border-color: rgba(255,122,0,0.3); }
-  .finding-file     { background: rgba(139, 148, 158, 0.15);color: #8b949e; border-color: rgba(139,148,158,0.3); }
+  .finding-file     { background: rgba(139, 148, 158, 0.15); color: #8b949e; border-color: rgba(139,148,158,0.3); }
   .finding-service  { background: rgba(0, 255, 224, 0.12);  color: #00ffe0; border-color: rgba(0,255,224,0.25); }
-
-  /* Hint level badge */
-  .hint-1 { color: var(--success); border-color: var(--success); }
-  .hint-2 { color: var(--accent); border-color: var(--accent); }
-  .hint-3 { color: var(--warning); border-color: var(--warning); }
-  .hint-4 { color: #ff7a00; border-color: #ff7a00; }
-  .hint-5 { color: var(--danger); border-color: var(--danger); }
+  .finding-vulnerability { background: rgba(248, 81, 73, 0.15); color: #f85149; border-color: rgba(248,81,73,0.3); }
+  .finding-note     { background: rgba(180, 79, 255, 0.12); color: #b44fff; border-color: rgba(180,79,255,0.25); }
 
   /* Difficulty badges */
   .diff-easy   { color: var(--success); }
@@ -261,11 +362,13 @@ html, body, #root {
   .diff-insane { color: var(--danger); }
 }
 
-/* ── Markdown prose (for chat messages) ──────────────────────────────────── */
+/* ─── Markdown prose (for chat messages) ──────────────────────────────────── */
 .prose {
   color: var(--text);
   font-size: 13.5px;
   line-height: 1.65;
+  user-select: text;
+  -webkit-user-select: text;
 }
 .prose h1 { font-size: 1.2em; font-weight: 700; margin: 12px 0 6px; color: var(--accent); }
 .prose h2 { font-size: 1.1em; font-weight: 600; margin: 10px 0 5px; color: var(--accent-2); }
@@ -280,7 +383,7 @@ html, body, #root {
   border: 1px solid var(--border);
   border-radius: 3px;
   padding: 1px 5px;
-  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
   font-size: 0.9em;
   color: var(--accent);
 }
@@ -311,7 +414,7 @@ html, body, #root {
 .prose th { background: var(--bg3); color: var(--text); padding: 6px 10px; text-align: left; border: 1px solid var(--border); }
 .prose td { padding: 5px 10px; border: 1px solid var(--border); color: var(--text-dim); }
 
-/* ── Progress bar ─────────────────────────────────────────────────────────── */
+/* ─── Progress bar ─────────────────────────────────────────────────────────── */
 .progress-bar {
   height: 4px;
   border-radius: 2px;
@@ -325,13 +428,13 @@ html, body, #root {
   transition: width 0.4s ease;
 }
 
-/* ── Tab bar ──────────────────────────────────────────────────────────────── */
-.tab-bar { background: var(--bg2); border-bottom: 1px solid var(--border); }
+/* ─── Tab bar ──────────────────────────────────────────────────────────────── */
+.tab-bar { background: rgba(10, 10, 15, 0.9); border-bottom: 1px solid rgba(42, 51, 71, 0.5); }
 .tab-item {
-  padding: 8px 16px;
+  padding: 8px 14px;
   font-size: 12.5px;
   color: var(--text-dim);
-  border-right: 1px solid var(--border);
+  border-right: 1px solid rgba(42, 51, 71, 0.4);
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
   display: flex;
@@ -339,10 +442,10 @@ html, body, #root {
   gap: 6px;
   white-space: nowrap;
 }
-.tab-item:hover { background: var(--bg3); color: var(--text); }
-.tab-item.active { background: var(--bg); color: var(--accent); border-bottom: 2px solid var(--accent); }
+.tab-item:hover { background: rgba(26, 27, 38, 0.6); color: var(--text); }
+.tab-item.active { background: rgba(180, 79, 255, 0.08); color: var(--accent); border-bottom: 2px solid var(--accent); }
 
-/* ── Sidebar nav items ────────────────────────────────────────────────────── */
+/* ─── Sidebar nav items ────────────────────────────────────────────────────── */
 .nav-item {
   display: flex;
   align-items: center;
@@ -357,16 +460,18 @@ html, body, #root {
 .nav-item:hover { background: var(--bg3); color: var(--text); }
 .nav-item.active { background: var(--accent-dim); color: var(--accent); }
 
-/* ── Animations ───────────────────────────────────────────────────────────── */
+/* ─── Animations ───────────────────────────────────────────────────────────── */
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 @keyframes spin { to { transform: rotate(360deg); } }
+@keyframes timerPulse { 0%, 100% { border-color: var(--danger); box-shadow: 0 0 0 0 rgba(248, 81, 73, 0.4); } 50% { border-color: #ff6b6b; box-shadow: 0 0 0 4px rgba(248, 81, 73, 0); } }
 
 .animate-fade-in { animation: fadeIn 0.2s ease-out; }
 .animate-pulse-dot { animation: pulse-dot 1.5s ease-in-out infinite; }
 .spinner { animation: spin 0.8s linear infinite; }
+.timer-pulse { animation: timerPulse 1s ease-in-out infinite; }
 
-/* ── Tooltip ──────────────────────────────────────────────────────────────── */
+/* ─── Tooltip ──────────────────────────────────────────────────────────────── */
 [data-tooltip] { position: relative; }
 [data-tooltip]::after {
   content: attr(data-tooltip);
@@ -388,23 +493,33 @@ html, body, #root {
 }
 [data-tooltip]:hover::after { opacity: 1; }
 
-/* ── Modal backdrop ───────────────────────────────────────────────────────── */
+/* ─── Modal backdrop ────────────────────────────────────────────────────────── */
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(6px);
   z-index: 50;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .modal-box {
-  background: var(--panel);
-  border: 1px solid var(--border2);
+  background: rgba(22, 27, 39, 0.95);
+  border: 1px solid rgba(42, 51, 71, 0.8);
   border-radius: 10px;
   padding: 24px;
   max-width: 520px;
   width: 90%;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
 }
+
+/* ─── selectable text ────────────────────────────────────────────────────── */
+.selectable, textarea, input, pre, code { user-select: text; -webkit-user-select: text; }
+
+/* ─── Hint level badges ──────────────────────────────────────────────────── */
+.hint-1 { color: var(--success); border-color: var(--success); }
+.hint-2 { color: var(--accent); border-color: var(--accent); }
+.hint-3 { color: var(--warning); border-color: var(--warning); }
+.hint-4 { color: #ff7a00; border-color: #ff7a00; }
+.hint-5 { color: var(--danger); border-color: var(--danger); }

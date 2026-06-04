@@ -1,5 +1,12 @@
 /// <reference types="vite/client" />
 
+// Electron titlebar drag region — not in standard React.CSSProperties
+declare module 'react' {
+  interface CSSProperties {
+    WebkitAppRegion?: 'drag' | 'no-drag'
+  }
+}
+
 import type { NetworkNode, NetworkGraph, GraphSummary } from '../shared/types'
 
 interface PushNodePayload {
@@ -30,6 +37,7 @@ declare global {
     electronAPI: {
       parseNmapXml(xml: string): Promise<NetworkNode[]>
       loadNmapFile(): Promise<NetworkNode[] | null>
+      loadNmapFileRaw(): Promise<{ content: string; filename: string } | null>
       importFromReconDesk(): Promise<NetworkNode[]>
       saveGraph(graph: NetworkGraph): Promise<void>
       loadGraphs(): Promise<GraphSummary[]>
@@ -38,6 +46,12 @@ declare global {
       getVersion(): Promise<string>
       pushToReconDesk(node: PushNodePayload): Promise<PushNodeResult>
       generateFromReconDesk(): Promise<ReconDeskGraphResult | null>
+      exportSvg(svgContent: string, name: string): Promise<void>
+      exportPng(dataUrl: string, name: string): Promise<void>
+      exportJson(json: string, name: string): Promise<void>
+      openExternal(url: string): Promise<void>
+      setTerminalLinkTarget(ip: string): Promise<void>
+      runNmap(ip: string): Promise<void>
     }
   }
 }

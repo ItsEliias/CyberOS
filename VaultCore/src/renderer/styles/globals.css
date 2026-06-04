@@ -2,111 +2,182 @@
 @tailwind components;
 @tailwind utilities;
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body, #root { width: 100%; height: 100%; overflow: hidden; }
+/* ─── CyberOS Design Bible — CSS Variables (VaultCore accent: #3fb950) ───── */
 
-/* ═══ CORE THEMES ═════════════════════════════════════════════════════════ */
-
-[data-core="stealth"], :root {
-  --bg: #0e1117;  --bg2: #0b0f15;  --bg3: #161b22;
-  --panel: #161b22;  --panel2: #1a2130;
-  --border: #30363d;  --border2: #3d444d;
-  --input-bg: #0d1017;  --input-border: #30363d;
-  --text: #c9d1d9;  --text-muted: #8b949e;  --text-dim: #6b7a99;
-  --scrollbar: #30363d;
-  --card-bg: #141a24;  --card-hover: #1a2130;
-  --shadow-color: rgba(74,158,255,.14);
+:root {
+  --accent:       #3fb950;
+  --accent-dim:   rgba(63, 185, 80, 0.4);
+  --bg:           #0a0a0f;
+  --bg2:          #12131a;
+  --bg3:          #1a1b26;
+  --border:       #2a3347;
+  --border-subtle:#1e2030;
+  --text:         #e2e8f0;
+  --text-muted:   #8b949e;
+  --text-dim:     #4a5568;
+  --input-bg:     #12131a;
+  --input-border: #2a3347;
+  --panel:        #161b22;
 }
 
-[data-core="graphite"] {
-  --bg: #111318;  --bg2: #0d0f14;  --bg3: #1a1f27;
-  --panel: #1a1f27;  --panel2: #1f2535;
-  --border: #2a313d;  --border2: #353d4d;
-  --input-bg: #0d0f14;  --input-border: #2a313d;
-  --text: #d8dee9;  --text-muted: #8892a4;  --text-dim: #6b7591;
-  --scrollbar: #2a313d;
-  --card-bg: #151b25;  --card-hover: #1f2535;
-  --shadow-color: rgba(110,168,254,.14);
+/* ─── CyberOS Design Bible — Global Styles ────────────────────────────────── */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  min-height: 100vh;
+  overflow: hidden;
+  background-color: #0a0a0f !important;
+  background: radial-gradient(ellipse at 20% 0%, rgba(63, 185, 80, 0.04) 0%, #0a0a0f 50%) !important;
+  color: #e2e8f0;
+  font-family: 'Inter', 'SF Pro Display', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-[data-core="frost"] {
-  --bg: #f0f4f8;  --bg2: #e8edf3;  --bg3: #ffffff;
-  --panel: #ffffff;  --panel2: #f5f8fc;
-  --border: #d1d9e0;  --border2: #c2ccd6;
-  --input-bg: #f5f8fc;  --input-border: #d1d9e0;
-  --text: #1a2030;  --text-muted: #536070;  --text-dim: #8090a0;
-  --scrollbar: #d1d9e0;
-  --card-bg: #f9fbfd;  --card-hover: #f0f4f8;
-  --shadow-color: rgba(74,158,255,.10);
+/* ─── Selection ───────────────────────────────────────────────────────────── */
+
+::selection {
+  background: rgba(63, 185, 80, 0.25);
+  color: inherit;
 }
 
-[data-core="oled"] {
-  --bg: #000000;  --bg2: #000000;  --bg3: #0d0d0d;
-  --panel: #0a0a0a;  --panel2: #111111;
-  --border: #222222;  --border2: #2a2a2a;
-  --input-bg: #050505;  --input-border: #222222;
-  --text: #eeeeee;  --text-muted: #888888;  --text-dim: #555555;
-  --scrollbar: #222222;
-  --card-bg: #0d0d0d;  --card-hover: #141414;
-  --shadow-color: rgba(200,200,200,.08);
+*:not(input):not(textarea):not(select) {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-/* ═══ PERSONALITY OVERLAYS ════════════════════════════════════════════════ */
+input, textarea, select, button {
+  user-select: text;
+  -webkit-user-select: text;
+}
 
-[data-personality="neutral"]  { --accent: #4a9eff; --accent2: #7bb8ff; }
-[data-personality="cyberpunk"]{ --accent: #b44eff; --accent2: #d68cff; }
-[data-personality="terminal"] { --accent: #33ff66; --accent2: #66ff99; }
-[data-personality="threat"]   { --accent: #ff4a4a; --accent2: #ff7b7b; }
+/* ─── Drag Regions (macOS frameless) ──────────────────────────────────────── */
 
-/* ─── Scrollbar ──────────────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 2px; }
+.drag-region {
+  -webkit-app-region: drag;
+}
 
-/* ─── User select ────────────────────────────────────────────────────────── */
-body { -webkit-user-select: none; user-select: none; }
-input, textarea, select { -webkit-user-select: text; user-select: text; }
+.no-drag {
+  -webkit-app-region: no-drag;
+}
 
-/* ─── Progress bar ───────────────────────────────────────────────────────── */
+/* ─── Scrollbars ──────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(42, 51, 71, 0.5);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(42, 51, 71, 0.8);
+}
+
+/* ─── Focus Styles ────────────────────────────────────────────────────────── */
+
+*:focus-visible {
+  outline: 1px solid rgba(63, 185, 80, 0.5);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+/* ─── Tabular Nums ────────────────────────────────────────────────────────── */
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Transitions ─────────────────────────────────────────────────────────── */
+
+button, a, input, select {
+  transition: all 0.15s ease-out;
+}
+
+/* ─── Glassmorphism Card ──────────────────────────────────────────────────── */
+
+.glass-card {
+  background: rgba(22, 27, 39, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(42, 51, 71, 0.6);
+  border-radius: 8px;
+}
+
+/* ─── Status Pulse Glow Animation ─────────────────────────────────────────── */
+
+@keyframes statusPulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--pulse-color, rgba(63, 185, 80, 0.4));
+  }
+  70% {
+    box-shadow: 0 0 0 6px var(--pulse-color-fade, rgba(63, 185, 80, 0));
+  }
+  100% {
+    box-shadow: 0 0 0 0 var(--pulse-color-fade, rgba(63, 185, 80, 0));
+  }
+}
+
+.status-dot-pulse {
+  animation: statusPulse 2s ease-out infinite;
+}
+
+/* ─── Metric Glow ─────────────────────────────────────────────────────────── */
+
+.metric-glow {
+  filter: drop-shadow(0 0 8px var(--glow-color, rgba(63, 185, 80, 0.5)));
+}
+
+/* ─── Accent Left Border Utility ──────────────────────────────────────────── */
+
+.accent-border-left {
+  border-left: 3px solid var(--accent-color, #3fb950);
+}
+
+/* ─── Shake animation for error state ────────────────────────────────────── */
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+
+.shake {
+  animation: shake 0.4s ease-out;
+}
+
+/* ─── Card / stat-chip / progress bar utility classes ─────────────────────── */
+
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.stat-chip {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  text-align: center;
+}
+
 .progress-bar-fill {
   height: 100%;
-  background: var(--accent);
   border-radius: 9999px;
-  transition: width 0.3s ease;
-}
-
-/* ─── Log panel ──────────────────────────────────────────────────────────── */
-.log-entry-info    { color: var(--text-muted); }
-.log-entry-success { color: #3fb950; }
-.log-entry-error   { color: #f85149; }
-.log-entry-warn    { color: #d29922; }
-
-/* ─── Source type pill active ────────────────────────────────────────────── */
-.pill-active {
   background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-}
-
-/* ─── Card ───────────────────────────────────────────────────────────────── */
-.card {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1rem;
-  transition: background 0.15s;
-}
-.card:hover { background: var(--card-hover); }
-
-/* ─── Tab ────────────────────────────────────────────────────────────────── */
-.tab { cursor: pointer; transition: color 0.15s, border-color 0.15s; }
-.tab.active { color: var(--accent); border-color: var(--accent); }
-
-/* ─── Stat chip ──────────────────────────────────────────────────────────── */
-.stat-chip {
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 0.75rem 1rem;
-  text-align: center;
+  transition: width 0.4s ease-out;
 }

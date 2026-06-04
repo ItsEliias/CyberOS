@@ -55,6 +55,13 @@ export function createSession(opts: {
     screenshots: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    ctfFlags: [],
+    sessionHints: [],
+    writeupContent: '',
+    writeupTemplate: '',
+    detectedTags: [],
+    review: null,
+    category: undefined,
   };
 }
 

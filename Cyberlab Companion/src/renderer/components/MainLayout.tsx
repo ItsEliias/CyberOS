@@ -14,13 +14,25 @@ import LabTracker from './LabTracker';
 import Progress from './Progress';
 import WriteupPanel from './WriteupPanel';
 import SettingsPanel from './SettingsPanel';
-import TimerHUD from './TimerHUD';
+import FindingsTable from './findings/FindingsTable';
+import LabHistory from './history/LabHistory';
+import SessionPanel from './session/SessionPanel';
+import KnowledgeBase from './KnowledgeBase';
+import StatsView from './StatsView';
 
-export default function MainLayout() {
+interface MainLayoutProps {
+  onHelp?: () => void
+}
+
+export default function MainLayout({ onHelp }: MainLayoutProps) {
   const { tabs, activeTabId } = useStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
   const activePanel = activeTab?.activePanel || 'chat';
   const hasActiveSession = !!(activeTab?.session?.labName && activeTab.session.labName !== 'New Session');
+
+  // For the chat view, show the spec's split layout: SessionPanel (320px) + ChatPanel (flex-1)
+  // For other panels, show full-width in main area (session panel still visible for context)
+  const showSessionPanel = hasActiveSession;
 
   const panels: Record<string, React.ReactNode> = {
     chat:         <ChatPanel />,
@@ -31,38 +43,44 @@ export default function MainLayout() {
     snippets:     <Snippets />,
     labtracker:   <LabTracker />,
     progress:     <Progress />,
-    writeup:      <WriteupPanel />,
-    settings:     <SettingsPanel />,
+    writeup:       <WriteupPanel />,
+    settings:      <SettingsPanel />,
+    findings:      <FindingsTable />,
+    history:       <LabHistory />,
+    knowledgebase: <KnowledgeBase />,
+    stats:         <StatsView />,
   };
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <Header />
+      <Header onHelp={onHelp} />
       <TabBar />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
-        <main className="flex-1 overflow-hidden">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activePanel}
-              className="h-full"
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.15 }}
-            >
-              {panels[activePanel] || <ChatPanel />}
-            </motion.div>
-          </AnimatePresence>
-        </main>
+
+        {/* Main content area: session panel + active panel */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Session info panel — always visible when a session is active */}
+          {showSessionPanel && <SessionPanel />}
+
+          {/* Active panel */}
+          <main className="flex-1 overflow-hidden">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activePanel}
+                className="h-full"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.15 }}
+              >
+                {panels[activePanel] || <ChatPanel />}
+              </motion.div>
+            </AnimatePresence>
+          </main>
+        </div>
       </div>
       <Footer />
-      {/* Timer HUD — floating pill, top-right of main content */}
-      {hasActiveSession && (
-        <div className="fixed top-16 right-4 z-40">
-          <TimerHUD />
-        </div>
-      )}
     </div>
   );
 }

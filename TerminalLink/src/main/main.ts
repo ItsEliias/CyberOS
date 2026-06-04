@@ -1,10 +1,11 @@
-import { app, BrowserWindow, ipcMain, globalShortcut } from 'electron';
+import { app, BrowserWindow, ipcMain, globalShortcut, shell } from 'electron';
 import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import fs from 'fs';
-import type { CommandEntry, CapturePayload } from '../shared/types.js';
+import type { CommandEntry, CapturePayload, SessionContext } from '../shared/types.js';
+import { registerTerminalLinkIPC } from './ipc/terminallink';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const _require   = createRequire(import.meta.url);
@@ -101,7 +102,11 @@ function createWindow(): void {
     mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
   }
 
-  mainWindow.once('ready-to-show', () => { mainWindow!.show(); });
+  mainWindow.once('ready-to-show', () => {
+    mainWindow!.show();
+    // Register the dedicated IPC module (spec deliverable)
+    registerTerminalLinkIPC(mainWindow!);
+  });
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 
@@ -254,6 +259,7 @@ ipcMain.handle('log-commands', (_evt, { commands }: { commands: CommandEntry[] }
 
 // ─── IPC: Version ─────────────────────────────────────────────────────────────
 ipcMain.handle('get-version', () => app.getVersion());
+ipcMain.handle('open-external', (_e, url: string) => shell.openExternal(url));
 
 // ─── IPC: Capture save ────────────────────────────────────────────────────────
 ipcMain.handle('capture:save', async (_e, payload: CapturePayload) => {

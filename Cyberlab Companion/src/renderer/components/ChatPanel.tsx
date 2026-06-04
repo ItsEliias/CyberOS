@@ -3,10 +3,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import { buildSystemPrompt, parseFindings, createSession } from '../lib/session';
 import { SOUNDS } from '../lib/sounds';
+import { parseAiResponse } from '../hooks/useAiParser';
 import type { ChatMessage, Session, ScreenshotAttachment } from '@shared/types';
 import LabCloseModal from './LabCloseModal';
 import SessionSetup from './SessionSetup';
 import MarkdownRenderer from './MarkdownRenderer';
+import SessionCompleteModal from './writeup/SessionCompleteModal';
+import WriteupEditor from './writeup/WriteupEditor';
+import FlagLogger from './flags/FlagLogger';
+import ParsedPortChips from './chat/ParsedPortChips';
+import ParsedCredChips from './chat/ParsedCredChips';
 
 // Port/credential regex for ReconDesk quick-save
 const PORT_PATTERN = /\bport[s]?\s+(\d{1,5})\s+(?:is\s+)?(?:open|running|listening)/gi;
@@ -393,23 +399,40 @@ export default function ChatPanel() {
           </div>
         )}
 
-        {messages.map(msg => (
-          <motion.div
-            key={msg.id}
-            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.15 }}
-          >
-            <div className={`max-w-[85%] ${msg.role === 'user' ? 'chat-msg-user' : 'chat-msg-ai'}`}>
-              {msg.role === 'user' ? (
-                <p className="text-sm selectable whitespace-pre-wrap">{msg.content}</p>
-              ) : (
-                <MarkdownRenderer content={msg.content} />
-              )}
-            </div>
-          </motion.div>
-        ))}
+        {messages.map(msg => {
+          const parsed = msg.role === 'assistant' ? parseAiResponse(msg.content) : null;
+          return (
+            <motion.div
+              key={msg.id}
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.15 }}
+            >
+              <div className={`max-w-[85%] ${msg.role === 'user' ? 'chat-msg-user' : 'chat-msg-ai'}`}>
+                {msg.role === 'user' ? (
+                  <p className="text-sm selectable whitespace-pre-wrap">{msg.content}</p>
+                ) : (
+                  <>
+                    <MarkdownRenderer content={msg.content} />
+                    {parsed && parsed.ports.length > 0 && (
+                      <ParsedPortChips
+                        ports={parsed.ports}
+                        targetName={session?.labName || ''}
+                      />
+                    )}
+                    {parsed && parsed.credentials.length > 0 && (
+                      <ParsedCredChips
+                        creds={parsed.credentials}
+                        targetName={session?.labName || ''}
+                      />
+                    )}
+                  </>
+                )}
+              </div>
+            </motion.div>
+          );
+        })}
 
         {streaming && (
           <div className="flex justify-start">

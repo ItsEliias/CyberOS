@@ -4,16 +4,18 @@ import EditorHeader from './EditorHeader';
 import SectionList from './SectionList';
 import SectionEditor from './SectionEditor';
 import FindingsPanel from './FindingsPanel';
+import StatusBar from './layout/StatusBar';
 
 interface Props {
   onBack: () => void;
   onSave: () => Promise<void>;
-  onExportMd: () => Promise<void>;
-  onExportPdf: () => Promise<void>;
+  onExportMd: () => void;
+  onExportPdf: () => void;
   exporting: boolean;
+  lastSavedAt: Date | null;
 }
 
-export default function ReportEditor({ onBack, onSave, onExportMd, onExportPdf, exporting }: Props) {
+export default function ReportEditor({ onBack, onSave, onExportMd, onExportPdf, exporting, lastSavedAt }: Props) {
   const { dirty, setActiveSectionId, activeReport } = useStore();
   const [panelView, setPanelView] = useState<'sections' | 'findings'>('sections');
 
@@ -50,6 +52,8 @@ export default function ReportEditor({ onBack, onSave, onExportMd, onExportPdf, 
           )}
         </div>
       </div>
+
+      <StatusBar lastSavedAt={lastSavedAt} />
     </div>
   );
 }

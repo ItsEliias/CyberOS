@@ -114,6 +114,29 @@ function ensureVaultFolders(vaultPath: string) {
   });
 }
 
+function parseNoteTags(content: string): string[] {
+  const tags: string[] = [];
+  const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+  if (fmMatch) {
+    const fm = fmMatch[1];
+    const inlineMatch = fm.match(/^tags:\s*\[([^\]]*)\]/m);
+    if (inlineMatch) {
+      inlineMatch[1].split(',').forEach(t => {
+        const tag = t.trim().replace(/['"]/g, '');
+        if (tag) tags.push(tag.startsWith('#') ? tag.slice(1) : tag);
+      });
+    }
+    const blockMatches = fm.matchAll(/^  - (.+)$/gm);
+    for (const m of blockMatches) {
+      const tag = m[1].trim().replace(/['"]/g, '');
+      if (tag) tags.push(tag.startsWith('#') ? tag.slice(1) : tag);
+    }
+  }
+  const inlineTags = content.match(/(?<!\w)#([\w-]+)/g) || [];
+  inlineTags.forEach(t => tags.push(t.slice(1)));
+  return [...new Set(tags)];
+}
+
 function listVaultNotes(vaultPath: string): NoteFile[] {
   const results: NoteFile[] = [];
   function walk(dir: string, relBase: string) {
@@ -127,14 +150,27 @@ function listVaultNotes(vaultPath: string): NoteFile[] {
         walk(full, rel);
       } else if (e.name.endsWith('.md')) {
         const stat = fs.statSync(full);
+        let tags: string[] = [];
+        let firstLine = '';
+        let wordCount = 0;
+        try {
+          const content = fs.readFileSync(full, 'utf8');
+          tags = parseNoteTags(content);
+          const lines = content.split('\n').filter(l => l.trim() && !l.startsWith('#') && !l.startsWith('---'));
+          firstLine = lines[0]?.trim().slice(0, 100) || '';
+          wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
+        } catch (_) {}
         results.push({
-          name    : e.name.replace('.md', ''),
-          filename: e.name,
-          path    : full,
+          name      : e.name.replace('.md', ''),
+          filename  : e.name,
+          path      : full,
           rel,
-          folder  : relBase || '/',
-          mtime   : stat.mtimeMs,
-          size    : stat.size
+          folder    : relBase || '/',
+          mtime     : stat.mtimeMs,
+          size      : stat.size,
+          tags,
+          firstLine,
+          wordCount
         });
       }
     }
@@ -150,7 +186,9 @@ const readNote  = (filePath: string): string => {
 function writeNote(filePath: string, content: string): boolean {
   try {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    fs.writeFileSync(filePath, content, 'utf8');
+    const tmp = filePath + '.tmp';
+    fs.writeFileSync(tmp, content, 'utf8');
+    fs.renameSync(tmp, filePath);
     return true;
   } catch (e) { console.error('writeNote:', (e as Error).message); return false; }
 }
@@ -172,17 +210,17 @@ const preloadPath = path.join(__dirname, '..', 'preload', 'preload.cjs');
 
 function createCaptureWindow() {
   captureWindow = new BrowserWindow({
-    width: 500, height: 600, minWidth: 400, minHeight: 480,
+    width: 480, height: 400, minWidth: 480, minHeight: 400,
     show: false, frame: false, transparent: true,
-    alwaysOnTop: true, skipTaskbar: true, resizable: true,
+    alwaysOnTop: true, skipTaskbar: true, resizable: false,
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true, nodeIntegration: false, sandbox: false, spellcheck: true
     }
   });
 
-  if (process.env.NODE_ENV === 'development') {
-    captureWindow.loadURL('http://localhost:5173/capture.html');
+  if (process.env['ELECTRON_RENDERER_URL']) {
+    captureWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/capture.html`);
   } else {
     captureWindow.loadFile(path.join(__dirname, '..', 'renderer', 'capture.html'));
   }
@@ -254,8 +292,8 @@ function createWindow() {
     }
   });
 
-  if (process.env.NODE_ENV === 'development') {
-    mainWindow.loadURL('http://localhost:5173');
+  if (process.env['ELECTRON_RENDERER_URL']) {
+    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL']);
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   } else {
     mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
@@ -454,5 +492,164 @@ ipcMain.handle('ghostvault:export-notes', (_, payload: { sessionName: string; no
     console.error('[GhostVault] export-notes failed:', (e as Error).message);
     return false;
   }
+});
+
+// ─── Move note ────────────────────────────────────────────────────────────────
+ipcMain.handle('move-note', (_, srcPath: string, destFolder: string): boolean => {
+  try {
+    const filename = path.basename(srcPath);
+    const newPath  = path.join(destFolder, filename);
+    if (srcPath === newPath) return true;
+    fs.mkdirSync(destFolder, { recursive: true });
+    fs.renameSync(srcPath, newPath);
+    return true;
+  } catch { return false; }
+});
+
+// ─── Note versions ────────────────────────────────────────────────────────────
+function getVersionsPath(notePath: string): string {
+  return notePath.replace(/\.md$/, '.versions.json');
+}
+
+ipcMain.handle('note:versions:list', (_, notePath: string): import('../shared/types.js').NoteVersion[] => {
+  const vp = getVersionsPath(notePath);
+  try {
+    if (fs.existsSync(vp)) return JSON.parse(fs.readFileSync(vp, 'utf8'));
+  } catch { /* ignore */ }
+  return [];
+});
+
+ipcMain.handle('note:versions:save', (_, notePath: string, content: string): void => {
+  const vp = getVersionsPath(notePath);
+  let versions: import('../shared/types.js').NoteVersion[] = [];
+  try {
+    if (fs.existsSync(vp)) versions = JSON.parse(fs.readFileSync(vp, 'utf8'));
+  } catch { /* ignore */ }
+  versions.push({ timestamp: Date.now(), content });
+  if (versions.length > 20) versions = versions.slice(-20);
+  try { fs.writeFileSync(vp, JSON.stringify(versions, null, 2), 'utf8'); } catch { /* ignore */ }
+});
+
+// ─── Note encryption ──────────────────────────────────────────────────────────
+const crypto = await import('crypto');
+
+ipcMain.handle('ghostvault:note:lock', async (_, notePath: string, password: string): Promise<{ ok: boolean; error?: string }> => {
+  try {
+    const content = readNote(notePath);
+    const salt    = crypto.randomBytes(16);
+    const iv      = crypto.randomBytes(12);
+    const key     = crypto.scryptSync(password, salt, 32);
+    const cipher  = crypto.createCipheriv('aes-256-gcm', key, iv);
+    let enc       = cipher.update(content, 'utf8', 'hex');
+    enc          += cipher.final('hex');
+    const tag     = cipher.getAuthTag().toString('hex');
+    const payload = `GHOSTVAULT_ENCRYPTED_V1:${salt.toString('hex')}:${iv.toString('hex')}:${tag}:${enc}`;
+    writeNote(notePath, payload);
+    return { ok: true };
+  } catch (e) { return { ok: false, error: (e as Error).message }; }
+});
+
+ipcMain.handle('ghostvault:note:unlock', async (_, notePath: string, password: string): Promise<{ ok: boolean; content?: string; error?: string }> => {
+  try {
+    const raw = readNote(notePath);
+    if (!raw.startsWith('GHOSTVAULT_ENCRYPTED_V1:')) return { ok: false, error: 'Not encrypted' };
+    const parts = raw.slice('GHOSTVAULT_ENCRYPTED_V1:'.length).split(':');
+    if (parts.length < 5) return { ok: false, error: 'Invalid format' };
+    const [saltHex, ivHex, tagHex, ...encParts] = parts;
+    const enc  = encParts.join(':');
+    const salt = Buffer.from(saltHex, 'hex');
+    const iv   = Buffer.from(ivHex, 'hex');
+    const tag  = Buffer.from(tagHex, 'hex');
+    const key  = crypto.scryptSync(password, salt, 32);
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(tag);
+    let dec = decipher.update(enc, 'hex', 'utf8');
+    dec    += decipher.final('utf8');
+    return { ok: true, content: dec };
+  } catch { return { ok: false, error: 'Wrong password or corrupted data' }; }
+});
+
+// ─── Export as HTML ───────────────────────────────────────────────────────────
+ipcMain.handle('note:export:html', async (_, html: string, noteName: string): Promise<boolean> => {
+  const result = await dialog.showSaveDialog(mainWindow!, {
+    title: 'Export as HTML',
+    defaultPath: `${noteName}.html`,
+    filters: [{ name: 'HTML', extensions: ['html'] }],
+  });
+  if (result.canceled || !result.filePath) return false;
+  try {
+    fs.writeFileSync(result.filePath, html, 'utf8');
+    return true;
+  } catch { return false; }
+});
+
+// ─── Export as PDF ────────────────────────────────────────────────────────────
+ipcMain.handle('note:export:pdf', async (_, htmlContent: string, noteName: string): Promise<boolean> => {
+  if (!mainWindow) return false;
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: 'Export as PDF',
+    defaultPath: `${noteName}.pdf`,
+    filters: [{ name: 'PDF', extensions: ['pdf'] }],
+  });
+  if (result.canceled || !result.filePath) return false;
+  try {
+    const pdfWin = new BrowserWindow({ show: false, webPreferences: { offscreen: true } });
+    await pdfWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
+    const data = await pdfWin.webContents.printToPDF({ printBackground: true });
+    pdfWin.destroy();
+    fs.writeFileSync(result.filePath, data);
+    return true;
+  } catch { return false; }
+});
+
+// ─── Spec-canonical IPC aliases ───────────────────────────────────────────────
+// The spec defines these channel names; we alias them to the existing handlers
+// so both naming conventions work without breaking existing renderer code.
+
+ipcMain.handle('ghostvault:vault:list', (_, vaultPath: string) => listVaultNotes(vaultPath));
+ipcMain.handle('ghostvault:note:read',  (_, filePath: string)  => readNote(filePath));
+ipcMain.handle('ghostvault:note:write', (_, filePath: string, content: string) => {
+  const ok = writeNote(filePath, content);
+  if (ok) { lastCaptureTime = new Date().toISOString(); writeGhostVaultStatus(); }
+  return ok;
+});
+ipcMain.handle('ghostvault:note:delete', (_, filePath: string) => {
+  const ok = deleteNote(filePath);
+  if (ok) { vaultNoteCount = Math.max(0, vaultNoteCount - 1); writeGhostVaultStatus(); }
+  return ok;
+});
+ipcMain.handle('ghostvault:note:search', async (_, vaultPath: string, query: string) => {
+  if (!query.trim()) return [];
+  const notes = listVaultNotes(vaultPath);
+  const lower = query.toLowerCase();
+  const results: { path: string; name: string; snippet: string }[] = [];
+  for (const note of notes) {
+    try {
+      const content = fs.readFileSync(note.path, 'utf8');
+      const idx = content.toLowerCase().indexOf(lower);
+      if (idx !== -1 || note.name.toLowerCase().includes(lower)) {
+        const start = Math.max(0, idx - 30);
+        results.push({ path: note.path, name: note.name, snippet: content.slice(start, idx + lower.length + 80) });
+      }
+    } catch { /* skip */ }
+    if (results.length >= 50) break;
+  }
+  return results;
+});
+ipcMain.handle('ghostvault:config:read', () => {
+  try {
+    if (!fs.existsSync(CYBERTOOLS_CONFIG)) return {};
+    return JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8'));
+  } catch { return {}; }
+});
+ipcMain.handle('ghostvault:event:emit', (_, event: { appName: string; eventType: string; data: Record<string, unknown> }) => {
+  ecosystemBus.emitEvent(event.appName || 'GhostVault', event.eventType, event.data || {});
+  return true;
+});
+ipcMain.handle('ghostvault:clipboard:read', () => {
+  // Delegates to read-clipboard (handled in ipc-extras.ts)
+  // This alias ensures spec-canonical channel is available
+  const { clipboard } = require('electron');
+  return clipboard.readText();
 });
 

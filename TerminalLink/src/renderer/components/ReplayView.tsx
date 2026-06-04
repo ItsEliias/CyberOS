@@ -165,12 +165,12 @@ export default function ReplayView({ commands, onExit }: Props) {
                 <span style={{
                   fontSize: 9,
                   padding: '1px 5px',
-                  background: current.pane === 1 ? 'rgba(74,158,255,0.2)' : 'rgba(0,255,65,0.15)',
-                  color:      current.pane === 1 ? 'var(--accent)' : 'var(--success)',
+                  background: current.pane === 'left' ? 'rgba(0,255,65,0.15)' : 'rgba(74,158,255,0.2)',
+                  color:      current.pane === 'left' ? 'var(--accent)' : '#4a9eff',
                   borderRadius: 2,
                   textTransform: 'uppercase',
                 }}>
-                  P{current.pane}
+                  {current.pane}
                 </span>
                 <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
                   {new Date(current.timestamp).toLocaleTimeString()}

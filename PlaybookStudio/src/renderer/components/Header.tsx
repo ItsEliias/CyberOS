@@ -1,8 +1,9 @@
 import { useStore, type View } from '../store'
 
 const TABS: { id: View; label: string }[] = [
-  { id: 'library', label: 'Library' },
-  { id: 'history', label: 'Run History' },
+  { id: 'library',  label: 'Library' },
+  { id: 'history',  label: 'Run History' },
+  { id: 'settings', label: 'Settings' },
 ]
 
 export default function Header() {

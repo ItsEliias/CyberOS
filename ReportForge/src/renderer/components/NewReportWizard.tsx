@@ -26,6 +26,7 @@ export default function NewReportWizard({ onComplete, onCancel }: Props) {
   const [writeups, setWriteups] = useState<WriteupFile[]>([]);
   const [selectedWriteup, setSelectedWriteup] = useState<string>('');
   const [importingWriteup, setImportingWriteup] = useState(false);
+  const [pasteMarkdown, setPasteMarkdown] = useState('');
   const [ghostExport, setGhostExport] = useState<{ sessionName: string; notes: string; exportedAt: string } | null>(null);
   const [importingGhost, setImportingGhost] = useState(false);
 
@@ -83,6 +84,16 @@ export default function NewReportWizard({ onComplete, onCancel }: Props) {
       patch({ sections, cyberLabSessionId: makeId() });
     }
     setImportingWriteup(false);
+  }
+
+  function applyPastedMarkdown() {
+    const content = pasteMarkdown.trim();
+    if (!content) return;
+    const sections = draft.sections.map(s =>
+      s.title === 'Executive Summary' ? { ...s, content } : s
+    );
+    patch({ sections, cyberLabSessionId: makeId() });
+    setPasteMarkdown('');
   }
 
   async function importFromGhostVault() {
@@ -177,6 +188,9 @@ export default function NewReportWizard({ onComplete, onCancel }: Props) {
                   onSelect={setSelectedWriteup}
                   onImport={importFromWriteup}
                   importing={importingWriteup}
+                  pasteMarkdown={pasteMarkdown}
+                  onPasteChange={setPasteMarkdown}
+                  onApplyPaste={applyPastedMarkdown}
                   ghostExport={ghostExport}
                   onImportGhost={importFromGhostVault}
                   importingGhost={importingGhost}
@@ -225,7 +239,11 @@ function StepTemplate({ selected, onSelect }: {
   selected: ReportTemplate;
   onSelect: (t: ReportTemplate) => void;
 }) {
-  const templates: ReportTemplate[] = ['blank', 'ptes', 'owasp-web', 'htb-machine'];
+  const templates: ReportTemplate[] = [
+    'blank', 'ptes', 'owasp-web', 'htb-machine',
+    'network-pentest', 'active-directory', 'api-security',
+    'mobile-app', 'executive-summary',
+  ];
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <p style={{ color: 'var(--text-dim)', fontSize: 13, margin: 0 }}>
@@ -319,12 +337,15 @@ function Step3Import({ targets, selected, onSelect, onImport, importing, draft }
 }
 
 // ── Step 4: Writeup Import ────────────────────────────────────────────────────
-function Step4Writeup({ writeups, selected, onSelect, onImport, importing, ghostExport, onImportGhost, importingGhost }: {
+function Step4Writeup({ writeups, selected, onSelect, onImport, importing, pasteMarkdown, onPasteChange, onApplyPaste, ghostExport, onImportGhost, importingGhost }: {
   writeups: WriteupFile[];
   selected: string;
   onSelect: (path: string) => void;
   onImport: () => void;
   importing: boolean;
+  pasteMarkdown: string;
+  onPasteChange: (v: string) => void;
+  onApplyPaste: () => void;
   ghostExport: { sessionName: string; notes: string; exportedAt: string } | null;
   onImportGhost: () => void;
   importingGhost: boolean;
@@ -395,6 +416,33 @@ function Step4Writeup({ writeups, selected, onSelect, onImport, importing, ghost
             </button>
           </>
         )}
+      </div>
+
+      <div style={{ height: 1, background: 'var(--border)' }} />
+
+      {/* Paste markdown directly */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <p style={{ color: 'var(--text-dim)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+          Or paste Markdown directly
+        </p>
+        <p style={{ color: 'var(--text-dim)', fontSize: 13, margin: 0 }}>
+          Paste a writeup or notes directly to populate the Executive Summary.
+        </p>
+        <textarea
+          value={pasteMarkdown}
+          onChange={e => onPasteChange(e.target.value)}
+          placeholder="Paste Markdown content here…"
+          rows={6}
+          style={{ width: '100%', fontFamily: '"SF Mono", "Fira Code", Consolas, monospace', fontSize: 12, lineHeight: 1.6 }}
+        />
+        <button
+          className="btn-primary"
+          disabled={!pasteMarkdown.trim()}
+          onClick={onApplyPaste}
+          style={{ alignSelf: 'flex-start' }}
+        >
+          Apply to Executive Summary
+        </button>
       </div>
     </div>
   );

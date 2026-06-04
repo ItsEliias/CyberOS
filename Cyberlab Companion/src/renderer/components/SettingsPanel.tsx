@@ -259,6 +259,34 @@ export default function SettingsPanel() {
           )}
         </section>
 
+        {/* Integrations: HTB + THM */}
+        <section className="card space-y-3">
+          <div className="text-xs font-semibold text-[var(--text-dim)] uppercase tracking-wide">Integrations</div>
+          <div className="input-group">
+            <label>HTB API Key</label>
+            <input
+              type="password"
+              value={form.htbApiKey || ''}
+              onChange={e => setForm(f => ({ ...f, htbApiKey: e.target.value }))}
+              className="w-full font-mono text-xs"
+              placeholder="eyJ0eXAi... (from hackthebox.com/profile)"
+            />
+            <div className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
+              Used for HTB Machine lookup in New Session and the HTB Progress dashboard
+            </div>
+          </div>
+          <div className="input-group">
+            <label>THM Username</label>
+            <input
+              type="text"
+              value={form.thmUsername || ''}
+              onChange={e => setForm(f => ({ ...f, thmUsername: e.target.value }))}
+              className="w-full font-mono text-xs"
+              placeholder="your-thm-username"
+            />
+          </div>
+        </section>
+
         {/* Preferences */}
         <section className="card space-y-3">
           <div className="text-xs font-semibold text-[var(--text-dim)] uppercase tracking-wide">Preferences</div>

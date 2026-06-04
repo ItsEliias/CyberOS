@@ -1,17 +1,15 @@
 // ReconDesk — main.ts
 // ItsEliias // v1.0 — Electron main process
 
-import { app, BrowserWindow, ipcMain, shell, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, shell, dialog, Notification, desktopCapturer } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import os from 'os'
 import https from 'https'
 import { emitEvent } from './ecosystem-bus'
-import type { ReconDeskData, ReconDeskStatus, CveResult } from '../shared/types'
-
-// ─── CVE lookup ───────────────────────────────────────────────────────────────
-
-const cveCache = new Map<string, CveResult[]>()
+import { detectCredentialChanges } from './credential-tracker'
+import { registerNetworkHandlers } from './ipc-network-handlers'
+import type { ReconDeskData, ReconDeskStatus } from '../shared/types'
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -134,61 +132,11 @@ let _previousData: ReconDeskData | null = null
 ipcMain.handle('data:save', (_e, data: ReconDeskData) => {
   const prev = _previousData
 
-  // Detect new credentials across all targets
   if (prev) {
-    let credentialDelta = 0
-    for (const target of data.targets) {
-      const prevTarget = prev.targets.find(t => t.id === target.id)
-      const prevCredCount = prevTarget ? prevTarget.credentials.length : 0
-      const currCredCount = target.credentials.length
-      if (currCredCount > prevCredCount) {
-        credentialDelta += currCredCount - prevCredCount
-      }
-    }
-    if (credentialDelta > 0) {
-      try {
-        let shared: Record<string, unknown> = {}
-        if (fs.existsSync(CYBERTOOLS_CONFIG)) {
-          try { shared = JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8')) } catch {}
-        }
-        const profile = (shared.operator_profile as Record<string, unknown>) || {}
-        const current = typeof profile.totalCredentials === 'number' ? profile.totalCredentials : 0
-        updateOperatorProfile({ totalCredentials: current + credentialDelta })
-      } catch {}
+    // Credential tracking (extracted to credential-tracker.ts)
+    detectCredentialChanges(prev, data)
 
-      // Collect new credential objects and push to credvault_pending
-      try {
-        const newCreds: Array<{ targetName: string; targetIP: string; username?: string; hash?: string; type: string; service?: string; queuedAt: string }> = []
-        for (const target of data.targets) {
-          const prevTarget = prev.targets.find(t => t.id === target.id)
-          const prevCredIds = new Set(prevTarget?.credentials.map(c => c.id) ?? [])
-          for (const cred of target.credentials) {
-            if (!prevCredIds.has(cred.id)) {
-              newCreds.push({
-                targetName: target.name,
-                targetIP:   target.ip,
-                username:   cred.username,
-                hash:       cred.hash,
-                type:       cred.type ?? 'unknown',
-                service:    cred.service,
-                queuedAt:   new Date().toISOString()
-              })
-            }
-          }
-        }
-        if (newCreds.length > 0) {
-          let shared: Record<string, unknown> = {}
-          if (fs.existsSync(CYBERTOOLS_CONFIG)) {
-            try { shared = JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8')) } catch {}
-          }
-          const existing = (shared.credvault_pending as typeof newCreds) || []
-          shared.credvault_pending = [...existing, ...newCreds]
-          fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8')
-        }
-      } catch {}
-    }
-
-    // Detect targets newly marked completed — emit ecosystem event (don't count labs here)
+    // Detect targets newly marked completed
     for (const target of data.targets) {
       const prevTarget = prev.targets.find(t => t.id === target.id)
       if (target.status === 'completed' && prevTarget && prevTarget.status !== 'completed') {
@@ -205,48 +153,51 @@ ipcMain.handle('data:save', (_e, data: ReconDeskData) => {
 
 ipcMain.handle('app:version', () => APP_VERSION)
 
-ipcMain.handle('cve:lookup', (_e, service: string, version: string): Promise<CveResult[]> => {
-  const key = `${service} ${version}`.trim().toLowerCase()
-  if (!key || key.length < 3) return Promise.resolve([])
-  if (cveCache.has(key)) return Promise.resolve(cveCache.get(key)!)
+ipcMain.handle('shell:open', (_e, url: string) => shell.openExternal(url))
 
-  return new Promise((resolve) => {
-    const query = encodeURIComponent(key)
-    const reqPath = `/rest/json/cves/2.0?keywordSearch=${query}&resultsPerPage=5`
-    const options = {
-      hostname: 'services.nvd.nist.gov',
-      path: reqPath,
-      headers: { 'User-Agent': 'CyberOS-ReconDesk' }
+// ─── New V2 IPC handlers ──────────────────────────────────────────────────────
+
+ipcMain.handle('recondesk:write-context', (_e, ctx: { activeTarget: string; activeIP: string }) => {
+  try {
+    let shared: Record<string, unknown> = {}
+    if (fs.existsSync(CYBERTOOLS_CONFIG)) {
+      try { shared = JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8')) } catch {}
     }
-    const timer = setTimeout(() => resolve([]), 8000)
-    https.get(options, (res) => {
-      let data = ''
-      res.on('data', c => { data += c })
-      res.on('end', () => {
-        clearTimeout(timer)
-        try {
-          const json = JSON.parse(data)
-          const results: CveResult[] = (json.vulnerabilities ?? []).map((v: any) => {
-            const cve    = v.cve
-            const metric = cve.metrics?.cvssMetricV31?.[0] ?? cve.metrics?.cvssMetricV2?.[0]
-            return {
-              id:          cve.id,
-              description: cve.descriptions?.find((d: any) => d.lang === 'en')?.value ?? '',
-              score:       metric?.cvssData?.baseScore ?? null,
-              severity:    metric?.cvssData?.baseSeverity ?? null,
-              published:   cve.published?.slice(0, 10) ?? '',
-              url:         `https://nvd.nist.gov/vuln/detail/${cve.id}`
-            }
-          })
-          cveCache.set(key, results)
-          resolve(results)
-        } catch { resolve([]) }
-      })
-    }).on('error', () => { clearTimeout(timer); resolve([]) })
-  })
+    const existingCtx = (shared.shared_context as Record<string, unknown>) || {}
+    shared.shared_context = {
+      ...existingCtx,
+      activeTarget: ctx.activeTarget,
+      activeIP: ctx.activeIP,
+      lastUpdated: new Date().toISOString(),
+      updatedBy: 'ReconDesk'
+    }
+    const existingStatus = (shared.recondesk_status as Record<string, unknown>) || {}
+    shared.recondesk_status = {
+      ...existingStatus,
+      activeTarget: ctx.activeTarget,
+    }
+    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8')
+    return { ok: true }
+  } catch (e) {
+    console.warn('[ReconDesk] writeContext failed:', (e as Error).message)
+    return { ok: false }
+  }
 })
 
-ipcMain.handle('shell:open', (_e, url: string) => shell.openExternal(url))
+ipcMain.handle('recondesk:emit-event', (_e, event: string, data: Record<string, unknown>) => {
+  try {
+    emitEvent('ReconDesk', event, data)
+  } catch {}
+})
+
+ipcMain.handle('recondesk:read-config', () => {
+  try {
+    if (!fs.existsSync(CYBERTOOLS_CONFIG)) return {}
+    return JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8'))
+  } catch { return {} }
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 ipcMain.handle('flag:captured', () => {
   try {
@@ -285,7 +236,152 @@ ipcMain.handle('export-target', async (_e, payload: { json: string; md: string; 
   return { ok: true, filePath }
 })
 
+// ─── Screenshot capture ───────────────────────────────────────────────────────
+
+ipcMain.handle('recondesk:capture-screenshot', async (_e, label: string) => {
+  try {
+    const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 1920, height: 1080 } })
+    if (sources.length === 0) return { ok: false, error: 'No screen sources' }
+    const source = sources[0]
+    const thumbnail = source.thumbnail.toDataURL()
+    const dataDir = path.join(app.getPath('userData'), 'screenshots')
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true })
+    const fileName = `screenshot-${Date.now()}.png`
+    const filePath = path.join(dataDir, fileName)
+    const base64 = thumbnail.replace(/^data:image\/\w+;base64,/, '')
+    fs.writeFileSync(filePath, Buffer.from(base64, 'base64'))
+    return { ok: true, path: filePath, thumbnail }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
+// ─── PDF export ───────────────────────────────────────────────────────────────
+
+ipcMain.handle('recondesk:export-pdf', async (_e, payload: { html: string; defaultName: string }) => {
+  const win = BrowserWindow.getFocusedWindow()
+  const { filePath, canceled } = await dialog.showSaveDialog(win!, {
+    title: 'Export PDF Report',
+    defaultPath: payload.defaultName,
+    filters: [{ name: 'PDF', extensions: ['pdf'] }],
+  })
+  if (canceled || !filePath) return { ok: false }
+
+  const offscreen = new BrowserWindow({
+    show: false,
+    webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: false },
+  })
+  try {
+    await offscreen.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(payload.html)}`)
+    const pdfBuffer = await offscreen.webContents.printToPDF({ printBackground: true, pageSize: 'A4' })
+    fs.writeFileSync(filePath, pdfBuffer)
+    return { ok: true, filePath }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  } finally {
+    offscreen.destroy()
+  }
+})
+
+// ─── System notification ──────────────────────────────────────────────────────
+
+ipcMain.handle('recondesk:notify', (_e, title: string, body: string) => {
+  try {
+    const n = new Notification({ title, body, silent: false })
+    n.show()
+    return true
+  } catch { return false }
+})
+
+// ─── NetworkMap IPC bridge ────────────────────────────────────────────────────
+
+ipcMain.handle('recondesk:open-in-networkmap', (_e, ip: string) => {
+  try {
+    let shared: Record<string, unknown> = {}
+    if (fs.existsSync(CYBERTOOLS_CONFIG)) {
+      try { shared = JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8')) } catch {}
+    }
+    shared.networkmap_focus = { ip, requestedAt: new Date().toISOString(), requestedBy: 'ReconDesk' }
+    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8')
+    emitEvent('ReconDesk', 'networkmap:focus-ip', { ip })
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+})
+
+// ─── CredVault linked credentials ────────────────────────────────────────────
+
+ipcMain.handle('recondesk:fetch-credvault', (_e, ip: string, hostname: string) => {
+  try {
+    if (!fs.existsSync(CYBERTOOLS_CONFIG)) return []
+    const shared = JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8'))
+    const pending = (shared.credvault_pending as any[]) ?? []
+    const stored  = (shared.credvault_stored  as any[]) ?? []
+    const all     = [...pending, ...stored]
+    const q = [ip, hostname].filter(Boolean).map(s => s.toLowerCase())
+    return all.filter((c: any) =>
+      q.some(v => c.targetIP?.toLowerCase() === v || c.hostname?.toLowerCase()?.includes(v))
+    )
+  } catch { return [] }
+})
+
+// ─── CSV import (no-op IPC, handled in renderer) ─────────────────────────────
+
+ipcMain.handle('recondesk:open-file-dialog', async (_e, opts: Electron.OpenDialogOptions) => {
+  const win = BrowserWindow.getFocusedWindow()
+  return dialog.showOpenDialog(win!, opts)
+})
+
+// ─── AI next-step suggestions ─────────────────────────────────────────────────
+
+ipcMain.handle('recondesk:ai-suggest', (_e, payload: {
+  apiKey: string; ports: string[]; os: string; cves: string[]; engagement: string
+}): Promise<string[] | null> => {
+  if (!payload.apiKey) return Promise.resolve(null)
+  const body = JSON.stringify({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 512,
+    messages: [{
+      role: 'user',
+      content: `You are a penetration tester. Given this target context, suggest 3-5 concrete next enumeration or exploitation steps. Return ONLY a JSON array of strings, no commentary.\n\nOS: ${payload.os || 'Unknown'}\nOpen ports: ${payload.ports.join(', ') || 'None scanned'}\nKnown CVEs: ${payload.cves.join(', ') || 'None'}\nEngagement type: ${payload.engagement || 'General'}`
+    }]
+  })
+
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(null), 20000)
+    const req = https.request({
+      hostname: 'api.anthropic.com',
+      path: '/v1/messages',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': payload.apiKey,
+        'anthropic-version': '2023-06-01',
+        'Content-Length': Buffer.byteLength(body),
+      }
+    }, (res) => {
+      let data = ''
+      res.on('data', c => { data += c })
+      res.on('end', () => {
+        clearTimeout(timer)
+        try {
+          const json  = JSON.parse(data)
+          const text  = json.content?.[0]?.text ?? ''
+          const match = text.match(/\[[\s\S]*\]/)
+          if (match) resolve(JSON.parse(match[0]))
+          else resolve(null)
+        } catch { resolve(null) }
+      })
+    })
+    req.on('error', () => { clearTimeout(timer); resolve(null) })
+    req.write(body)
+    req.end()
+  })
+})
+
 app.whenReady().then(() => {
+  registerNetworkHandlers()
   createWindow()
   const data = loadData()
   _previousData = data  // seed so first save doesn't false-positive on existing credentials

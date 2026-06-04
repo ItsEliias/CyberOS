@@ -1,15 +1,25 @@
 // NetworkMap — GraphLibrary.tsx
 import { useState, useEffect, useCallback } from 'react'
-import type { GraphSummary, NetworkNode, NetworkGraph } from '@shared/types'
-import PasteXmlModal from './PasteXmlModal'
+import type { GraphSummary, NetworkGraph } from '@shared/types'
 
 interface Props {
   onOpenGraph: (graph: NetworkGraph) => void
+  onOpenImport: () => void
+  onOpenSettings: () => void
+  onOpenHelp?: () => void
 }
 
 function fmt(iso: string): string {
-  try { return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }
-  catch { return iso }
+  try {
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  } catch { return iso }
+}
+
+function importSourceLabel(src?: string): string {
+  if (src === 'nmap-xml') return 'nmap XML'
+  if (src === 'paste')    return 'Paste'
+  if (src === 'recondesk') return 'ReconDesk'
+  return '—'
 }
 
 function makeEmptyGraph(): NetworkGraph {
@@ -24,23 +34,11 @@ function makeEmptyGraph(): NetworkGraph {
   }
 }
 
-function nodesToGraph(nodes: NetworkNode[], name: string): NetworkGraph {
-  const id = `graph-${Date.now()}`
-  return {
-    id,
-    name,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    nodes,
-    edges: [],
-  }
-}
-
-export default function GraphLibrary({ onOpenGraph }: Props) {
-  const [graphs, setGraphs]       = useState<GraphSummary[]>([])
-  const [showPaste, setShowPaste] = useState(false)
-  const [loading, setLoading]     = useState(false)
-  const [error, setError]         = useState<string | null>(null)
+export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings, onOpenHelp }: Props) {
+  const [graphs, setGraphs]         = useState<GraphSummary[]>([])
+  const [loading, setLoading]       = useState(false)
+  const [error, setError]           = useState<string | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
   const reload = useCallback(() => {
     window.electronAPI.loadGraphs().then(setGraphs).catch(console.error)
@@ -50,82 +48,31 @@ export default function GraphLibrary({ onOpenGraph }: Props) {
 
   async function handleDelete(id: string, e: React.MouseEvent) {
     e.stopPropagation()
-    await window.electronAPI.deleteGraph(id)
-    reload()
+    if (deleteConfirm === id) {
+      await window.electronAPI.deleteGraph(id)
+      setDeleteConfirm(null)
+      reload()
+    } else {
+      setDeleteConfirm(id)
+      // Auto-dismiss confirm after 3 seconds
+      setTimeout(() => setDeleteConfirm(prev => prev === id ? null : prev), 3000)
+    }
   }
 
   async function handleOpenGraph(id: string) {
-    const g = await window.electronAPI.loadGraph(id)
-    if (g) onOpenGraph(g)
-  }
-
-  async function handleImportFile() {
     setLoading(true)
-    setError(null)
     try {
-      const nodes = await window.electronAPI.loadNmapFile()
-      if (nodes && nodes.length > 0) {
-        const g = nodesToGraph(nodes, `Scan ${new Date().toLocaleDateString()}`)
-        await window.electronAPI.saveGraph(g)
-        reload()
-        onOpenGraph(g)
-      } else if (nodes !== null) {
-        setError('No hosts found in the selected XML file.')
-      }
+      const g = await window.electronAPI.loadGraph(id)
+      if (g) onOpenGraph(g)
     } catch (e) {
       setError((e as Error).message)
     } finally {
       setLoading(false)
     }
-  }
-
-  async function handleImportReconDesk() {
-    setLoading(true)
-    setError(null)
-    try {
-      const result = await window.electronAPI.generateFromReconDesk()
-      if (result && result.nodes.length > 0) {
-        // Map ReconDesk port shape → NetworkPort shape
-        const nodes: NetworkNode[] = result.nodes.map((n: any) => ({
-          id:       n.ip,
-          ip:       n.ip,
-          hostname: n.label !== n.ip ? n.label : undefined,
-          status:   'up' as const,
-          ports:    n.ports.map((p: any) => ({
-            port:     p.number,
-            protocol: p.protocol,
-            state:    p.state as 'open' | 'filtered' | 'closed',
-            service:  p.service,
-          })),
-          x: 0,
-          y: 0,
-        }))
-        const g = nodesToGraph(nodes, result.name)
-        await window.electronAPI.saveGraph(g)
-        reload()
-        onOpenGraph(g)
-      } else {
-        setError('No active ReconDesk target found.')
-      }
-    } catch (e) {
-      setError((e as Error).message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function handlePasteImport(nodes: NetworkNode[]) {
-    setShowPaste(false)
-    if (nodes.length === 0) return
-    const g = nodesToGraph(nodes, `Pasted Scan ${new Date().toLocaleDateString()}`)
-    await window.electronAPI.saveGraph(g)
-    reload()
-    onOpenGraph(g)
   }
 
   function handleNewEmpty() {
-    const g = makeEmptyGraph()
-    onOpenGraph(g)
+    onOpenGraph(makeEmptyGraph())
   }
 
   return (
@@ -138,10 +85,27 @@ export default function GraphLibrary({ onOpenGraph }: Props) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 8 }}>
           <span style={{ fontSize: 18, fontWeight: 600, color: 'var(--text)' }}>NetworkMap</span>
           <span style={{
-            fontSize: 10, fontWeight: 500, color: 'var(--accent)',
-            background: 'rgba(210,153,34,0.12)', border: '1px solid rgba(210,153,34,0.25)',
-            borderRadius: 4, padding: '1px 6px', letterSpacing: '0.05em',
-          }}>CYBERTOOLS</span>
+            display: 'flex', alignItems: 'center', gap: 4,
+            fontSize: 9, fontWeight: 600, color: '#4a5568',
+            background: 'rgba(74,158,255,0.08)', border: '1px solid rgba(74,158,255,0.12)',
+            borderRadius: 999, padding: '2px 8px', letterSpacing: '0.1em', textTransform: 'uppercase',
+          }}>⬡ CYBERTOOLS</span>
+          {onOpenHelp && (
+            <button
+              onClick={onOpenHelp}
+              title="Help & onboarding"
+              style={{
+                width: 24, height: 24, borderRadius: 4, border: '1px solid rgba(42,51,71,0.6)',
+                background: 'transparent', color: '#4a5568', fontSize: 12, fontWeight: 700,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
+              }}
+              onMouseEnter={e => { const el = e.currentTarget; el.style.color = '#d29922'; el.style.borderColor = 'rgba(210,153,34,0.4)' }}
+              onMouseLeave={e => { const el = e.currentTarget; el.style.color = '#4a5568'; el.style.borderColor = 'rgba(42,51,71,0.6)' }}
+            >
+              ?
+            </button>
+          )}
         </div>
         <p style={{ color: 'var(--text-dim)', fontSize: 12, marginTop: 4 }}>
           Network topology graphs from nmap scans
@@ -153,19 +117,17 @@ export default function GraphLibrary({ onOpenGraph }: Props) {
         display: 'flex', gap: 8, padding: '16px 24px',
         borderBottom: '1px solid var(--border)',
         WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
+        flexWrap: 'wrap',
+        alignItems: 'center',
       }}>
-        <ToolBtn onClick={handleImportFile} disabled={loading}>
-          Import nmap XML
+        <ToolBtn onClick={onOpenImport} disabled={loading} accent>
+          Import ▾
         </ToolBtn>
-        <ToolBtn onClick={() => setShowPaste(true)} disabled={loading}>
-          Paste XML
-        </ToolBtn>
-        <ToolBtn onClick={handleImportReconDesk} disabled={loading}>
-          Import from ReconDesk
-        </ToolBtn>
-        <ToolBtn onClick={handleNewEmpty} accent>
+        <ToolBtn onClick={handleNewEmpty}>
           + New Empty Graph
         </ToolBtn>
+        <div style={{ flex: 1 }} />
+        <ToolBtn onClick={onOpenSettings}>⚙ Settings</ToolBtn>
       </div>
 
       {error && (
@@ -178,7 +140,7 @@ export default function GraphLibrary({ onOpenGraph }: Props) {
         </div>
       )}
 
-      {/* Graph grid */}
+      {/* Graph table */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
         {graphs.length === 0 ? (
           <div style={{
@@ -190,31 +152,86 @@ export default function GraphLibrary({ onOpenGraph }: Props) {
             <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>
               Import an nmap XML scan to get started
             </p>
+            <button
+              onClick={onOpenImport}
+              style={{
+                marginTop: 8, padding: '8px 20px', borderRadius: 6,
+                background: 'var(--accent)', border: 'none',
+                color: '#0d1117', fontWeight: 600, fontSize: 13, cursor: 'pointer',
+              }}
+            >Import Scan</button>
           </div>
         ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-            gap: 12,
-          }}>
-            {graphs.map(g => (
-              <GraphCard
-                key={g.id}
-                graph={g}
-                onClick={() => handleOpenGraph(g.id)}
-                onDelete={e => handleDelete(g.id, e)}
-              />
-            ))}
-          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                {(['Name', 'Source', 'Date', 'Nodes', 'Edges', 'Actions'] as const).map(h => (
+                  <th
+                    key={h}
+                    style={{
+                      textAlign: 'left',
+                      padding: '8px 12px',
+                      fontSize: 10, fontWeight: 600,
+                      color: 'var(--text-muted)',
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                      borderBottom: '1px solid var(--border)',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {graphs.map(g => (
+                <tr
+                  key={g.id}
+                  onClick={() => handleOpenGraph(g.id)}
+                  style={{ cursor: 'pointer' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <td style={tdStyle}>
+                    <span style={{ fontWeight: 500, color: 'var(--text)', fontSize: 13 }}>
+                      {g.name}
+                    </span>
+                  </td>
+                  <td style={tdStyle}>
+                    <span style={{
+                      fontSize: 11, padding: '2px 7px', borderRadius: 4,
+                      background: 'rgba(210,153,34,0.08)',
+                      border: '1px solid rgba(210,153,34,0.18)',
+                      color: 'var(--accent)',
+                    }}>
+                      {importSourceLabel(g.importSource)}
+                    </span>
+                  </td>
+                  <td style={{ ...tdStyle, color: 'var(--text-muted)', fontSize: 12 }}>
+                    {fmt(g.createdAt)}
+                  </td>
+                  <td style={{ ...tdStyle, color: 'var(--text-dim)', fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
+                    {g.nodeCount}
+                  </td>
+                  <td style={{ ...tdStyle, color: 'var(--text-dim)', fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
+                    {g.edgeCount ?? 0}
+                  </td>
+                  <td style={{ ...tdStyle }} onClick={e => e.stopPropagation()}>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <ActionBtn onClick={() => handleOpenGraph(g.id)}>Open</ActionBtn>
+                      <ActionBtn
+                        onClick={e => handleDelete(g.id, e)}
+                        danger={deleteConfirm === g.id}
+                      >
+                        {deleteConfirm === g.id ? 'Confirm?' : 'Delete'}
+                      </ActionBtn>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
-
-      {showPaste && (
-        <PasteXmlModal
-          onClose={() => setShowPaste(false)}
-          onImport={handlePasteImport}
-        />
-      )}
     </div>
   )
 }
@@ -249,53 +266,33 @@ function ToolBtn({
   )
 }
 
-function GraphCard({
-  graph, onClick, onDelete,
+function ActionBtn({
+  children, onClick, danger,
 }: {
-  graph: GraphSummary
-  onClick: () => void
-  onDelete: (e: React.MouseEvent) => void
+  children: React.ReactNode
+  onClick: (e: React.MouseEvent) => void
+  danger?: boolean
 }) {
   return (
-    <div
+    <button
       onClick={onClick}
       style={{
-        background: 'var(--panel)',
-        border: '1px solid var(--border)',
-        borderRadius: 8,
-        padding: '14px 16px',
-        cursor: 'pointer',
-        position: 'relative',
-        transition: 'border-color 0.15s',
+        padding: '4px 10px', borderRadius: 5,
+        background: danger ? 'rgba(248,81,73,0.12)' : 'var(--panel)',
+        border: `1px solid ${danger ? 'rgba(248,81,73,0.4)' : 'var(--border)'}`,
+        color: danger ? 'var(--error)' : 'var(--text-dim)',
+        fontSize: 11, cursor: 'pointer',
+        transition: 'all 0.15s',
       }}
-      onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent-dim)')}
-      onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div style={{ fontWeight: 500, color: 'var(--text)', fontSize: 13, marginBottom: 6 }}>
-          {graph.name}
-        </div>
-        <button
-          onClick={onDelete}
-          style={{
-            background: 'transparent',
-            color: 'var(--text-muted)',
-            fontSize: 16,
-            lineHeight: 1,
-            padding: '0 2px',
-            borderRadius: 4,
-          }}
-          title="Delete graph"
-        >
-          ×
-        </button>
-      </div>
-      <div style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 4 }}>
-        {graph.nodeCount} {graph.nodeCount === 1 ? 'host' : 'hosts'}
-      </div>
-      <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>
-        {fmt(graph.createdAt)}
-      </div>
-    </div>
+      {children}
+    </button>
   )
+}
+
+const tdStyle: React.CSSProperties = {
+  padding: '10px 12px',
+  borderBottom: '1px solid rgba(48,54,61,0.5)',
+  color: 'var(--text-dim)',
+  fontSize: 12,
 }

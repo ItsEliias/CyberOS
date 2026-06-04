@@ -20,9 +20,15 @@ export default function SettingsView({ ollamaModels, onOllamaRefresh }: Props) {
   const [hotkeyRecording, setHotkeyRecording]   = useState(false);
   const [hotkeyError, setHotkeyError]           = useState<string | null>(null);
   const [hotkeySuccess, setHotkeySuccess]       = useState(false);
+  const [academicMode, setAcademicMode]         = useState(false);
+  const [academicAuthor, setAcademicAuthor]     = useState('');
 
   useEffect(() => {
     window.ghostvault.getCaptureHotkey().then(setCaptureHotkey);
+    window.ghostvault.getConfig().then(cfg => {
+      setAcademicMode(!!cfg.academicMode);
+      setAcademicAuthor(cfg.academicAuthor || '');
+    });
   }, []);
 
   const core        = (config?.theme as { core?: CoreTheme })?.core        || 'stealth';
@@ -80,6 +86,35 @@ export default function SettingsView({ ollamaModels, onOllamaRefresh }: Props) {
       await window.ghostvault.saveConfig({ vaultPath: p });
       window.location.reload();
     }
+  }
+
+  async function toggleAcademicMode(enabled: boolean) {
+    setAcademicMode(enabled);
+    await window.ghostvault.saveConfig({ academicMode: enabled });
+    if (enabled && vaultPath) {
+      const weekFolders = ['Week 01', 'Week 02', 'Week 03', 'Week 04'];
+      await window.ghostvault.createFolder(vaultPath, 'Courses');
+      for (const w of weekFolders) {
+        await window.ghostvault.createFolder(vaultPath, `Courses/Labs/${w}`);
+      }
+    }
+  }
+
+  async function saveAcademicAuthor(value: string) {
+    setAcademicAuthor(value);
+    await window.ghostvault.saveConfig({ academicAuthor: value });
+  }
+
+  async function createLabReport() {
+    if (!vaultPath || !academicMode) return;
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10);
+    const weekNum = Math.ceil(now.getDate() / 7).toString().padStart(2, '0');
+    const folder = `Courses/Labs/Week ${weekNum}`;
+    const title = `Lab Report — ${dateStr}`;
+    const content = `---\ntitle: ${title}\ndate: ${dateStr}\nauthor: ${academicAuthor || 'Student'}\n---\n\n# ${title}\n\n## Objective\n\n\n## Methodology\n\n\n## Results\n\n\n## Discussion\n\n\n## Conclusion\n\n`;
+    await window.ghostvault.createFolder(vaultPath, folder);
+    await window.ghostvault.newNote(vaultPath, folder, title);
   }
 
   return (
@@ -251,6 +286,44 @@ export default function SettingsView({ ollamaModels, onOllamaRefresh }: Props) {
               </select>
             )}
           </div>
+        </div>
+      </section>
+
+      {/* Academic Mode */}
+      <section>
+        <h3 className="text-[10px] uppercase tracking-widest font-semibold mb-3" style={{ color: 'var(--text-dim)' }}>Academic Mode</h3>
+        <div className="space-y-3">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" checked={academicMode}
+              onChange={e => toggleAcademicMode(e.target.checked)} className="w-4 h-4" />
+            <div>
+              <div className="text-sm" style={{ color: 'var(--text)' }}>Enable Academic Mode</div>
+              <div className="text-[11px]" style={{ color: 'var(--text-dim)' }}>
+                Creates Courses/Labs/Week XX folder structure. Adds quick lab report creation.
+              </div>
+            </div>
+          </label>
+          {academicMode && (
+            <>
+              <div>
+                <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--text-dim)' }}>Author Name</div>
+                <input
+                  value={academicAuthor}
+                  onChange={e => saveAcademicAuthor(e.target.value)}
+                  placeholder="Your name for lab report front matter"
+                  className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                  style={{ background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)' }}
+                />
+              </div>
+              <button
+                onClick={createLabReport}
+                className="text-sm px-4 py-2 rounded-lg font-medium"
+                style={{ background: '#7bb8ff', color: '#0a0a0f' }}
+              >
+                + New Lab Report
+              </button>
+            </>
+          )}
         </div>
       </section>
 

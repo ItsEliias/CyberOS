@@ -45,6 +45,13 @@ const api = {
   saveSnippets: (data: unknown) => ipcRenderer.invoke('save-snippets', data),
   loadSnippets: ()              => ipcRenderer.invoke('load-snippets'),
 
+  saveAnnotatedScreenshot: (data: unknown) => ipcRenderer.invoke('save-annotated-screenshot', data),
+  saveKnowledgeBase: (data: unknown) => ipcRenderer.invoke('save-knowledge-base', data),
+  loadKnowledgeBase: () => ipcRenderer.invoke('load-knowledge-base'),
+  saveLabReviews: (data: unknown) => ipcRenderer.invoke('save-lab-reviews', data),
+  loadLabReviews: () => ipcRenderer.invoke('load-lab-reviews'),
+  exportHtml: (data: unknown) => ipcRenderer.invoke('export-html', data),
+
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
   getVersion:   ()            => ipcRenderer.invoke('get-version'),
   getPlatform:  ()            => ipcRenderer.invoke('get-platform'),
@@ -73,8 +80,10 @@ const api = {
   updateOperatorProfile: (updates: object) => ipcRenderer.invoke('update-operator-profile', updates),
   completeLab: (opts: { platform: string; labType: string }) => ipcRenderer.invoke('complete-lab', opts),
 
-  startLab: (opts: { name: string; platform: string; targetIP?: string }) =>
+  startLab: (opts: { name: string; platform: string; targetIP?: string; findingsCount?: number }) =>
     ipcRenderer.invoke('lab:start', opts),
+  updateLabFindings: (opts: { findingsCount: number }) =>
+    ipcRenderer.invoke('lab:update-findings', opts),
   endLab: () => ipcRenderer.invoke('lab:end'),
 
   removeAllListeners: (channel: string) => ipcRenderer.removeAllListeners(channel),

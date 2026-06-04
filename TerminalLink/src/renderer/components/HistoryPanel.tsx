@@ -1,63 +1,116 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+/**
+ * HistoryPanel — TerminalLink
+ * 300px slide-in panel (animation handled by App.tsx AnimatePresence wrapper).
+ * Uses CommandEntryRow and HistorySearch subcomponents.
+ * Virtualizes the list when there are >500 entries for performance.
+ */
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import type { CommandEntry } from '@shared/types';
-import ReplayView from './ReplayView';
+import CommandEntryRow from './history/CommandEntryRow';
+import HistorySearch   from './history/HistorySearch';
+import ReplayView      from './ReplayView';
+
+// Virtual list constants — each row is ~60px when no output snippet, ~80px with one
+const ESTIMATED_ROW_HEIGHT = 68;
+const VIRTUAL_THRESHOLD    = 500;
+const OVERSCAN             = 5;
 
 interface Props {
   commands: CommandEntry[];
   onClear: () => void;
 }
 
-// ─── Highlight matched substring in amber ─────────────────────────────────
-function HighlightedCommand({ command, query }: { command: string; query: string }) {
-  const q = query.trim();
-  if (!q) return <>{command}</>;
+// ─── Simple virtual list ──────────────────────────────────────────────────────
+function VirtualList({
+  items,
+  query,
+}: {
+  items: CommandEntry[];
+  query: string;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [height, setHeight] = useState(400);
 
-  const idx = command.toLowerCase().indexOf(q.toLowerCase());
-  if (idx === -1) return <>{command}</>;
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      setHeight(entry.contentRect.height);
+    });
+    ro.observe(el);
+    setHeight(el.clientHeight);
+    return () => ro.disconnect();
+  }, []);
+
+  const totalHeight = items.length * ESTIMATED_ROW_HEIGHT;
+  const startIdx    = Math.max(0, Math.floor(scrollTop / ESTIMATED_ROW_HEIGHT) - OVERSCAN);
+  const endIdx      = Math.min(items.length, Math.ceil((scrollTop + height) / ESTIMATED_ROW_HEIGHT) + OVERSCAN);
+  const visibleItems = items.slice(startIdx, endIdx);
 
   return (
-    <>
-      {command.slice(0, idx)}
-      <span style={{
-        background: 'rgba(245,158,11,0.2)',
-        color: 'var(--warning)',
-        borderRadius: 2,
-        padding: '0 2px',
-        fontSize: 'inherit',
-      }}>
-        {command.slice(idx, idx + q.length)}
-      </span>
-      {command.slice(idx + q.length)}
-    </>
+    <div
+      ref={containerRef}
+      onScroll={e => setScrollTop((e.target as HTMLDivElement).scrollTop)}
+      style={{ flex: 1, overflowY: 'auto', position: 'relative' }}
+    >
+      {/* Total height spacer */}
+      <div style={{ height: totalHeight, position: 'relative' }}>
+        {/* Rendered rows, offset to correct position */}
+        <div style={{ position: 'absolute', top: startIdx * ESTIMATED_ROW_HEIGHT, left: 0, right: 0 }}>
+          {visibleItems.map(entry => (
+            <CommandEntryRow key={entry.id} entry={entry} query={query} />
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
-function relativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const s = Math.floor(diff / 1000);
-  if (s < 60)  return `${s}s ago`;
-  const m = Math.floor(s / 60);
-  if (m < 60)  return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24)  return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
+// ─── Non-virtual list (< 500 entries) ────────────────────────────────────────
+function PlainList({
+  items,
+  query,
+}: {
+  items: CommandEntry[];
+  query: string;
+}) {
+  return (
+    <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
+      {items.length === 0 && (
+        <div style={{
+          padding: 12,
+          color: 'var(--text-muted)',
+          fontSize: 11,
+          textAlign: 'center',
+        }}>
+          {query ? 'No matches' : 'No commands yet'}
+        </div>
+      )}
+      {items.map(entry => (
+        <CommandEntryRow key={entry.id} entry={entry} query={query} />
+      ))}
+    </div>
+  );
 }
 
+// ─── HistoryPanel ─────────────────────────────────────────────────────────────
 export default function HistoryPanel({ commands, onClear }: Props) {
-  const [query,        setQuery]       = useState('');
-  const [clearPending, setClearPend]   = useState(false);
-  const [replayMode,   setReplayMode]  = useState(false);
-  const panelRef    = useRef<HTMLDivElement>(null);
-  const searchRef   = useRef<HTMLInputElement>(null);
+  const [query,        setQuery]      = useState('');
+  const [clearPending, setClearPend]  = useState(false);
+  const [replayMode,   setReplayMode] = useState(false);
+  const panelRef  = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
+  // Newest first, filtered by query
   const filtered = useMemo(() => {
-    const q = query.toLowerCase().trim();
+    const q      = query.toLowerCase().trim();
     const sorted = [...commands].reverse();
     if (!q) return sorted;
     return sorted.filter(c => c.command.toLowerCase().includes(q));
   }, [commands, query]);
 
-  // Cmd+F / Ctrl+F focuses the search input when the panel is focused
+  // Cmd+F / Ctrl+F focuses search when panel is focused
   const handlePanelKeyDown = useCallback((e: React.KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
       e.preventDefault();
@@ -65,10 +118,18 @@ export default function HistoryPanel({ commands, onClear }: Props) {
     }
   }, [replayMode]);
 
-  function handleExport() {
+  async function handleExport() {
     const text = commands.map(c =>
-      `[${c.timestamp}] [pane ${c.pane}] ${c.command}`
+      `[${c.timestamp}] [${c.pane}] ${c.command}${c.outputSnippet ? `\n  > ${c.outputSnippet}` : ''}`
     ).join('\n');
+
+    // Try native save dialog first; fall back to browser download
+    try {
+      const result = await window.electronAPI.exportHistory(text);
+      if (result && result.success) return;
+    } catch { /* fall through */ }
+
+    // Browser fallback
     const blob = new Blob([text], { type: 'text/plain' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
@@ -84,13 +145,15 @@ export default function HistoryPanel({ commands, onClear }: Props) {
     onClear();
   }
 
+  const useVirtual = filtered.length > VIRTUAL_THRESHOLD;
+
   return (
     <div
       ref={panelRef}
       tabIndex={-1}
       onKeyDown={handlePanelKeyDown}
       style={{
-        width: 280,
+        width: 300,
         display: 'flex',
         flexDirection: 'column',
         background: 'var(--panel)',
@@ -109,12 +172,24 @@ export default function HistoryPanel({ commands, onClear }: Props) {
         gap: 6,
         flexShrink: 0,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-          <span style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: 1 }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 6,
+        }}>
+          <span style={{
+            fontSize: 11,
+            color: 'var(--text-dim)',
+            textTransform: 'uppercase',
+            letterSpacing: 1,
+          }}>
             {replayMode ? 'Replay' : 'History'}
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{commands.length} cmds</span>
+            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+              {commands.length} cmd{commands.length !== 1 ? 's' : ''}
+            </span>
             <button
               onClick={() => setReplayMode(r => !r)}
               disabled={commands.length === 0}
@@ -135,65 +210,18 @@ export default function HistoryPanel({ commands, onClear }: Props) {
           </div>
         </div>
 
-        {/* Search input — only in list mode */}
+        {/* Search (list mode only) */}
         {!replayMode && (
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            {/* Search icon */}
-            <span style={{
-              position: 'absolute',
-              left: 7,
-              fontSize: 11,
-              color: 'var(--text-muted)',
-              pointerEvents: 'none',
-              lineHeight: 1,
-            }}>⌕</span>
-            <input
-              ref={searchRef}
-              type="text"
-              placeholder="Search commands…"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              style={{
-                width: '100%',
-                background: 'var(--bg)',
-                border: '1px solid var(--border)',
-                borderRadius: 3,
-                padding: '4px 24px 4px 22px',
-                color: 'var(--text)',
-                fontSize: 12,
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
-            />
-            {/* Clear button */}
-            {query && (
-              <button
-                onClick={() => { setQuery(''); searchRef.current?.focus(); }}
-                title="Clear search"
-                style={{
-                  position: 'absolute',
-                  right: 5,
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-muted)',
-                  fontSize: 12,
-                  cursor: 'pointer',
-                  padding: '0 2px',
-                  lineHeight: 1,
-                }}
-              >✕</button>
-            )}
-          </div>
-        )}
-        {/* Result count when filter active */}
-        {!replayMode && query.trim() && (
-          <div style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'right', paddingRight: 2 }}>
-            {filtered.length} of {commands.length} commands
-          </div>
+          <HistorySearch
+            query={query}
+            total={commands.length}
+            filtered={filtered.length}
+            onChange={setQuery}
+          />
         )}
       </div>
 
-      {/* Body — switches between list view and replay view */}
+      {/* Body */}
       {replayMode ? (
         <ReplayView
           commands={commands}
@@ -201,78 +229,25 @@ export default function HistoryPanel({ commands, onClear }: Props) {
         />
       ) : (
         <>
-          {/* List */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
-            {filtered.length === 0 && (
-              <div style={{ padding: 12, color: 'var(--text-muted)', fontSize: 11, textAlign: 'center' }}>
-                {query ? 'No matches' : 'No commands yet'}
-              </div>
-            )}
-            {filtered.map(entry => (
-              <div
-                key={entry.id}
-                style={{
-                  padding: '6px 10px',
-                  borderBottom: '1px solid var(--border)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 3,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{
-                      fontSize: 9,
-                      padding: '1px 4px',
-                      background: entry.pane === 1 ? 'rgba(74,158,255,0.2)' : 'rgba(0,255,65,0.15)',
-                      color:      entry.pane === 1 ? 'var(--accent)' : 'var(--success)',
-                      borderRadius: 2,
-                      textTransform: 'uppercase',
-                    }}>P{entry.pane}</span>
-                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                      {relativeTime(entry.timestamp)}
-                    </span>
-                  </div>
-                  <button
-                    title="Copy"
-                    onClick={() => navigator.clipboard.writeText(entry.command)}
-                    style={{
-                      fontSize: 10,
-                      color: 'var(--text-muted)',
-                      padding: '1px 4px',
-                      borderRadius: 2,
-                      background: 'var(--bg)',
-                      border: '1px solid var(--border)',
-                    }}
-                  >
-                    copy
-                  </button>
-                </div>
-                <span style={{
-                  fontSize: 12,
-                  color: 'var(--text)',
-                  wordBreak: 'break-all',
-                  whiteSpace: 'pre-wrap',
-                  fontFamily: 'inherit',
-                }}>
-                  <HighlightedCommand command={entry.command} query={query} />
-                </span>
-                {entry.outputSnippet && (
-                  <span style={{
-                    fontSize: 10,
-                    color: 'var(--text-muted)',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}>
-                    {entry.outputSnippet}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
+          {/* Virtual or plain list */}
+          {filtered.length === 0 ? (
+            <div style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--text-muted)',
+              fontSize: 11,
+            }}>
+              {query ? 'No matches' : 'No commands yet'}
+            </div>
+          ) : useVirtual ? (
+            <VirtualList items={filtered} query={query} />
+          ) : (
+            <PlainList items={filtered} query={query} />
+          )}
 
-          {/* Footer actions */}
+          {/* Footer */}
           <div style={{
             padding: '6px 10px',
             borderTop: '1px solid var(--border)',
@@ -292,6 +267,7 @@ export default function HistoryPanel({ commands, onClear }: Props) {
                 border: '1px solid var(--accent)',
                 color: 'var(--accent)',
                 opacity: commands.length === 0 ? 0.4 : 1,
+                cursor: commands.length === 0 ? 'default' : 'pointer',
               }}
             >
               Export
@@ -308,6 +284,7 @@ export default function HistoryPanel({ commands, onClear }: Props) {
                 border: `1px solid ${clearPending ? 'var(--error)' : 'var(--border)'}`,
                 color: clearPending ? 'var(--error)' : 'var(--text-dim)',
                 opacity: commands.length === 0 ? 0.4 : 1,
+                cursor: commands.length === 0 ? 'default' : 'pointer',
               }}
             >
               {clearPending ? 'Confirm' : 'Clear'}
