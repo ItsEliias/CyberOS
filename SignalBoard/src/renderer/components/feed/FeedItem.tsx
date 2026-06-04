@@ -214,14 +214,14 @@ export default function FeedItemCard({ item, index = 0 }: { item: FeedItemType; 
             </button>
           ))}
           {(item.cveIds?.length ?? 0) > 1 && (
-            <span className="text-[9px] text-muted/50">+{(item.cveIds!.length - 1)} CVE</span>
+            <span className="text-[9px]" style={{ color: '#6b7a90' }}>+{(item.cveIds!.length - 1)} CVE</span>
           )}
           {item.duplicateCount ? (
-            <span className="text-[9px] text-muted/50 px-1 py-px rounded border border-border/30 flex-shrink-0">
+            <span className="text-[9px] px-1 py-px rounded border flex-shrink-0" style={{ color: '#6b7a90', borderColor: 'rgba(42,51,71,0.5)' }}>
               +{item.duplicateCount} similar
             </span>
           ) : null}
-          <span className="ml-auto text-[10px] text-white/30 flex-shrink-0">{timeAgo(item.publishedAt)}</span>
+          <span className="ml-auto text-[10px] flex-shrink-0" style={{ color: '#6b7a90' }}>{timeAgo(item.publishedAt)}</span>
         </div>
 
         {/* Row 2: Headline */}
@@ -231,12 +231,12 @@ export default function FeedItemCard({ item, index = 0 }: { item: FeedItemType; 
 
         {/* Row 3: Summary */}
         {item.summary && (
-          <p className="text-[11px] leading-relaxed line-clamp-2 text-white/45">{item.summary}</p>
+          <p className="text-[11px] leading-relaxed line-clamp-2" style={{ color: '#8b949e' }}>{item.summary}</p>
         )}
 
         {/* Inline expand indicator for short items */}
         {isShortItem && (
-          <div className="flex items-center gap-1 mt-1.5 text-[10px]" style={{ color: 'rgba(255,255,255,0.2)' }}>
+          <div className="flex items-center gap-1 mt-1.5 text-[10px]" style={{ color: '#4a5568' }}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>
               <polyline points="6 9 12 15 18 9" />
             </svg>
@@ -262,29 +262,29 @@ export default function FeedItemCard({ item, index = 0 }: { item: FeedItemType; 
           </button>
           <button
             onClick={handleOpen}
-            className="text-[10px] px-2.5 py-1 border border-white/10 text-white/40 transition-all duration-150"
-            style={{ borderRadius: '8px', background: 'rgba(42,51,71,0.2)' }}
-            onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
+            className="text-[10px] px-2.5 py-1 border transition-all duration-150"
+            style={{ borderRadius: '8px', background: 'rgba(42,51,71,0.2)', borderColor: 'rgba(42,51,71,0.6)', color: '#8b949e' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#e2e8f0'; e.currentTarget.style.borderColor = 'rgba(42,51,71,0.9)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#8b949e'; e.currentTarget.style.borderColor = 'rgba(42,51,71,0.6)' }}
           >
             Open ↗
           </button>
           <button
             onClick={e => { e.stopPropagation(); navigator.clipboard.writeText(item.url) }}
-            className="text-[10px] px-2.5 py-1 border border-white/10 text-white/40 transition-all duration-150"
-            style={{ borderRadius: '8px', background: 'rgba(42,51,71,0.2)' }}
-            onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
+            className="text-[10px] px-2.5 py-1 border transition-all duration-150"
+            style={{ borderRadius: '8px', background: 'rgba(42,51,71,0.2)', borderColor: 'rgba(42,51,71,0.6)', color: '#8b949e' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#e2e8f0'; e.currentTarget.style.borderColor = 'rgba(42,51,71,0.9)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#8b949e'; e.currentTarget.style.borderColor = 'rgba(42,51,71,0.6)' }}
             title="Copy link"
           >
             ⎘ Copy
           </button>
           <button
             onClick={handleVault}
-            className="text-[10px] px-2.5 py-1 border border-white/10 text-white/40 transition-all duration-150"
-            style={{ borderRadius: '8px', background: 'rgba(42,51,71,0.2)' }}
-            onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
+            className="text-[10px] px-2.5 py-1 border transition-all duration-150"
+            style={{ borderRadius: '8px', background: 'rgba(42,51,71,0.2)', borderColor: 'rgba(42,51,71,0.6)', color: '#8b949e' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#e2e8f0'; e.currentTarget.style.borderColor = 'rgba(42,51,71,0.9)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#8b949e'; e.currentTarget.style.borderColor = 'rgba(42,51,71,0.6)' }}
           >
             Vault
           </button>

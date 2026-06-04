@@ -3,6 +3,7 @@
 import { useMemo, type ReactNode } from 'react'
 import type { Credential } from '@shared/types'
 import type { AuditIssue } from '../utils/passwordAudit'
+import { useStore, type AppTheme } from '../store'
 
 // ─── Vault Health Ring ────────────────────────────────────────────────────────
 
@@ -153,5 +154,141 @@ export function Toggle({ value, onChange }: { value: boolean; onChange: (v: bool
         background: '#fff', transition: 'left 0.2s',
       }} />
     </button>
+  )
+}
+
+// ─── Theme Section ────────────────────────────────────────────────────────────
+
+const ACCENT_PRESETS = ['#f78166', '#4a9eff', '#3fb950', '#d29922', '#b44fff', '#ff6b6b']
+const BG_PRESETS: { label: string; value: string }[] = [
+  { label: 'Dark',     value: '#0a0a0f' },
+  { label: 'Graphite', value: '#111318' },
+  { label: 'Navy',     value: '#0d1117' },
+  { label: 'OLED',     value: '#000000' },
+]
+
+function hexToRgb(hex: string): [number, number, number] | null {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : null
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('')
+}
+
+// Interpolate between #8b949e and #ffffff based on 0-1 slider
+function brightnessToTextColor(t: number): string {
+  const lo = hexToRgb('#8b949e')!
+  const hi = hexToRgb('#ffffff')!
+  return rgbToHex(
+    Math.round(lo[0] + (hi[0] - lo[0]) * t),
+    Math.round(lo[1] + (hi[1] - lo[1]) * t),
+    Math.round(lo[2] + (hi[2] - lo[2]) * t),
+  )
+}
+
+function textColorToBrightness(hex: string): number {
+  const c = hexToRgb(hex)
+  if (!c) return 0.5
+  const lo = hexToRgb('#8b949e')!
+  const hi = hexToRgb('#ffffff')!
+  const range = hi[0] - lo[0]
+  if (range === 0) return 0
+  return Math.max(0, Math.min(1, (c[0] - lo[0]) / range))
+}
+
+export function ThemeSection() {
+  const theme     = useStore(s => s.theme)
+  const setTheme  = useStore(s => s.setTheme)
+  const resetTheme = useStore(s => s.resetTheme)
+
+  const brightness = textColorToBrightness(theme.textColor)
+
+  return (
+    <Card title="Theme">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+        {/* Accent color */}
+        <SettingRow label="Accent color" description="Primary highlight colour used throughout the UI">
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {ACCENT_PRESETS.map(color => (
+              <button
+                key={color}
+                title={color}
+                onClick={() => setTheme({ accentColor: color })}
+                style={{
+                  width: 22, height: 22, borderRadius: '50%', border: 'none',
+                  background: color, cursor: 'pointer', flexShrink: 0,
+                  outline: theme.accentColor === color ? `2px solid ${color}` : '2px solid transparent',
+                  outlineOffset: 2,
+                  transition: 'outline 0.15s, transform 0.15s',
+                  transform: theme.accentColor === color ? 'scale(1.15)' : 'scale(1)',
+                }}
+              />
+            ))}
+          </div>
+        </SettingRow>
+
+        {/* Background */}
+        <SettingRow label="Background" description="App background darkness preset">
+          <div style={{ display: 'flex', gap: 6 }}>
+            {BG_PRESETS.map(p => (
+              <button
+                key={p.value}
+                onClick={() => setTheme({ bgColor: p.value })}
+                style={{
+                  fontSize: 10, padding: '3px 9px', borderRadius: 6,
+                  border: `1px solid ${theme.bgColor === p.value ? theme.accentColor : 'rgba(42,51,71,0.6)'}`,
+                  background: theme.bgColor === p.value ? `${theme.accentColor}15` : p.value,
+                  color: theme.bgColor === p.value ? theme.accentColor : '#8b949e',
+                  cursor: 'pointer',
+                }}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </SettingRow>
+
+        {/* Text brightness slider */}
+        <SettingRow label="Text brightness" description="Adjust base text brightness">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={brightness}
+              onChange={e => setTheme({ textColor: brightnessToTextColor(parseFloat(e.target.value)) })}
+              style={{ width: 100 }}
+            />
+            <span style={{ fontSize: 11, color: theme.textColor, minWidth: 56, fontFamily: 'JetBrains Mono, monospace' }}>
+              {theme.textColor}
+            </span>
+          </div>
+        </SettingRow>
+
+        {/* Live preview swatch */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12,
+          padding: '10px 14px', borderRadius: 8,
+          background: theme.bgColor,
+          border: `1px solid rgba(42,51,71,0.5)`,
+        }}>
+          <div style={{ width: 28, height: 28, borderRadius: 6, background: theme.accentColor, flexShrink: 0 }} title="Accent" />
+          <div style={{ width: 28, height: 28, borderRadius: 6, background: theme.bgColor, border: '1px solid rgba(42,51,71,0.5)', flexShrink: 0 }} title="Background" />
+          <span style={{ fontSize: 13, color: theme.textColor, fontWeight: 500, flex: 1 }}>Preview text</span>
+          <span style={{ fontSize: 11, color: theme.accentColor }}>Accent label</span>
+        </div>
+
+        <button
+          className="btn btn-ghost"
+          style={{ alignSelf: 'flex-start', fontSize: 11 }}
+          onClick={resetTheme}
+        >
+          Reset to defaults
+        </button>
+      </div>
+    </Card>
   )
 }

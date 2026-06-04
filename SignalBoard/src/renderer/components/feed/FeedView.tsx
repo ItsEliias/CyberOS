@@ -100,7 +100,7 @@ export default function FeedView() {
       <div className="w-[340px] flex flex-col border-r border-white/[0.06] flex-shrink-0">
         {/* Column header with refresh indicator */}
         <div className="flex items-center justify-between px-3 pt-2 pb-1" style={{ minHeight: '28px' }}>
-          <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.2)' }}>Feed</span>
+          <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#4a5568' }}>Feed</span>
           <div className="flex items-center gap-2">
             {filtered.filter(i => !i.read).length > 0 && (
               <button
@@ -108,8 +108,8 @@ export default function FeedView() {
                 className="text-[9px] px-1.5 py-0.5 rounded transition-colors flex items-center gap-1"
                 style={{
                   background: markAllFlash ? 'rgba(63,185,80,0.12)' : 'transparent',
-                  border: `1px solid ${markAllFlash ? 'rgba(63,185,80,0.3)' : 'rgba(42,51,71,0.4)'}`,
-                  color: markAllFlash ? '#3fb950' : 'rgba(255,255,255,0.25)',
+                  border: `1px solid ${markAllFlash ? 'rgba(63,185,80,0.3)' : 'rgba(42,51,71,0.5)'}`,
+                  color: markAllFlash ? '#3fb950' : '#6b7a90',
                   transition: 'all 0.2s',
                 }}
                 title="Mark all visible items as read"
@@ -218,8 +218,8 @@ export default function FeedView() {
                       </svg>
                     </div>
                   </div>
-                  <p className="text-sm font-semibold mb-1.5" style={{ color: 'rgba(255,255,255,0.45)' }}>No signals found</p>
-                  <p className="text-xs leading-relaxed max-w-[170px]" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                  <p className="text-sm font-semibold mb-1.5" style={{ color: '#8b949e' }}>No signals found</p>
+                  <p className="text-xs leading-relaxed max-w-[170px]" style={{ color: '#4a5568' }}>
                     Add a source in Sources to start receiving intelligence
                   </p>
                 </div>

@@ -4,6 +4,26 @@ import type { Credential, VaultStats, ImportHistoryEntry } from '@shared/types'
 export type View = 'vault' | 'import' | 'settings'
 export type SortOrder = 'lastUsed' | 'alpha' | 'newest' | 'strength' | null
 
+export interface AppTheme {
+  accentColor: string  // Default: '#f78166'
+  bgColor:     string  // Default: '#0a0a0f'
+  textColor:   string  // Default: '#e2e8f0'
+}
+
+const DEFAULT_THEME: AppTheme = {
+  accentColor: '#f78166',
+  bgColor:     '#0a0a0f',
+  textColor:   '#e2e8f0',
+}
+
+function loadTheme(): AppTheme {
+  try {
+    const raw = localStorage.getItem('cv_theme')
+    if (raw) return { ...DEFAULT_THEME, ...JSON.parse(raw) }
+  } catch {}
+  return { ...DEFAULT_THEME }
+}
+
 export interface Store {
   // Auth state
   isSetup:    boolean
@@ -21,6 +41,9 @@ export interface Store {
 
   // Settings
   clipboardClearMs: number   // 0 = never, 30000, 60000
+
+  // Theme
+  theme: AppTheme
 
   // UI state
   activeView:      View
@@ -58,6 +81,8 @@ export interface Store {
   setSortOrder:        (s: SortOrder) => void
   resetFilters:        () => void
   setClipboardToast:   (toast: { label: string; clearsAt: number } | null) => void
+  setTheme:            (t: Partial<AppTheme>) => void
+  resetTheme:          () => void
 }
 
 export const useStore = create<Store>((set) => ({
@@ -70,6 +95,8 @@ export const useStore = create<Store>((set) => ({
   version:      '1.0.0',
   pendingCount: 0,
   clipboardClearMs: 30_000,
+
+  theme: loadTheme(),
 
   activeView:     'vault',
   searchQuery:    '',
@@ -111,4 +138,13 @@ export const useStore = create<Store>((set) => ({
     activeTags: []
   }),
   setClipboardToast:   (t)    => set({ clipboardToast: t }),
+  setTheme: (partial) => set(s => {
+    const next = { ...s.theme, ...partial }
+    try { localStorage.setItem('cv_theme', JSON.stringify(next)) } catch {}
+    return { theme: next }
+  }),
+  resetTheme: () => set(() => {
+    try { localStorage.setItem('cv_theme', JSON.stringify(DEFAULT_THEME)) } catch {}
+    return { theme: { ...DEFAULT_THEME } }
+  }),
 }))
