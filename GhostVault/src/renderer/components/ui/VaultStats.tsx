@@ -1,6 +1,7 @@
 // GhostVault — Vault stat widgets (progress ring + sparkline)
 // Used by VaultView stats row
 
+import { useEffect, useState } from 'react';
 import type { NoteFile } from '@shared/types';
 
 // ── Animated progress ring stat card ─────────────────────────────────────────
@@ -10,6 +11,15 @@ export function VaultStatRing({ label, value, max, color, sub }: {
   const r = 14;
   const circ = 2 * Math.PI * r;
   const pct = max > 0 ? Math.min(value / max, 1) : 0;
+
+  // Mount animation: start at full offset (empty ring), animate to target
+  const [animOffset, setAnimOffset] = useState(circ);
+  useEffect(() => {
+    const t = requestAnimationFrame(() => {
+      setAnimOffset(circ * (1 - pct));
+    });
+    return () => cancelAnimationFrame(t);
+  }, [circ, pct]);
 
   return (
     <div className="relative overflow-hidden px-3 py-2 rounded-xl flex items-center gap-3 card-hover"
@@ -24,8 +34,8 @@ export function VaultStatRing({ label, value, max, color, sub }: {
           stroke={color} strokeWidth="3"
           strokeLinecap="round"
           strokeDasharray={circ}
-          strokeDashoffset={circ * (1 - pct)}
-          style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.2,0.8,0.2,1)', filter: `drop-shadow(0 0 4px ${color}55)` }}
+          strokeDashoffset={animOffset}
+          style={{ transition: 'stroke-dashoffset 1.1s cubic-bezier(0.2,0.8,0.2,1)', filter: `drop-shadow(0 0 4px ${color}55)` }}
         />
       </svg>
       <div className="flex flex-col">

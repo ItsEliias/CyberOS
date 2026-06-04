@@ -1,7 +1,7 @@
 // GhostVault — EditorView (redesigned: glass panel aesthetic, soft blue accent)
 
 import { useRef, useCallback, useEffect, useMemo, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import { parseMarkdown, setWikiLinkOpener } from '../lib/markdown';
 import WikilinkAutocomplete from './WikilinkAutocomplete';
@@ -9,25 +9,24 @@ import InlineAICommands from './InlineAICommands';
 import VersionHistoryPanel from './VersionHistoryPanel';
 import PresentationMode from './PresentationMode';
 import EditorStatusBar from './notes/EditorStatusBar';
-import { ToolBtn, ToolDivider, TABLE_TEMPLATE, formatRelTime, tagHue } from './notes/EditorToolbar';
+import EditorEmptyState from './notes/EditorEmptyState';
+import EditorTopBar from './notes/EditorTopBar';
+import { TABLE_TEMPLATE } from './notes/EditorToolbar';
 import type { EditorMode, NoteFile } from '@shared/types';
 
 interface Props {
-  onSave     : () => void;
-  onAiMenu   : () => void;
-  onTemplate : () => void;
-  onTogglePin: () => void;
-  onToggleAot: () => void;
-  onCapture  : () => void;
-  onOpenNote?: (note: NoteFile) => void;
-}
-
-function modeLabel(m: EditorMode): string {
-  return m === 'edit' ? 'Edit' : m === 'split' ? 'Split' : 'Preview';
+  onSave          : () => void;
+  onAiMenu        : () => void;
+  onTemplate      : () => void;
+  onTogglePin     : () => void;
+  onToggleAot     : () => void;
+  onCapture       : () => void;
+  onOpenNote?     : (note: NoteFile) => void;
+  onFocusModeChange?: (focused: boolean) => void;
 }
 
 export default function EditorView({
-  onSave, onAiMenu, onTemplate, onTogglePin, onToggleAot, onCapture, onOpenNote
+  onSave, onAiMenu, onTemplate, onTogglePin, onToggleAot, onCapture, onOpenNote, onFocusModeChange
 }: Props) {
   const {
     activeNote, editorContent, editorMode, dirty, alwaysOnTop, pinnedPaths,
@@ -40,6 +39,7 @@ export default function EditorView({
   const previewDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [previewHtml, setPreviewHtml] = useState('');
   const [exportToast, setExportToast] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
 
   const [wikiAc, setWikiAc] = useState<{ query: string; pos: { top: number; left: number } } | null>(null);
   const [aiCmd, setAiCmd] = useState<{ pos: { top: number; left: number } } | null>(null);
@@ -67,10 +67,18 @@ export default function EditorView({
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'F5') { e.preventDefault(); setPresentMode(!presentMode); }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'F') {
+        e.preventDefault();
+        setFocusMode(f => {
+          const next = !f;
+          onFocusModeChange?.(next);
+          return next;
+        });
+      }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [presentMode, setPresentMode]);
+  }, [presentMode, setPresentMode, onFocusModeChange]);
 
   async function handleExportToReport() {
     if (!activeNote || !editorContent.trim()) return;
@@ -234,161 +242,55 @@ export default function EditorView({
     return t ? t.split(/\s+/).length : 0;
   }, [editorContent]);
 
-  const modes: EditorMode[] = ['edit', 'split', 'preview'];
   const hasOllama = useStore.getState().ollamaStatus?.running || false;
 
+  function toggleFocusMode() {
+    setFocusMode(f => { const next = !f; onFocusModeChange?.(next); return next; });
+  }
+
   return (
-    <div className="flex flex-col h-full relative" style={{ background: '#07080f' }}>
-      {/* Toolbar */}
-      <div
-        className="flex items-center gap-2 px-4 py-2 flex-shrink-0"
-        style={{
-          borderBottom: '1px solid rgba(42,51,71,0.4)',
-          background: 'rgba(10,11,20,0.7)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-        }}
-      >
-        {/* Note title */}
-        <div className="flex-1 min-w-0">
-          {activeNote ? (
-            <div className="flex flex-col gap-0.5 min-w-0">
-              <div className="flex items-baseline gap-1.5 min-w-0">
-                <span className="text-[10px] font-mono" style={{ color: 'rgba(72,79,88,0.7)' }}>
-                  {activeNote.folder}/
-                </span>
-                <span
-                  className="text-sm font-semibold truncate"
-                  style={{ color: '#e6edf3', fontFamily: 'var(--font-display)' }}
-                >
-                  {activeNote.name}
-                </span>
-                {isLocked && (
-                  <span className="text-[10px]" style={{ color: '#d29922' }}>locked</span>
-                )}
-              </div>
-              {/* Note metadata row */}
-              <div className="flex items-center gap-2">
-                <span className="text-[9px] font-mono tabular-nums" style={{ color: 'rgba(72,79,88,0.5)' }}>
-                  modified {formatRelTime(activeNote.mtime)}
-                </span>
-                {(activeNote.tags?.length ?? 0) > 0 && (
-                  <div className="flex items-center gap-1">
-                    {activeNote.tags!.slice(0, 3).map(tag => (
-                      <span key={tag}
-                        className={`text-[9px] px-1.5 py-px rounded-full font-medium tag-colored tag-hue-${tagHue(tag)}`}>
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <span
-              className="text-sm font-semibold"
-              style={{ color: 'rgba(72,79,88,0.7)', fontFamily: 'var(--font-display)' }}
-            >
-              GhostVault
-            </span>
-          )}
-        </div>
+    <div className={`flex flex-col h-full relative${focusMode ? ' focused' : ''}`} style={{ background: '#07080f' }}>
+      <EditorTopBar
+        activeNote={activeNote}
+        editorContent={editorContent}
+        editorMode={editorMode}
+        dirty={dirty}
+        isPinned={isPinned}
+        isLocked={isLocked}
+        alwaysOnTop={alwaysOnTop}
+        showHistory={showHistory}
+        focusMode={focusMode}
+        onSave={onSave}
+        onAiMenu={onAiMenu}
+        onTemplate={onTemplate}
+        onTogglePin={onTogglePin}
+        onToggleAot={onToggleAot}
+        onCapture={onCapture}
+        onInsertLink={insertLink}
+        onInsertTable={insertTable}
+        onWrapSelection={wrapSelection}
+        onSetMode={(m) => { setEditorMode(m); window.ghostvault.saveConfig({ editorMode: m }); }}
+        onToggleHistory={() => setShowHistory(!showHistory)}
+        onToggleFocus={toggleFocusMode}
+        onPresentMode={() => activeNote && setPresentMode(true)}
+        onExportReport={handleExportToReport}
+      />
 
-        {/* Mode pills */}
+      {/* Focus mode hint */}
+      {focusMode && (
         <div
-          className="flex rounded overflow-hidden"
-          style={{ border: '1px solid rgba(42,51,71,0.5)' }}
+          key="focus-hint"
+          className="focus-mode-hint absolute top-14 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-lg text-[10px] font-medium z-50 pointer-events-none"
+          style={{
+            background: 'rgba(19,21,37,0.9)',
+            border: '1px solid rgba(123,184,255,0.2)',
+            color: 'rgba(123,184,255,0.7)',
+            fontFamily: 'var(--font-display)',
+          }}
         >
-          {modes.map(m => (
-            <button
-              key={m}
-              onClick={() => { setEditorMode(m); window.ghostvault.saveConfig({ editorMode: m }); }}
-              className="px-2.5 py-1 text-[10px] font-medium transition-colors"
-              style={{
-                background: editorMode === m ? 'rgba(123,184,255,0.12)' : 'transparent',
-                color: editorMode === m ? '#7bb8ff' : 'rgba(72,79,88,0.7)',
-                borderRight: m !== 'preview' ? '1px solid rgba(42,51,71,0.4)' : 'none',
-                fontFamily: 'var(--font-display)',
-              }}
-            >
-              {modeLabel(m)}
-            </button>
-          ))}
+          Focus mode · ⌘⇧F to exit
         </div>
-
-        {/* Action buttons — grouped with dividers */}
-        <div className="flex items-center gap-0.5">
-          {/* Formatting group: Bold / Italic / Code / Link */}
-          <ToolBtn onClick={() => wrapSelection('**', '**')} title="Bold (⌘B)"><span style={{ fontWeight: 700, fontFamily: 'serif', fontSize: '0.85rem' }}>B</span></ToolBtn>
-          <ToolBtn onClick={() => wrapSelection('_', '_')} title="Italic (⌘I)"><span style={{ fontStyle: 'italic', fontFamily: 'serif', fontSize: '0.85rem' }}>I</span></ToolBtn>
-          <ToolBtn onClick={() => wrapSelection('`', '`')} title="Inline Code"><span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}>&lt;/&gt;</span></ToolBtn>
-          <ToolBtn onClick={() => insertLink()} title="Insert Link">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-          </ToolBtn>
-          <ToolDivider />
-          {/* Insert group */}
-          <ToolBtn onClick={insertTable} title="Insert Table">⊞</ToolBtn>
-          <ToolBtn onClick={onTemplate} title="Insert Template">🗂</ToolBtn>
-          <ToolDivider />
-          {/* AI + Capture group */}
-          <ToolBtn onClick={onAiMenu} title="AI Assistant">✨</ToolBtn>
-          <ToolBtn onClick={onCapture} title="Capture Window">⚡</ToolBtn>
-          <ToolDivider />
-          {/* Note state group */}
-          <ToolBtn onClick={onTogglePin} title={isPinned ? 'Unpin Note' : 'Pin Note'} active={isPinned}>📌</ToolBtn>
-          <ToolBtn onClick={onToggleAot} title="Toggle Always on Top" active={alwaysOnTop}>⬆</ToolBtn>
-          {activeNote && (
-            <ToolBtn
-              onClick={() => setShowHistory(!showHistory)}
-              title="Version History"
-              active={showHistory}
-            >
-              ⏱
-            </ToolBtn>
-          )}
-          <ToolDivider />
-          {/* View group */}
-          <ToolBtn
-            onClick={() => activeNote && setPresentMode(true)}
-            title="Presentation Mode (F5)"
-            disabled={!activeNote}
-          >
-            ▶
-          </ToolBtn>
-
-          <button
-            onClick={onSave}
-            disabled={!dirty}
-            className="px-2.5 py-1 rounded text-[10px] font-semibold transition-all ml-1"
-            style={{
-              background: dirty ? 'rgba(123,184,255,0.15)' : 'rgba(42,51,71,0.15)',
-              color: dirty ? '#7bb8ff' : 'rgba(72,79,88,0.6)',
-              border: dirty ? '1px solid rgba(123,184,255,0.3)' : '1px solid rgba(42,51,71,0.3)',
-              fontFamily: 'var(--font-display)',
-            }}
-          >
-            {dirty ? 'Save' : 'Saved'}
-          </button>
-
-          {activeNote && editorContent.trim() && (
-            <button
-              onClick={handleExportToReport}
-              title="Export to ReportForge"
-              className="px-2.5 py-1 rounded text-[10px] font-medium transition-colors ml-0.5"
-              style={{
-                border: '1px solid rgba(123,184,255,0.2)',
-                color: '#7bb8ff',
-                background: 'transparent',
-                fontFamily: 'var(--font-display)',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(123,184,255,0.08)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-            >
-              → Report
-            </button>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* Export toast */}
       {exportToast && (
@@ -408,46 +310,7 @@ export default function EditorView({
 
       {/* Editor + Preview panes */}
       <div className="flex flex-1 min-h-0 relative">
-        {!activeNote && (
-          <motion.div
-            key="editor-empty"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
-            className="flex-1 flex flex-col items-center justify-center gap-5 text-center px-8"
-            style={{ pointerEvents: 'none' }}
-          >
-            <div style={{ opacity: 0.22 }}>
-              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" style={{ color: '#7bb8ff' }}>
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-                <line x1="10" y1="9" x2="8" y2="9" />
-              </svg>
-            </div>
-            <div>
-              <div className="text-sm font-semibold mb-1.5" style={{ color: 'rgba(139,148,158,0.55)' }}>
-                No note open
-              </div>
-              <div className="text-xs leading-relaxed mb-3" style={{ color: 'rgba(72,79,88,0.7)', maxWidth: '24ch', margin: '0 auto 12px' }}>
-                Select a note from the list or create one
-              </div>
-              {/* Keyboard hints */}
-              <div className="flex items-center justify-center gap-3">
-                <div className="flex items-center gap-1.5">
-                  <kbd className="px-1.5 py-0.5 rounded text-[10px] font-mono" style={{ background: 'rgba(42,51,71,0.4)', color: 'rgba(123,184,255,0.6)', border: '1px solid rgba(123,184,255,0.2)' }}>⌘N</kbd>
-                  <span className="text-[10px]" style={{ color: 'rgba(72,79,88,0.5)' }}>new note</span>
-                </div>
-                <span style={{ color: 'rgba(42,51,71,0.5)', fontSize: 10 }}>·</span>
-                <div className="flex items-center gap-1.5">
-                  <kbd className="px-1.5 py-0.5 rounded text-[10px] font-mono" style={{ background: 'rgba(42,51,71,0.4)', color: 'rgba(139,148,158,0.5)', border: '1px solid rgba(42,51,71,0.5)' }}>⌘S</kbd>
-                  <span className="text-[10px]" style={{ color: 'rgba(72,79,88,0.5)' }}>save</span>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
+        {!activeNote && <EditorEmptyState />}
 
         {editorMode !== 'preview' && (
           <div

@@ -22,7 +22,15 @@ function NoteSkeletonRow({ delay }: { delay: number }) {
   );
 }
 
-type SortMode = 'recent' | 'alpha' | 'tag';
+type SortMode = 'modified' | 'created' | 'title' | 'size';
+type SortDir  = 'desc' | 'asc';
+
+const SORT_LABELS: Record<SortMode, string> = {
+  modified: 'Modified',
+  created:  'Created',
+  title:    'Title',
+  size:     'Size',
+};
 
 interface Props {
   onOpenNote: (note: NoteFile) => void;
@@ -47,8 +55,10 @@ async function exportZip(notes: NoteFile[]): Promise<void> {
 
 export default function NoteList({ onOpenNote, onDeleteNote, onRenameNote }: Props) {
   const { notes, activeNote, pinnedPaths, selectedPaths, toggleSelection, clearSelection, togglePin, folders } = useStore();
-  const [search, setSearch]   = useState('');
-  const [sort, setSort]       = useState<SortMode>('recent');
+  const [search, setSearch]       = useState('');
+  const [sort, setSort]           = useState<SortMode>('modified');
+  const [sortDir, setSortDir]     = useState<SortDir>('desc');
+  const [activeTag, setActiveTag] = useState<string | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [localOrder, setLocalOrder]   = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,9 +70,16 @@ export default function NoteList({ onOpenNote, onDeleteNote, onRenameNote }: Pro
     return () => clearTimeout(t);
   }, []);
 
+  // Collect all unique tags across all notes for the tag filter bar
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    for (const n of notes) (n.tags || []).forEach(t => tagSet.add(t));
+    return [...tagSet].sort();
+  }, [notes]);
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    const base = q
+    let base = q
       ? notes.filter(n =>
           n.name.toLowerCase().includes(q) ||
           n.folder.toLowerCase().includes(q) ||
@@ -71,15 +88,16 @@ export default function NoteList({ onOpenNote, onDeleteNote, onRenameNote }: Pro
         )
       : notes;
 
+    // Tag filter
+    if (activeTag) base = base.filter(n => (n.tags || []).includes(activeTag));
+
     let sorted: NoteFile[];
+    const dir = sortDir === 'asc' ? 1 : -1;
     switch (sort) {
-      case 'recent': sorted = [...base].sort((a, b) => b.mtime - a.mtime); break;
-      case 'alpha':  sorted = [...base].sort((a, b) => a.name.localeCompare(b.name)); break;
-      case 'tag': {
-        const byTag = (n: NoteFile) => (n.tags?.[0] || '') + n.name;
-        sorted = [...base].sort((a, b) => byTag(a).localeCompare(byTag(b)));
-        break;
-      }
+      case 'modified': sorted = [...base].sort((a, b) => dir * (b.mtime - a.mtime)); break;
+      case 'created':  sorted = [...base].sort((a, b) => dir * ((b.ctime ?? b.mtime) - (a.ctime ?? a.mtime))); break;
+      case 'title':    sorted = [...base].sort((a, b) => dir * a.name.localeCompare(b.name)); break;
+      case 'size':     sorted = [...base].sort((a, b) => dir * ((b.wordCount ?? 0) - (a.wordCount ?? 0))); break;
       default: sorted = base;
     }
 
@@ -93,7 +111,7 @@ export default function NoteList({ onOpenNote, onDeleteNote, onRenameNote }: Pro
       });
     }
     return sorted;
-  }, [notes, search, sort, localOrder]);
+  }, [notes, search, sort, sortDir, activeTag, localOrder]);
 
   const pinned   = useMemo(() => filtered.filter(n => pinnedPaths.has(n.path)), [filtered, pinnedPaths]);
   const unpinned = useMemo(() => filtered.filter(n => !pinnedPaths.has(n.path)), [filtered, pinnedPaths]);
@@ -214,20 +232,63 @@ export default function NoteList({ onOpenNote, onDeleteNote, onRenameNote }: Pro
         </div>
       </div>
 
-      {/* Sort row */}
-      <div className="px-3 pb-2 flex gap-1 shrink-0">
-        {(['recent', 'alpha', 'tag'] as SortMode[]).map(s => (
-          <button key={s} onClick={() => setSort(s)}
-            className="flex-1 py-1 rounded text-[10px] capitalize font-medium transition-colors"
-            style={{
-              background : sort === s ? 'rgba(123,184,255,0.12)' : 'transparent',
-              color      : sort === s ? '#7bb8ff' : 'var(--text-dim)',
-              border     : sort === s ? '1px solid rgba(123,184,255,0.2)' : '1px solid transparent',
-            }}>
-            {s === 'recent' ? 'Recent' : s === 'alpha' ? 'A–Z' : 'Tag'}
-          </button>
-        ))}
+      {/* Sort bar */}
+      <div className="px-3 pb-2 flex gap-1 shrink-0 items-center">
+        {(Object.keys(SORT_LABELS) as SortMode[]).map(s => {
+          const active = sort === s;
+          return (
+            <button key={s}
+              onClick={() => {
+                if (active) setSortDir(d => d === 'desc' ? 'asc' : 'desc');
+                else { setSort(s); setSortDir('desc'); }
+              }}
+              className="flex-1 py-1 rounded text-[10px] font-medium transition-colors flex items-center justify-center gap-0.5"
+              style={{
+                background : active ? 'rgba(123,184,255,0.12)' : 'transparent',
+                color      : active ? '#7bb8ff' : 'var(--text-dim)',
+                border     : active ? '1px solid rgba(123,184,255,0.2)' : '1px solid transparent',
+              }}>
+              {SORT_LABELS[s]}
+              {active && (
+                <span className="text-[8px] leading-none" style={{ color: '#7bb8ff', opacity: 0.8 }}>
+                  {sortDir === 'desc' ? '↓' : '↑'}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
+
+      {/* Tag filter chips */}
+      {allTags.length > 0 && (
+        <div className="px-3 pb-2 shrink-0">
+          <div className="flex gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+            {activeTag && (
+              <button
+                onClick={() => setActiveTag(null)}
+                className="flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors"
+                style={{ background: 'rgba(248,81,73,0.12)', color: '#f85149', border: '1px solid rgba(248,81,73,0.25)' }}>
+                ✕ clear
+              </button>
+            )}
+            {allTags.map(tag => {
+              const isActive = activeTag === tag;
+              return (
+                <button key={tag}
+                  onClick={() => setActiveTag(isActive ? null : tag)}
+                  className="flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors"
+                  style={{
+                    background: isActive ? 'rgba(123,184,255,0.18)' : 'rgba(123,184,255,0.06)',
+                    color     : isActive ? '#7bb8ff' : 'var(--text-dim)',
+                    border    : isActive ? '1px solid rgba(123,184,255,0.35)' : '1px solid rgba(123,184,255,0.12)',
+                  }}>
+                  #{tag}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Count + selection badge */}
       <div className="px-3 pb-1 text-[10px] shrink-0 flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>

@@ -129,8 +129,19 @@ export default function NoteListItem({
           </div>
 
           {note.firstLine && (
-            <div className="text-xs truncate mb-1" style={{ color: 'var(--text-dim)' }}>
-              {note.firstLine}
+            <div
+              className="text-xs mb-1"
+              style={{
+                color: 'var(--text-dim)',
+                display: '-webkit-box',
+                WebkitLineClamp: 1,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+                lineHeight: 1.4,
+              }}
+              title={note.firstLine}
+            >
+              {note.firstLine.slice(0, 60)}
             </div>
           )}
 

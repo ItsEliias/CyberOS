@@ -45,6 +45,7 @@ export default function App() {
   const [ollamaModels, setOllamaModels]   = useState<string[]>([]);
   const [setupDone, setSetupDone]         = useState(false);
   const [passwordModal, setPasswordModal] = useState<{ path: string; name: string; mode: 'lock' | 'unlock' } | null>(null);
+  const [editorFocusMode, setEditorFocusMode] = useState(false);
   const onboarding = useOnboarding();
 
   // ── Bootstrap ──────────────────────────────────────────────────────────────
@@ -101,8 +102,11 @@ export default function App() {
       if (e.metaKey && e.key === 'n') { e.preventDefault(); setShowNewNote(true); }
       if (e.metaKey && e.key === 'p') { e.preventDefault(); setShowCapture(true); }
       if (e.metaKey && e.key === '/') { e.preventDefault(); setAiMenuOpen(v => !v); }
-      if (e.metaKey && e.key === 'f') { e.preventDefault(); setActiveView('search'); }
-      if (e.metaKey && e.shiftKey && e.key === 'F') { e.preventDefault(); setActiveView('fullsearch'); }
+      if (e.metaKey && e.key === 'f' && !e.shiftKey) { e.preventDefault(); setActiveView('search'); }
+      // ⌘⇧F is handled by EditorView for focus mode toggle; App falls back to fullsearch only when not on notes view
+      if (e.metaKey && e.shiftKey && e.key === 'F') {
+        if (useStore.getState().activeView !== 'notes') { e.preventDefault(); setActiveView('fullsearch'); }
+      }
     }
     window.addEventListener('keydown', handleKey);
 
@@ -301,21 +305,25 @@ export default function App() {
 
       {/* Main content area */}
       <div className="flex flex-1 overflow-hidden min-h-0">
-        <Sidebar
-          onOpenNote={openNote}
-          onNewNote={() => setShowNewNote(true)}
-          onNewFolder={() => setShowNewFolder(true)}
-          onContextMenu={(e, note) => setContextMenu({ x: e.clientX, y: e.clientY, path: note.path })}
-        />
+        {!editorFocusMode && (
+          <Sidebar
+            onOpenNote={openNote}
+            onNewNote={() => setShowNewNote(true)}
+            onNewFolder={() => setShowNewFolder(true)}
+            onContextMenu={(e, note) => setContextMenu({ x: e.clientX, y: e.clientY, path: note.path })}
+          />
+        )}
 
         <div className="flex-1 overflow-hidden flex flex-col min-w-0">
           {activeView === 'notes' && (
             <div className="flex flex-1 min-h-0 overflow-hidden">
-              <NoteList
-                onOpenNote={openNote}
-                onDeleteNote={deleteNote}
-                onRenameNote={renameNote}
-              />
+              {!editorFocusMode && (
+                <NoteList
+                  onOpenNote={openNote}
+                  onDeleteNote={deleteNote}
+                  onRenameNote={renameNote}
+                />
+              )}
               <div className="flex-1 overflow-hidden flex flex-col min-w-0">
                 <EditorView
                   onSave={saveNote}
@@ -325,6 +333,7 @@ export default function App() {
                   onToggleAot={handleToggleAot}
                   onCapture={() => setShowCapture(true)}
                   onOpenNote={openNote}
+                  onFocusModeChange={setEditorFocusMode}
                 />
               </div>
             </div>
