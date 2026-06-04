@@ -15,13 +15,15 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "playwright-core": "^1.40.0",
+    "@fontsource/geist-sans": "^5.2.5",
+    "@fontsource/jetbrains-mono": "^5.2.8",
     "@playwright/browser-chromium": "^1.40.0",
-    "pdf-parse": "^1.1.1",
-    "node-cron": "^3.0.3",
-    "turndown": "^7.1.2",
     "cheerio": "^1.0.0-rc.12",
-    "node-fetch": "^2.7.0"
+    "node-cron": "^3.0.3",
+    "node-fetch": "^2.7.0",
+    "pdf-parse": "^1.1.1",
+    "playwright-core": "^1.40.0",
+    "turndown": "^7.1.2"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
@@ -53,24 +55,45 @@
       "assets/**"
     ],
     "extraResources": [
-      { "from": "assets", "to": "assets" }
+      {
+        "from": "assets",
+        "to": "assets"
+      }
     ],
     "win": {
-      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "icon": "assets/logo.ico"
     },
     "mac": {
-      "target": ["dmg"],
+      "target": [
+        "dmg"
+      ],
       "icon": "assets/logo.icns",
       "category": "public.app-category.productivity"
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "icon": "assets/logo.png",
       "category": "Utility"
     }
   },
-  "author": { "name": "ItsEliias", "email": "itseliiasstudy@gmail.com" },
+  "author": {
+    "name": "ItsEliias",
+    "email": "itseliiasstudy@gmail.com"
+  },
   "license": "MIT",
-  "engines": { "node": ">=18.0.0", "npm": ">=9.0.0" }
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
 }

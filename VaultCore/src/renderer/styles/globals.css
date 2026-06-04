@@ -1,3 +1,11 @@
+@import '@fontsource/geist-sans/400.css';
+@import '@fontsource/geist-sans/500.css';
+@import '@fontsource/geist-sans/600.css';
+@import '@fontsource/geist-sans/700.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+@import '@fontsource/jetbrains-mono/600.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,19 +13,38 @@
 /* ─── CyberOS Design Bible — CSS Variables (VaultCore accent: #3fb950) ───── */
 
 :root {
-  --accent:       #3fb950;
-  --accent-dim:   rgba(63, 185, 80, 0.4);
-  --bg:           #0a0a0f;
-  --bg2:          #12131a;
-  --bg3:          #1a1b26;
-  --border:       #2a3347;
-  --border-subtle:#1e2030;
-  --text:         #e2e8f0;
-  --text-muted:   #8b949e;
-  --text-dim:     #4a5568;
-  --input-bg:     #12131a;
-  --input-border: #2a3347;
-  --panel:        #161b22;
+  --surface-0: #07080f; --surface-1: #0d0e18; --surface-2: #131525; --surface-3: #191c32;
+  --surface-glass: rgba(13,14,24,0.72);
+  --elevation-1: 0 1px 3px rgba(0,0,0,.5), 0 1px 2px rgba(0,0,0,.35);
+  --elevation-2: 0 4px 16px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.4);
+  --elevation-3: 0 12px 40px rgba(0,0,0,.6), 0 4px 12px rgba(0,0,0,.45);
+  --border-subtle: rgba(42,51,71,0.35); --border-default: rgba(42,51,71,0.75);
+  --border-glass: rgba(255,255,255,0.055);
+  --text-primary: #e6edf3; --text-secondary: #8b949e; --text-muted: #484f58;
+  --sev-critical: #f85149; --sev-high: #ff8c42; --sev-medium: #d29922; --sev-low: #4a9eff; --sev-info: #8b949e;
+  --state-online: #3fb950; --state-offline: #484f58; --state-blocked: #f85149;
+  --accent: #3fb950; --accent-rgb: 63,185,80;
+  --accent-tint: rgba(63,185,80,0.08); --accent-tint2: rgba(63,185,80,0.15);
+  --accent-glow: rgba(63,185,80,0.28); --accent-border: rgba(63,185,80,0.30);
+  --font-display: 'Geist Sans', 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --radius-xs: 4px; --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px;
+  --motion-fast: 150ms; --motion-base: 250ms; --motion-slow: 400ms;
+  --ease: cubic-bezier(0.2,0.8,0.2,1);
+
+  /* Legacy variable aliases for existing components */
+  --accent-dim:    rgba(63, 185, 80, 0.4);
+  --bg:            #07080f;
+  --bg2:           #0d0e18;
+  --bg3:           #131525;
+  --border:        rgba(42,51,71,0.75);
+  --border-subtle: rgba(42,51,71,0.35);
+  --text:          #e6edf3;
+  --text-muted:    #8b949e;
+  --text-dim:      #484f58;
+  --input-bg:      #0d0e18;
+  --input-border:  rgba(42,51,71,0.75);
+  --panel:         #0d0e18;
 }
 
 /* ─── CyberOS Design Bible — Global Styles ────────────────────────────────── */
@@ -28,10 +55,10 @@ html, body, #root {
   height: 100%;
   min-height: 100vh;
   overflow: hidden;
-  background-color: #0a0a0f !important;
-  background: radial-gradient(ellipse at 20% 0%, rgba(63, 185, 80, 0.04) 0%, #0a0a0f 50%) !important;
-  color: #e2e8f0;
-  font-family: 'Inter', 'SF Pro Display', system-ui, sans-serif;
+  background-color: #07080f !important;
+  background: radial-gradient(ellipse at 18% 0%, rgba(63,185,80,0.04) 0%, transparent 55%), #07080f !important;
+  color: #e6edf3;
+  font-family: var(--font-display);
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -108,11 +135,12 @@ button, a, input, select {
 /* ─── Glassmorphism Card ──────────────────────────────────────────────────── */
 
 .glass-card {
-  background: rgba(22, 27, 39, 0.75);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(42, 51, 71, 0.6);
-  border-radius: 8px;
+  background: var(--surface-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  box-shadow: var(--elevation-2);
 }
 
 /* ─── Status Pulse Glow Animation ─────────────────────────────────────────── */
@@ -162,15 +190,16 @@ button, a, input, select {
 /* ─── Card / stat-chip / progress bar utility classes ─────────────────────── */
 
 .card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--elevation-1);
 }
 
 .stat-chip {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
   padding: 12px 16px;
   text-align: center;
 }
