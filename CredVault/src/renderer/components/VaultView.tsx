@@ -9,11 +9,11 @@ import { scorePassword } from '../utils/passwordStrength'
 const COL_HEADERS = ['Service', 'Username', 'IP / Port', 'Tags', 'Source', 'Date', 'Status', 'Age']
 
 const SORT_OPTIONS: { value: SortOrder; label: string }[] = [
-  { value: null,        label: 'Default' },
+  { value: null,        label: 'Default'   },
   { value: 'lastUsed',  label: 'Last Used' },
-  { value: 'alpha',     label: 'A → Z' },
-  { value: 'newest',    label: 'Newest' },
-  { value: 'strength',  label: 'Strength' },
+  { value: 'alpha',     label: 'A → Z'     },
+  { value: 'newest',    label: 'Newest'    },
+  { value: 'strength',  label: 'Strength'  },
 ]
 
 export default function VaultView() {
@@ -62,7 +62,6 @@ export default function VaultView() {
       const fields = [c.service, c.username, c.ip ?? '', c.targetName ?? '', c.labName ?? '', c.source, c.notes ?? '', ...(c.tags ?? [])]
       return fields.some(f => fuzzyMatch(q, f).matched)
     })
-
     if (sortOrder === 'lastUsed') {
       result = [...result].sort((a, b) => {
         const at = a.lastUsed ? new Date(a.lastUsed).getTime() : 0
@@ -95,7 +94,7 @@ export default function VaultView() {
   async function refreshData() {
     const [creds, stats] = await Promise.all([
       window.electronAPI.getCredentials(),
-      window.electronAPI.getStats()
+      window.electronAPI.getStats(),
     ])
     setCredentials(creds)
     setStats(stats)
@@ -128,24 +127,19 @@ export default function VaultView() {
   const runBreachCheck = useCallback(async () => {
     const withPasswords = credentials.filter(c => c.password)
     if (!withPasswords.length) return
-    setBreachRunning(true)
-    setBreachDone(false)
+    setBreachRunning(true); setBreachDone(false)
     const results: Record<string, BreachCheckResult> = {}
     for (const c of withPasswords) {
       try {
         const res = await window.electronAPI.checkBreach(c.id, c.password!)
         results[c.id] = res
-      } catch {
-        results[c.id] = { ok: false }
-      }
+      } catch { results[c.id] = { ok: false } }
     }
     const breached = Object.values(results).filter(r => r.ok && (r.breachCount ?? 0) > 0).length
     if (breached > 0) {
       import('../utils/audioNotify').then(m => m.playBreachDetected()).catch(() => {})
     }
-    setBreachMap(results)
-    setBreachRunning(false)
-    setBreachDone(true)
+    setBreachMap(results); setBreachRunning(false); setBreachDone(true)
   }, [credentials])
 
   const breachedCount = Object.values(breachMap).filter(r => r.ok && (r.breachCount ?? 0) > 0).length
@@ -153,24 +147,34 @@ export default function VaultView() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Toolbar */}
-      <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>
+      <div
+        className="shrink-0 flex items-center gap-2 flex-wrap px-4 py-2.5"
+        style={{ borderBottom: '1px solid rgba(42,51,71,0.35)', background: 'rgba(7,8,15,0.6)' }}
+      >
+        {/* Search */}
         <div style={{ position: 'relative' }}>
+          <svg
+            width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+            style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#484f58', pointerEvents: 'none' }}
+          >
+            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
           <input
             type="text"
             placeholder="Fuzzy search…"
             value={searchQuery}
             onChange={e => setSearch(e.target.value)}
-            style={{ width: 200, paddingRight: 36 }}
+            style={{ width: 200, paddingLeft: 30, paddingRight: searchQuery ? 36 : undefined }}
           />
           {searchQuery && (
-            <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: 'var(--text-muted)', pointerEvents: 'none' }}>
+            <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#484f58', pointerEvents: 'none' }}>
               {filtered.length}
             </span>
           )}
         </div>
 
         {/* Filter chips */}
-        <div style={{ display: 'flex', gap: 5, flex: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 4, flex: 1, flexWrap: 'wrap', alignItems: 'center' }}>
           {allStatuses.map(s => (
             <FilterChip key={s} label={s} active={filterStatus === s} onClick={() => setFilterStatus(filterStatus === s ? null : s)} />
           ))}
@@ -184,20 +188,24 @@ export default function VaultView() {
             <FilterChip key={t} label={`#${t}`} active={filterTag === t} onClick={() => setFilterTag(filterTag === t ? null : t)} />
           ))}
           {allFolders.filter(f => f !== '__notes__').map(f => (
-            <FilterChip key={`folder:${f}`} label={`📁 ${f}`} active={filterFolder === f} onClick={() => setFilterFolder(filterFolder === f ? null : f)} />
+            <FilterChip key={`folder:${f}`} label={`${f}`} active={filterFolder === f} onClick={() => setFilterFolder(filterFolder === f ? null : f)} />
           ))}
           {hasFilters && (
-            <button className="btn btn-ghost" style={{ fontSize: 11, padding: '2px 8px' }} onClick={resetFilters}>
+            <button
+              className="btn btn-ghost"
+              style={{ fontSize: 11, padding: '2px 8px', color: '#f78166', borderColor: 'rgba(247,129,102,0.3)' }}
+              onClick={resetFilters}
+            >
               Clear
             </button>
           )}
         </div>
 
-        {/* Sort dropdown */}
+        {/* Sort */}
         <select
           value={sortOrder ?? ''}
           onChange={e => setSortOrder((e.target.value || null) as SortOrder)}
-          style={{ fontSize: 11, padding: '3px 8px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--panel)', color: 'var(--text-dim)', cursor: 'pointer' }}
+          style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, border: '1px solid rgba(42,51,71,0.6)', background: 'rgba(13,14,24,0.9)', color: '#8b949e', cursor: 'pointer' }}
           title="Sort order"
         >
           {SORT_OPTIONS.map(o => (
@@ -205,10 +213,10 @@ export default function VaultView() {
           ))}
         </select>
 
-        {/* HIBP breach check */}
+        {/* HIBP check */}
         <button
           className="btn btn-ghost"
-          style={{ fontSize: 11, padding: '3px 10px', color: breachedCount > 0 ? '#f85149' : 'var(--text-dim)' }}
+          style={{ fontSize: 11, padding: '3px 10px', color: breachedCount > 0 ? '#f85149' : '#8b949e' }}
           onClick={runBreachCheck}
           disabled={breachRunning}
           title="Check all passwords against HaveIBeenPwned"
@@ -216,24 +224,31 @@ export default function VaultView() {
           {breachRunning ? 'Checking…' : breachDone ? `Breaches: ${breachedCount}` : 'HIBP Check'}
         </button>
 
-        <button className="btn btn-accent" style={{ fontSize: 12 }} onClick={() => setShowModal(true)}>
+        <button
+          className="btn btn-accent"
+          style={{ fontSize: 12, background: '#f78166', color: '#07080f', border: 'none', fontWeight: 600 }}
+          onClick={() => setShowModal(true)}
+        >
           + Add
         </button>
       </div>
 
-      {/* Recently Used section */}
+      {/* Recently Used */}
       {recentlyUsed.length > 0 && !searchQuery && !hasFilters && (
-        <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 4 }}>Recent</span>
+        <div
+          className="shrink-0 flex items-center gap-2 px-4 py-1.5 flex-wrap"
+          style={{ borderBottom: '1px solid rgba(42,51,71,0.25)', background: 'rgba(7,8,15,0.4)' }}
+        >
+          <span style={{ fontSize: 9, color: '#484f58', textTransform: 'uppercase', letterSpacing: '0.08em', marginRight: 2 }}>Recent</span>
           {recentlyUsed.map(c => (
             <button
               key={c.id}
               onClick={() => setSearch(c.service)}
               style={{
-                display: 'flex', alignItems: 'center', gap: 5,
+                display: 'flex', alignItems: 'center', gap: 4,
                 fontSize: 11, padding: '2px 8px', borderRadius: 4,
-                border: '1px solid var(--border)', background: 'transparent',
-                color: 'var(--text-dim)', cursor: 'pointer',
+                border: '1px solid rgba(42,51,71,0.5)', background: 'transparent',
+                color: '#8b949e', cursor: 'pointer', transition: 'border-color 0.15s, color 0.15s',
               }}
               title={`${c.service} — ${c.username}`}
             >
@@ -248,15 +263,20 @@ export default function VaultView() {
         {credentials.length === 0 ? (
           <Empty />
         ) : filtered.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+          <div style={{ padding: 40, textAlign: 'center', color: '#484f58', fontSize: 13 }}>
             No credentials match your search or filters.
           </div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid var(--border)' }}>
+              <tr style={{ borderBottom: '1px solid rgba(42,51,71,0.4)' }}>
                 {COL_HEADERS.map(h => (
-                  <th key={h} style={{ padding: '8px 14px', textAlign: 'left', fontSize: 11, fontWeight: 500, color: 'var(--text-muted)', letterSpacing: '0.04em', textTransform: 'uppercase', position: 'sticky', top: 0, background: 'var(--bg)', zIndex: 1 }}>
+                  <th key={h} style={{
+                    padding: '8px 14px', textAlign: 'left', fontSize: 10, fontWeight: 600,
+                    color: '#484f58', letterSpacing: '0.06em', textTransform: 'uppercase',
+                    position: 'sticky', top: 0, background: '#0a0b12', zIndex: 1,
+                    borderBottom: '1px solid rgba(42,51,71,0.35)',
+                  }}>
                     {h}
                   </th>
                 ))}
@@ -291,9 +311,9 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
       onClick={onClick}
       style={{
         padding: '2px 8px', borderRadius: 12, fontSize: 11, cursor: 'pointer',
-        border: active ? '1px solid var(--accent)' : '1px solid var(--border)',
-        background: active ? 'var(--accent-dim)' : 'transparent',
-        color: active ? 'var(--accent)' : 'var(--text-dim)',
+        border: active ? '1px solid rgba(247,129,102,0.5)' : '1px solid rgba(42,51,71,0.5)',
+        background: active ? 'rgba(247,129,102,0.1)' : 'transparent',
+        color: active ? '#f78166' : '#8b949e',
         transition: 'all 0.15s',
       }}
     >
@@ -304,10 +324,22 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
 
 function Empty() {
   return (
-    <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-muted)' }}>
-      <div style={{ fontSize: 32, marginBottom: 12 }}>🗄️</div>
-      <div style={{ fontSize: 14, marginBottom: 6 }}>No credentials yet</div>
-      <div style={{ fontSize: 12 }}>Click "+ Add" or import from ReconDesk</div>
+    <div style={{ padding: 60, textAlign: 'center', color: '#484f58', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+      <div style={{
+        width: 56, height: 56, borderRadius: 14,
+        background: 'rgba(247,129,102,0.06)', border: '1px solid rgba(247,129,102,0.12)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f78166" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}>
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          <circle cx="12" cy="16" r="1" fill="#f78166" />
+        </svg>
+      </div>
+      <div>
+        <div style={{ fontSize: 14, color: '#8b949e', marginBottom: 5, fontWeight: 500 }}>No credentials yet</div>
+        <div style={{ fontSize: 12 }}>Click "+ Add" or import from ReconDesk</div>
+      </div>
     </div>
   )
 }
