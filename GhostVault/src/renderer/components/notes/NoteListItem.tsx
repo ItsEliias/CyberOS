@@ -43,8 +43,12 @@ function formatDate(mtime: number): string {
   const now = new Date();
   const diff = now.getTime() - d.getTime();
   const days = Math.floor(diff / 86400000);
-  if (days === 0) return 'Today';
-  if (days === 1) return 'Yesterday';
+  const hours = Math.floor(diff / 3600000);
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1)  return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days === 1) return 'yesterday';
   if (days < 7)  return `${days}d ago`;
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
@@ -75,9 +79,9 @@ export default function NoteListItem({
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: -6 }}
+      initial={{ opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.025, duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
+      transition={{ delay: index * 0.055, duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
       draggable
       onDragStart={dragHandlers.onDragStart}
       onDragOver={dragHandlers.onDragOver}
@@ -135,9 +139,10 @@ export default function NoteListItem({
             <div className="flex items-center gap-1 flex-wrap">
               {tags.map(tag => (
                 <span key={tag}
-                  className={`text-[10px] px-2 py-0.5 rounded-full font-medium tag-colored tag-hue-${tagHue(tag)}`}
+                  className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium tag-colored tag-hue-${tagHue(tag)}`}
                   style={{ letterSpacing: '0.01em' }}>
-                  #{tag}
+                  <span className="w-1 h-1 rounded-full shrink-0 tag-dot" />
+                  {tag}
                 </span>
               ))}
               {(note.tags?.length || 0) > 2 && (
@@ -149,11 +154,11 @@ export default function NoteListItem({
               {/* Word count badge */}
               {wordCount > 0 && (
                 <span
-                  className="text-[9px] px-1.5 py-0.5 rounded font-mono tabular-nums ml-auto"
+                  className="text-[9px] px-1.5 py-0.5 rounded font-mono tabular-nums"
                   style={{
-                    background: 'rgba(42,51,71,0.3)',
-                    color: 'rgba(107,122,153,0.7)',
-                    border: '1px solid rgba(42,51,71,0.25)',
+                    background: 'rgba(123,184,255,0.06)',
+                    color: 'rgba(123,184,255,0.45)',
+                    border: '1px solid rgba(123,184,255,0.1)',
                     marginLeft: tags.length === 0 ? 0 : 'auto',
                   }}
                   title={`~${wordCount} words`}

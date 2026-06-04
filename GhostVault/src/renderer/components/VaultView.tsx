@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import type { NoteFile } from '@shared/types';
+import { VaultStatRing, VaultWordSpark } from './ui/VaultStats';
 
 interface TreeNode {
   name: string;
@@ -298,39 +299,29 @@ export default function VaultView({ onOpenNote }: Props) {
       </div>
 
       {/* Stats row */}
-      <div className="px-6 py-3 border-b flex gap-3 shrink-0" style={{ borderColor: 'var(--border)' }}>
-        {[
-          {
-            label: 'Notes', value: notes.length,
-            sub: notes.length > 0
-              ? `mod ${new Date(Math.max(...notes.map(n => n.mtime))).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
-              : null,
-            icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
-          },
-          {
-            label: 'Folders', value: folders.length,
-            sub: notes.length > 0
-              ? `mod ${new Date(Math.max(...notes.map(n => n.mtime))).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
-              : null,
-            icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>,
-          },
-        ].map(s => (
-          <div key={s.label} className="relative overflow-hidden px-4 py-2.5 rounded-xl flex items-center gap-3 card-hover"
-            style={{ background: 'rgba(123,184,255,0.05)', border: '1px solid rgba(123,184,255,0.14)', flex: '0 0 auto' }}>
-            <div className="absolute top-0 left-0 right-0 h-[2px] rounded-t-xl"
-              style={{ background: 'linear-gradient(90deg, transparent, rgba(123,184,255,0.45), transparent)' }} />
-            <span style={{ color: '#7bb8ff', opacity: 0.7 }}>{s.icon}</span>
-            <div className="flex flex-col">
-              <span className="text-base font-bold font-mono tabular-nums leading-none" style={{ color: '#7bb8ff', textShadow: '0 0 12px rgba(123,184,255,0.35)' }}>{s.value}</span>
-              <span className="text-[10px] uppercase tracking-wider mt-0.5" style={{ color: 'var(--text-dim)' }}>{s.label}</span>
-              {s.sub && (
-                <span className="text-[9px] font-mono mt-0.5" style={{ color: 'rgba(107,122,153,0.55)' }}>
-                  {s.sub}
-                </span>
-              )}
-            </div>
-          </div>
-        ))}
+      <div className="px-6 py-3 border-b flex gap-3 shrink-0 flex-wrap" style={{ borderColor: 'var(--border)' }}>
+        {/* Notes stat with progress ring */}
+        <VaultStatRing
+          label="Notes"
+          value={notes.length}
+          max={Math.max(notes.length, 20)}
+          color="#7bb8ff"
+          sub={notes.length > 0
+            ? `last mod ${new Date(Math.max(...notes.map(n => n.mtime))).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+            : 'empty vault'}
+        />
+        {/* Folders stat with progress ring */}
+        <VaultStatRing
+          label="Folders"
+          value={folders.length}
+          max={Math.max(folders.length, 10)}
+          color="#a8d4ff"
+          sub={`${folders.length > 0 ? folders.slice(0, 2).join(', ') + (folders.length > 2 ? '…' : '') : 'none'}`}
+        />
+        {/* Total word count sparkline */}
+        {notes.length > 0 && (
+          <VaultWordSpark notes={notes} />
+        )}
       </div>
 
       {/* New note form */}

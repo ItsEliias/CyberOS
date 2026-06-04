@@ -8,6 +8,8 @@ import WikilinkAutocomplete from './WikilinkAutocomplete';
 import InlineAICommands from './InlineAICommands';
 import VersionHistoryPanel from './VersionHistoryPanel';
 import PresentationMode from './PresentationMode';
+import EditorStatusBar from './notes/EditorStatusBar';
+import { ToolBtn, ToolDivider, TABLE_TEMPLATE, formatRelTime, tagHue } from './notes/EditorToolbar';
 import type { EditorMode, NoteFile } from '@shared/types';
 
 interface Props {
@@ -23,36 +25,6 @@ interface Props {
 function modeLabel(m: EditorMode): string {
   return m === 'edit' ? 'Edit' : m === 'split' ? 'Split' : 'Preview';
 }
-
-const TABLE_TEMPLATE = '\n| Col 1 | Col 2 | Col 3 |\n|-------|-------|-------|\n|       |       |       |\n|       |       |       |\n|       |       |       |\n';
-
-// Small toolbar icon button with grouped tooltip
-function ToolBtn({ onClick, title, active, children, disabled }: {
-  onClick?: () => void; title: string; active?: boolean;
-  children: React.ReactNode; disabled?: boolean;
-}) {
-  return (
-    <button onClick={onClick} title={title} disabled={disabled}
-      className="relative group w-7 h-7 rounded flex items-center justify-center text-sm transition-colors"
-      style={{
-        color: active ? '#7bb8ff' : 'rgba(72,79,88,0.75)',
-        background: active ? 'rgba(123,184,255,0.1)' : 'transparent',
-        border: active ? '1px solid rgba(123,184,255,0.2)' : '1px solid transparent',
-        opacity: disabled ? 0.3 : 1,
-      }}
-      onMouseEnter={e => { if (!active && !disabled) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
-      onMouseLeave={e => { if (!active && !disabled) e.currentTarget.style.background = 'transparent'; }}
-    >
-      {children}
-      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-0.5 rounded text-[9px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50"
-        style={{ background: 'rgba(10,11,20,0.95)', border: '1px solid rgba(42,51,71,0.7)', color: 'rgba(201,209,217,0.9)', fontFamily: 'var(--font-display)' }}>
-        {title}
-      </span>
-    </button>
-  );
-}
-
-const ToolDivider = () => <span className="w-px h-4 mx-0.5 flex-shrink-0" style={{ background: 'rgba(42,51,71,0.5)' }} />;
 
 export default function EditorView({
   onSave, onAiMenu, onTemplate, onTogglePin, onToggleAot, onCapture, onOpenNote
@@ -280,19 +252,37 @@ export default function EditorView({
         {/* Note title */}
         <div className="flex-1 min-w-0">
           {activeNote ? (
-            <div className="flex items-baseline gap-1.5 min-w-0">
-              <span className="text-[10px] font-mono" style={{ color: 'rgba(72,79,88,0.7)' }}>
-                {activeNote.folder}/
-              </span>
-              <span
-                className="text-sm font-semibold truncate"
-                style={{ color: '#e6edf3', fontFamily: 'var(--font-display)' }}
-              >
-                {activeNote.name}
-              </span>
-              {isLocked && (
-                <span className="text-[10px]" style={{ color: '#d29922' }}>locked</span>
-              )}
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <div className="flex items-baseline gap-1.5 min-w-0">
+                <span className="text-[10px] font-mono" style={{ color: 'rgba(72,79,88,0.7)' }}>
+                  {activeNote.folder}/
+                </span>
+                <span
+                  className="text-sm font-semibold truncate"
+                  style={{ color: '#e6edf3', fontFamily: 'var(--font-display)' }}
+                >
+                  {activeNote.name}
+                </span>
+                {isLocked && (
+                  <span className="text-[10px]" style={{ color: '#d29922' }}>locked</span>
+                )}
+              </div>
+              {/* Note metadata row */}
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] font-mono tabular-nums" style={{ color: 'rgba(72,79,88,0.5)' }}>
+                  modified {formatRelTime(activeNote.mtime)}
+                </span>
+                {(activeNote.tags?.length ?? 0) > 0 && (
+                  <div className="flex items-center gap-1">
+                    {activeNote.tags!.slice(0, 3).map(tag => (
+                      <span key={tag}
+                        className={`text-[9px] px-1.5 py-px rounded-full font-medium tag-colored tag-hue-${tagHue(tag)}`}>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
             <span
@@ -440,12 +430,20 @@ export default function EditorView({
               <div className="text-sm font-semibold mb-1.5" style={{ color: 'rgba(139,148,158,0.55)' }}>
                 No note open
               </div>
-              <div className="text-xs leading-relaxed" style={{ color: 'rgba(72,79,88,0.7)', maxWidth: '24ch', margin: '0 auto' }}>
-                Select a note from the list or press{' '}
-                <kbd className="px-1 py-0.5 rounded text-[10px] font-mono" style={{ background: 'rgba(42,51,71,0.4)', color: 'rgba(139,148,158,0.6)', border: '1px solid rgba(42,51,71,0.5)' }}>
-                  ⌘N
-                </kbd>
-                {' '}to create one
+              <div className="text-xs leading-relaxed mb-3" style={{ color: 'rgba(72,79,88,0.7)', maxWidth: '24ch', margin: '0 auto 12px' }}>
+                Select a note from the list or create one
+              </div>
+              {/* Keyboard hints */}
+              <div className="flex items-center justify-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <kbd className="px-1.5 py-0.5 rounded text-[10px] font-mono" style={{ background: 'rgba(42,51,71,0.4)', color: 'rgba(123,184,255,0.6)', border: '1px solid rgba(123,184,255,0.2)' }}>⌘N</kbd>
+                  <span className="text-[10px]" style={{ color: 'rgba(72,79,88,0.5)' }}>new note</span>
+                </div>
+                <span style={{ color: 'rgba(42,51,71,0.5)', fontSize: 10 }}>·</span>
+                <div className="flex items-center gap-1.5">
+                  <kbd className="px-1.5 py-0.5 rounded text-[10px] font-mono" style={{ background: 'rgba(42,51,71,0.4)', color: 'rgba(139,148,158,0.5)', border: '1px solid rgba(42,51,71,0.5)' }}>⌘S</kbd>
+                  <span className="text-[10px]" style={{ color: 'rgba(72,79,88,0.5)' }}>save</span>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -473,19 +471,11 @@ export default function EditorView({
                 caretColor: '#7bb8ff',
               }}
             />
-            {/* Mini status bar */}
-            <div
-              className="flex items-center gap-4 px-4 py-1 text-[10px] font-mono"
-              style={{
-                borderTop: '1px solid rgba(42,51,71,0.3)',
-                color: 'rgba(72,79,88,0.6)',
-                background: 'rgba(7,8,15,0.5)',
-              }}
-            >
-              <span className="tabular-nums">{wordCount} words</span>
-              <span className="tabular-nums">{editorContent.length} chars</span>
-              <span className="tabular-nums">{editorContent.split('\n').length} lines</span>
-            </div>
+            <EditorStatusBar
+              wordCount={wordCount}
+              charCount={editorContent.length}
+              lineCount={editorContent.split('\n').length}
+            />
           </div>
         )}
 
