@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useStore } from './store';
 import { applyTheme } from './lib/themes';
 import { initSounds } from './lib/sounds';
+import { DEFAULT_PAYLOADS } from './lib/defaultPayloads';
 import type { AppConfig } from '@shared/types';
 import SetupWizard from './components/SetupWizard';
 import MainLayout from './components/MainLayout';
@@ -77,7 +78,25 @@ export default function App() {
 
         if (progress) setProgressData(progress as never);
         if (labs) setLabsData(labs as never);
-        if (snippets) setSnippetsData(snippets as never);
+        if (snippets) {
+          const sData = snippets as { snippets?: unknown[]; usageCounts?: Record<string, number> };
+          // Seed default payloads if not already present
+          const existing = Array.isArray(sData.snippets) ? sData.snippets as Array<{ id: string }> : [];
+          const existingIds = new Set(existing.map(s => s.id));
+          const toSeed = DEFAULT_PAYLOADS.filter(p => !existingIds.has(p.id));
+          if (toSeed.length > 0) {
+            const merged = { snippets: [...existing, ...toSeed], usageCounts: sData.usageCounts || {} };
+            setSnippetsData(merged as never);
+            window.electronAPI.saveSnippets(merged as never).catch(() => {});
+          } else {
+            setSnippetsData(snippets as never);
+          }
+        } else {
+          // First boot — seed all default payloads
+          const seedData = { snippets: DEFAULT_PAYLOADS, usageCounts: {} };
+          setSnippetsData(seedData as never);
+          window.electronAPI.saveSnippets(seedData as never).catch(() => {});
+        }
       } catch (err) {
         console.error('Boot error:', err);
       } finally {

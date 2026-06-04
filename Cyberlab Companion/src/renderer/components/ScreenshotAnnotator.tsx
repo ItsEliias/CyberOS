@@ -224,10 +224,10 @@ function AnnotationCanvas({ imageBase64, onSave, onClose }: AnnotatorProps) {
 
 interface CaptureAnnotateButtonProps {
   sessionId: string;
-  labName: string;
+  labName?: string;
 }
 
-export default function CaptureAnnotateButton({ sessionId, labName }: CaptureAnnotateButtonProps) {
+export function CaptureAnnotateButton({ sessionId, labName = '' }: CaptureAnnotateButtonProps) {
   const { tabs, activeTabId, updateSession } = useStore();
   const session = tabs.find(t => t.id === activeTabId)?.session;
   const [capturing, setCapturing] = useState(false);

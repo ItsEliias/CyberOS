@@ -10,6 +10,9 @@ import MethodologyGuide from './MethodologyGuide';
 import SessionCompleteModal from '../writeup/SessionCompleteModal';
 import WriteupEditor from '../writeup/WriteupEditor';
 import FlagLogger from '../flags/FlagLogger';
+import FlagTracker from '../flags/FlagTracker';
+import HintsPanel from './HintsPanel';
+import { CaptureAnnotateButton } from '../ScreenshotAnnotator';
 import type { Session } from '@shared/types';
 
 export default function SessionPanel() {
@@ -20,6 +23,8 @@ export default function SessionPanel() {
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showWriteup, setShowWriteup] = useState(false);
   const [showFlagLogger, setShowFlagLogger] = useState(false);
+  const [showFlagTracker, setShowFlagTracker] = useState(false);
+  const [showHints, setShowHints] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
   const [showTools, setShowTools] = useState(false);
   const [showMethodology, setShowMethodology] = useState(false);
@@ -160,6 +165,59 @@ export default function SessionPanel() {
           {/* Findings panel */}
           <FindingsPanel onViewAll={handleViewAllFindings} />
 
+          {/* CTF Flag Tracker (collapsible) */}
+          <div>
+            <button
+              className="w-full text-xs py-1.5 rounded btn-ghost flex items-center justify-between px-3"
+              onClick={() => setShowFlagTracker(true)}
+            >
+              <span className="flex items-center gap-1.5">
+                <span>🚩</span>
+                <span>Flag Tracker</span>
+                {(session.ctfFlags?.length ?? 0) > 0 && (
+                  <span className="text-[10px] font-mono" style={{ color: '#3fb950' }}>
+                    {session.ctfFlags!.length}
+                  </span>
+                )}
+              </span>
+              <span style={{ opacity: 0.5 }}>→</span>
+            </button>
+          </div>
+
+          {/* Hints (collapsible) */}
+          <div>
+            <button
+              className="w-full text-xs py-1.5 rounded btn-ghost flex items-center justify-between px-3"
+              onClick={() => setShowHints(h => !h)}
+            >
+              <span className="flex items-center gap-1.5">
+                <span>💡</span>
+                <span>Hints</span>
+                {(session.sessionHints?.length ?? 0) > 0 && (
+                  <span className="text-[10px]" style={{ color: 'var(--accent)' }}>
+                    {session.sessionHints!.filter(h => h.revealed).length}/{session.sessionHints!.length}
+                  </span>
+                )}
+              </span>
+              <span style={{ opacity: 0.5 }}>{showHints ? '▲' : '▼'}</span>
+            </button>
+            <AnimatePresence>
+              {showHints && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-1.5">
+                    <HintsPanel />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           {/* Notes (expandable) */}
           <div>
             <button
@@ -291,6 +349,9 @@ export default function SessionPanel() {
             </AnimatePresence>
           </div>
 
+          {/* Screenshot capture */}
+          <CaptureAnnotateButton sessionId={session.id} labName={session.labName} />
+
           {/* Quick actions */}
           <QuickActions
             onFlagLogger={() => setShowFlagLogger(true)}
@@ -321,6 +382,12 @@ export default function SessionPanel() {
       <AnimatePresence>
         {showFlagLogger && (
           <FlagLogger onClose={() => setShowFlagLogger(false)} />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showFlagTracker && (
+          <FlagTracker onClose={() => setShowFlagTracker(false)} />
         )}
       </AnimatePresence>
     </>

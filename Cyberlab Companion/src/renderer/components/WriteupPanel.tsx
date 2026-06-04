@@ -289,7 +289,7 @@ function buildContent(session: { labName: string; platform: string; difficulty: 
 }
 
 export default function WriteupPanel() {
-  const { tabs, activeTabId, config } = useStore();
+  const { tabs, activeTabId, config, updateSession } = useStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
   const session = activeTab?.session;
 
@@ -311,6 +311,15 @@ export default function WriteupPanel() {
   useEffect(() => {
     setTags(extractTags(content));
   }, [content]);
+
+  // Persist writeupContent to session (debounced 2s) so GhostVault auto-save can read it
+  useEffect(() => {
+    if (!activeTabId || !session) return;
+    const t = setTimeout(() => {
+      updateSession(activeTabId, { writeupContent: content });
+    }, 2000);
+    return () => clearTimeout(t);
+  }, [content, activeTabId]);
 
   // Auto-save to GhostVault every 2 minutes
   useEffect(() => {
