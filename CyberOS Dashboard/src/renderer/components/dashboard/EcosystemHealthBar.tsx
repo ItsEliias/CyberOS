@@ -1,6 +1,4 @@
 // CyberOS Dashboard — Ecosystem Health Bar
-// Horizontal strip showing one colored dot per app (12 total)
-// Each dot uses its app accent color, active dots pulse, inactive at 30% opacity
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
@@ -14,41 +12,69 @@ export default function EcosystemHealthBar() {
   const [hoveredId, setHoveredId] = useState<string | null>(null)
 
   const activeCount = cards.filter((c) => c.active).length
+  const healthPct = cards.length > 0 ? Math.round((activeCount / cards.length) * 100) : 0
+  const healthColor = healthPct >= 75 ? '#3fb950' : healthPct >= 40 ? '#d29922' : '#f85149'
 
   return (
-    <div className="glass-card px-3 py-2.5">
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-widest">
+    <div
+      className="rounded-xl px-3 py-2.5"
+      style={{
+        background: 'var(--surface-glass)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        border: '1px solid var(--border-glass)',
+        boxShadow: 'var(--elevation-1)',
+      }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between mb-2.5">
+        <span className="text-[10px] font-semibold text-text-muted uppercase tracking-widest">
           Ecosystem Health
-        </p>
-        <span className="text-[10px] font-mono text-text-muted">
-          <span className="text-success">{activeCount}</span>/{cards.length} online
         </span>
+        <div className="flex items-center gap-2">
+          {/* Health bar */}
+          <div
+            className="w-24 h-1 rounded-full overflow-hidden"
+            style={{ background: 'rgba(42,51,71,0.6)' }}
+          >
+            <motion.div
+              className="h-full rounded-full"
+              style={{ background: healthColor, boxShadow: `0 0 6px ${healthColor}88` }}
+              initial={{ width: 0 }}
+              animate={{ width: `${healthPct}%` }}
+              transition={{ duration: 0.8, ease: 'easeOut' }}
+            />
+          </div>
+          <span className="text-[10px] font-mono tabular-nums" style={{ color: healthColor }}>
+            {activeCount}
+            <span className="text-text-muted">/{cards.length}</span>
+          </span>
+        </div>
       </div>
-      <div className="flex items-start justify-between">
+
+      {/* App dots */}
+      <div className="flex items-end justify-between">
         {cards.map((card) => (
           <div
             key={card.id}
-            className="relative flex flex-col items-center gap-1.5 cursor-default"
+            className="relative flex flex-col items-center gap-1 cursor-default"
             onMouseEnter={() => setHoveredId(card.id)}
             onMouseLeave={() => setHoveredId(null)}
           >
-            {/* Dot — colored in accent, pulse if active, dim if inactive */}
             <span
-              className={`w-3 h-3 rounded-full ${card.active ? 'status-dot-pulse' : ''}`}
+              className={`w-2.5 h-2.5 rounded-full ${card.active ? 'status-dot-pulse' : ''}`}
               style={{
                 backgroundColor: card.accentColor,
-                opacity: card.active ? 1 : 0.3,
-                '--pulse-color': `${card.accentColor}66`,
-                '--pulse-color-fade': `${card.accentColor}00`,
-                boxShadow: card.active ? `0 0 6px ${card.accentColor}88` : 'none',
+                opacity: card.active ? 1 : 0.22,
+                '--pulse-rgb': '74,158,255',
+                boxShadow: card.active ? `0 0 6px ${card.accentColor}99` : 'none',
               } as React.CSSProperties}
             />
-            {/* App name label */}
-            <span className={`text-[8px] font-medium truncate max-w-[52px] ${
-              card.active ? 'text-text-secondary' : 'text-text-muted'
-            }`}>
-              {card.name.length > 7 ? card.name.slice(0, 7) : card.name}
+            <span
+              className="text-[8px] font-medium max-w-[44px] truncate text-center"
+              style={{ color: card.active ? 'var(--text-secondary)' : 'var(--text-muted)' }}
+            >
+              {card.name.length > 6 ? card.name.slice(0, 6) : card.name}
             </span>
 
             {/* Tooltip */}
@@ -57,9 +83,22 @@ export default function EcosystemHealthBar() {
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.1 }}
-                className="absolute -top-14 left-1/2 -translate-x-1/2 glass-card px-2.5 py-1.5 z-50 whitespace-nowrap shadow-lg"
+                className="absolute z-50 whitespace-nowrap"
+                style={{
+                  bottom: '100%',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  marginBottom: '6px',
+                  background: 'rgba(13,14,24,0.96)',
+                  border: '1px solid rgba(42,51,71,0.75)',
+                  borderRadius: '6px',
+                  padding: '5px 10px',
+                  boxShadow: 'var(--elevation-3)',
+                }}
               >
-                <p className="text-xs font-medium" style={{ color: card.accentColor }}>{card.name}</p>
+                <p className="text-[11px] font-semibold" style={{ color: card.accentColor }}>
+                  {card.name}
+                </p>
                 <p className="text-[10px] text-text-secondary">
                   {card.active ? 'Online' : `Last: ${timeAgo(card.lastActive)}`}
                 </p>

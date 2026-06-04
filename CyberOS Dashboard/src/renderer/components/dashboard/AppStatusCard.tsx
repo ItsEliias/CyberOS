@@ -1,7 +1,4 @@
 // CyberOS Dashboard — App Status Card
-// Instrument panel style card with accent left border, SVG area chart, glowing metrics
-// Fix #3: status text demoted to text-xs text-secondary (not accent)
-// Fix #5: tighter padding (p-3), reduced internal spacing for 1440p fit
 
 import { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
@@ -14,6 +11,8 @@ interface AppStatusCardProps {
   index: number
 }
 
+const STATUS_STRINGS = ['Running', 'Inactive', 'No active session', 'Idle', 'Locked', 'Unlocked', 'Active', 'Offline', 'Online']
+
 export default function AppStatusCard({ card, index }: AppStatusCardProps) {
   const [hovered, setHovered] = useState(false)
   const liveStats = useDashboardStore((s) => s.liveStats)
@@ -24,164 +23,180 @@ export default function AppStatusCard({ card, index }: AppStatusCardProps) {
     }
   }
 
-  // Use real live history if available, otherwise fall back to seed-based points
   const sparklinePoints = useMemo(() => {
     const history = liveStats[card.id]?.history
-    if (history && history.length >= 2) {
-      return history.map((s) => s.value)
-    }
-    // Seed-based fallback (static visual placeholder)
+    if (history && history.length >= 2) return history.map((s) => s.value)
     const seed = card.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
     const points: number[] = []
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 14; i++) {
       points.push(30 + Math.sin(seed + i * 0.8) * 20 + Math.cos(seed * 0.3 + i) * 10)
     }
     return points
   }, [card.id, liveStats])
 
-  // Build SVG path for area chart
   const svgPath = useMemo(() => {
     const width = 120
-    const height = 24
+    const height = 28
     const step = width / (sparklinePoints.length - 1)
     const max = Math.max(...sparklinePoints)
     const min = Math.min(...sparklinePoints)
     const range = max - min || 1
-
-    const linePoints = sparklinePoints.map((v, i) => {
+    const pts = sparklinePoints.map((v, i) => {
       const x = i * step
-      const y = height - ((v - min) / range) * height
+      const y = height - ((v - min) / range) * (height - 2) - 1
       return `${x},${y}`
     })
-
-    const linePath = `M${linePoints.join(' L')}`
-    const areaPath = `${linePath} L${width},${height} L0,${height} Z`
-
-    return { linePath, areaPath, width, height }
+    return {
+      linePath: `M${pts.join(' L')}`,
+      areaPath: `M${pts.join(' L')} L${width},${height} L0,${height} Z`,
+      width,
+      height,
+    }
   }, [sparklinePoints])
 
   const primaryMetric = card.metrics[0]
-  const secondaryMetrics = card.metrics.slice(1)
-
-  // Determine if primary metric value is a status string vs a number
-  const STATUS_STRINGS = ['Running', 'Inactive', 'No active session', 'Idle', 'Locked', 'Unlocked', 'Active', 'Offline', 'Online']
+  const secondaryMetrics = card.metrics.slice(1, 3)
   const isStatusString = typeof primaryMetric?.value === 'string' &&
     STATUS_STRINGS.includes(primaryMetric.value as string)
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 6 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.15, delay: index * 0.03, ease: 'easeOut' }}
+      transition={{ duration: 0.2, delay: index * 0.025, ease: 'easeOut' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="glass-card accent-border-left p-3 relative overflow-hidden transition-colors hover:bg-bg-interactive/40 cursor-default"
-      style={{ '--accent-color': card.accentColor } as React.CSSProperties}
+      className="relative overflow-hidden rounded-xl cursor-default transition-all duration-150"
+      style={{
+        background: hovered ? 'rgba(19,21,37,0.9)' : 'var(--surface-2)',
+        border: `1px solid ${card.active ? card.accentColor + '28' : 'rgba(42,51,71,0.4)'}`,
+        borderLeft: `2px solid ${card.active ? card.accentColor : 'rgba(42,51,71,0.5)'}`,
+        boxShadow: hovered ? `0 4px 20px rgba(0,0,0,0.4), inset 0 0 0 1px ${card.accentColor}18` : 'none',
+      }}
     >
-      {/* Header row */}
-      <div className="flex items-center justify-between mb-1.5">
-        <div className="flex items-center gap-1.5">
-          {/* Status dot with pulse */}
-          <span
-            className={`w-1.5 h-1.5 rounded-full ${card.active ? 'status-dot-pulse' : 'opacity-30'}`}
-            style={{
-              backgroundColor: card.accentColor,
-              '--pulse-color': `${card.accentColor}66`,
-              '--pulse-color-fade': `${card.accentColor}00`,
-            } as React.CSSProperties}
-          />
-          <span className="text-[11px] font-semibold text-text-primary">{card.name}</span>
-        </div>
-        <span className="text-[9px] font-mono text-text-muted">
-          {card.active ? 'ON' : 'OFF'}
-        </span>
-      </div>
+      {/* Subtle glow when active */}
+      {card.active && (
+        <div
+          className="absolute inset-0 pointer-events-none rounded-xl"
+          style={{ background: `radial-gradient(ellipse at 10% 0%, ${card.accentColor}08 0%, transparent 60%)` }}
+        />
+      )}
 
-      {/* Primary metric — large and glowing if numeric, demoted if status string */}
-      {primaryMetric && (
-        <div className="mb-1.5">
-          {isStatusString ? (
-            <span className="text-xs" style={{ color: '#8b949e' }}>{primaryMetric.value}</span>
-          ) : (
+      <div className="p-3 relative">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1.5 min-w-0">
             <span
-              className="text-lg font-bold tabular-nums metric-glow"
+              className={`w-1.5 h-1.5 rounded-full shrink-0 ${card.active ? 'status-dot-pulse' : ''}`}
+              style={{
+                backgroundColor: card.accentColor,
+                opacity: card.active ? 1 : 0.3,
+                '--pulse-rgb': '74,158,255',
+                boxShadow: card.active ? `0 0 5px ${card.accentColor}` : 'none',
+              } as React.CSSProperties}
+            />
+            <span className="text-[11px] font-semibold text-text-primary truncate">{card.name}</span>
+          </div>
+          <span
+            className="text-[9px] font-mono font-medium shrink-0"
+            style={{ color: card.active ? card.accentColor : 'var(--text-muted)' }}
+          >
+            {card.active ? 'ON' : 'OFF'}
+          </span>
+        </div>
+
+        {/* Primary metric */}
+        {primaryMetric && (
+          <div className="mb-1.5">
+            {isStatusString ? (
+              <span className="text-[11px] text-text-secondary">{primaryMetric.value}</span>
+            ) : (
+              <span
+                className="text-[20px] font-bold tabular-nums leading-none"
+                style={{
+                  color: card.accentColor,
+                  textShadow: `0 0 10px ${card.accentColor}55`,
+                }}
+              >
+                {primaryMetric.value}
+              </span>
+            )}
+            <span className="text-[9px] text-text-muted ml-1.5">{primaryMetric.label}</span>
+          </div>
+        )}
+
+        {/* Sparkline */}
+        <div className="mb-2">
+          <svg
+            width={svgPath.width}
+            height={svgPath.height}
+            viewBox={`0 0 ${svgPath.width} ${svgPath.height}`}
+            className="w-full"
+            style={{ height: '34px' }}
+            preserveAspectRatio="none"
+          >
+            <defs>
+              <linearGradient id={`g-${card.id}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={card.accentColor} stopOpacity={card.active ? '0.35' : '0.1'} />
+                <stop offset="100%" stopColor={card.accentColor} stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path d={svgPath.areaPath} fill={`url(#g-${card.id})`} />
+            <path
+              d={svgPath.linePath}
+              fill="none"
+              stroke={card.accentColor}
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={card.active ? 1 : 0.35}
+              style={{ filter: card.active ? `drop-shadow(0 0 3px ${card.accentColor}88)` : 'none' }}
+            />
+          </svg>
+        </div>
+
+        {/* Secondary metrics */}
+        {secondaryMetrics.length > 0 && (
+          <div className="space-y-0.5 mb-1.5">
+            {secondaryMetrics.map((m) => {
+              const isStatus = typeof m.value === 'string' && STATUS_STRINGS.includes(m.value as string)
+              return (
+                <div key={m.label} className="flex items-center justify-between">
+                  <span className="text-[9px] text-text-muted">{m.label}</span>
+                  <span
+                    className="text-[10px] font-mono tabular-nums"
+                    style={{ color: isStatus ? 'var(--text-secondary)' : 'var(--text-primary)' }}
+                  >
+                    {m.value}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-1.5" style={{ borderTop: '1px solid rgba(42,51,71,0.25)' }}>
+          <span className="text-[9px] text-text-muted font-mono">
+            {card.lastActive ? timeAgo(card.lastActive) : '—'}
+          </span>
+          {hovered && card.execPath && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.1 }}
+              onClick={handleLaunch}
+              className="text-[9px] font-semibold px-2 py-0.5 rounded transition-colors"
               style={{
                 color: card.accentColor,
-                '--glow-color': `${card.accentColor}80`,
-                textShadow: `0 0 8px ${card.accentColor}66`,
-              } as React.CSSProperties}
+                background: `${card.accentColor}15`,
+                border: `1px solid ${card.accentColor}30`,
+              }}
             >
-              {primaryMetric.value}
-            </span>
+              Open
+            </motion.button>
           )}
-          <span className="text-[9px] text-text-muted ml-1.5">{primaryMetric.label}</span>
         </div>
-      )}
-
-      {/* SVG Area Chart Sparkline — 48px min height */}
-      <div className="mb-1.5">
-        <svg
-          width={svgPath.width}
-          height={svgPath.height}
-          viewBox={`0 0 ${svgPath.width} ${svgPath.height}`}
-          className="w-full"
-          style={{ height: '48px', minHeight: '48px' }}
-          preserveAspectRatio="none"
-        >
-          <defs>
-            <linearGradient id={`grad-${card.id}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={card.accentColor} stopOpacity="0.3" />
-              <stop offset="100%" stopColor={card.accentColor} stopOpacity="0" />
-            </linearGradient>
-          </defs>
-          <path d={svgPath.areaPath} fill={`url(#grad-${card.id})`} />
-          <path
-            d={svgPath.linePath}
-            fill="none"
-            stroke={card.accentColor}
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{ filter: `drop-shadow(0 0 3px ${card.accentColor}88)` }}
-          />
-        </svg>
-      </div>
-
-      {/* Secondary metrics */}
-      {secondaryMetrics.length > 0 && (
-        <div className="space-y-0.5">
-          {secondaryMetrics.map((metric) => {
-            const isSecondaryStatus = typeof metric.value === 'string' &&
-              STATUS_STRINGS.includes(metric.value as string)
-            return (
-              <div key={metric.label} className="flex items-center justify-between">
-                <span className="text-[9px] text-text-muted">{metric.label}</span>
-                <span className={`text-[10px] font-mono tabular-nums ${isSecondaryStatus ? '' : 'text-text-primary'}`} style={isSecondaryStatus ? { color: '#8b949e' } : undefined}>
-                  {metric.value}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Footer: last active + launch */}
-      <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-border-subtle/30">
-        <span className="text-[9px] text-text-muted font-mono">
-          {card.lastActive ? timeAgo(card.lastActive) : '—'}
-        </span>
-
-        {hovered && card.execPath && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.1 }}
-            onClick={handleLaunch}
-            className="text-[9px] font-medium text-accent hover:text-accent-emphasis px-1.5 py-0.5 rounded bg-accent/10 transition-colors"
-          >
-            Open
-          </motion.button>
-        )}
       </div>
     </motion.div>
   )

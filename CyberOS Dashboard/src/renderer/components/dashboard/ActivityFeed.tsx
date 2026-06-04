@@ -1,6 +1,5 @@
 // CyberOS Dashboard — Activity Feed
-// Right panel showing live ecosystem events, newest first
-// Fix #7: Deduplication — cap duplicate events from same app to 1 entry with ×N badge
+// Right panel — live ecosystem events, deduped, newest first
 
 import { useRef, useEffect, useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -30,34 +29,22 @@ export default function ActivityFeed() {
     ? normalized.filter((e) => e.app.toLowerCase() === feedFilter.toLowerCase())
     : normalized
 
-  // Deduplication: collapse consecutive same app+event into one entry with count
   const deduplicated = useMemo(() => {
     const result: DeduplicatedEvent[] = []
     const maxItems = settings.feedMaxItems ?? 50
     const topItems = filtered.slice(0, maxItems)
-
     for (const event of topItems) {
       const key = `${event.app}::${event.event}`
       const existing = result.find((r) => `${r.app}::${r.event}` === key)
       if (existing) {
         existing.count += 1
       } else {
-        result.push({
-          id: event.id,
-          app: event.app,
-          event: event.event,
-          timestamp: event.timestamp,
-          data: event.data,
-          count: 1,
-        })
+        result.push({ id: event.id, app: event.app, event: event.event, timestamp: event.timestamp, data: event.data, count: 1 })
       }
     }
-
-    // Only show top 20 unique entries
     return result.slice(0, 20)
   }, [filtered, settings.feedMaxItems])
 
-  // Auto-scroll to top when new events arrive
   const prevCountRef = useRef(events.length)
   useEffect(() => {
     if (events.length > prevCountRef.current && scrollRef.current) {
@@ -66,99 +53,134 @@ export default function ActivityFeed() {
     prevCountRef.current = events.length
   }, [events.length])
 
-  // Unique app names for filter dropdown
   const appNames = [...new Set(normalized.map((e) => e.app))]
-
-  // Warning if no events in 30 minutes
   const latestTimestamp = normalized[0]?.timestamp
   const isStale = latestTimestamp
     ? Date.now() - new Date(latestTimestamp).getTime() > 30 * 60_000
     : true
 
   return (
-    <div className="w-[280px] border-l border-border-subtle/50 flex flex-col shrink-0" style={{ background: 'rgba(18, 19, 26, 0.6)' }}>
+    <div
+      className="w-[272px] flex flex-col shrink-0"
+      style={{
+        background: 'rgba(11,12,19,0.7)',
+        borderLeft: '1px solid rgba(42,51,71,0.3)',
+      }}
+    >
       {/* Header */}
-      <div className="px-3 py-2.5 border-b border-border-subtle/50 flex items-center justify-between">
+      <div
+        className="px-3 py-2.5 flex items-center justify-between shrink-0"
+        style={{ borderBottom: '1px solid rgba(42,51,71,0.3)' }}
+      >
         <div className="flex items-center gap-2">
-          <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-widest">
+          <span className="text-[10px] font-semibold text-text-muted uppercase tracking-widest">
             Activity
-          </p>
+          </span>
           {isStale && (
-            <span className="w-2 h-2 rounded-full bg-warning animate-pulse" title="No events in 30+ minutes" />
+            <span
+              className="w-1.5 h-1.5 rounded-full animate-pulse"
+              style={{ background: 'var(--sev-medium)' }}
+              title="No events in 30+ minutes"
+            />
+          )}
+          {deduplicated.length > 0 && !isStale && (
+            <span
+              className="text-[9px] font-mono px-1.5 py-0.5 rounded"
+              style={{ background: 'rgba(74,158,255,0.1)', color: 'var(--accent)' }}
+            >
+              {deduplicated.length}
+            </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          {/* Filter dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-              className="text-[10px] text-text-muted hover:text-text-primary px-1.5 py-0.5 rounded hover:bg-bg-interactive transition-colors font-mono"
+
+        {/* Filter */}
+        <div className="relative">
+          <button
+            onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+            className="flex items-center gap-0.5 text-[10px] text-text-muted hover:text-text-primary px-1.5 py-0.5 rounded transition-colors font-mono"
+            style={{ background: showFilterDropdown ? 'rgba(42,51,71,0.4)' : 'transparent' }}
+          >
+            {feedFilter ?? 'ALL'}
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="ml-0.5">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+
+          {showFilterDropdown && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.1 }}
+              className="absolute right-0 top-full mt-1 z-50 py-1 min-w-[130px] rounded-lg overflow-hidden"
+              style={{
+                background: 'rgba(13,14,24,0.96)',
+                border: '1px solid rgba(42,51,71,0.7)',
+                boxShadow: 'var(--elevation-3)',
+                backdropFilter: 'blur(12px)',
+              }}
             >
-              {feedFilter ?? 'ALL'}
-              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="inline ml-0.5">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
-            {showFilterDropdown && (
-              <motion.div
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="absolute right-0 top-full mt-1 glass-card shadow-lg z-50 py-1 min-w-[120px]"
+              <button
+                onClick={() => { setFeedFilter(null); setShowFilterDropdown(false) }}
+                className="w-full text-left px-3 py-1.5 text-[10px] text-text-primary hover:bg-bg-interactive transition-colors"
               >
+                All Apps
+              </button>
+              {appNames.map((app) => (
                 <button
-                  onClick={() => { setFeedFilter(null); setShowFilterDropdown(false) }}
-                  className="w-full text-left px-3 py-1.5 text-[10px] text-text-primary hover:bg-bg-interactive"
+                  key={app}
+                  onClick={() => { setFeedFilter(app); setShowFilterDropdown(false) }}
+                  className="w-full text-left px-3 py-1.5 text-[10px] hover:bg-bg-interactive transition-colors"
+                  style={{ color: getAppAccentColor(app) }}
                 >
-                  All Apps
+                  {app}
                 </button>
-                {appNames.map((app) => (
-                  <button
-                    key={app}
-                    onClick={() => { setFeedFilter(app); setShowFilterDropdown(false) }}
-                    className="w-full text-left px-3 py-1.5 text-[10px] hover:bg-bg-interactive"
-                    style={{ color: getAppAccentColor(app) }}
-                  >
-                    {app}
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </div>
+              ))}
+            </motion.div>
+          )}
         </div>
       </div>
 
-      {/* Event list */}
+      {/* Events */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         <AnimatePresence initial={false}>
           {deduplicated.length === 0 ? (
-            <div className="px-4 py-8 text-center">
+            <div className="px-4 py-10 text-center">
+              <div className="w-8 h-8 rounded-full bg-surface-2 flex items-center justify-center mx-auto mb-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-muted">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+              </div>
               <p className="text-[10px] text-text-muted">No events yet</p>
             </div>
           ) : (
-            deduplicated.map((event) => {
+            deduplicated.map((event, i) => {
               const accentColor = getAppAccentColor(event.app)
               return (
                 <motion.div
                   key={event.id}
-                  initial={{ x: 20, opacity: 0 }}
+                  initial={{ x: 16, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: -20, opacity: 0 }}
+                  exit={{ x: -12, opacity: 0 }}
                   transition={{ duration: 0.15, ease: 'easeOut' }}
-                  className="px-3 py-2 border-b border-border-subtle/30 hover:bg-bg-interactive/20 transition-colors"
-                  style={{ borderLeft: `2px solid ${accentColor}` }}
+                  className="px-3 py-2.5 transition-colors hover:bg-white/[0.02]"
+                  style={{
+                    borderBottom: '1px solid rgba(42,51,71,0.2)',
+                    borderLeft: `2px solid ${accentColor}55`,
+                  }}
                 >
                   <div className="flex items-center justify-between mb-0.5">
                     <div className="flex items-center gap-1.5">
-                      <span
-                        className="text-[10px] font-semibold"
-                        style={{ color: accentColor }}
-                      >
+                      <span className="text-[10px] font-semibold" style={{ color: accentColor }}>
                         {event.app}
                       </span>
-                      {/* Dedup counter badge */}
                       {event.count > 1 && (
-                        <span className="text-[10px] font-mono text-text-muted bg-bg-interactive px-1 rounded">
-                          &times;{event.count}
+                        <span
+                          className="text-[9px] font-mono px-1 rounded"
+                          style={{ background: 'rgba(42,51,71,0.5)', color: 'var(--text-muted)' }}
+                        >
+                          ×{event.count}
                         </span>
                       )}
                     </div>
@@ -166,7 +188,9 @@ export default function ActivityFeed() {
                       {timeAgo(event.timestamp)}
                     </span>
                   </div>
-                  <p className="text-[11px] text-text-primary leading-tight">{humanizeEventType(event.event)}</p>
+                  <p className="text-[11px] text-text-primary leading-snug">
+                    {humanizeEventType(event.event)}
+                  </p>
                   {event.data && Object.keys(event.data).length > 0 && (
                     <p className="text-[9px] text-text-muted mt-0.5 truncate font-mono">
                       {Object.entries(event.data)
@@ -182,10 +206,13 @@ export default function ActivityFeed() {
         </AnimatePresence>
       </div>
 
-      {/* Footer count */}
-      <div className="px-3 py-2 border-t border-border-subtle/50">
+      {/* Footer */}
+      <div
+        className="px-3 py-2 shrink-0"
+        style={{ borderTop: '1px solid rgba(42,51,71,0.3)' }}
+      >
         <span className="text-[9px] text-text-muted font-mono">
-          {deduplicated.length} unique / {normalized.length} total events
+          {deduplicated.length} unique · {normalized.length} total
         </span>
       </div>
     </div>
