@@ -15,6 +15,7 @@ export const COL_HEADERS: { label: string; sortKey?: string }[] = [
   { label: 'Date',      sortKey: 'newest'   },
   { label: 'Status'                         },
   { label: 'Age',       sortKey: 'lastUsed' },
+  { label: 'Breach'                         },
 ]
 
 // ─── Skeleton shimmer rows ────────────────────────────────────────────────────
