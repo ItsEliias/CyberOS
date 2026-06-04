@@ -1,4 +1,4 @@
-// NetworkMap — NodeDetail.tsx  (tabbed: Ports | Port Timeline | Vulns | ReconDesk)
+// NetworkMap — NodeDetail.tsx — Glass panel host detail (UI redesign, logic unchanged)
 import { useState } from 'react'
 import type { NetworkNode } from '@shared/types'
 import { osIcon } from '../lib/nmapParser'
@@ -13,8 +13,8 @@ interface Props {
 type Tab = 'ports' | 'timeline' | 'vulns' | 'recondesk'
 
 function stateColor(state: string): string {
-  if (state === 'open')     return 'var(--success)'
-  if (state === 'filtered') return 'var(--warning)'
+  if (state === 'open')     return '#3fb950'
+  if (state === 'filtered') return '#d29922'
   return 'var(--text-muted)'
 }
 
@@ -22,24 +22,27 @@ function copyToClipboard(text: string): void {
   navigator.clipboard.writeText(text).catch(console.error)
 }
 
-// ─── Port Timeline Tab ────────────────────────────────────────────────────────
+// ─── Port Timeline ─────────────────────────────────────────────────────────────
 function PortTimeline({ node, allScans }: { node: NetworkNode; allScans: { scanName: string; nodes: NetworkNode[] }[] }) {
   const scans = allScans.filter(s => s.nodes.some(n => n.id === node.id))
   if (scans.length === 0) {
-    return <p style={{ fontSize: 11, color: 'var(--text-muted)', padding: 8 }}>No multi-scan timeline data available. Import multiple scans to compare.</p>
+    return (
+      <p style={{ fontSize: 11, color: 'var(--text-muted)', padding: 8 }}>
+        No multi-scan timeline data. Import multiple scans to compare.
+      </p>
+    )
   }
 
   const allPorts = new Set<number>()
   for (const s of scans) {
-    const n = s.nodes.find(nd => nd.id === node.id)
-    n?.ports.forEach(p => allPorts.add(p.port))
+    s.nodes.find(nd => nd.id === node.id)?.ports.forEach(p => allPorts.add(p.port))
   }
   const sortedPorts = Array.from(allPorts).sort((a, b) => a - b)
 
   function cellColor(state: string | undefined): string {
-    if (state === 'open') return 'rgba(63,185,80,0.6)'
-    if (state === 'filtered' || state === 'closed') return 'rgba(248,81,73,0.5)'
-    return 'rgba(139,148,158,0.2)'
+    if (state === 'open')     return 'rgba(63,185,80,0.55)'
+    if (state === 'filtered' || state === 'closed') return 'rgba(248,81,73,0.45)'
+    return 'rgba(139,148,158,0.15)'
   }
 
   return (
@@ -54,7 +57,7 @@ function PortTimeline({ node, allScans }: { node: NetworkNode; allScans: { scanN
         <tbody>
           {sortedPorts.map(port => (
             <tr key={port}>
-              <td style={{ ...tdStyle, fontFamily: 'monospace' }}>{port}</td>
+              <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)' }}>{port}</td>
               {scans.map(s => {
                 const n = s.nodes.find(nd => nd.id === node.id)
                 const p = n?.ports.find(pp => pp.port === port)
@@ -76,39 +79,50 @@ function PortTimeline({ node, allScans }: { node: NetworkNode; allScans: { scanN
 function VulnsTab({ node }: { node: NetworkNode }) {
   const vulns = node.vulns ?? []
   if (vulns.length === 0) {
-    return <p style={{ fontSize: 11, color: 'var(--text-muted)', padding: 8 }}>No vulnerability data loaded for this host. Use "Import Vulns" in the toolbar.</p>
+    return (
+      <p style={{ fontSize: 11, color: 'var(--text-muted)', padding: 8 }}>
+        No vulnerability data loaded. Use "Import Vulns" in the toolbar.
+      </p>
+    )
   }
 
   function sevColor(s: string): string {
     if (s === 'critical') return '#f85149'
-    if (s === 'high')     return '#d29922'
-    if (s === 'medium')   return '#e8b84b'
+    if (s === 'high')     return '#ff8c42'
+    if (s === 'medium')   return '#d29922'
     if (s === 'low')      return '#3fb950'
     return '#8b949e'
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       {vulns.map((v, i) => (
         <div key={i} style={{
-          padding: '8px 10px', borderRadius: 6,
-          border: `1px solid ${sevColor(v.severity)}44`,
-          background: `${sevColor(v.severity)}0a`,
+          padding: '8px 10px', borderRadius: 8,
+          border: `1px solid ${sevColor(v.severity)}38`,
+          background: `${sevColor(v.severity)}09`,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: sevColor(v.severity), textTransform: 'uppercase' }}>
-              {v.severity}
-            </span>
+            <span style={{
+              fontSize: 9, fontWeight: 700, letterSpacing: '0.08em',
+              color: sevColor(v.severity), textTransform: 'uppercase',
+              background: `${sevColor(v.severity)}18`,
+              border: `1px solid ${sevColor(v.severity)}35`,
+              borderRadius: 4, padding: '1px 6px',
+            }}>{v.severity}</span>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
             {v.cves.map(cve => (
               <span key={cve} style={{
-                fontSize: 10, fontFamily: 'monospace', padding: '1px 6px', borderRadius: 3,
-                background: 'rgba(139,148,158,0.15)', color: 'var(--text-dim)',
+                fontSize: 10, fontFamily: 'var(--font-mono)', padding: '1px 6px', borderRadius: 4,
+                background: 'rgba(139,148,158,0.12)', color: 'var(--text-secondary)',
+                border: '1px solid rgba(42,51,71,0.5)',
               }}>{cve}</span>
             ))}
           </div>
-          {v.description && <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>{v.description}</div>}
+          {v.description && (
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>{v.description}</div>
+          )}
         </div>
       ))}
     </div>
@@ -139,47 +153,71 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate }:
     setTimeout(() => setRdMsg(null), 3500)
   }
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: 'ports', label: 'Ports' },
-    { id: 'timeline', label: 'Timeline' },
-    { id: 'vulns', label: `Vulns${node.vulns?.length ? ` (${node.vulns.length})` : ''}` },
+  const TABS: { id: Tab; label: string; count?: number }[] = [
+    { id: 'ports',     label: 'Ports' },
+    { id: 'timeline',  label: 'Timeline' },
+    { id: 'vulns',     label: 'Vulns', count: node.vulns?.length },
     { id: 'recondesk', label: 'Actions' },
   ]
 
+  const statusOnline = node.status === 'up'
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{
+      display: 'flex', flexDirection: 'column', height: '100%',
+      background: '#0d0e18', borderLeft: '1px solid rgba(255,255,255,0.04)',
+    }}>
       {/* Header */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '10px 12px',
-        background: 'rgba(210,153,34,0.06)',
-        borderBottom: '1px solid var(--border)',
-        flexShrink: 0,
+        padding: '10px 14px', flexShrink: 0,
+        background: 'rgba(255,140,66,0.05)',
+        borderBottom: '1px solid rgba(255,140,66,0.12)',
       }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)', letterSpacing: '0.06em' }}>HOST DETAIL</span>
-        <button onClick={onClose} style={{ background: 'transparent', color: 'var(--text-muted)', fontSize: 16, lineHeight: 1 }}>×</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ width: 2, height: 14, borderRadius: 1, background: '#ff8c42', flexShrink: 0 }} />
+          <span style={{ fontSize: 10, fontWeight: 700, color: '#ff8c42', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            Host Detail
+          </span>
+        </div>
+        <button
+          onClick={onClose}
+          style={{
+            background: 'transparent', color: 'var(--text-muted)', fontSize: 18, lineHeight: 1,
+            width: 24, height: 24, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all 120ms',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' }}
+        >×</button>
       </div>
 
       {/* Identity block */}
-      <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-          <span style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{node.ip}</span>
+      <div style={{ padding: '12px 14px', borderBottom: '1px solid rgba(42,51,71,0.5)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>
+            {node.ip}
+          </span>
           <span style={{
-            fontSize: 10, padding: '2px 6px', borderRadius: 4,
-            background: node.status === 'up' ? 'rgba(63,185,80,0.12)' : 'rgba(139,148,158,0.12)',
-            color: node.status === 'up' ? 'var(--success)' : 'var(--text-muted)',
-            border: `1px solid ${node.status === 'up' ? 'rgba(63,185,80,0.25)' : 'rgba(139,148,158,0.2)'}`,
+            fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 600,
+            background: statusOnline ? 'rgba(63,185,80,0.10)' : 'rgba(72,79,88,0.18)',
+            color: statusOnline ? '#3fb950' : 'var(--text-muted)',
+            border: `1px solid ${statusOnline ? 'rgba(63,185,80,0.28)' : 'rgba(72,79,88,0.35)'}`,
           }}>{node.status}</span>
         </div>
-        {node.hostname && <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 2 }}>{node.hostname}</div>}
+        {node.hostname && (
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {node.hostname}
+          </div>
+        )}
         {node.os && (
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
             <span>{osIcon(node.os)}</span>
             <span>{node.os}{node.osAccuracy ? ` (${node.osAccuracy}%)` : ''}</span>
           </div>
         )}
         {node.annotation && (
-          <div style={{ marginTop: 4, fontSize: 11, color: 'var(--accent)', fontStyle: 'italic' }}>
+          <div style={{ marginTop: 5, fontSize: 11, color: '#ff8c42', fontStyle: 'italic', opacity: 0.85 }}>
             {node.annotation}
           </div>
         )}
@@ -187,42 +225,59 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate }:
 
       {/* Annotation input */}
       {onAnnotate && (
-        <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+        <div style={{ padding: '8px 14px', borderBottom: '1px solid rgba(42,51,71,0.5)', flexShrink: 0 }}>
           <input
             value={annotationDraft}
             onChange={e => setAnnotationDraft(e.target.value)}
             onBlur={() => onAnnotate(annotationDraft)}
-            placeholder="Add annotation..."
+            placeholder="Add annotation…"
             style={{
-              width: '100%', background: 'var(--bg)', border: '1px solid var(--border)',
-              borderRadius: 4, padding: '4px 8px', color: 'var(--text)', fontSize: 11,
+              width: '100%', background: '#07080f', border: '1px solid rgba(42,51,71,0.75)',
+              borderRadius: 6, padding: '5px 8px', color: 'var(--text-primary)', fontSize: 11,
+              fontFamily: 'var(--font-display)', transition: 'border-color 150ms',
             }}
+            onFocus={e => (e.currentTarget.style.borderColor = 'rgba(255,140,66,0.4)')}
+            onBlur={e => (e.currentTarget.style.borderColor = 'rgba(42,51,71,0.75)')}
           />
         </div>
       )}
 
       {/* Tab bar */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-        {tabs.map(t => (
+      <div style={{
+        display: 'flex', borderBottom: '1px solid rgba(42,51,71,0.5)',
+        flexShrink: 0, padding: '4px 6px', gap: 2,
+        background: '#0d0e18',
+      }}>
+        {TABS.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
             style={{
-              flex: 1, padding: '7px 4px', fontSize: 10, fontWeight: 500,
-              background: 'transparent', border: 'none',
-              borderBottom: tab === t.id ? '2px solid var(--accent)' : '2px solid transparent',
-              color: tab === t.id ? 'var(--accent)' : 'var(--text-muted)',
-              cursor: 'pointer',
+              flex: 1, padding: '5px 4px', fontSize: 10, fontWeight: 600,
+              background: tab === t.id ? '#131525' : 'transparent',
+              border: tab === t.id ? '1px solid rgba(42,51,71,0.7)' : '1px solid transparent',
+              borderRadius: 6,
+              color: tab === t.id ? '#ff8c42' : 'var(--text-muted)',
+              cursor: 'pointer', transition: 'all 120ms', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
             }}
-          >{t.label}</button>
+          >
+            {t.label}
+            {t.count !== undefined && t.count > 0 && (
+              <span style={{
+                fontSize: 9, background: tab === t.id ? 'rgba(255,140,66,0.15)' : 'rgba(42,51,71,0.4)',
+                color: tab === t.id ? '#ff8c42' : '#484f58',
+                borderRadius: 4, padding: '0 4px',
+              }}>{t.count}</span>
+            )}
+          </button>
         ))}
       </div>
 
       {/* Tab content */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px' }}>
         {tab === 'ports' && (
           <>
-            <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+            <div style={{ display: 'flex', gap: 5, marginBottom: 10 }}>
               <ActionBtn onClick={() => copyToClipboard(node.ip)}>Copy IP</ActionBtn>
               <ActionBtn onClick={() => {
                 const line = `${node.ip}${node.hostname ? ` (${node.hostname})` : ''} — ${openPorts.map(p => `${p.port}/${p.protocol}`).join(', ')}`
@@ -233,23 +288,32 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate }:
               <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>No port data</p>
             ) : (
               <>
-                <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.06em', marginBottom: 6 }}>
-                  PORTS ({node.ports.length})
+                <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: 6, textTransform: 'uppercase' }}>
+                  Ports ({node.ports.length})
                 </div>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr>
                       {(['PORT', 'SERVICE', 'STATE'] as const).map(h => (
-                        <th key={h} style={{ textAlign: 'left', fontSize: 9, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.05em', paddingBottom: 5, borderBottom: '1px solid var(--border)' }}>{h}</th>
+                        <th key={h} style={thStyle}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {node.ports.map(p => (
-                      <tr key={`${p.port}-${p.protocol}`}>
-                        <td style={{ padding: '4px 0', fontFamily: 'monospace', fontSize: 11, color: 'var(--text)' }}>{p.port}/{p.protocol}</td>
-                        <td style={{ padding: '4px 4px', fontSize: 11, color: 'var(--text-dim)', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.service || '—'}</td>
-                        <td style={{ padding: '4px 0', fontSize: 11, color: stateColor(p.state) }}>{p.state}</td>
+                      <tr key={`${p.port}-${p.protocol}`} style={{ transition: 'background 100ms' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      >
+                        <td style={{ padding: '4px 0', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-primary)' }}>
+                          {p.port}/{p.protocol}
+                        </td>
+                        <td style={{ padding: '4px 4px', fontSize: 11, color: 'var(--text-secondary)', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {p.service || '—'}
+                        </td>
+                        <td style={{ padding: '4px 0', fontSize: 11, color: stateColor(p.state), fontWeight: p.state === 'open' ? 600 : 400 }}>
+                          {p.state}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -265,10 +329,10 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate }:
             <ActionBtn onClick={handlePushToReconDesk}>Add to ReconDesk</ActionBtn>
             {rdMsg && (
               <div style={{
-                fontSize: 11, padding: '5px 8px', borderRadius: 5,
-                background: rdMsg.ok ? 'rgba(63,185,80,0.10)' : 'rgba(255,68,68,0.10)',
-                border: `1px solid ${rdMsg.ok ? 'rgba(63,185,80,0.25)' : 'rgba(255,68,68,0.25)'}`,
-                color: rdMsg.ok ? 'var(--success)' : 'var(--error)',
+                fontSize: 11, padding: '6px 10px', borderRadius: 6,
+                background: rdMsg.ok ? 'rgba(63,185,80,0.08)' : 'rgba(248,81,73,0.08)',
+                border: `1px solid ${rdMsg.ok ? 'rgba(63,185,80,0.25)' : 'rgba(248,81,73,0.25)'}`,
+                color: rdMsg.ok ? '#3fb950' : '#f85149',
               }}>{rdMsg.text}</div>
             )}
           </div>
@@ -280,21 +344,27 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate }:
 
 function ActionBtn({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
   return (
-    <button onClick={onClick} style={{
-      padding: '5px 10px', borderRadius: 5,
-      background: 'var(--bg)', border: '1px solid var(--border)',
-      color: 'var(--text-dim)', fontSize: 11,
-    }}>{children}</button>
+    <button
+      onClick={onClick}
+      style={{
+        padding: '5px 10px', borderRadius: 6,
+        background: '#07080f', border: '1px solid rgba(42,51,71,0.75)',
+        color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer',
+        transition: 'all 150ms', fontFamily: 'var(--font-display)',
+      }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,140,66,0.35)'; (e.currentTarget as HTMLElement).style.color = '#ff8c42' }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,51,71,0.75)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)' }}
+    >{children}</button>
   )
 }
 
 const thStyle: React.CSSProperties = {
-  textAlign: 'left', fontSize: 9, fontWeight: 600, color: 'var(--text-muted)',
-  letterSpacing: '0.05em', paddingBottom: 4, borderBottom: '1px solid var(--border)',
-  padding: '3px 4px',
+  textAlign: 'left', fontSize: 9, fontWeight: 700, color: 'var(--text-muted)',
+  letterSpacing: '0.07em', padding: '3px 4px 5px', borderBottom: '1px solid rgba(42,51,71,0.5)',
+  textTransform: 'uppercase',
 }
 
 const tdStyle: React.CSSProperties = {
-  padding: '3px 4px', fontSize: 10, color: 'var(--text-dim)',
-  textAlign: 'center', borderBottom: '1px solid rgba(42,51,71,0.3)',
+  padding: '3px 4px', fontSize: 10, color: 'var(--text-secondary)',
+  textAlign: 'center', borderBottom: '1px solid rgba(42,51,71,0.25)',
 }

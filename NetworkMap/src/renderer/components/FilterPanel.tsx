@@ -1,12 +1,12 @@
-// NetworkMap — FilterPanel.tsx — Feature 12: Slide-out filter panel
+// NetworkMap — FilterPanel.tsx — Dark glass filter sidebar (UI redesign, logic unchanged)
 import { useMemo } from 'react'
 import type { NetworkNode } from '@shared/types'
 
 export interface FilterState {
-  osType: string        // '' = all
-  openPort: string      // '' = any, else port number string
-  dateFrom: string      // ISO or ''
-  dateTo: string        // ISO or ''
+  osType: string
+  openPort: string
+  dateFrom: string
+  dateTo: string
 }
 
 export const EMPTY_FILTERS: FilterState = { osType: '', openPort: '', dateFrom: '', dateTo: '' }
@@ -61,71 +61,129 @@ export default function FilterPanel({ nodes, filters, onChange, onClose }: Props
     onChange({ ...filters, [k]: v })
   }
 
-  const s: React.CSSProperties = { fontSize: 12, color: 'var(--text)' }
   const inputStyle: React.CSSProperties = {
-    background: 'var(--bg)', border: '1px solid var(--border)',
-    borderRadius: 4, padding: '4px 8px', color: 'var(--text)', fontSize: 11, width: '100%',
+    background: '#07080f', border: '1px solid rgba(42,51,71,0.75)',
+    borderRadius: 6, padding: '5px 9px', color: 'var(--text-primary)', fontSize: 11, width: '100%',
+    fontFamily: 'var(--font-display)', transition: 'border-color 150ms',
+    outline: 'none',
   }
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: 9, fontWeight: 700, color: 'var(--text-muted)',
+    display: 'block', marginBottom: 5,
+    textTransform: 'uppercase', letterSpacing: '0.08em',
+  }
+
+  const activeCount = activeFilterCount(filters)
 
   return (
     <div style={{
-      position: 'absolute', top: 0, right: 0, bottom: 0, width: 260,
-      background: 'var(--panel)', borderLeft: '1px solid var(--border)',
+      position: 'absolute', top: 0, right: 0, bottom: 0, width: 264,
+      background: 'rgba(13,14,24,0.98)',
+      borderLeft: '1px solid rgba(255,255,255,0.04)',
       display: 'flex', flexDirection: 'column', zIndex: 25,
       animation: 'slideInRight 0.2s ease-out',
+      backdropFilter: 'blur(12px)',
     }}>
+      {/* Header */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '10px 12px', borderBottom: '1px solid var(--border)',
+        padding: '10px 14px', flexShrink: 0,
+        background: 'rgba(255,140,66,0.05)',
+        borderBottom: '1px solid rgba(255,140,66,0.12)',
       }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)', letterSpacing: '0.06em' }}>FILTERS</span>
-        <button onClick={onClose} style={{ background: 'transparent', color: 'var(--text-muted)', fontSize: 16 }}>×</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ width: 2, height: 14, borderRadius: 1, background: '#ff8c42', flexShrink: 0 }} />
+          <span style={{ fontSize: 10, fontWeight: 700, color: '#ff8c42', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            Filters
+          </span>
+          {activeCount > 0 && (
+            <span style={{
+              fontSize: 9, fontWeight: 700,
+              background: 'rgba(255,140,66,0.15)', color: '#ff8c42',
+              border: '1px solid rgba(255,140,66,0.3)',
+              borderRadius: 10, padding: '1px 6px',
+            }}>{activeCount}</span>
+          )}
+        </div>
+        <button
+          onClick={onClose}
+          style={{
+            background: 'transparent', color: 'var(--text-muted)', fontSize: 18, lineHeight: 1,
+            width: 24, height: 24, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all 120ms',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' }}
+        >×</button>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: 12, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* Content */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+        {/* OS Type */}
         <div>
-          <label style={{ ...s, fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>OS Type</label>
-          <select value={filters.osType} onChange={e => set('osType', e.target.value)} style={inputStyle}>
+          <label style={labelStyle}>OS Type</label>
+          <select
+            value={filters.osType}
+            onChange={e => set('osType', e.target.value)}
+            style={inputStyle}
+          >
             <option value="">All OS</option>
             <option value="windows">Windows</option>
             <option value="linux">Linux</option>
             <option value="macos">macOS</option>
-            <option value="router">Router/Network</option>
+            <option value="router">Router / Network</option>
             <option value="unknown">Unknown</option>
           </select>
         </div>
 
+        {/* Open Port */}
         <div>
-          <label style={{ ...s, fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Open Port</label>
+          <label style={labelStyle}>Open Port</label>
           <input
-            type="number" placeholder="e.g. 22, 80, 443"
+            type="number"
+            placeholder="e.g. 22, 80, 443"
             value={filters.openPort}
             onChange={e => set('openPort', e.target.value)}
             style={inputStyle}
+            onFocus={e => (e.currentTarget.style.borderColor = 'rgba(255,140,66,0.4)')}
+            onBlur={e => (e.currentTarget.style.borderColor = 'rgba(42,51,71,0.75)')}
           />
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
-            {commonPorts.map(port => (
-              <button
-                key={port}
-                onClick={() => set('openPort', filters.openPort === String(port) ? '' : String(port))}
-                style={{
-                  padding: '2px 7px', fontSize: 10, borderRadius: 4, cursor: 'pointer',
-                  background: filters.openPort === String(port) ? 'rgba(210,153,34,0.2)' : 'rgba(42,51,71,0.6)',
-                  border: `1px solid ${filters.openPort === String(port) ? 'rgba(210,153,34,0.5)' : 'var(--border)'}`,
-                  color: filters.openPort === String(port) ? 'var(--accent)' : 'var(--text-dim)',
-                  fontFamily: 'monospace',
-                }}
-              >{port}</button>
-            ))}
-          </div>
+          {commonPorts.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 7 }}>
+              {commonPorts.map(port => {
+                const active = filters.openPort === String(port)
+                return (
+                  <button
+                    key={port}
+                    onClick={() => set('openPort', active ? '' : String(port))}
+                    style={{
+                      padding: '2px 8px', fontSize: 10, borderRadius: 4, cursor: 'pointer',
+                      background: active ? 'rgba(255,140,66,0.15)' : 'rgba(42,51,71,0.35)',
+                      border: `1px solid ${active ? 'rgba(255,140,66,0.4)' : 'rgba(42,51,71,0.6)'}`,
+                      color: active ? '#ff8c42' : 'var(--text-secondary)',
+                      fontFamily: 'var(--font-mono)', transition: 'all 120ms',
+                    }}
+                  >{port}</button>
+                )
+              })}
+            </div>
+          )}
         </div>
 
+        {/* Divider */}
+        <div style={{ height: 1, background: 'rgba(42,51,71,0.4)' }} />
+
+        {/* Clear */}
         <button
           onClick={() => onChange(EMPTY_FILTERS)}
           style={{
-            marginTop: 4, padding: '6px 12px', borderRadius: 5,
-            background: 'var(--bg)', border: '1px solid var(--border)',
-            color: 'var(--text-dim)', fontSize: 11, cursor: 'pointer',
+            padding: '7px 12px', borderRadius: 6, cursor: 'pointer',
+            background: '#07080f', border: '1px solid rgba(42,51,71,0.75)',
+            color: 'var(--text-secondary)', fontSize: 11,
+            transition: 'all 150ms', fontFamily: 'var(--font-display)',
+            opacity: activeCount === 0 ? 0.4 : 1,
           }}
         >Clear Filters</button>
       </div>
