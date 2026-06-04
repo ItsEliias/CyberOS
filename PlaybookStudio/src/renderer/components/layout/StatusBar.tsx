@@ -1,4 +1,4 @@
-// PlaybookStudio — StatusBar Component
+// PlaybookStudio — StatusBar Component (teal accent redesign)
 
 import { useState, useEffect } from 'react'
 import { useStore } from '../../store'
@@ -26,41 +26,51 @@ export default function StatusBar() {
     <div
       className="h-6 flex items-center px-4 text-xs shrink-0"
       style={{
-        background: 'rgba(10, 10, 15, 0.95)',
-        borderTop: '1px solid var(--border)',
+        background: 'rgba(7,8,15,0.98)',
+        borderTop: '1px solid rgba(255,255,255,0.04)',
       }}
     >
-      {/* Pulse dot + app name */}
+      {/* Live dot + app name */}
       <div className="flex items-center gap-2">
         <span
           className="w-1.5 h-1.5 rounded-full status-dot-pulse"
           style={{
-            '--pulse-color': 'rgba(74,158,255,0.4)',
-            '--pulse-color-fade': 'rgba(74,158,255,0)',
-            backgroundColor: '#4a9eff',
+            '--pulse-rgb': '45,212,191',
+            backgroundColor: '#2dd4bf',
           } as React.CSSProperties}
         />
         <span style={{ color: '#8b949e' }}>PlaybookStudio</span>
       </div>
 
-      <span className="mx-3" style={{ color: '#4a5568' }}>•</span>
+      <span className="mx-2.5" style={{ color: '#2d3548' }}>·</span>
 
-      <span style={{ color: '#8b949e' }}>
-        {builtIn} built-in · {custom} custom
+      <span style={{ color: '#484f58' }}>
+        {builtIn} built-in
+      </span>
+      <span className="mx-1.5" style={{ color: '#2d3548' }}>·</span>
+      <span style={{ color: '#484f58' }}>
+        {custom} custom
       </span>
 
       {activeRun && (
         <>
-          <span className="mx-3" style={{ color: '#4a5568' }}>•</span>
-          <span style={{ color: '#4a9eff', fontWeight: 500 }}>
-            Active: {activeRun.playbookName}
+          <span className="mx-2.5" style={{ color: '#2d3548' }}>·</span>
+          <span
+            className="flex items-center gap-1.5"
+            style={{ color: '#2dd4bf', fontWeight: 500 }}
+          >
+            <span
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ background: '#3fb950' }}
+            />
+            {activeRun.playbookName}
           </span>
           {(() => {
             const done  = activeRun.steps.filter(s => s.status === 'done' || s.status === 'skipped').length
             const total = activeRun.steps.length
             return (
-              <span className="ml-1.5" style={{ color: '#4a5568' }}>
-                ({done}/{total} steps)
+              <span className="ml-1.5" style={{ color: '#484f58' }}>
+                ({done}/{total})
               </span>
             )
           })()}
@@ -69,26 +79,26 @@ export default function StatusBar() {
 
       {!activeRun && (
         <>
-          <span className="mx-3" style={{ color: '#4a5568' }}>•</span>
-          <span style={{ color: '#4a5568' }}>No active run</span>
+          <span className="mx-2.5" style={{ color: '#2d3548' }}>·</span>
+          <span style={{ color: '#2d3548' }}>No active run</span>
         </>
       )}
 
       {context.activeLab && (
         <>
-          <span className="mx-3" style={{ color: '#4a5568' }}>•</span>
+          <span className="mx-2.5" style={{ color: '#2d3548' }}>·</span>
           <span style={{ color: '#8b949e' }}>
             Lab: <span style={{ color: '#c9d1d9' }}>{context.activeLab}</span>
           </span>
           {context.activeIP && (
-            <span className="ml-2 font-mono" style={{ color: '#4a5568' }}>{context.activeIP}</span>
+            <span className="ml-2 font-mono" style={{ color: '#484f58' }}>{context.activeIP}</span>
           )}
         </>
       )}
 
       <div className="flex-1" />
 
-      <span className="font-mono" style={{ color: '#4a5568' }}>{utcTime}</span>
+      <span className="font-mono tabular-nums" style={{ color: '#484f58' }}>{utcTime}</span>
     </div>
   )
 }

@@ -1,8 +1,48 @@
+@import '@fontsource/geist-sans/400.css';
+@import '@fontsource/geist-sans/500.css';
+@import '@fontsource/geist-sans/600.css';
+@import '@fontsource/geist-sans/700.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+@import '@fontsource/jetbrains-mono/600.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* ─── CyberOS Design Bible — Global Styles ────────────────────────────────── */
+
+:root {
+  --surface-0: #07080f; --surface-1: #0d0e18; --surface-2: #131525; --surface-3: #191c32;
+  --surface-glass: rgba(13,14,24,0.72);
+  --elevation-1: 0 1px 3px rgba(0,0,0,.5), 0 1px 2px rgba(0,0,0,.35);
+  --elevation-2: 0 4px 16px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.4);
+  --elevation-3: 0 12px 40px rgba(0,0,0,.6), 0 4px 12px rgba(0,0,0,.45);
+  --border-subtle: rgba(42,51,71,0.35); --border-default: rgba(42,51,71,0.75);
+  --border-glass: rgba(255,255,255,0.055);
+  --text-primary: #e6edf3; --text-secondary: #8b949e; --text-muted: #484f58;
+  --sev-critical: #f85149; --sev-high: #ff8c42; --sev-medium: #d29922;
+  --sev-low: #4a9eff; --sev-info: #8b949e;
+  --state-online: #3fb950; --state-offline: #484f58; --state-blocked: #f85149;
+  --accent: #2dd4bf; --accent-rgb: 45,212,191;
+  --accent-tint: rgba(45,212,191,0.08); --accent-tint2: rgba(45,212,191,0.15);
+  --accent-glow: rgba(45,212,191,0.28); --accent-border: rgba(45,212,191,0.30);
+  --font-display: 'Geist Sans', 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --radius-xs: 4px; --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px;
+  --motion-fast: 150ms; --motion-base: 250ms; --motion-slow: 400ms;
+  --ease: cubic-bezier(0.2,0.8,0.2,1);
+  /* Legacy compat vars */
+  --border: rgba(42,51,71,0.75);
+  --panel: #0d0e18;
+  --bg: #07080f;
+  --text: #e6edf3;
+  --text-dim: #8b949e;
+  --accent-dim: rgba(45,212,191,0.12);
+  --success: #3fb950;
+  --error: #f85149;
+  --warning: #d29922;
+}
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -10,10 +50,9 @@ html, body, #root {
   height: 100%;
   min-height: 100vh;
   overflow: hidden;
-  background-color: #0a0a0f !important;
-  background: radial-gradient(ellipse at 20% 0%, rgba(74, 158, 255, 0.04) 0%, #0a0a0f 50%) !important;
-  color: #e2e8f0;
-  font-family: 'Inter', 'SF Pro Display', system-ui, sans-serif;
+  background: radial-gradient(ellipse at 18% 0%, rgba(45,212,191,0.04) 0%, transparent 55%), #07080f;
+  color: var(--text-primary);
+  font-family: var(--font-display);
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -23,7 +62,7 @@ html, body, #root {
 /* ─── Selection ───────────────────────────────────────────────────────────── */
 
 ::selection {
-  background: rgba(74, 158, 255, 0.25);
+  background: rgba(45, 212, 191, 0.22);
   color: inherit;
 }
 
@@ -49,87 +88,58 @@ input, textarea, select, button {
 
 /* ─── Scrollbars ──────────────────────────────────────────────────────────── */
 
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(42, 51, 71, 0.5);
+  background: rgba(42, 51, 71, 0.45);
   border-radius: 3px;
 }
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(42, 51, 71, 0.8);
-}
+::-webkit-scrollbar-thumb:hover { background: rgba(42, 51, 71, 0.7); }
 
 /* ─── Focus Styles ────────────────────────────────────────────────────────── */
 
 *:focus-visible {
-  outline: 1px solid rgba(74, 158, 255, 0.5);
+  outline: 1px solid rgba(45, 212, 191, 0.45);
   outline-offset: 1px;
   border-radius: 4px;
 }
 
 /* ─── Tabular Nums ────────────────────────────────────────────────────────── */
 
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
-}
+.tabular-nums { font-variant-numeric: tabular-nums; }
 
 /* ─── Transitions ─────────────────────────────────────────────────────────── */
 
-button, a, input, select {
-  transition: all 0.15s ease-out;
-}
+button, a, input, select { transition: all 0.15s ease-out; }
 
 /* ─── Glassmorphism Card ──────────────────────────────────────────────────── */
 
 .glass-card {
-  background: rgba(22, 27, 39, 0.75);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(42, 51, 71, 0.6);
-  border-radius: 8px;
+  background: rgba(13, 14, 24, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 10px;
 }
 
 /* ─── Status Pulse Glow Animation ─────────────────────────────────────────── */
 
 @keyframes statusPulse {
-  0% {
-    box-shadow: 0 0 0 0 var(--pulse-color, rgba(74, 158, 255, 0.4));
-  }
-  70% {
-    box-shadow: 0 0 0 6px var(--pulse-color-fade, rgba(74, 158, 255, 0));
-  }
-  100% {
-    box-shadow: 0 0 0 0 var(--pulse-color-fade, rgba(74, 158, 255, 0));
-  }
+  0%   { box-shadow: 0 0 0 0 rgba(var(--pulse-rgb, 45,212,191), 0.4); }
+  70%  { box-shadow: 0 0 0 6px rgba(var(--pulse-rgb, 45,212,191), 0); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--pulse-rgb, 45,212,191), 0); }
 }
 
-.status-dot-pulse {
-  animation: statusPulse 2s ease-out infinite;
-}
+.status-dot-pulse { animation: statusPulse 2s ease-out infinite; }
 
 /* ─── Metric Glow ─────────────────────────────────────────────────────────── */
 
-.metric-glow {
-  filter: drop-shadow(0 0 8px var(--glow-color, rgba(74, 158, 255, 0.5)));
-}
+.metric-glow { filter: drop-shadow(0 0 8px var(--glow-color, rgba(45,212,191,0.45))); }
 
-/* ─── Accent Left Border Utility ──────────────────────────────────────────── */
+/* ─── Accent Left Border ──────────────────────────────────────────────────── */
 
-.accent-border-left {
-  border-left: 3px solid var(--accent-color, #4a9eff);
-}
+.accent-border-left { border-left: 2px solid var(--accent); }
 
 /* ─── Textarea reset ──────────────────────────────────────────────────────── */
 
-textarea {
-  resize: none;
-  font-family: inherit;
-}
+textarea { resize: none; font-family: inherit; }
