@@ -6,6 +6,13 @@ import { motion } from 'framer-motion';
 import { useStore } from '../store';
 import type { NoteFile } from '@shared/types';
 
+// Stable hue bucket for a tag string (0-7)
+function tagHue(tag: string): number {
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) hash = (hash * 31 + tag.charCodeAt(i)) >>> 0;
+  return hash % 8;
+}
+
 interface TagStats {
   tag: string;
   count: number;
@@ -133,6 +140,7 @@ export default function TagsView({ onOpenNote }: Props) {
                 {tagStats.map((ts, i) => {
                   const size = 0.75 + (ts.count / maxCount) * 0.5;
                   const isActive = activeTag === ts.tag;
+                  const hue = tagHue(ts.tag);
                   return (
                     <motion.button
                       key={ts.tag}
@@ -140,22 +148,15 @@ export default function TagsView({ onOpenNote }: Props) {
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: i * 0.02 }}
                       onClick={() => handleTagClick(ts.tag)}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-all"
-                      style={{
-                        fontSize: `${size}rem`,
-                        background: isActive ? '#7bb8ff' : 'var(--bg3)',
-                        borderColor: isActive ? '#7bb8ff' : 'var(--border)',
-                        color: isActive ? '#0a0a0f' : 'var(--text-muted)',
-                        fontWeight: isActive ? 600 : 400,
-                      }}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-all tag-hue-${hue} ${isActive ? 'tag-colored-active' : 'tag-colored'}`}
+                      style={{ fontSize: `${size}rem`, fontWeight: isActive ? 600 : 400 }}
                     >
                       <span>#</span>
                       <span>{ts.tag}</span>
                       <span
                         className="text-[10px] px-1 rounded-full"
                         style={{
-                          background: isActive ? 'rgba(10,10,15,0.2)' : 'rgba(123,184,255,0.15)',
-                          color: isActive ? '#0a0a0f' : '#7bb8ff',
+                          background: isActive ? 'rgba(7,8,15,0.25)' : 'rgba(0,0,0,0.15)',
                         }}
                       >
                         {ts.count}

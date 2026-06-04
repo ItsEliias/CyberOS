@@ -1,6 +1,19 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import type { NoteFile } from '@shared/types';
+
+// Stable hue bucket for a tag string (0-7)
+function tagHue(tag: string): number {
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) hash = (hash * 31 + tag.charCodeAt(i)) >>> 0;
+  return hash % 8;
+}
+
+function countWords(text?: string): number {
+  if (!text) return 0;
+  const t = text.trim();
+  return t ? t.split(/\s+/).length : 0;
+}
 
 interface DragHandlers {
   onDragStart: (e: React.DragEvent) => void;
@@ -54,6 +67,11 @@ export default function NoteListItem({
   }
 
   const tags = note.tags?.slice(0, 2) || [];
+  // Use server-supplied wordCount if present, otherwise estimate from visible text
+  const wordCount = useMemo(() => {
+    if (note.wordCount != null && note.wordCount > 0) return note.wordCount;
+    return countWords(note.firstLine ? note.name + ' ' + note.firstLine : note.name);
+  }, [note.wordCount, note.name, note.firstLine]);
 
   return (
     <motion.div
@@ -114,16 +132,11 @@ export default function NoteListItem({
 
           {/* Tags + actions */}
           <div className="flex items-center gap-1.5 justify-between">
-            <div className="flex gap-1 flex-wrap">
+            <div className="flex items-center gap-1 flex-wrap">
               {tags.map(tag => (
                 <span key={tag}
-                  className="text-[10px] px-2 py-0.5 rounded-full font-medium"
-                  style={{
-                    background: 'rgba(123,184,255,0.1)',
-                    color: '#7bb8ff',
-                    border: '1px solid rgba(123,184,255,0.18)',
-                    letterSpacing: '0.01em',
-                  }}>
+                  className={`text-[10px] px-2 py-0.5 rounded-full font-medium tag-colored tag-hue-${tagHue(tag)}`}
+                  style={{ letterSpacing: '0.01em' }}>
                   #{tag}
                 </span>
               ))}
@@ -131,6 +144,21 @@ export default function NoteListItem({
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full"
                   style={{ background: 'rgba(42,51,71,0.4)', color: 'var(--text-dim)' }}>
                   +{(note.tags?.length || 0) - 2}
+                </span>
+              )}
+              {/* Word count badge */}
+              {wordCount > 0 && (
+                <span
+                  className="text-[9px] px-1.5 py-0.5 rounded font-mono tabular-nums ml-auto"
+                  style={{
+                    background: 'rgba(42,51,71,0.3)',
+                    color: 'rgba(107,122,153,0.7)',
+                    border: '1px solid rgba(42,51,71,0.25)',
+                    marginLeft: tags.length === 0 ? 0 : 'auto',
+                  }}
+                  title={`~${wordCount} words`}
+                >
+                  {wordCount}w
                 </span>
               )}
             </div>

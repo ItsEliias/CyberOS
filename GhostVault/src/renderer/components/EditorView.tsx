@@ -26,17 +26,14 @@ function modeLabel(m: EditorMode): string {
 
 const TABLE_TEMPLATE = '\n| Col 1 | Col 2 | Col 3 |\n|-------|-------|-------|\n|       |       |       |\n|       |       |       |\n|       |       |       |\n';
 
-// Small toolbar icon button
+// Small toolbar icon button with grouped tooltip
 function ToolBtn({ onClick, title, active, children, disabled }: {
   onClick?: () => void; title: string; active?: boolean;
   children: React.ReactNode; disabled?: boolean;
 }) {
   return (
-    <button
-      onClick={onClick}
-      title={title}
-      disabled={disabled}
-      className="w-7 h-7 rounded flex items-center justify-center text-sm transition-colors"
+    <button onClick={onClick} title={title} disabled={disabled}
+      className="relative group w-7 h-7 rounded flex items-center justify-center text-sm transition-colors"
       style={{
         color: active ? '#7bb8ff' : 'rgba(72,79,88,0.75)',
         background: active ? 'rgba(123,184,255,0.1)' : 'transparent',
@@ -47,9 +44,15 @@ function ToolBtn({ onClick, title, active, children, disabled }: {
       onMouseLeave={e => { if (!active && !disabled) e.currentTarget.style.background = 'transparent'; }}
     >
       {children}
+      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-0.5 rounded text-[9px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50"
+        style={{ background: 'rgba(10,11,20,0.95)', border: '1px solid rgba(42,51,71,0.7)', color: 'rgba(201,209,217,0.9)', fontFamily: 'var(--font-display)' }}>
+        {title}
+      </span>
     </button>
   );
 }
+
+const ToolDivider = () => <span className="w-px h-4 mx-0.5 flex-shrink-0" style={{ background: 'rgba(42,51,71,0.5)' }} />;
 
 export default function EditorView({
   onSave, onAiMenu, onTemplate, onTogglePin, onToggleAot, onCapture, onOpenNote
@@ -291,26 +294,33 @@ export default function EditorView({
           ))}
         </div>
 
-        {/* Action buttons */}
+        {/* Action buttons — grouped with dividers */}
         <div className="flex items-center gap-0.5">
+          {/* Insert group */}
           <ToolBtn onClick={insertTable} title="Insert Table">⊞</ToolBtn>
-          <ToolBtn onClick={onTemplate} title="Templates">🗂</ToolBtn>
+          <ToolBtn onClick={onTemplate} title="Insert Template">🗂</ToolBtn>
+          <ToolDivider />
+          {/* AI + Capture group */}
           <ToolBtn onClick={onAiMenu} title="AI Assistant">✨</ToolBtn>
-          <ToolBtn onClick={onCapture} title="Capture window">⚡</ToolBtn>
-          <ToolBtn onClick={onTogglePin} title={isPinned ? 'Unpin' : 'Pin'} active={isPinned}>📌</ToolBtn>
-          <ToolBtn onClick={onToggleAot} title="Always on top" active={alwaysOnTop}>⬆</ToolBtn>
+          <ToolBtn onClick={onCapture} title="Capture Window">⚡</ToolBtn>
+          <ToolDivider />
+          {/* Note state group */}
+          <ToolBtn onClick={onTogglePin} title={isPinned ? 'Unpin Note' : 'Pin Note'} active={isPinned}>📌</ToolBtn>
+          <ToolBtn onClick={onToggleAot} title="Toggle Always on Top" active={alwaysOnTop}>⬆</ToolBtn>
           {activeNote && (
             <ToolBtn
               onClick={() => setShowHistory(!showHistory)}
-              title="Version history"
+              title="Version History"
               active={showHistory}
             >
               ⏱
             </ToolBtn>
           )}
+          <ToolDivider />
+          {/* View group */}
           <ToolBtn
             onClick={() => activeNote && setPresentMode(true)}
-            title="Presentation mode (F5)"
+            title="Presentation Mode (F5)"
             disabled={!activeNote}
           >
             ▶

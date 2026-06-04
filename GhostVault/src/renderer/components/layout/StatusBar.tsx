@@ -16,9 +16,12 @@ function calcStats(text: string): { words: number; chars: number; readMins: numb
 
 export default function StatusBar() {
   const { notes, vaultPath, dirty, ollamaStatus, editorContent } = useStore();
-  const [utcTime, setUtcTime] = useState(getUTC());
-  const [stats, setStats]     = useState({ words: 0, chars: 0, readMins: 0 });
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [utcTime, setUtcTime]   = useState(getUTC());
+  const [stats, setStats]       = useState({ words: 0, chars: 0, readMins: 0 });
+  const [wpm, setWpm]           = useState<number | null>(null);
+  const debounceRef             = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wpmTimerRef             = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wpmWindowRef            = useRef<{ words: number; ts: number }[]>([]);
 
   useEffect(() => {
     const interval = setInterval(() => setUtcTime(getUTC()), 1000);
@@ -27,7 +30,26 @@ export default function StatusBar() {
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => setStats(calcStats(editorContent)), 300);
+    debounceRef.current = setTimeout(() => {
+      const s = calcStats(editorContent);
+      setStats(s);
+      // Track WPM: record (wordCount, timestamp) window of last 10s
+      const now = Date.now();
+      wpmWindowRef.current.push({ words: s.words, ts: now });
+      // Keep only last 10 seconds
+      wpmWindowRef.current = wpmWindowRef.current.filter(e => now - e.ts < 10000);
+      if (wpmWindowRef.current.length >= 2) {
+        const oldest = wpmWindowRef.current[0];
+        const newest = wpmWindowRef.current[wpmWindowRef.current.length - 1];
+        const deltaWords = newest.words - oldest.words;
+        const deltaMin = (newest.ts - oldest.ts) / 60000;
+        const computed = deltaMin > 0 ? Math.round(deltaWords / deltaMin) : 0;
+        if (computed > 0 && computed < 300) setWpm(computed);
+      }
+      // Clear WPM display after 4s of inactivity
+      if (wpmTimerRef.current) clearTimeout(wpmTimerRef.current);
+      wpmTimerRef.current = setTimeout(() => setWpm(null), 4000);
+    }, 300);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [editorContent]);
 
@@ -64,6 +86,20 @@ export default function StatusBar() {
           <span style={{ color: 'rgba(42,51,71,0.6)' }}>·</span>
           <span className="text-[10px] font-mono tabular-nums" style={{ color: 'rgba(72,79,88,0.7)' }}>
             {stats.words}w · {stats.chars}c · ~{stats.readMins}m
+          </span>
+        </>
+      )}
+
+      {/* WPM typing indicator */}
+      {wpm !== null && wpm > 0 && (
+        <>
+          <span style={{ color: 'rgba(42,51,71,0.6)' }}>·</span>
+          <span
+            className="text-[10px] font-mono tabular-nums wpm-indicator"
+            style={{ color: '#7bb8ff', opacity: 0.8 }}
+            title="Words per minute (current typing speed)"
+          >
+            {wpm} wpm
           </span>
         </>
       )}

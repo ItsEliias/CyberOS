@@ -184,9 +184,24 @@ export default function NoteList({ onOpenNote, onDeleteNote, onRenameNote }: Pro
           </svg>
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Filter notes…"
-            className="w-full pl-8 pr-7 py-1.5 rounded-lg text-xs input-glow"
-            style={{ background: 'var(--bg3)', border: '1px solid rgba(42,51,71,0.6)', color: 'var(--text)', outline: 'none' }}
+            className="w-full pl-8 py-1.5 rounded-lg text-xs input-glow"
+            style={{
+              background: 'var(--bg3)',
+              border: '1px solid rgba(42,51,71,0.6)',
+              color: 'var(--text)',
+              outline: 'none',
+              paddingRight: search ? '4.5rem' : '0.75rem',
+            }}
           />
+          {/* Results count "X of Y" */}
+          {search && (
+            <span
+              className="absolute right-7 top-1/2 -translate-y-1/2 text-[9px] font-mono tabular-nums pointer-events-none"
+              style={{ color: filtered.length > 0 ? '#7bb8ff' : 'rgba(248,81,73,0.7)' }}
+            >
+              {filtered.length}/{notes.length}
+            </span>
+          )}
           {search && (
             <button
               onClick={() => setSearch('')}
@@ -272,8 +287,85 @@ export default function NoteList({ onOpenNote, onDeleteNote, onRenameNote }: Pro
           </>
         )}
 
-        {/* All notes */}
-        {!loading && unpinned.length === 0 && pinned.length === 0 ? (
+        {/* Quick Start templates — shown when vault is empty and no search active */}
+        {!loading && unpinned.length === 0 && pinned.length === 0 && !search && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, ease: [0.2, 0.8, 0.2, 1] }}
+            className="flex flex-col items-center gap-5 py-8 px-4 text-center"
+          >
+            <div style={{ opacity: 0.3 }}>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" style={{ color: '#7bb8ff' }}>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+                <line x1="10" y1="9" x2="8" y2="9" />
+              </svg>
+            </div>
+            <div>
+              <div className="text-xs font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>
+                No notes yet
+              </div>
+              <div className="text-[10px] leading-relaxed" style={{ color: 'var(--text-dim)', maxWidth: '18ch', margin: '0 auto' }}>
+                Start from scratch or try a template
+              </div>
+            </div>
+
+            {/* Quick start section */}
+            <div className="w-full text-left">
+              <div className="text-[9px] uppercase tracking-widest font-semibold mb-2 px-1"
+                style={{ color: 'rgba(72,79,88,0.6)' }}>
+                Quick Start
+              </div>
+              {[
+                { emoji: '🔍', label: 'Pentest Report', desc: 'Scope, findings, remediation', template: '# Pentest Report\n\n**Target:** \n**Date:** \n**Scope:** \n\n## Executive Summary\n\n## Findings\n\n### Finding 1\n- **Severity:** Critical\n- **Description:** \n- **Remediation:** \n\n## Conclusion\n' },
+                { emoji: '📋', label: 'CTF Writeup', desc: 'Challenge, solution, flags', template: '# CTF Writeup\n\n**Challenge:** \n**Category:** \n**Points:** \n\n## Description\n\n## Solution\n\n### Step 1\n\n## Flag\n\n`flag{}`\n' },
+                { emoji: '📝', label: 'Daily Log', desc: 'Tasks, notes, references', template: `# Daily Log — ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}\n\n## Tasks\n- [ ] \n- [ ] \n\n## Notes\n\n## References\n` },
+              ].map(item => (
+                <button
+                  key={item.label}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg mb-1.5 text-left transition-colors group"
+                  style={{
+                    background: 'rgba(123,184,255,0.04)',
+                    border: '1px solid rgba(42,51,71,0.4)',
+                  }}
+                  onClick={() => {
+                    const { vaultPath, notes: n } = useStore.getState();
+                    if (!vaultPath) return;
+                    const name = item.label;
+                    window.ghostvault.newNote(vaultPath, 'Notes', name).then(async () => {
+                      const vp = vaultPath;
+                      const { notes: newN, folders: newF } = await window.ghostvault.loadVault(vp);
+                      const newNote = newN.find(x => x.name === name);
+                      if (newNote) {
+                        await window.ghostvault.saveNote(newNote.path, item.template);
+                      }
+                      useStore.getState().setNotes(newN);
+                      useStore.getState().setFolders(newF);
+                    });
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(123,184,255,0.08)'; e.currentTarget.style.borderColor = 'rgba(123,184,255,0.2)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(123,184,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(42,51,71,0.4)'; }}
+                >
+                  <span className="text-base">{item.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium" style={{ color: '#c9d1d9' }}>{item.label}</div>
+                    <div className="text-[9px] truncate" style={{ color: 'rgba(107,122,153,0.7)' }}>{item.desc}</div>
+                  </div>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                    style={{ color: 'rgba(107,122,153,0.4)', flexShrink: 0 }}>
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Search empty state */}
+        {!loading && unpinned.length === 0 && pinned.length === 0 && search && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -281,32 +373,23 @@ export default function NoteList({ onOpenNote, onDeleteNote, onRenameNote }: Pro
             className="flex flex-col items-center justify-center h-full gap-4 py-8 text-center px-6"
           >
             <div style={{ opacity: 0.35 }}>
-              {search ? (
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" style={{ color: '#7bb8ff' }}>
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  <line x1="8" y1="11" x2="14" y2="11" />
-                </svg>
-              ) : (
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" style={{ color: '#7bb8ff' }}>
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                  <line x1="16" y1="13" x2="8" y2="13" />
-                  <line x1="16" y1="17" x2="8" y2="17" />
-                  <line x1="10" y1="9" x2="8" y2="9" />
-                </svg>
-              )}
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" style={{ color: '#7bb8ff' }}>
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                <line x1="8" y1="11" x2="14" y2="11" />
+              </svg>
             </div>
             <div>
-              <div className="text-xs font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>
-                {search ? 'No results' : 'No notes yet'}
-              </div>
+              <div className="text-xs font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>No results</div>
               <div className="text-[10px] leading-relaxed" style={{ color: 'var(--text-dim)', maxWidth: '18ch', margin: '0 auto' }}>
-                {search ? `Nothing matched "${search}"` : 'Create your first note to get started'}
+                Nothing matched &ldquo;{search}&rdquo;
               </div>
             </div>
           </motion.div>
-        ) : !loading && (
+        )}
+
+        {/* Notes list */}
+        {!loading && (unpinned.length > 0 || pinned.length > 0) && (
           unpinned.map((note, i) => (
             <NoteListItem key={note.path} note={note} index={i}
               isActive={activeNote?.path === note.path}

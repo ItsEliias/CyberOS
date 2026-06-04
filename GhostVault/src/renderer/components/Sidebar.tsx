@@ -269,20 +269,32 @@ export default function Sidebar({ onNewNote, onNewFolder, onOpenNote, onContextM
         <>
           {/* Search + actions */}
           <div className="px-2 py-2" style={{ borderBottom: '1px solid rgba(42,51,71,0.3)' }}>
-            <input
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Filter notes..."
-              className="w-full px-2.5 py-1.5 rounded text-[11px] outline-none transition-colors"
-              style={{
-                background: 'rgba(19,21,37,0.8)',
-                border: '1px solid rgba(42,51,71,0.5)',
-                color: '#c9d1d9',
-                fontFamily: 'var(--font-display)',
-              }}
-              onFocus={e => { e.currentTarget.style.borderColor = 'rgba(123,184,255,0.3)'; }}
-              onBlur={e => { e.currentTarget.style.borderColor = 'rgba(42,51,71,0.5)'; }}
-            />
+            <div className="relative">
+              <input
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Filter notes..."
+                className="w-full px-2.5 py-1.5 rounded text-[11px] outline-none transition-colors"
+                style={{
+                  background: 'rgba(19,21,37,0.8)',
+                  border: '1px solid rgba(42,51,71,0.5)',
+                  color: '#c9d1d9',
+                  fontFamily: 'var(--font-display)',
+                  paddingRight: searchQuery ? '3.5rem' : '0.625rem',
+                }}
+                onFocus={e => { e.currentTarget.style.borderColor = 'rgba(123,184,255,0.3)'; }}
+                onBlur={e => { e.currentTarget.style.borderColor = 'rgba(42,51,71,0.5)'; }}
+              />
+              {/* Results count indicator */}
+              {searchQuery && (
+                <span
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-mono tabular-nums pointer-events-none"
+                  style={{ color: filteredNotes.length > 0 ? '#7bb8ff' : 'rgba(248,81,73,0.7)' }}
+                >
+                  {filteredNotes.length}/{notes.length}
+                </span>
+              )}
+            </div>
             <div className="flex gap-1 mt-1.5">
               <button
                 onClick={onNewNote}
