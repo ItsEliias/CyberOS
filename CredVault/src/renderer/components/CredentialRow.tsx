@@ -1,82 +1,11 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import * as OTPAuth from 'otpauth'
-import type { Credential, CredentialCategory } from '@shared/types'
+import type { Credential } from '@shared/types'
 import { useStore } from '../store'
 import { fuzzyMatch, highlightSegments } from '../utils/fuzzySearch'
 import { playTotpExpiring } from '../utils/audioNotify'
-
-// ─── Password strength bar (mock based on length) ─────────────────────────────
-// Thresholds: <8=weak, 8-12=fair, 12-16=good, 16+=strong
-
-function PasswordStrengthBar({ password }: { password: string }) {
-  const len = password.length
-  let score = 0
-  if (len >= 8)  score = 1
-  if (len >= 12) score = 2
-  if (len >= 16) score = 3
-  if (len >= 20) score = 4
-  const colors = ['#f85149', '#d29922', '#4a9eff', '#3fb950']
-  const labels = ['Weak', 'Fair', 'Good', 'Strong']
-  return (
-    <div style={{ marginTop: 6 }}>
-      <div style={{ display: 'flex', gap: 3, marginBottom: 3 }}>
-        {[1, 2, 3, 4].map(i => (
-          <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: score >= i ? colors[i - 1] : 'rgba(42,51,71,0.5)', transition: 'background 0.25s' }} />
-        ))}
-      </div>
-      {score > 0 && (
-        <span style={{ fontSize: 9, color: colors[score - 1], fontWeight: 600, letterSpacing: '0.04em' }}>
-          {labels[score - 1]}
-        </span>
-      )}
-    </div>
-  )
-}
-
-// ─── Category pill colors ─────────────────────────────────────────────────────
-
-const CATEGORY_COLORS: Record<CredentialCategory, string> = {
-  'SSH':         '#4a9eff',
-  'API Key':     '#a78bfa',
-  'Web':         '#3fb950',
-  'Database':    '#f78166',
-  'Certificate': '#d29922',
-  'Token':       '#e879f9',
-  'Other':       '#8b949e',
-}
-
-function CategoryPill({ cat }: { cat: CredentialCategory }) {
-  const color = CATEGORY_COLORS[cat]
-  return (
-    <span style={{
-      fontSize: 9, fontWeight: 600, padding: '1px 6px', borderRadius: 8,
-      border: `1px solid ${color}40`, background: `${color}14`, color,
-      letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap',
-    }}>
-      {cat}
-    </span>
-  )
-}
-
-// ─── Expiry badge ─────────────────────────────────────────────────────────────
-
-function ExpiryBadge({ expiresAt }: { expiresAt: string }) {
-  const now   = Date.now()
-  const exp   = new Date(expiresAt).getTime()
-  const diff  = exp - now
-  const days  = Math.ceil(diff / 86_400_000)
-  let color   = '#3fb950'
-  let label   = `${days}d`
-  if (diff < 0)        { color = '#f85149'; label = 'Expired' }
-  else if (days <= 7)  { color = '#f85149'; label = `${days}d` }
-  else if (days <= 30) { color = '#d29922'; label = `${days}d` }
-  return (
-    <span style={{ fontSize: 9, fontWeight: 600, padding: '1px 5px', borderRadius: 6, border: `1px solid ${color}40`, background: `${color}14`, color }}>
-      {label}
-    </span>
-  )
-}
+import { CategoryPill, CredTypeIcon, PasswordStrengthBar, ExpiryBadge } from './ui/CredentialBits'
 
 // ─── TOTP live code ───────────────────────────────────────────────────────────
 
@@ -168,12 +97,13 @@ interface Props {
   searchQuery?: string
   breached?:    boolean
   breachCount?: number
+  staggerIndex?: number
   onEdit:       (c: Credential) => void
   onDelete:     (id: string) => void
   onRotate?:    (id: string) => void
 }
 
-export default function CredentialRow({ cred, searchQuery = '', breached, onEdit, onDelete, onRotate }: Props) {
+export default function CredentialRow({ cred, searchQuery = '', breached, staggerIndex = 0, onEdit, onDelete, onRotate }: Props) {
   const clipboardClearMs = useStore(s => s.clipboardClearMs)
   const [expanded, setExpanded]     = useState(false)
   const [copyMsg, setCopyMsg]       = useState<string | null>(null)
@@ -215,17 +145,18 @@ export default function CredentialRow({ cred, searchQuery = '', breached, onEdit
 
   return (
     <>
-      {/* improvement #4: cred-row class adds translateY lift on hover */}
+      {/* improvement #4: cred-row class adds translateY lift on hover; pass 3: stagger entry */}
       <tr
-        className="cred-row"
+        className="cred-row cred-row-stagger"
         onClick={handleExpand}
         onMouseEnter={() => setRowHovered(true)}
         onMouseLeave={() => setRowHovered(false)}
-        style={{ cursor: 'pointer', background: rowBg }}
+        style={{ cursor: 'pointer', background: rowBg, animationDelay: `${Math.min(staggerIndex, 12) * 40}ms` }}
       >
         {/* Service */}
         <td style={{ padding: '9px 14px', fontSize: 12, color: '#8b949e' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+            <CredTypeIcon category={cred.category} />
             <span style={{ color: expanded ? '#e6edf3' : '#c9d1d9' }}>
               <HighlightText text={cred.service} query={searchQuery} />
             </span>

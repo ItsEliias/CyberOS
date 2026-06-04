@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { motion } from 'framer-motion'
 import { useStore, type View } from '../store'
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -58,6 +59,56 @@ function FolderIcon() {
   return (
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+    </svg>
+  )
+}
+
+// ─── Category icons (pass 3) ───────────────────────────────────────────────────
+
+function CategoryIcon({ cat }: { cat: string }) {
+  const s: React.CSSProperties = { flexShrink: 0 }
+  if (cat === 'SSH') return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
+      <rect x="2" y="7" width="7" height="14" rx="1.5" />
+      <path d="M9 11h12M18 8l3 3-3 3" />
+    </svg>
+  )
+  if (cat === 'API Key') return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
+      <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4" />
+    </svg>
+  )
+  if (cat === 'Token') return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </svg>
+  )
+  if (cat === 'Certificate') return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
+      <circle cx="12" cy="8" r="5" />
+      <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11" />
+    </svg>
+  )
+  if (cat === 'Database') return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
+      <ellipse cx="12" cy="5" rx="9" ry="3" />
+      <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+      <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+    </svg>
+  )
+  if (cat === 'Web') return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
+      <circle cx="12" cy="12" r="10" />
+      <line x1="2" y1="12" x2="22" y2="12" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    </svg>
+  )
+  // Other / fallback
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
     </svg>
   )
 }
@@ -223,7 +274,7 @@ export default function Sidebar() {
                     }}
                     className="flex items-center gap-2 py-1.5 pr-4 text-[12px] transition-all w-full"
                     style={{
-                      paddingLeft: 28,
+                      paddingLeft: 24,
                       color: active ? '#e6edf3' : '#8b949e',
                       background: active ? `${color}12` : 'transparent',
                       borderLeft: active ? `2px solid ${color}` : '2px solid transparent',
@@ -232,14 +283,25 @@ export default function Sidebar() {
                       textAlign: 'left',
                     }}
                   >
-                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0, opacity: active ? 1 : 0.5 }} />
-                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat}</span>
+                    {/* Pass 3: category icon instead of dot */}
                     <span
+                      className="cat-icon-wrap"
+                      style={{ background: active ? `${color}18` : 'rgba(42,51,71,0.25)', color: active ? color : '#484f58', borderRadius: 4 }}
+                    >
+                      <CategoryIcon cat={cat} />
+                    </span>
+                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat}</span>
+                    {/* Pass 3: animated count badge */}
+                    <motion.span
+                      key={count}
+                      initial={{ scale: 1.4, opacity: 0.6 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
                       className="text-[10px] px-1.5 py-0.5 rounded tabular-nums"
-                      style={{ background: active ? `${color}20` : 'rgba(42,51,71,0.5)', color: active ? color : '#484f58', border: `1px solid ${active ? color + '40' : 'transparent'}` }}
+                      style={{ background: active ? `${color}20` : 'rgba(42,51,71,0.5)', color: active ? color : '#484f58', border: `1px solid ${active ? color + '40' : 'transparent'}`, display: 'inline-block' }}
                     >
                       {count}
-                    </span>
+                    </motion.span>
                   </button>
                 )
               })}

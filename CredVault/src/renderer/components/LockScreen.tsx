@@ -178,6 +178,8 @@ export default function LockScreen({ needsSetup }: Props) {
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%', position: 'relative', overflow: 'hidden', background: '#07080f' }}>
+      {/* Pass 3: animated shifting multi-radial background */}
+      <div className="lock-bg-gradient" />
       {/* Deep ambient glow */}
       <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 35%, rgba(247,129,102,0.07) 0%, transparent 60%)', pointerEvents: 'none' }} />
       {/* Corner accent */}
