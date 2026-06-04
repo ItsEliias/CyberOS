@@ -197,6 +197,49 @@ export default function FilterPanel({ nodes, filters, onChange, onClose }: Props
       {/* Content */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 18 }}>
 
+        {/* Quick Filters */}
+        <div>
+          <label style={{
+            fontSize: 9, fontWeight: 700, color: 'var(--text-muted)',
+            display: 'block', marginBottom: 8,
+            textTransform: 'uppercase', letterSpacing: '0.08em',
+          }}>Quick Filters</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            {[
+              { label: 'Linux only',      preset: { osType: 'linux',   openPort: '', dateFrom: '', dateTo: '' } as FilterState },
+              { label: 'Windows only',    preset: { osType: 'windows', openPort: '', dateFrom: '', dateTo: '' } as FilterState },
+              { label: 'Open web ports',  preset: { osType: '',        openPort: '80',  dateFrom: '', dateTo: '' } as FilterState },
+              { label: 'High port count', preset: { osType: '',        openPort: '8080', dateFrom: '', dateTo: '' } as FilterState },
+            ].map(({ label, preset }) => {
+              const active = JSON.stringify(filters) === JSON.stringify(preset)
+              return (
+                <button
+                  key={label}
+                  onClick={() => onChange(active ? { osType: '', openPort: '', dateFrom: '', dateTo: '' } : preset)}
+                  style={{
+                    padding: '6px 10px', fontSize: 11, borderRadius: 8, cursor: 'pointer',
+                    textAlign: 'left',
+                    background: active ? 'rgba(255,140,66,0.14)' : 'rgba(42,51,71,0.2)',
+                    border: `1px solid ${active ? 'rgba(255,140,66,0.4)' : 'rgba(42,51,71,0.45)'}`,
+                    color: active ? '#ff8c42' : 'var(--text-secondary)',
+                    fontFamily: 'var(--font-display)', fontWeight: active ? 600 : 400,
+                    transition: 'all 150ms var(--ease)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  }}
+                  onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = 'rgba(255,140,66,0.08)'; (e.currentTarget as HTMLElement).style.color = '#ff8c42'; } }}
+                  onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = 'rgba(42,51,71,0.2)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; } }}
+                >
+                  <span>{label}</span>
+                  {active && <span style={{ fontSize: 9 }}>✓</span>}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div style={{ height: 1, background: 'linear-gradient(90deg, rgba(42,51,71,0.6), rgba(42,51,71,0.2))' }} />
+
         {/* OS Type — pill selector */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>

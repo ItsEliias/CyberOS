@@ -60,6 +60,7 @@ export default function TimelineTab({ targetId }: { targetId: string }) {
 
   const [activeTypes, setActiveTypes] = useState<Set<TimelineEntryType>>(new Set(ALL_TYPES))
   const [showFilter, setShowFilter]   = useState(false)
+  const [expandedId, setExpandedId]   = useState<string | null>(null)
 
   if (!target) return null
 
@@ -172,60 +173,117 @@ export default function TimelineTab({ targetId }: { targetId: string }) {
               <AnimatePresence initial>
                 {filtered.map((entry, i) => {
                   const cfg = TYPE_CONFIG[entry.type] ?? { color: '#4a5568', label: '?' }
+                  const isExpanded = expandedId === entry.id
+                  const ts = formatTimestamp(entry.timestamp)
                   return (
                     <motion.div
                       key={entry.id}
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.06, duration: 0.18 }}
-                      className="flex items-start gap-3 py-2.5 pl-5 relative group"
+                      className="pl-5 relative"
                     >
-                      {/* Dot — pulses for the most recent entry (i === 0) */}
-                      <span
-                        className={`absolute left-[1px] top-[14px] w-2 h-2 rounded-full border-2 flex-shrink-0${i === 0 ? ' status-dot-pulse' : ''}`}
-                        style={{
-                          backgroundColor: cfg.color,
-                          borderColor: '#07080f',
-                          boxShadow: `0 0 6px ${cfg.color}50`,
-                          '--pulse-rgb': cfg.color.replace(/^#/, '').match(/.{2}/g)?.map(h => parseInt(h, 16)).join(',') ?? '210,153,34',
-                        } as React.CSSProperties}
-                      />
+                      {/* Row — clickable */}
+                      <div
+                        className="flex items-start gap-3 py-2.5 group cursor-pointer"
+                        onClick={() => setExpandedId(isExpanded ? null : entry.id)}
+                      >
+                        {/* Dot — pulses for the most recent entry (i === 0) */}
+                        <span
+                          className={`absolute left-[1px] top-[14px] w-2 h-2 rounded-full border-2 flex-shrink-0${i === 0 ? ' status-dot-pulse' : ''}`}
+                          style={{
+                            backgroundColor: cfg.color,
+                            borderColor: '#07080f',
+                            boxShadow: `0 0 6px ${cfg.color}50`,
+                            '--pulse-rgb': cfg.color.replace(/^#/, '').match(/.{2}/g)?.map(h => parseInt(h, 16)).join(',') ?? '210,153,34',
+                          } as React.CSSProperties}
+                        />
 
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span
-                            className="text-[9px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider flex-shrink-0"
-                            style={{
-                              color:           cfg.color,
-                              backgroundColor: `${cfg.color}15`,
-                              border:          `1px solid ${cfg.color}28`,
-                            }}
-                          >
-                            {cfg.label}
-                          </span>
-                          {/* Relative time (primary) with full date as tooltip */}
-                          {(() => {
-                            const ts = formatTimestamp(entry.timestamp)
-                            return (
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              className="text-[9px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider flex-shrink-0"
+                              style={{
+                                color:           cfg.color,
+                                backgroundColor: `${cfg.color}15`,
+                                border:          `1px solid ${cfg.color}28`,
+                              }}
+                            >
+                              {cfg.label}
+                            </span>
+                            {/* Relative time (primary) with full date as tooltip */}
+                            <span
+                              className="text-[10px] font-mono flex-shrink-0 tabular-nums cursor-default"
+                              style={{ color: '#484f58' }}
+                              title={`${ts.date} ${ts.time}`}
+                            >
+                              <span style={{ color: '#6b7585' }}>{ts.relative}</span>
                               <span
-                                className="text-[10px] font-mono flex-shrink-0 tabular-nums cursor-default"
+                                className="ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-[9px]"
                                 style={{ color: '#484f58' }}
-                                title={`${ts.date} ${ts.time}`}
                               >
-                                <span style={{ color: '#6b7585' }}>{ts.relative}</span>
-                                <span
-                                  className="ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-[9px]"
-                                  style={{ color: '#484f58' }}
-                                >
-                                  · {ts.date}
-                                </span>
+                                · {ts.date}
                               </span>
-                            )
-                          })()}
+                            </span>
+                            {/* Expand chevron */}
+                            <span
+                              className="ml-auto opacity-0 group-hover:opacity-60 transition-all text-[8px]"
+                              style={{ color: cfg.color, transform: isExpanded ? 'rotate(90deg)' : 'none', display: 'inline-block', transition: 'opacity 150ms, transform 150ms' }}
+                            >
+                              ▶
+                            </span>
+                          </div>
+                          <p className="text-xs mt-0.5 leading-relaxed" style={{ color: '#e2e8f0' }}>{entry.description}</p>
                         </div>
-                        <p className="text-xs mt-0.5 leading-relaxed" style={{ color: '#e2e8f0' }}>{entry.description}</p>
                       </div>
+
+                      {/* Slide-out detail card */}
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
+                            className="overflow-hidden"
+                          >
+                            <div
+                              className="mb-2 rounded-lg p-3 ml-3 text-[10px] font-mono"
+                              style={{
+                                background: 'rgba(7,8,15,0.7)',
+                                border: `1px solid ${cfg.color}25`,
+                                borderLeft: `2px solid ${cfg.color}60`,
+                              }}
+                            >
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                <div className="flex gap-2">
+                                  <span style={{ color: '#484f58' }}>type</span>
+                                  <span style={{ color: cfg.color }}>{entry.type}</span>
+                                </div>
+                                <div className="flex gap-2">
+                                  <span style={{ color: '#484f58' }}>date</span>
+                                  <span style={{ color: '#8b949e' }}>{ts.date}</span>
+                                </div>
+                                <div className="flex gap-2">
+                                  <span style={{ color: '#484f58' }}>time</span>
+                                  <span style={{ color: '#8b949e' }}>{ts.time}</span>
+                                </div>
+                                <div className="flex gap-2">
+                                  <span style={{ color: '#484f58' }}>id</span>
+                                  <span className="truncate" style={{ color: '#484f58' }}>{entry.id.slice(0, 12)}</span>
+                                </div>
+                              </div>
+                              {entry.description && (
+                                <div className="mt-2 pt-2" style={{ borderTop: '1px solid rgba(42,51,71,0.4)' }}>
+                                  <span style={{ color: '#484f58' }}>description </span>
+                                  <span style={{ color: '#e2e8f0' }}>{entry.description}</span>
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </motion.div>
                   )
                 })}

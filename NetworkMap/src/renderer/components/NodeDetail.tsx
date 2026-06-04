@@ -64,6 +64,14 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate, s
   const [tab, setTab] = useState<Tab>('ports')
   const [annotationDraft, setAnnotationDraft] = useState(node.annotation ?? '')
   const [copyFeedback, setCopyFeedback] = useState(false)
+  const [copyHostnameFeedback, setCopyHostnameFeedback] = useState(false)
+
+  function handleCopyHostname() {
+    if (!node.hostname) return
+    copyToClipboard(node.hostname)
+    setCopyHostnameFeedback(true)
+    setTimeout(() => setCopyHostnameFeedback(false), 1500)
+  }
 
   function handleCopyIP() {
     copyToClipboard(node.ip)
@@ -191,8 +199,33 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate, s
           }}>{node.status}</span>
         </div>
         {node.hostname && (
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            <HighlightText text={node.hostname} query={searchQuery} />
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 2, display: 'flex', alignItems: 'center', gap: 5, overflow: 'hidden' }}>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+              <HighlightText text={node.hostname} query={searchQuery} />
+            </span>
+            <button
+              onClick={handleCopyHostname}
+              title="Copy hostname"
+              style={{
+                flexShrink: 0, padding: '1px 5px', borderRadius: 6, fontSize: 9, cursor: 'pointer',
+                background: copyHostnameFeedback ? 'rgba(63,185,80,0.12)' : 'rgba(42,51,71,0.3)',
+                border: `1px solid ${copyHostnameFeedback ? 'rgba(63,185,80,0.35)' : 'rgba(42,51,71,0.6)'}`,
+                color: copyHostnameFeedback ? '#3fb950' : 'var(--text-muted)',
+                transition: 'all 150ms var(--ease)', fontFamily: 'var(--font-display)',
+                display: 'flex', alignItems: 'center', gap: 2,
+              }}
+              onMouseEnter={e => { if (!copyHostnameFeedback) { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,140,66,0.35)'; (e.currentTarget as HTMLElement).style.color = '#ff8c42'; } }}
+              onMouseLeave={e => { if (!copyHostnameFeedback) { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,51,71,0.6)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; } }}
+            >
+              {copyHostnameFeedback ? (
+                <svg width="7" height="7" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 5l2.5 2.5L8 3" /></svg>
+              ) : (
+                <svg width="7" height="7" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <rect x="4" y="4" width="8" height="8" rx="1.5" />
+                  <path d="M10 4V3a1 1 0 00-1-1H3a1 1 0 00-1 1v6a1 1 0 001 1h1" />
+                </svg>
+              )}
+            </button>
           </div>
         )}
         {node.os && (

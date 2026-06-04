@@ -125,7 +125,7 @@ export default function MiniMap({ nodes, transform, canvasW, canvasH, onPan }: P
         />
       </svg>
 
-      {/* Node type legend */}
+      {/* Node type legend + zoom */}
       <div style={{
         borderTop: '1px solid rgba(255,255,255,0.04)',
         padding: '5px 8px 6px',
@@ -146,6 +146,24 @@ export default function MiniMap({ nodes, transform, canvasW, canvasH, onPan }: P
             </span>
           </div>
         ))}
+      </div>
+      {/* Zoom level footer */}
+      <div style={{
+        borderTop: '1px solid rgba(255,255,255,0.03)',
+        padding: '3px 7px',
+        background: 'rgba(7,8,15,0.5)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <span style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: 'rgba(139,148,158,0.4)', letterSpacing: '0.04em' }}>
+          zoom
+        </span>
+        <span style={{
+          fontSize: 9, fontFamily: 'var(--font-mono)',
+          color: transform.scale !== 1 ? 'rgba(255,140,66,0.7)' : 'rgba(139,148,158,0.55)',
+          fontWeight: 600, letterSpacing: '0.04em',
+        }}>
+          {Math.round(transform.scale * 100)}%
+        </span>
       </div>
     </div>
   )

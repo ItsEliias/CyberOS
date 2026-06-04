@@ -4,13 +4,13 @@ import { useRecondeskStore, calcHealthScore } from '../../stores/useRecondeskSto
 import CvssWidget, { calcCvssScore, cvssColor } from './CvssWidget'
 import type { AttackCard, AttackStage, CardStatus, Port, Credential, Target } from '../../types/recondesk'
 
-const STAGES: { id: AttackStage; label: string; color: string }[] = [
-  { id: 'recon',   label: 'Recon',   color: '#4a9eff' },
-  { id: 'enum',    label: 'Enum',    color: '#d29922' },
-  { id: 'exploit', label: 'Exploit', color: '#f85149' },
-  { id: 'post',    label: 'Post',    color: '#b44fff' },
-  { id: 'privesc', label: 'PrivEsc', color: '#ff8c42' },
-  { id: 'loot',    label: 'Loot',    color: '#3fb950' },
+const STAGES: { id: AttackStage; label: string; color: string; wip: number }[] = [
+  { id: 'recon',   label: 'Recon',   color: '#4a9eff', wip: 5 },
+  { id: 'enum',    label: 'Enum',    color: '#d29922', wip: 5 },
+  { id: 'exploit', label: 'Exploit', color: '#f85149', wip: 4 },
+  { id: 'post',    label: 'Post',    color: '#b44fff', wip: 4 },
+  { id: 'privesc', label: 'PrivEsc', color: '#ff8c42', wip: 3 },
+  { id: 'loot',    label: 'Loot',    color: '#3fb950', wip: 5 },
 ]
 
 const STATUS_OPTIONS: { id: CardStatus; label: string; color: string }[] = [
@@ -403,26 +403,46 @@ export default function AttackBoardTab({ targetId }: { targetId: string }) {
                 onDragLeave={() => setDragOverStage(null)}
               >
                 {/* Column header — colored left border accent */}
-                <div
-                  className="flex items-center justify-between px-3 py-2.5 border-b border-[#2a3347]/50 flex-shrink-0"
-                  style={{ borderLeft: `3px solid ${stage.color}55` }}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: stage.color }} />
-                    <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: stage.color }}>{stage.label}</span>
-                  </div>
-                  {/* Task count chip — always shown, color-keyed to stage */}
-                  <span
-                    className="text-[9px] font-bold font-mono tabular-nums min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1"
-                    style={{
-                      color:      stageCards.length > 0 ? stage.color : '#484f58',
-                      background: stageCards.length > 0 ? `${stage.color}18` : 'rgba(42,51,71,0.18)',
-                      border:     `1px solid ${stageCards.length > 0 ? stage.color + '30' : 'rgba(42,51,71,0.3)'}`,
-                    }}
-                  >
-                    {stageCards.length}
-                  </span>
-                </div>
+                {(() => {
+                  const atWip = stageCards.length >= stage.wip
+                  const wipColor = atWip ? '#d29922' : stage.color
+                  return (
+                    <div
+                      className="flex items-center justify-between px-3 py-2.5 border-b border-[#2a3347]/50 flex-shrink-0"
+                      style={{ borderLeft: `3px solid ${atWip ? 'rgba(210,153,34,0.55)' : stage.color + '55'}` }}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: wipColor }} />
+                        <span
+                          className="text-[10px] font-semibold uppercase tracking-widest"
+                          style={{ color: wipColor }}
+                        >
+                          {stage.label}
+                        </span>
+                        {atWip && (
+                          <span
+                            className="text-[8px] px-1 py-0.5 rounded font-bold uppercase tracking-wider animate-pulse"
+                            style={{ color: '#d29922', background: 'rgba(210,153,34,0.12)', border: '1px solid rgba(210,153,34,0.25)' }}
+                          >
+                            WIP
+                          </span>
+                        )}
+                      </div>
+                      {/* X/Y WIP limit chip */}
+                      <span
+                        className="text-[9px] font-bold font-mono tabular-nums min-w-[32px] h-[18px] flex items-center justify-center rounded-full px-1.5"
+                        style={{
+                          color:      atWip ? '#d29922' : (stageCards.length > 0 ? stage.color : '#484f58'),
+                          background: atWip ? 'rgba(210,153,34,0.15)' : (stageCards.length > 0 ? `${stage.color}18` : 'rgba(42,51,71,0.18)'),
+                          border:     `1px solid ${atWip ? 'rgba(210,153,34,0.35)' : (stageCards.length > 0 ? stage.color + '30' : 'rgba(42,51,71,0.3)')}`,
+                        }}
+                        title={`${stageCards.length} of ${stage.wip} WIP limit`}
+                      >
+                        {stageCards.length}/{stage.wip}
+                      </span>
+                    </div>
+                  )
+                })()}
 
                 <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
                   <AnimatePresence initial>

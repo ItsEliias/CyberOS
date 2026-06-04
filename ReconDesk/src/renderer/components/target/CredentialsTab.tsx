@@ -4,6 +4,31 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useRecondeskStore } from '../../stores/useRecondeskStore'
 import type { HashType } from '../../types/recondesk'
 
+function credAgeDays(addedAt: string): number {
+  try {
+    return Math.floor((Date.now() - new Date(addedAt).getTime()) / 86_400_000)
+  } catch { return 0 }
+}
+
+function AgeBadge({ addedAt }: { addedAt: string }) {
+  const days = credAgeDays(addedAt)
+  if (days < 1) return null
+  const isOld    = days > 90
+  const isStale  = days > 30
+  const color    = isOld ? '#f85149' : isStale ? '#d29922' : '#484f58'
+  const bg       = isOld ? 'rgba(248,81,73,0.10)' : isStale ? 'rgba(210,153,34,0.10)' : 'rgba(42,51,71,0.25)'
+  const border   = isOld ? 'rgba(248,81,73,0.25)' : isStale ? 'rgba(210,153,34,0.25)' : 'rgba(42,51,71,0.4)'
+  return (
+    <span
+      className="text-[9px] px-1.5 py-0.5 rounded font-mono tabular-nums flex-shrink-0"
+      style={{ color, background: bg, border: `1px solid ${border}` }}
+      title={`Added ${days} day${days !== 1 ? 's' : ''} ago`}
+    >
+      {days}d old
+    </span>
+  )
+}
+
 const HASH_TYPE_BADGE: Record<HashType, string> = {
   NTLM:   'text-[#f85149] bg-[#f85149]/10 border-[#f85149]/20',
   MD5:    'text-[#d29922] bg-[#d29922]/10 border-[#d29922]/20',
@@ -200,6 +225,7 @@ export default function CredentialsTab({ targetId }: { targetId: string }) {
                 <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Service</th>
                 <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest w-16" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Port</th>
                 <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest w-20" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Status</th>
+                <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest w-20" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Age</th>
                 <th className="px-4 py-2.5 w-8" />
               </tr>
             </thead>
@@ -313,6 +339,9 @@ export default function CredentialsTab({ targetId }: { targetId: string }) {
                         >
                           {cred.verified ? '✓ verified' : '○ unverified'}
                         </button>
+                      </td>
+                      <td className="px-2 py-2.5">
+                        <AgeBadge addedAt={cred.addedAt} />
                       </td>
                       <td className="px-2 py-2.5">
                         <button

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useRecondeskStore, calcHealthScore } from '../../stores/useRecondeskStore'
 import type { TargetStatus, Platform, Difficulty, AttackStage } from '../../types/recondesk'
+import { ScreenshotsPanel, AiSuggestionsPanel, NetworkDiagram } from './OverviewTabPanels'
 
 const PLATFORM_STYLE: Record<Platform, { color: string; bg: string; border: string }> = {
   HTB:      { color: '#f85149', bg: 'rgba(248,81,73,0.10)',   border: 'rgba(248,81,73,0.20)'   },
@@ -288,6 +289,9 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
           )}
         </div>
 
+        {/* Network diagram — attacker → target */}
+        <NetworkDiagram ip={target.ip} openPortCount={target.ports.filter(p => p.state === 'open').length} panelCls={panelCls} />
+
         {/* Stats + Attack Progress + Context */}
         <div className="grid grid-cols-3 gap-4 mb-4">
           <div className={panelCls}>
@@ -382,30 +386,7 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
         </div>
 
         {/* Screenshots */}
-        <div className={`${panelCls} mb-4`}>
-          <div className="flex items-center justify-between mb-3">
-            <p className={labelCls} style={{ color: '#484f58', marginBottom: 0 }}>Screenshots</p>
-            <button
-              onClick={captureScreenshot} disabled={screenshotBusy}
-              className="text-[10px] px-2.5 py-1 rounded border border-[rgba(210,153,34,0.25)] bg-[rgba(210,153,34,0.07)] text-[#d29922] hover:bg-[rgba(210,153,34,0.15)] transition-colors disabled:opacity-40"
-            >{screenshotBusy ? 'Capturing...' : '+ Screenshot'}</button>
-          </div>
-          {target.screenshots.length === 0 ? (
-            <p className="text-xs" style={{ color: '#484f58' }}>No screenshots yet. Click to capture the current screen.</p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {target.screenshots.map(sc => (
-                <button key={sc.id} onClick={() => setFullImg(sc.thumbnail ?? sc.path)} className="group relative rounded overflow-hidden border border-[rgba(42,51,71,0.6)] hover:border-[rgba(210,153,34,0.30)] transition-colors">
-                  {sc.thumbnail
-                    ? <img src={sc.thumbnail} alt={sc.label} className="w-24 h-16 object-cover" />
-                    : <div className="w-24 h-16 flex items-center justify-center text-[10px]" style={{ background: 'rgba(42,51,71,0.40)', color: '#484f58' }}>Screenshot</div>
-                  }
-                  <div className="absolute bottom-0 left-0 right-0 px-1 py-0.5 text-[8px] opacity-0 group-hover:opacity-100 transition-opacity truncate" style={{ background: 'rgba(0,0,0,0.7)', color: '#8b949e' }}>{sc.label}</div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <ScreenshotsPanel screenshots={target.screenshots} busy={screenshotBusy} panelCls={panelCls} labelCls={labelCls} onCapture={captureScreenshot} onView={setFullImg} />
 
         {/* CredVault Linked Credentials */}
         {credVaultItems.length > 0 && (
@@ -451,40 +432,13 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
         </div>
 
         {/* AI Next-Step Suggestions */}
-        <div className={panelCls}>
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <p className={labelCls} style={{ color: '#484f58', marginBottom: 0 }}>AI Suggestions</p>
-              {!settings.anthropicApiKey && (
-                <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ background: 'rgba(72,79,88,0.10)', border: '1px solid rgba(72,79,88,0.25)', color: '#484f58' }}>API key required</span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {aiSuggestions && (
-                <button onClick={() => setAiExpanded(e => !e)} className="text-[10px] text-[#484f58] hover:text-[#8b949e] transition-colors">{aiExpanded ? 'Collapse' : 'Expand'}</button>
-              )}
-              <button onClick={fetchAiSuggestions} disabled={!settings.anthropicApiKey || aiLoading}
-                className="text-[10px] px-2.5 py-1 rounded border border-[rgba(210,153,34,0.30)] bg-[rgba(210,153,34,0.10)] text-[#d29922] hover:bg-[rgba(210,153,34,0.18)] transition-colors disabled:opacity-40">
-                {aiLoading ? 'Thinking...' : 'Suggest Next Steps'}
-              </button>
-            </div>
-          </div>
-          {aiExpanded && aiSuggestions && (
-            <div className="flex flex-col gap-2 mt-2">
-              {aiSuggestions.map((step, i) => (
-                <div key={i} className="flex items-start gap-3 p-2.5 rounded group" style={{ background: '#07080f', border: '1px solid rgba(42,51,71,0.5)' }}>
-                  <span className="text-[10px] font-mono flex-shrink-0 mt-0.5" style={{ color: 'rgba(210,153,34,0.60)' }}>{String(i + 1).padStart(2, '0')}</span>
-                  <span className="text-xs flex-1 leading-relaxed" style={{ color: '#e6edf3' }}>{step}</span>
-                  <button onClick={() => emitEvent('playbookstudio:add-step', { step, targetName: target.name, targetIP: target.ip })}
-                    className="opacity-0 group-hover:opacity-100 text-[9px] px-1.5 py-0.5 rounded border bg-[rgba(210,153,34,0.10)] border-[rgba(210,153,34,0.25)] text-[#d29922] transition-all flex-shrink-0">+ Playbook</button>
-                </div>
-              ))}
-            </div>
-          )}
-          {!aiSuggestions && !aiLoading && settings.anthropicApiKey && (
-            <p className="text-[10px] text-[#484f58]">Click "Suggest Next Steps" to get AI-generated enumeration recommendations.</p>
-          )}
-        </div>
+        <AiSuggestionsPanel
+          panelCls={panelCls} labelCls={labelCls}
+          hasKey={!!settings.anthropicApiKey} loading={aiLoading}
+          suggestions={aiSuggestions} expanded={aiExpanded}
+          onToggle={() => setAiExpanded(e => !e)} onFetch={fetchAiSuggestions}
+          onAddPlaybook={(step) => emitEvent('playbookstudio:add-step', { step, targetName: target.name, targetIP: target.ip })}
+        />
       </div>
 
       {/* Full-screen image viewer */}

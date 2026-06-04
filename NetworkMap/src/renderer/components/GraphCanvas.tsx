@@ -404,6 +404,27 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
 
               <GraphLegend />
 
+              {/* Selection count badge */}
+              {selectedId && (
+                <div
+                  style={{
+                    position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
+                    zIndex: 22, pointerEvents: 'none',
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    padding: '4px 12px', borderRadius: 20,
+                    background: 'rgba(13,14,24,0.92)',
+                    border: '1px solid rgba(255,140,66,0.35)',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+                    fontSize: 11, color: '#ff8c42', fontWeight: 600,
+                    backdropFilter: 'blur(8px)',
+                    animation: 'badgePop 0.2s var(--ease)',
+                  }}
+                >
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ff8c42', boxShadow: '0 0 6px rgba(255,140,66,0.6)', flexShrink: 0 }} />
+                  1 node selected
+                </div>
+              )}
+
               <MiniMap nodes={graph.nodes} transform={transform} canvasW={canvasSize.w} canvasH={canvasSize.h} onPan={(x, y) => setTransform(t => ({ ...t, x, y }))} />
 
               {filterOpen && <FilterPanel nodes={graph.nodes} filters={filters} onChange={setFilters} onClose={() => setFilterOpen(false)} />}

@@ -278,7 +278,7 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
           <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 4 }}>
             <thead>
               <tr>
-                {(['Name', 'Source', 'Created', 'Nodes', 'Edges', 'Actions'] as const).map(h => (
+                {(['Name', 'Source', 'Created', 'Modified', 'Nodes', 'Edges', 'Actions'] as const).map(h => (
                   <th key={h} style={{
                     textAlign: 'left', padding: '10px 12px',
                     fontSize: 9, fontWeight: 700, color: 'var(--text-muted)',
@@ -307,10 +307,23 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
                     }}>{importSourceLabel(g.importSource)}</span>
                   </td>
                   <td style={{ ...tdStyle }} title={fmt(g.createdAt)}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                      <span style={{ color: 'var(--text-secondary)', fontSize: 11 }}>{fmt(g.createdAt)}</span>
-                      <span style={{ color: 'var(--text-muted)', fontSize: 9 }}>{fmtRelative(g.createdAt)}</span>
-                    </div>
+                    <span style={{ color: 'var(--text-secondary)', fontSize: 11 }}>{fmt(g.createdAt)}</span>
+                  </td>
+                  <td style={{ ...tdStyle }}>
+                    <span
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        fontSize: 10, color: 'var(--text-muted)',
+                        fontFamily: 'var(--font-mono)',
+                      }}
+                      title={fmt(g.createdAt)}
+                    >
+                      <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="rgba(255,140,66,0.4)" strokeWidth="1.4">
+                        <circle cx="5" cy="5" r="4" />
+                        <path d="M5 2.5v2.5l1.5 1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      {fmtRelative(g.createdAt)}
+                    </span>
                   </td>
                   <td style={{ ...tdStyle, fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
                     <NodeCountBadge count={g.nodeCount} />

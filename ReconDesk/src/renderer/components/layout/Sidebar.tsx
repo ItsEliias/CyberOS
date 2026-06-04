@@ -1,10 +1,47 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRecondeskStore } from '../../stores/useRecondeskStore'
 import NewTargetModal from '../target/NewTargetModal'
 import CsvImportModal from '../target/CsvImportModal'
 import EngagementScopePanel from '../engagement/EngagementScopePanel'
 import type { TargetStatus, Platform } from '../../types/recondesk'
+
+// ─── Live elapsed timer ───────────────────────────────────────────────────────
+
+function EngagementTimer({ createdAt }: { createdAt: string }) {
+  const [elapsed, setElapsed] = useState(0)
+  const startRef = useRef<number>(new Date(createdAt).getTime())
+
+  useEffect(() => {
+    startRef.current = new Date(createdAt).getTime()
+    setElapsed(Math.floor((Date.now() - startRef.current) / 1000))
+    const id = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startRef.current) / 1000))
+    }, 1000)
+    return () => clearInterval(id)
+  }, [createdAt])
+
+  const h = Math.floor(elapsed / 3600)
+  const m = Math.floor((elapsed % 3600) / 60)
+  const s = elapsed % 60
+  const fmt = h > 0
+    ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+    : `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+
+  return (
+    <span
+      className="text-[9px] font-mono tabular-nums flex-shrink-0 px-1 py-0.5 rounded"
+      style={{
+        color: '#d29922',
+        background: 'rgba(210,153,34,0.08)',
+        border: '1px solid rgba(210,153,34,0.20)',
+      }}
+      title="Time since engagement created"
+    >
+      {fmt}
+    </span>
+  )
+}
 
 const STATUS_COLOR: Record<TargetStatus, string> = {
   active:    '#3fb950',
@@ -65,6 +102,11 @@ export default function Sidebar() {
   })).filter(g => g.targets.length > 0)
 
   const ungrouped = filteredTargets.filter(t => !engagements.find(e => e.id === t.engagementId))
+
+  // Find the engagement that contains the active target (for the timer)
+  const activeTargetEngagement = activeTarget
+    ? engagements.find(e => e.id === activeTarget.engagementId)
+    : null
 
   function TargetRow({ target, i }: { target: typeof targets[number]; i: number }) {
     const isActive = target.id === activeTargetId
@@ -282,6 +324,7 @@ export default function Sidebar() {
                     <span className="text-[10px] font-semibold uppercase tracking-widest flex-1 truncate text-left" style={{ color: hasActiveTarget ? '#d29922' : eng.color }}>
                       {eng.name}
                     </span>
+                    {hasActiveTarget && <EngagementTimer createdAt={eng.createdAt} />}
                     <span className="text-[9px]" style={{ color: '#484f58' }}>{engTargets.length}</span>
                     <span className="text-[9px]" style={{ color: '#484f58' }}>{isCollapsed ? '▸' : '▾'}</span>
                   </button>
