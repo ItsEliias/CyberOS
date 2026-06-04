@@ -12,24 +12,37 @@ interface Props {
   exitCode?: number | null;
 }
 
+function Sep() {
+  return (
+    <span style={{ color: 'rgba(0,255,65,0.2)', margin: '0 2px', fontFamily: 'var(--font-mono)' }}>│</span>
+  );
+}
+
 export default function StatusBar({ sessionCtx, commandCount, sessionName, cwd, exitCode }: Props) {
   const hasTarget = Boolean(sessionCtx.activeTarget || sessionCtx.activeIP);
 
   return (
     <div style={{
       height: 22, display: 'flex', alignItems: 'center', padding: '0 10px',
-      background: 'var(--panel)', borderTop: '1px solid var(--border)',
-      flexShrink: 0, gap: 10, fontSize: 10, color: 'var(--text-muted)', userSelect: 'none',
-      fontFamily: 'JetBrains Mono, monospace',
+      background: 'rgba(5,10,4,0.98)',
+      borderTop: '1px solid rgba(0,255,65,0.1)',
+      flexShrink: 0, gap: 8,
+      fontSize: 10, fontFamily: 'var(--font-mono)',
+      color: 'rgba(0,255,65,0.4)', userSelect: 'none',
     }}>
-      <span style={{ color: 'var(--text-dim)' }}>
+      {/* Session name with prompt prefix */}
+      <span style={{ color: '#00ff41', fontWeight: 600, letterSpacing: '0.05em' }}>
+        <span style={{ color: 'rgba(0,255,65,0.4)', marginRight: 4 }}>$</span>
         {sessionName}
       </span>
 
       {cwd && (
         <>
-          <span style={{ color: 'var(--border)' }}>·</span>
-          <span style={{ color: 'var(--accent)', maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Sep />
+          <span style={{
+            color: '#7abf7a', maxWidth: 260,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
             {cwd}
           </span>
         </>
@@ -37,35 +50,42 @@ export default function StatusBar({ sessionCtx, commandCount, sessionName, cwd, 
 
       {exitCode !== null && exitCode !== undefined && (
         <>
-          <span style={{ color: 'var(--border)' }}>·</span>
-          <span style={{ color: exitCode === 0 ? 'var(--accent)' : '#ff4444' }}>
-            Exit: {exitCode}
+          <Sep />
+          <span style={{ color: exitCode === 0 ? '#00ff41' : '#f85149', fontWeight: 600 }}>
+            [{exitCode}]
           </span>
         </>
       )}
 
-      <span style={{ color: 'var(--border)' }}>·</span>
-      <span>{commandCount} cmd{commandCount !== 1 ? 's' : ''}</span>
+      <Sep />
+      <span style={{ color: 'rgba(0,255,65,0.4)' }}>
+        {commandCount} cmd{commandCount !== 1 ? 's' : ''}
+      </span>
 
       {hasTarget && (
         <>
-          <span style={{ color: 'var(--border)' }}>·</span>
-          <span style={{ color: 'var(--text-dim)' }}>
+          <Sep />
+          <span style={{ color: '#7abf7a', letterSpacing: '0.03em' }}>
             {sessionCtx.activeTarget}
-            {sessionCtx.activeIP && <span style={{ color: 'var(--text-muted)' }}> {sessionCtx.activeIP}</span>}
+            {sessionCtx.activeIP && (
+              <span style={{ color: 'rgba(0,255,65,0.4)', marginLeft: 4 }}>{sessionCtx.activeIP}</span>
+            )}
           </span>
         </>
       )}
 
       <div style={{ flex: 1 }} />
 
-      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      {/* Target indicator */}
+      <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 9, letterSpacing: '0.08em' }}>
         <span style={{
-          width: 5, height: 5, borderRadius: '50%',
-          background: hasTarget ? 'var(--accent)' : 'var(--text-muted)',
-          display: 'inline-block',
+          width: 5, height: 5, borderRadius: '50%', display: 'inline-block',
+          background: hasTarget ? '#00ff41' : 'rgba(0,255,65,0.2)',
+          boxShadow: hasTarget ? '0 0 6px rgba(0,255,65,0.5)' : 'none',
         }} />
-        {hasTarget ? 'Target set' : 'No target'}
+        <span style={{ color: hasTarget ? '#7abf7a' : 'rgba(0,255,65,0.25)', textTransform: 'uppercase' }}>
+          {hasTarget ? 'TARGET SET' : 'NO TARGET'}
+        </span>
       </span>
     </div>
   );
