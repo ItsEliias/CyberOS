@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useStore, type SortOrder } from '../store'
 import CredentialRow from './CredentialRow'
 import CredentialModal from './CredentialModal'
@@ -41,6 +42,14 @@ export default function VaultView() {
   const [breachMap, setBreachMap] = useState<Record<string, BreachCheckResult>>({})
   const [breachRunning, setBreachRunning] = useState(false)
   const [breachDone, setBreachDone] = useState(false)
+  // improvement #1: skeleton loader on initial mount
+  const [initialLoading, setInitialLoading] = useState(true)
+  useEffect(() => {
+    if (credentials.length >= 0) {
+      const t = setTimeout(() => setInitialLoading(false), 400)
+      return () => clearTimeout(t)
+    }
+  }, [])
 
   const allTags       = useMemo(() => [...new Set(credentials.flatMap(c => c.tags))].sort(), [credentials])
   const allSources    = useMemo(() => [...new Set(credentials.map(c => c.source))].sort(), [credentials])
@@ -151,11 +160,11 @@ export default function VaultView() {
         className="shrink-0 flex items-center gap-2 flex-wrap px-4 py-2.5"
         style={{ borderBottom: '1px solid rgba(42,51,71,0.35)', background: 'rgba(7,8,15,0.6)' }}
       >
-        {/* Search */}
-        <div style={{ position: 'relative' }}>
+        {/* Search — improvement #5: focus glow ring */}
+        <div className="search-input-wrap" style={{ position: 'relative' }}>
           <svg
             width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-            style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#484f58', pointerEvents: 'none' }}
+            style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#484f58', pointerEvents: 'none', zIndex: 1 }}
           >
             <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
@@ -213,15 +222,26 @@ export default function VaultView() {
           ))}
         </select>
 
-        {/* HIBP check */}
+        {/* HIBP check — improvement #9: spinner + animated result */}
         <button
           className="btn btn-ghost"
-          style={{ fontSize: 11, padding: '3px 10px', color: breachedCount > 0 ? '#f85149' : '#8b949e' }}
+          style={{
+            fontSize: 11, padding: '3px 10px',
+            color: breachedCount > 0 ? '#f85149' : breachDone ? '#3fb950' : '#8b949e',
+            borderColor: breachedCount > 0 ? 'rgba(248,81,73,0.4)' : breachDone ? 'rgba(63,185,80,0.35)' : undefined,
+            minWidth: 90, justifyContent: 'center',
+          }}
           onClick={runBreachCheck}
           disabled={breachRunning}
           title="Check all passwords against HaveIBeenPwned"
         >
-          {breachRunning ? 'Checking…' : breachDone ? `Breaches: ${breachedCount}` : 'HIBP Check'}
+          {breachRunning
+            ? <><span className="hibp-spinner" />Scanning…</>
+            : breachDone
+              ? breachedCount > 0
+                ? `⚠ ${breachedCount} breach${breachedCount !== 1 ? 'es' : ''}`
+                : '✓ Clean'
+              : 'HIBP Check'}
         </button>
 
         <button
@@ -258,24 +278,22 @@ export default function VaultView() {
         </div>
       )}
 
-      {/* Table */}
+      {/* Table — improvements #1 (skeleton), #8 (sticky gradient header) */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
-        {credentials.length === 0 ? (
+        {initialLoading ? (
+          <SkeletonRows />
+        ) : credentials.length === 0 ? (
           <Empty />
         ) : filtered.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#484f58', fontSize: 13 }}>
-            No credentials match your search or filters.
-          </div>
+          <NoResults />
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid rgba(42,51,71,0.4)' }}>
+              <tr>
                 {COL_HEADERS.map(h => (
-                  <th key={h} style={{
+                  <th key={h} className="table-sticky-head" style={{
                     padding: '8px 14px', textAlign: 'left', fontSize: 10, fontWeight: 600,
                     color: '#484f58', letterSpacing: '0.06em', textTransform: 'uppercase',
-                    position: 'sticky', top: 0, background: '#0a0b12', zIndex: 1,
-                    borderBottom: '1px solid rgba(42,51,71,0.35)',
                   }}>
                     {h}
                   </th>
@@ -305,6 +323,44 @@ export default function VaultView() {
   )
 }
 
+// improvement #1: Skeleton loader — shimmer rows while vault initialises
+function SkeletonRows() {
+  const widths = [
+    ['120px', '90px', '70px', '60px', '55px', '70px', '50px', '48px'],
+    ['85px',  '110px','60px', '80px', '55px', '70px', '50px', '48px'],
+    ['100px', '75px', '90px', '50px', '55px', '70px', '50px', '48px'],
+    ['140px', '95px', '60px', '70px', '55px', '70px', '50px', '48px'],
+    ['90px',  '80px', '80px', '60px', '55px', '70px', '50px', '48px'],
+  ]
+  return (
+    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <thead>
+        <tr>
+          {COL_HEADERS.map(h => (
+            <th key={h} className="table-sticky-head" style={{
+              padding: '8px 14px', textAlign: 'left', fontSize: 10, fontWeight: 600,
+              color: '#484f58', letterSpacing: '0.06em', textTransform: 'uppercase',
+            }}>
+              {h}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {widths.map((row, ri) => (
+          <tr key={ri} style={{ borderBottom: '1px solid rgba(42,51,71,0.25)' }}>
+            {row.map((w, ci) => (
+              <td key={ci} style={{ padding: '12px 14px' }}>
+                <div className="skeleton" style={{ height: 12, width: w }} />
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
 function FilterChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button
@@ -322,24 +378,95 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
   )
 }
 
+// improvement #2: Illustrated empty state with animated lock icon
 function Empty() {
   return (
-    <div style={{ padding: 60, textAlign: 'center', color: '#484f58', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.2, 0.8, 0.2, 1] }}
+      style={{ padding: '72px 40px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}
+    >
+      {/* Illustrated vault icon with glow rings */}
+      <div style={{ position: 'relative', width: 96, height: 96, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {/* Outer glow ring */}
+        <motion.div
+          animate={{ scale: [1, 1.08, 1], opacity: [0.35, 0.12, 0.35] }}
+          transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+          style={{
+            position: 'absolute', inset: 0, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(247,129,102,0.2) 0%, transparent 70%)',
+            border: '1px solid rgba(247,129,102,0.15)',
+          }}
+        />
+        {/* Inner icon container */}
+        <motion.div
+          animate={{ y: [0, -4, 0] }}
+          transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+          style={{
+            width: 72, height: 72, borderRadius: 20,
+            background: 'radial-gradient(circle at 50% 35%, rgba(247,129,102,0.12) 0%, rgba(247,129,102,0.04) 100%)',
+            border: '1px solid rgba(247,129,102,0.2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4), 0 0 24px rgba(247,129,102,0.1)',
+          }}
+        >
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f78166" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.75 }}>
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            <circle cx="12" cy="16" r="1" fill="#f78166" />
+          </svg>
+        </motion.div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxWidth: 300 }}>
+        <div style={{ fontSize: 16, color: '#c9d1d9', fontWeight: 600, letterSpacing: '-0.2px' }}>
+          Vault is empty
+        </div>
+        <div style={{ fontSize: 12, color: '#484f58', lineHeight: 1.6 }}>
+          Add your first credential using <span style={{ color: '#f78166', fontWeight: 500 }}>+ Add</span>, or import from ReconDesk or a CSV export.
+        </div>
+      </div>
+
+      {/* Decorative dots */}
+      <div style={{ display: 'flex', gap: 5, marginTop: 4 }}>
+        {[0, 1, 2].map(i => (
+          <motion.div
+            key={i}
+            animate={{ opacity: [0.15, 0.5, 0.15] }}
+            transition={{ duration: 1.8, repeat: Infinity, delay: i * 0.3 }}
+            style={{ width: 5, height: 5, borderRadius: '50%', background: '#f78166' }}
+          />
+        ))}
+      </div>
+    </motion.div>
+  )
+}
+
+// improvement #2b: no-results illustrated state
+function NoResults() {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.25 }}
+      style={{ padding: '60px 40px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}
+    >
       <div style={{
-        width: 56, height: 56, borderRadius: 14,
-        background: 'rgba(247,129,102,0.06)', border: '1px solid rgba(247,129,102,0.12)',
+        width: 52, height: 52, borderRadius: 14,
+        background: 'rgba(42,51,71,0.3)', border: '1px solid rgba(42,51,71,0.5)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f78166" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}>
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-          <circle cx="12" cy="16" r="1" fill="#f78166" />
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#484f58" strokeWidth="1.5" strokeLinecap="round">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          <line x1="8" y1="11" x2="14" y2="11" />
         </svg>
       </div>
       <div>
-        <div style={{ fontSize: 14, color: '#8b949e', marginBottom: 5, fontWeight: 500 }}>No credentials yet</div>
-        <div style={{ fontSize: 12 }}>Click "+ Add" or import from ReconDesk</div>
+        <div style={{ fontSize: 13, color: '#8b949e', fontWeight: 500, marginBottom: 4 }}>No results</div>
+        <div style={{ fontSize: 12, color: '#484f58' }}>Try a different search or clear your filters.</div>
       </div>
-    </div>
+    </motion.div>
   )
 }

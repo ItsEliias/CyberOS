@@ -1,4 +1,5 @@
 import { useState, FormEvent, type ReactNode } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import type { Credential, CredentialCategory, CredentialType } from '@shared/types'
 import { scorePassword } from '../utils/passwordStrength'
 
@@ -239,27 +240,41 @@ export default function CredentialModal({ initial, onSave, onClose }: Props) {
     })
   }
 
+  // improvement #7: framer-motion animated modal entry
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
       style={{
         position: 'fixed', inset: 0, zIndex: 100,
-        background: 'rgba(14,17,23,0.85)',
+        background: 'rgba(7,8,15,0.8)',
+        backdropFilter: 'blur(6px)',
+        WebkitBackdropFilter: 'blur(6px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center'
       }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div style={{
-        background: 'var(--panel)',
-        border: '1px solid var(--border)',
-        borderRadius: 10,
-        width: 540,
-        maxHeight: '90vh',
-        overflowY: 'auto',
-        padding: '24px 28px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 16,
-      }}>
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 12, scale: 0.97 }}
+        transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
+        style={{
+          background: 'rgba(13,14,24,0.95)',
+          border: '1px solid rgba(247,129,102,0.12)',
+          borderRadius: 12,
+          width: 540,
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          padding: '24px 28px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16,
+          boxShadow: '0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(247,129,102,0.06)',
+        }}
+      >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontWeight: 600, fontSize: 15 }}>
             {initial ? 'Edit' : 'Add'} {type === 'note' ? 'Secure Note' : 'Credential'}
@@ -540,12 +555,12 @@ export default function CredentialModal({ initial, onSave, onClose }: Props) {
 
           {error && <div style={{ fontSize: 12, color: 'var(--error)' }}>{error}</div>}
 
-          <button type="submit" className="btn btn-accent" style={{ alignSelf: 'flex-end', marginTop: 4 }}>
+          <button type="submit" className="btn btn-accent" style={{ alignSelf: 'flex-end', marginTop: 4, borderRadius: 8, padding: '7px 16px', fontSize: 13 }}>
             {initial ? 'Save Changes' : type === 'note' ? 'Add Note' : 'Add Credential'}
           </button>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
 

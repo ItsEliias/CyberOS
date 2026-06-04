@@ -2,6 +2,7 @@ import { useState, FormEvent, type ReactNode } from 'react'
 import { useStore } from '../store'
 import { auditPasswords, type AuditReport, type AuditIssue } from '../utils/passwordAudit'
 import { setAudioVolume, getAudioVolume, playAutoLock } from '../utils/audioNotify'
+import MetricCard from './ui/MetricCard'
 
 const AUTO_LOCK_OPTIONS = [
   { label: 'Never',    ms: 0 },
@@ -107,7 +108,13 @@ export default function SettingsView() {
 
   return (
     <div style={{ padding: 24, maxWidth: 640, display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <h2 style={{ fontSize: 16, fontWeight: 600 }}>Settings</h2>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 4 }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f78166" strokeWidth="2" strokeLinecap="round">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68 1.65 1.65 0 0 0 9 3V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+        <h2 style={{ fontSize: 16, fontWeight: 600, color: '#e6edf3', letterSpacing: '-0.2px' }}>Settings</h2>
+      </div>
 
       {/* ── Security ──────────────────────────────────────────────────────── */}
       <Card title="Security">
@@ -340,11 +347,33 @@ export default function SettingsView() {
         )}
       </Card>
 
-      {/* ── Vault statistics ──────────────────────────────────────────────── */}
+      {/* ── Vault statistics — improvement #3: count-up MetricCards ─────── */}
       {stats && (
         <Card title="Vault Statistics">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
+            <MetricCard
+              label="Total"
+              value={stats.total}
+              accentColor="var(--accent)"
+              icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>}
+              sublabel="credentials"
+            />
+            <MetricCard
+              label="Active"
+              value={credentials.filter(c => c.status === 'active').length}
+              accentColor="#3fb950"
+              icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>}
+              sublabel="in use"
+            />
+            <MetricCard
+              label="Rotated"
+              value={credentials.filter(c => c.status === 'rotated').length}
+              accentColor="#d29922"
+              icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>}
+              sublabel="rotated"
+            />
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            <StatBlock label="Total Credentials" value={stats.total} />
             {Object.keys(stats.byService).length > 0 && (
               <div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -392,14 +421,18 @@ export default function SettingsView() {
 
 function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+    <div style={{
+      border: '1px solid rgba(42,51,71,0.6)',
+      borderRadius: 10, overflow: 'hidden',
+      background: 'rgba(13,14,24,0.6)',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+    }}>
       <div style={{
         padding: '10px 16px',
-        background: 'var(--panel)',
-        borderBottom: '1px solid var(--border)',
-        fontSize: 12,
-        fontWeight: 500,
-        color: 'var(--text-dim)',
+        background: 'rgba(19,21,37,0.8)',
+        borderBottom: '1px solid rgba(42,51,71,0.45)',
+        fontSize: 11, fontWeight: 600,
+        color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.06em',
       }}>
         {title}
       </div>

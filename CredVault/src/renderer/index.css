@@ -325,3 +325,139 @@ select option {
   border-radius: 2px;
   transition: width 0.3s ease, background-color 0.3s ease;
 }
+
+/* ─── Skeleton loader ─────────────────────────────────────────────────────── */
+
+@keyframes shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position:  600px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(42,51,71,0.25) 25%,
+    rgba(42,51,71,0.45) 50%,
+    rgba(42,51,71,0.25) 75%
+  );
+  background-size: 600px 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+/* ─── Row lift micro-animation ────────────────────────────────────────────── */
+
+.cred-row {
+  transition: background 0.18s var(--ease), transform 0.18s var(--ease), box-shadow 0.18s var(--ease);
+  will-change: transform;
+}
+
+.cred-row:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.35);
+}
+
+.cred-row:active {
+  transform: translateY(0);
+}
+
+/* ─── Accent button glow pulse ────────────────────────────────────────────── */
+
+.btn-accent {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-accent::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(255,255,255,0.12);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.btn-accent:hover:not(:disabled)::after {
+  opacity: 1;
+}
+
+/* ─── Search input glow focus ─────────────────────────────────────────────── */
+
+.search-input-wrap {
+  position: relative;
+  transition: filter 0.2s var(--ease);
+}
+
+.search-input-wrap:focus-within {
+  filter: drop-shadow(0 0 6px rgba(247,129,102,0.35));
+}
+
+.search-input-wrap input:focus {
+  border-color: rgba(247,129,102,0.65) !important;
+}
+
+/* ─── Sidebar nav item glow ───────────────────────────────────────────────── */
+
+.sidebar-nav-item {
+  transition: background 0.18s var(--ease), color 0.18s var(--ease), box-shadow 0.18s var(--ease);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  margin-right: 8px;
+}
+
+.sidebar-nav-item.active {
+  box-shadow: inset 3px 0 0 var(--accent), 2px 0 12px rgba(247,129,102,0.1);
+}
+
+.sidebar-nav-item:not(.active):hover {
+  background: rgba(247,129,102,0.05) !important;
+  color: #c9d1d9 !important;
+}
+
+/* ─── Table header peach gradient ─────────────────────────────────────────── */
+
+.table-sticky-head {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(180deg, rgba(15,16,22,1) 70%, rgba(15,16,22,0)) !important;
+  z-index: 2;
+  border-bottom: 1px solid rgba(247,129,102,0.1) !important;
+}
+
+/* ─── HIBP check spinner ──────────────────────────────────────────────────── */
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.hibp-spinner {
+  width: 10px; height: 10px;
+  border: 1.5px solid rgba(139,148,158,0.35);
+  border-top-color: #8b949e;
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+/* ─── Copy toast micro-notification ──────────────────────────────────────── */
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.copy-toast {
+  animation: fadeSlideUp 0.2s var(--ease) both;
+}
+
+/* ─── Metric card count-up glow ───────────────────────────────────────────── */
+
+.stat-metric {
+  transition: text-shadow 0.4s var(--ease);
+}
+
+.stat-metric:hover {
+  text-shadow: 0 0 24px rgba(247,129,102,0.6) !important;
+}

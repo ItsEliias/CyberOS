@@ -108,24 +108,24 @@ export default function Sidebar() {
         </span>
       </div>
 
-      {/* Main nav */}
+      {/* Main nav — improvement #6: glow on active nav items */}
       {NAV.map(({ id, label, Icon }) => {
         const active = activeView === id && !filterFolder
         return (
           <button
             key={id}
             onClick={() => navClick(id)}
-            className="flex items-center gap-2.5 px-4 py-2 text-[13px] font-medium transition-all relative"
+            className={`sidebar-nav-item flex items-center gap-2.5 px-4 py-2 text-[13px] font-medium relative${active ? ' active' : ''}`}
             style={{
               color: active ? '#e6edf3' : '#8b949e',
-              background: active ? 'rgba(247,129,102,0.07)' : 'transparent',
-              borderLeft: active ? '2px solid #f78166' : '2px solid transparent',
+              background: active ? 'rgba(247,129,102,0.08)' : 'transparent',
+              borderLeft: active ? '3px solid #f78166' : '3px solid transparent',
               border: 'none',
               cursor: 'pointer',
               textAlign: 'left',
             }}
           >
-            <span style={{ color: active ? '#f78166' : '#484f58' }}><Icon /></span>
+            <span style={{ color: active ? '#f78166' : '#484f58', transition: 'color 0.18s' }}><Icon /></span>
             <span style={{ flex: 1 }}>{label}</span>
             {id === 'vault' && credCount > 0 && (
               <span
@@ -153,11 +153,11 @@ export default function Sidebar() {
           <div className="mx-4 my-2 h-px" style={{ background: 'rgba(42,51,71,0.35)' }} />
           <button
             onClick={notesClick}
-            className="flex items-center gap-2.5 px-4 py-2 text-[12px] font-medium transition-all"
+            className={`sidebar-nav-item flex items-center gap-2.5 px-4 py-2 text-[12px] font-medium${filterFolder === '__notes__' ? ' active' : ''}`}
             style={{
               color: filterFolder === '__notes__' ? '#e6edf3' : '#8b949e',
-              background: filterFolder === '__notes__' ? 'rgba(247,129,102,0.07)' : 'transparent',
-              borderLeft: filterFolder === '__notes__' ? '2px solid #f78166' : '2px solid transparent',
+              background: filterFolder === '__notes__' ? 'rgba(247,129,102,0.08)' : 'transparent',
+              borderLeft: filterFolder === '__notes__' ? '3px solid #f78166' : '3px solid transparent',
               border: 'none',
               cursor: 'pointer',
               textAlign: 'left',

@@ -186,11 +186,13 @@ export default function CredentialRow({ cred, searchQuery = '', breached, onEdit
 
   return (
     <>
+      {/* improvement #4: cred-row class adds translateY lift on hover */}
       <tr
+        className="cred-row"
         onClick={handleExpand}
         onMouseEnter={() => setRowHovered(true)}
         onMouseLeave={() => setRowHovered(false)}
-        style={{ cursor: 'pointer', background: rowBg, transition: 'background 0.15s' }}
+        style={{ cursor: 'pointer', background: rowBg }}
       >
         {/* Service */}
         <td style={{ padding: '9px 14px', fontSize: 12, color: '#8b949e' }}>
@@ -356,11 +358,28 @@ export default function CredentialRow({ cred, searchQuery = '', breached, onEdit
                     </Field>
                   )}
 
-                  {copyMsg && (
-                    <div style={{ gridColumn: '1 / -1', fontSize: 11, color: '#3fb950' }}>
-                      {copyMsg} copied{hasSecret && countdown > 0 ? ` — clipboard clears in ${countdown}s` : ''}
-                    </div>
-                  )}
+                  {/* improvement #10: animated copy toast */}
+                  <AnimatePresence>
+                    {copyMsg && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        transition={{ duration: 0.18 }}
+                        className="copy-toast"
+                        style={{
+                          gridColumn: '1 / -1', fontSize: 11,
+                          display: 'flex', alignItems: 'center', gap: 6,
+                          padding: '5px 10px', borderRadius: 6,
+                          background: 'rgba(63,185,80,0.08)', border: '1px solid rgba(63,185,80,0.2)',
+                          color: '#3fb950',
+                        }}
+                      >
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+                        {copyMsg} copied{hasSecret && countdown > 0 ? ` — clipboard clears in ${countdown}s` : ''}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
                   {/* Actions */}
                   <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 8, marginTop: 4 }}>
