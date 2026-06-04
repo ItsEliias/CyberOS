@@ -359,6 +359,52 @@ export default function Progress() {
             </div>
           </div>
 
+          {/* Next rank card */}
+          {levelInfo.level < XP_THRESHOLDS.length && (
+            <div
+              className="p-3 rounded-lg"
+              style={{
+                background: 'rgba(180,79,255,0.04)',
+                border: '1px solid rgba(180,79,255,0.14)',
+              }}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: '#484f58' }}>
+                    Next Rank
+                  </span>
+                  <span
+                    className="text-[10px] font-mono px-1.5 py-0.5 rounded"
+                    style={{ background: 'rgba(180,79,255,0.1)', color: '#b44fff', border: '1px solid rgba(180,79,255,0.2)' }}
+                  >
+                    Lv {levelInfo.level + 1}
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono tabular-nums" style={{ color: '#8b949e' }}>
+                  {(levelInfo.nextXp - levelInfo.currentXp).toLocaleString()} XP needed
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(42,51,71,0.5)' }}>
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${xpBarWidth}%`,
+                    background: 'linear-gradient(90deg, rgba(180,79,255,0.5), rgba(203,128,255,0.8))',
+                    transition: 'width 1s cubic-bezier(0.2,0.8,0.2,1)',
+                  }}
+                />
+              </div>
+              <div className="flex justify-between mt-1.5">
+                <span className="text-[10px] font-mono tabular-nums" style={{ color: '#484f58' }}>
+                  {levelInfo.currentXp.toLocaleString()} XP
+                </span>
+                <span className="text-[10px] font-mono tabular-nums" style={{ color: '#484f58' }}>
+                  {levelInfo.nextXp.toLocaleString()} XP
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* XP breakdown */}
           <div className="card">
             <div className="text-xs font-semibold mb-2" style={{ color: 'var(--text-dim)' }}>XP Breakdown</div>

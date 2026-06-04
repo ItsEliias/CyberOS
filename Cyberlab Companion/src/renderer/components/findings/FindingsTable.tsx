@@ -53,6 +53,33 @@ function flattenFindings(findings: SessionFindings): FlatFinding[] {
   return result.sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime());
 }
 
+// Mock CVSS scores for demonstration — assigned based on category
+function getMockCvss(category: string, value: string): number | null {
+  if (category === 'cves') {
+    // Use hash of the value string to get a deterministic score
+    let hash = 0;
+    for (let i = 0; i < value.length; i++) hash = (hash * 31 + value.charCodeAt(i)) & 0xffff;
+    return parseFloat(((hash % 100) / 10).toFixed(1));
+  }
+  if (category === 'credentials') return 9.8;
+  if (category === 'flags') return null;
+  return null;
+}
+
+function cvssColor(score: number): string {
+  if (score <= 3) return '#3fb950';
+  if (score <= 6) return '#d29922';
+  if (score <= 8) return '#ff7a00';
+  return '#f85149';
+}
+
+function cvssLabel(score: number): string {
+  if (score <= 3) return 'Low';
+  if (score <= 6) return 'Med';
+  if (score <= 8) return 'High';
+  return 'Crit';
+}
+
 export default function FindingsTable() {
   const { tabs, activeTabId } = useStore();
   const tab = tabs.find(t => t.id === activeTabId);
@@ -62,6 +89,22 @@ export default function FindingsTable() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [pushing, setPushing] = useState<string | null>(null);
   const [pushed, setPushed] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  function toggleSelect(id: string) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll(ids: string[]) {
+    const allSelected = ids.every(id => selected.has(id));
+    if (allSelected) setSelected(new Set());
+    else setSelected(new Set(ids));
+  }
 
   if (!session) {
     return (
@@ -187,11 +230,20 @@ export default function FindingsTable() {
               className="grid grid-cols-12 px-4 py-2 text-[10px] font-semibold uppercase tracking-widest"
               style={{ color: '#484f58', background: 'rgba(7,8,15,0.5)', borderBottom: '1px solid var(--border-default)' }}
             >
+              <div className="col-span-1 flex items-center">
+                <input
+                  type="checkbox"
+                  style={{ accentColor: '#b44fff', cursor: 'pointer' }}
+                  checked={filtered.length > 0 && filtered.every(f => selected.has(f.id))}
+                  onChange={() => toggleSelectAll(filtered.map(f => f.id))}
+                  title="Select all"
+                />
+              </div>
               <div className="col-span-2">Type</div>
-              <div className="col-span-5">Value</div>
-              <div className="col-span-2">Source</div>
+              <div className="col-span-3">Value</div>
+              <div className="col-span-2">CVSS</div>
               <div className="col-span-2">Time</div>
-              <div className="col-span-1 text-right">Act.</div>
+              <div className="col-span-2 text-right">Act.</div>
             </div>
 
             <AnimatePresence>
@@ -213,23 +265,36 @@ export default function FindingsTable() {
                     <div
                       className="grid grid-cols-12 px-4 py-2.5 text-xs cursor-pointer transition-colors"
                       style={{
-                        background: isExpanded ? 'rgba(13,14,24,0.8)' : 'transparent',
+                        background: isExpanded
+                          ? 'rgba(13,14,24,0.8)'
+                          : selected.has(finding.id)
+                          ? 'rgba(180,79,255,0.06)'
+                          : 'transparent',
                       }}
                       onMouseEnter={e => {
-                        if (!isExpanded) e.currentTarget.style.background = 'rgba(13,14,24,0.5)';
+                        if (!isExpanded && !selected.has(finding.id)) e.currentTarget.style.background = 'rgba(13,14,24,0.5)';
                       }}
                       onMouseLeave={e => {
-                        if (!isExpanded) e.currentTarget.style.background = 'transparent';
+                        if (!isExpanded) e.currentTarget.style.background = selected.has(finding.id) ? 'rgba(180,79,255,0.06)' : 'transparent';
                       }}
                       onClick={() => setExpanded(isExpanded ? null : finding.id)}
                     >
+                      <div className="col-span-1 flex items-center" onClick={e => { e.stopPropagation(); toggleSelect(finding.id); }}>
+                        <input
+                          type="checkbox"
+                          style={{ accentColor: '#b44fff', cursor: 'pointer' }}
+                          checked={selected.has(finding.id)}
+                          onChange={() => toggleSelect(finding.id)}
+                        />
+                      </div>
+
                       <div className="col-span-2 flex items-center">
                         <Badge variant={badgeVariant}>
                           {CATEGORY_ICONS[finding.category]} {getCategoryLabel(finding.category).slice(0, -1)}
                         </Badge>
                       </div>
 
-                      <div className="col-span-5 flex items-center gap-1">
+                      <div className="col-span-3 flex items-center gap-1">
                         <span className="font-mono truncate" style={{ color: '#e6edf3' }}>
                           {finding.value}
                         </span>
@@ -238,15 +303,32 @@ export default function FindingsTable() {
                         )}
                       </div>
 
-                      <div className="col-span-2 flex items-center text-[11px]" style={{ color: '#484f58' }}>
-                        AI-detected
+                      <div className="col-span-2 flex items-center gap-1.5">
+                        {(() => {
+                          const cvss = getMockCvss(finding.category, finding.value);
+                          if (cvss === null) return <span style={{ color: '#484f58', fontSize: 11 }}>—</span>;
+                          const c = cvssColor(cvss);
+                          return (
+                            <span
+                              className="text-[10px] font-mono font-semibold px-1 py-0.5 rounded"
+                              style={{
+                                color: c,
+                                background: `${c}18`,
+                                border: `1px solid ${c}40`,
+                              }}
+                              title={`CVSS ${cvss} — ${cvssLabel(cvss)}`}
+                            >
+                              {cvss.toFixed(1)}
+                            </span>
+                          );
+                        })()}
                       </div>
 
                       <div className="col-span-2 flex items-center font-mono text-[11px] tabular-nums" style={{ color: '#484f58' }}>
                         {new Date(finding.addedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
 
-                      <div className="col-span-1 flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
+                      <div className="col-span-2 flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
                         <button
                           className="w-6 h-6 flex items-center justify-center rounded transition-colors"
                           style={{ border: 'none', background: 'transparent', color: '#484f58', fontSize: 12 }}

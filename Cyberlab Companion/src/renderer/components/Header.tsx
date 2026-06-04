@@ -151,8 +151,22 @@ export default function Header({ onHelp }: HeaderProps) {
             }}
           />
           <span style={{ color: vpnColor, fontSize: '11px' }}>
-            {vpnOnline ? (vpnStatus.ip || 'VPN') : vpnOff ? 'No VPN' : 'VPN?'}
+            {vpnOnline ? 'VPN' : vpnOff ? 'No VPN' : 'VPN?'}
           </span>
+          {vpnOnline && vpnStatus.ip && (
+            <span
+              className="font-mono"
+              style={{
+                color: '#3fb950',
+                fontSize: '10px',
+                borderLeft: '1px solid rgba(63,185,80,0.3)',
+                marginLeft: '2px',
+                paddingLeft: '4px',
+              }}
+            >
+              {vpnStatus.ip}
+            </span>
+          )}
         </div>
 
         {/* AI provider selector */}

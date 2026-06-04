@@ -1,10 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../store';
 
+const APP_START = Date.now();
+
+function formatSessionActive(ms: number): string {
+  const totalSec = Math.floor(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
 export default function Footer() {
   const { tabs, activeTabId, vpnStatus } = useStore();
   const [utcTime, setUtcTime] = useState(getUTC());
   const [version, setVersion] = useState('');
+  const [appElapsed, setAppElapsed] = useState(Date.now() - APP_START);
 
   const activeTab = tabs.find(t => t.id === activeTabId);
   const session = activeTab?.session;
@@ -14,7 +24,10 @@ export default function Footer() {
   }, []);
 
   useEffect(() => {
-    const interval = setInterval(() => setUtcTime(getUTC()), 1000);
+    const interval = setInterval(() => {
+      setUtcTime(getUTC());
+      setAppElapsed(Date.now() - APP_START);
+    }, 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -89,6 +102,12 @@ export default function Footer() {
       )}
 
       <div className="flex-1" />
+
+      <span className="font-mono tabular-nums" style={{ color: '#484f58' }}>
+        session {formatSessionActive(appElapsed)}
+      </span>
+
+      <span style={{ color: 'rgba(42,51,71,0.6)' }}>·</span>
 
       <span className="font-mono tabular-nums" style={{ color: '#484f58' }}>{utcTime}</span>
 

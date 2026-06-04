@@ -416,16 +416,31 @@ export default function ChatPanel() {
 
         {messages.map(msg => {
           const parsed = msg.role === 'assistant' ? parseAiResponse(msg.content) : null;
+          const isUser = msg.role === 'user';
           return (
             <motion.div
               key={msg.id}
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.15 }}
             >
-              <div className={`max-w-[85%] ${msg.role === 'user' ? 'chat-msg-user' : 'chat-msg-ai'}`}>
-                {msg.role === 'user' ? (
+              <div
+                className={`max-w-[85%] ${isUser ? 'chat-msg-user' : 'chat-msg-ai'}`}
+                style={isUser ? {
+                  background: 'linear-gradient(135deg, rgba(180,79,255,0.22) 0%, rgba(180,79,255,0.12) 100%)',
+                  border: '1px solid rgba(180,79,255,0.35)',
+                  borderRadius: '12px 4px 12px 12px',
+                  padding: '10px 14px',
+                } : {
+                  background: 'rgba(13,14,24,0.85)',
+                  border: '1px solid rgba(42,51,71,0.6)',
+                  borderRadius: '4px 12px 12px 12px',
+                  backdropFilter: 'blur(8px)',
+                  padding: '10px 14px',
+                }}
+              >
+                {isUser ? (
                   <p className="text-sm selectable whitespace-pre-wrap" style={{ color: '#e6edf3' }}>
                     {msg.content}
                   </p>

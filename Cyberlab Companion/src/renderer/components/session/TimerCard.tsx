@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '../../store';
+import type { Session } from '@shared/types';
 
 function pad(n: number) { return String(n).padStart(2, '0'); }
 
@@ -23,7 +24,24 @@ export default function TimerCard({ onStop }: TimerCardProps) {
   const [elapsed, setElapsed] = useState(session?.timer?.elapsed ?? 0);
   const [running, setRunning] = useState(session?.timer?.running ?? false);
   const [mode] = useState<'countup' | 'countdown'>('countup');
+  const [recentSessions, setRecentSessions] = useState<Array<{ name: string; elapsed: number }>>([]);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    async function loadHistory() {
+      try {
+        const list = await window.electronAPI.listSessions() as Session[];
+        if (Array.isArray(list)) {
+          const completed = list
+            .filter(s => s?.labName && s.labName !== 'New Session' && (s.timer?.elapsed ?? 0) > 0)
+            .slice(-3)
+            .reverse();
+          setRecentSessions(completed.map(s => ({ name: s.labName, elapsed: s.timer?.elapsed ?? 0 })));
+        }
+      } catch {}
+    }
+    loadHistory();
+  }, [activeTabId]);
 
   // Sync from session on tab change
   useEffect(() => {
@@ -157,6 +175,27 @@ export default function TimerCard({ onStop }: TimerCardProps) {
           Stop
         </button>
       </div>
+
+      {/* Session history chips */}
+      {recentSessions.length > 0 && (
+        <div className="flex items-center gap-1.5 mt-2.5 relative flex-wrap">
+          <span className="text-[9px] uppercase tracking-widest" style={{ color: '#484f58' }}>Recent</span>
+          {recentSessions.map((s, i) => (
+            <span
+              key={i}
+              className="text-[10px] font-mono px-1.5 py-0.5 rounded"
+              style={{
+                background: 'rgba(42,51,71,0.4)',
+                border: '1px solid rgba(42,51,71,0.6)',
+                color: '#8b949e',
+              }}
+              title={s.name}
+            >
+              {formatTime(s.elapsed)}
+            </span>
+          ))}
+        </div>
+      )}
     </motion.div>
   );
 }

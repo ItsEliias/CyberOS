@@ -169,20 +169,27 @@ export default function StatsView() {
                 <div className="flex items-center justify-between mb-0.5">
                   <span className="text-xs" style={{ color: CAT_COLORS[cat] }}>{cat}</span>
                   <span className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>
-                    {cs.flags} flags · {cs.sessions} sessions
-                    {cs.bestMins && ` · best ${cs.bestMins}m`}
+                    {cs.sessions} sessions{cs.bestMins ? ` · best ${cs.bestMins}m` : ''}
                   </span>
                 </div>
-                <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(42,51,71,0.3)' }}>
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${pct}%`,
-                      background: `linear-gradient(90deg, ${CAT_COLORS[cat]}cc, ${CAT_COLORS[cat]})`,
-                      boxShadow: pct > 0 ? `0 0 8px ${CAT_COLORS[cat]}55` : 'none',
-                      transition: 'width 0.8s cubic-bezier(0.2,0.8,0.2,1)',
-                    }}
-                  />
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'rgba(42,51,71,0.3)' }}>
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${pct}%`,
+                        background: `linear-gradient(90deg, ${CAT_COLORS[cat]}cc, ${CAT_COLORS[cat]})`,
+                        boxShadow: pct > 0 ? `0 0 8px ${CAT_COLORS[cat]}55` : 'none',
+                        transition: 'width 0.8s cubic-bezier(0.2,0.8,0.2,1)',
+                      }}
+                    />
+                  </div>
+                  <span
+                    className="text-[10px] font-mono tabular-nums flex-shrink-0 w-10 text-right"
+                    style={{ color: cs.flags > 0 ? CAT_COLORS[cat] : 'var(--text-muted)' }}
+                  >
+                    {cs.flags > 0 ? `${cs.flags}` : '—'}
+                  </span>
                 </div>
               </div>
             );

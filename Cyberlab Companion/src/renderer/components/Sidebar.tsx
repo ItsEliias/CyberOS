@@ -103,12 +103,13 @@ function HelpBubble({ text, anchorRef, onClose }: {
 
 // ─── Nav item ─────────────────────────────────────────────────────────────────
 
-function NavItem({ panel, isActive, onClick, openHelp, onHelpToggle }: {
+function NavItem({ panel, isActive, onClick, openHelp, onHelpToggle, showDot }: {
   panel: typeof PANELS[number];
   isActive: boolean;
   onClick: () => void;
   openHelp: PanelId | null;
   onHelpToggle: (id: PanelId, ref: React.RefObject<HTMLElement | null>) => void;
+  showDot?: boolean;
 }) {
   const rowRef   = useRef<HTMLDivElement>(null);
   const helpBtnRef = useRef<HTMLButtonElement>(null);
@@ -167,6 +168,16 @@ function NavItem({ panel, isActive, onClick, openHelp, onHelpToggle }: {
         <span style={{ fontSize: '12px', fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {panel.label}
         </span>
+        {showDot && !isActive && (
+          <span
+            style={{
+              width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0,
+              background: '#b44fff',
+              boxShadow: '0 0 4px rgba(180,79,255,0.7)',
+              marginRight: '2px',
+            }}
+          />
+        )}
       </button>
 
       {/* ? help button — only visible on hover */}
@@ -200,6 +211,14 @@ export default function Sidebar() {
   const { tabs, activeTabId, setActivePanel, setBgTheme, setAccentTheme, bgTheme, accentTheme } = useStore();
   const activeTab   = tabs.find(t => t.id === activeTabId);
   const activePanel = activeTab?.activePanel || 'chat';
+  const session = activeTab?.session;
+  const findingsCount = session ? (
+    (session.findings?.ports?.length ?? 0) +
+    (session.findings?.credentials?.length ?? 0) +
+    (session.findings?.flags?.length ?? 0) +
+    (session.findings?.users?.length ?? 0) +
+    (session.findings?.cves?.length ?? 0)
+  ) : 0;
 
   const [openHelp, setOpenHelp]     = useState<PanelId | null>(null);
   const [helpAnchor, setHelpAnchor] = useState<React.RefObject<HTMLElement | null> | null>(null);
@@ -234,6 +253,7 @@ export default function Sidebar() {
             onClick={() => activeTabId && setActivePanel(activeTabId, p.id)}
             openHelp={openHelp}
             onHelpToggle={handleHelpToggle}
+            showDot={p.id === 'findings' && findingsCount > 0}
           />
         ))}
       </div>

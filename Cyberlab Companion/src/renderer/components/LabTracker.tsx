@@ -14,7 +14,21 @@ const COLUMNS: Array<{ id: LabColumn; label: string; color: string; rgb: string 
 ];
 
 const DIFF_COLORS: Record<string, string> = {
-  Easy: '#3fb950', Medium: '#d29922', Hard: '#ff7a00', Insane: '#f85149',
+  Easy: '#3fb950', Medium: '#d29922', Hard: '#ff6b6b', Insane: '#f85149',
+};
+
+const DIFF_BG: Record<string, string> = {
+  Easy: 'rgba(63,185,80,0.12)',
+  Medium: 'rgba(210,153,34,0.12)',
+  Hard: 'rgba(255,107,107,0.12)',
+  Insane: 'rgba(248,81,73,0.12)',
+};
+
+const DIFF_BORDER: Record<string, string> = {
+  Easy: 'rgba(63,185,80,0.3)',
+  Medium: 'rgba(210,153,34,0.3)',
+  Hard: 'rgba(255,107,107,0.3)',
+  Insane: 'rgba(248,81,73,0.3)',
 };
 
 export default function LabTracker() {
@@ -283,12 +297,18 @@ function LabCard({
               >
                 {lab.platform}
               </span>
-              <span
-                className="text-[10px] font-semibold"
-                style={{ color: diffColor }}
-              >
-                {lab.difficulty}
-              </span>
+              {lab.difficulty && (
+                <span
+                  className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                  style={{
+                    color: diffColor,
+                    background: DIFF_BG[lab.difficulty] || 'rgba(72,79,88,0.12)',
+                    border: `1px solid ${DIFF_BORDER[lab.difficulty] || 'rgba(72,79,88,0.3)'}`,
+                  }}
+                >
+                  {lab.difficulty}
+                </span>
+              )}
             </div>
           </div>
           <button
