@@ -21,13 +21,11 @@ export default function StatusBar({ lastSavedAt }: Props) {
   const [savedFlash, setSavedFlash] = useState(false);
   const prevSavedRef = useRef<Date | null>(null);
 
-  // Tick every 5s to update "X ago" label
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 5000);
     return () => clearInterval(id);
   }, []);
 
-  // Flash "Saved ✓" when lastSavedAt changes to a new value
   useEffect(() => {
     if (lastSavedAt && lastSavedAt !== prevSavedRef.current) {
       prevSavedRef.current = lastSavedAt;
@@ -41,48 +39,45 @@ export default function StatusBar({ lastSavedAt }: Props) {
 
   const findingsCount = activeReport.findings.length;
   const status = activeReport.status ?? 'draft';
+  const isDraft = status !== 'complete';
 
   return (
-    <div style={{
-      height: 26,
-      flexShrink: 0,
-      borderTop: '1px solid var(--border)',
-      background: 'var(--panel)',
-      display: 'flex',
-      alignItems: 'center',
-      gap: 16,
-      padding: '0 16px',
-      fontSize: 11,
-      color: 'var(--text-muted)',
-      userSelect: 'none',
-    }}>
-      {/* Status badge */}
-      <span style={{
-        fontWeight: 600,
-        textTransform: 'uppercase',
-        letterSpacing: '0.05em',
-        color: status === 'complete' ? 'var(--accent)' : 'var(--warning)',
-        fontSize: 10,
-      }}>
+    <div
+      className="shrink-0 flex items-center gap-4 px-4 tabular-nums"
+      style={{
+        height: 26,
+        borderTop: '1px solid rgba(255,255,255,0.04)',
+        background: 'rgba(7,8,15,0.95)',
+        fontSize: 11,
+        color: 'var(--text-muted)',
+        userSelect: 'none',
+      }}
+    >
+      {/* Status pill */}
+      <span
+        className="font-bold uppercase tracking-widest"
+        style={{
+          fontSize: 10,
+          color: isDraft ? '#d29922' : '#3fb950',
+        }}
+      >
         {status}
       </span>
 
-      <span style={{ color: 'var(--border)' }}>•</span>
+      <Divider />
 
       {/* Save state */}
       <AnimatePresence mode="wait">
         {savedFlash ? (
-          <motion.span
-            key="saved"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={{ color: 'var(--accent)', fontWeight: 600 }}
+          <motion.span key="saved" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ color: '#4a9eff', fontWeight: 600 }}
           >
             Saved ✓
           </motion.span>
         ) : dirty ? (
-          <motion.span key="dirty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <motion.span key="dirty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ color: '#d29922' }}
+          >
             Unsaved changes
           </motion.span>
         ) : lastSavedAt ? (
@@ -96,21 +91,36 @@ export default function StatusBar({ lastSavedAt }: Props) {
         )}
       </AnimatePresence>
 
-      <span style={{ color: 'var(--border)' }}>•</span>
+      <Divider />
 
       {/* Findings count */}
       <span>
-        {findingsCount === 0 ? 'No findings' : `${findingsCount} finding${findingsCount !== 1 ? 's' : ''}`}
+        {findingsCount === 0
+          ? 'No findings'
+          : `${findingsCount} finding${findingsCount !== 1 ? 's' : ''}`}
       </span>
 
-      {/* Spacer */}
       <div style={{ flex: 1 }} />
 
-      {/* Sections count */}
+      {/* Visible sections */}
       <span>{activeReport.sections.filter(s => s.visible).length} visible sections</span>
 
-      {/* Suppress unused tick warning */}
+      {/* CYBERTOOLS brand */}
+      <span
+        className="font-mono tracking-widest uppercase"
+        style={{ fontSize: 9, color: 'rgba(42,51,71,0.8)', letterSpacing: '0.08em' }}
+      >
+        ReportForge
+      </span>
+
+      {/* Suppress tick */}
       <span style={{ display: 'none' }}>{tick}</span>
     </div>
+  );
+}
+
+function Divider() {
+  return (
+    <span style={{ color: 'rgba(42,51,71,0.8)' }}>·</span>
   );
 }
