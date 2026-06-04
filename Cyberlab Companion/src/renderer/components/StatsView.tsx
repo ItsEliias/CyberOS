@@ -138,8 +138,8 @@ export default function StatsView() {
           { label: 'Avg / Session', value: avgMinsAll ? `${avgMinsAll}m` : '—', color: 'var(--text-dim)' },
         ].map(s => (
           <div key={s.label} className="card text-center">
-            <div className="text-lg font-bold font-mono" style={{ color: s.color }}>{s.value}</div>
-            <div className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{s.label}</div>
+            <div className="text-lg font-bold font-mono tabular-nums" style={{ color: s.color }}>{s.value}</div>
+            <div className="text-[10px] mt-0.5 uppercase tracking-wider" style={{ color: 'var(--text-muted)', letterSpacing: '0.07em' }}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -185,7 +185,7 @@ export default function StatsView() {
                     />
                   </div>
                   <span
-                    className="text-[10px] font-mono tabular-nums flex-shrink-0 w-10 text-right"
+                    className="text-[10px] font-mono tabular-nums flex-shrink-0 w-12 text-right"
                     style={{ color: cs.flags > 0 ? CAT_COLORS[cat] : 'var(--text-muted)' }}
                   >
                     {cs.flags > 0 ? `${cs.flags}` : '—'}

@@ -247,7 +247,7 @@ export default function FindingsTable() {
             </div>
 
             <AnimatePresence>
-              {filtered.map(finding => {
+              {filtered.map((finding, rowIndex) => {
                 const color = CATEGORY_COLORS[finding.category] || 'var(--accent)';
                 const isExpanded = expanded === finding.id;
                 const wasPushed = pushed.has(finding.id);
@@ -259,8 +259,11 @@ export default function FindingsTable() {
                     initial={{ opacity: 0, y: -4 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.12 }}
-                    style={{ borderBottom: '1px solid rgba(42,51,71,0.35)' }}
+                    transition={{ duration: 0.14, delay: rowIndex * 0.04 }}
+                    style={{
+                      borderBottom: '1px solid rgba(42,51,71,0.35)',
+                      borderLeft: `3px solid ${color}`,
+                    }}
                   >
                     <div
                       className="grid grid-cols-12 px-4 py-2.5 text-xs cursor-pointer transition-colors"

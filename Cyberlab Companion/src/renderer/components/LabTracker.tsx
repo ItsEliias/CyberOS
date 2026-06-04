@@ -263,6 +263,8 @@ function LabCard({
   const [expanded, setExpanded] = useState(false);
   const diffColor = DIFF_COLORS[lab.difficulty] || '#484f58';
 
+  const isActive = lab.column === 'inprogress';
+
   return (
     <motion.div
       layout
@@ -270,14 +272,14 @@ function LabCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.96 }}
       transition={{ duration: 0.15 }}
-      className="group cursor-pointer rounded-md overflow-hidden"
+      className={`group cursor-pointer rounded-md overflow-hidden${isActive ? ' timer-border-running' : ''}`}
       style={{
         background: 'var(--surface-1)',
-        border: '1px solid rgba(42,51,71,0.6)',
-        transition: 'border-color 0.15s',
+        border: isActive ? '1px solid rgba(63,185,80,0.55)' : '1px solid rgba(42,51,71,0.6)',
+        transition: isActive ? 'none' : 'border-color 0.15s',
       }}
-      onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(180,79,255,0.25)')}
-      onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(42,51,71,0.6)')}
+      onMouseEnter={e => { if (!isActive) e.currentTarget.style.borderColor = 'rgba(180,79,255,0.25)'; }}
+      onMouseLeave={e => { if (!isActive) e.currentTarget.style.borderColor = 'rgba(42,51,71,0.6)'; }}
       onClick={() => setExpanded(e => !e)}
     >
       <div className="p-3">

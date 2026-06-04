@@ -91,6 +91,9 @@ export default function Progress() {
   const [htbError, setHtbError] = useState('');
   const [xpBarWidth, setXpBarWidth] = useState(0);
   const xpAnimated = useRef(false);
+  const [sparkles, setSparkles] = useState<Array<{ id: number; tx: string; ty: string; color: string; left: string }>>([]);
+  const prevLevelRef = useRef<number | null>(null);
+  let sparkleId = useRef(0);
 
   useEffect(() => {
     if (progressData) {
@@ -145,6 +148,28 @@ export default function Progress() {
       });
     }
   }, [activeTab, levelInfo.pct]);
+
+  // Sparkle burst on level-up
+  useEffect(() => {
+    if (prevLevelRef.current !== null && levelInfo.level > prevLevelRef.current) {
+      const COLORS = ['#b44fff','#cb80ff','#3fb950','#4a9eff','#d29922','#ff7a00'];
+      const particles = Array.from({ length: 14 }, () => {
+        const angle = Math.random() * 360;
+        const dist = 24 + Math.random() * 36;
+        const rad = (angle * Math.PI) / 180;
+        return {
+          id: ++sparkleId.current,
+          tx: `${Math.round(Math.cos(rad) * dist)}px`,
+          ty: `${Math.round(Math.sin(rad) * dist - 20)}px`,
+          color: COLORS[Math.floor(Math.random() * COLORS.length)],
+          left: `${20 + Math.random() * 60}%`,
+        };
+      });
+      setSparkles(particles);
+      setTimeout(() => setSparkles([]), 950);
+    }
+    prevLevelRef.current = levelInfo.level;
+  }, [levelInfo.level]);
   const xpAchievements = checkXpAchievements(sessions);
 
   // Category bars
@@ -311,7 +336,22 @@ export default function Progress() {
       {activeTab === 'xp' && (
         <div className="space-y-4">
           {/* Level card */}
-          <div className="card" style={{ border: '1px solid rgba(180,79,255,0.2)', background: 'linear-gradient(135deg, rgba(180,79,255,0.07) 0%, rgba(13,14,24,0.9) 100%)' }}>
+          <div className="card" style={{ border: '1px solid rgba(180,79,255,0.2)', background: 'linear-gradient(135deg, rgba(180,79,255,0.07) 0%, rgba(13,14,24,0.9) 100%)', position: 'relative', overflow: 'hidden' }}>
+            {/* CSS-only sparkle burst on level-up */}
+            {sparkles.map(p => (
+              <span
+                key={p.id}
+                className="sparkle-particle"
+                style={{
+                  background: p.color,
+                  left: p.left,
+                  bottom: '40%',
+                  '--tx': p.tx,
+                  '--ty': p.ty,
+                  boxShadow: `0 0 4px ${p.color}`,
+                } as React.CSSProperties}
+              />
+            ))}
             <div className="flex items-center gap-3 mb-3">
               <div
                 className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0"

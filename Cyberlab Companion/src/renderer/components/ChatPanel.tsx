@@ -417,44 +417,58 @@ export default function ChatPanel() {
         {messages.map(msg => {
           const parsed = msg.role === 'assistant' ? parseAiResponse(msg.content) : null;
           const isUser = msg.role === 'user';
+          const timeLabel = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           return (
             <motion.div
               key={msg.id}
-              className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
+              className={`flex group/msg ${isUser ? 'justify-end' : 'justify-start'}`}
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.15 }}
             >
-              <div
-                className={`max-w-[85%] ${isUser ? 'chat-msg-user' : 'chat-msg-ai'}`}
-                style={isUser ? {
-                  background: 'linear-gradient(135deg, rgba(180,79,255,0.22) 0%, rgba(180,79,255,0.12) 100%)',
-                  border: '1px solid rgba(180,79,255,0.35)',
-                  borderRadius: '12px 4px 12px 12px',
-                  padding: '10px 14px',
-                } : {
-                  background: 'rgba(13,14,24,0.85)',
-                  border: '1px solid rgba(42,51,71,0.6)',
-                  borderRadius: '4px 12px 12px 12px',
-                  backdropFilter: 'blur(8px)',
-                  padding: '10px 14px',
-                }}
-              >
-                {isUser ? (
-                  <p className="text-sm selectable whitespace-pre-wrap" style={{ color: '#e6edf3' }}>
-                    {msg.content}
-                  </p>
-                ) : (
-                  <>
-                    <MarkdownRenderer content={msg.content} />
-                    {parsed && parsed.ports.length > 0 && (
-                      <ParsedPortChips ports={parsed.ports} targetName={session?.labName || ''} />
-                    )}
-                    {parsed && parsed.credentials.length > 0 && (
-                      <ParsedCredChips creds={parsed.credentials} targetName={session?.labName || ''} />
-                    )}
-                  </>
-                )}
+              <div className={`max-w-[85%] ${isUser ? 'text-right' : 'text-left'}`}>
+                <div
+                  className={isUser ? 'chat-msg-user' : 'chat-msg-ai'}
+                  style={isUser ? {
+                    background: 'linear-gradient(135deg, rgba(180,79,255,0.22) 0%, rgba(180,79,255,0.12) 100%)',
+                    border: '1px solid rgba(180,79,255,0.35)',
+                    borderRadius: '12px 4px 12px 12px',
+                    padding: '10px 14px',
+                    backdropFilter: 'blur(6px)',
+                    WebkitBackdropFilter: 'blur(6px)',
+                  } : {
+                    background: 'rgba(13,14,24,0.72)',
+                    border: '1px solid rgba(255,255,255,0.055)',
+                    borderRadius: '4px 12px 12px 12px',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                    padding: '10px 14px',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+                  }}
+                >
+                  {isUser ? (
+                    <p className="text-sm selectable whitespace-pre-wrap" style={{ color: '#e6edf3' }}>
+                      {msg.content}
+                    </p>
+                  ) : (
+                    <>
+                      <MarkdownRenderer content={msg.content} />
+                      {parsed && parsed.ports.length > 0 && (
+                        <ParsedPortChips ports={parsed.ports} targetName={session?.labName || ''} />
+                      )}
+                      {parsed && parsed.credentials.length > 0 && (
+                        <ParsedCredChips creds={parsed.credentials} targetName={session?.labName || ''} />
+                      )}
+                    </>
+                  )}
+                </div>
+                {/* Timestamp — fades in on bubble hover */}
+                <div
+                  className="msg-timestamp font-mono"
+                  style={{ textAlign: isUser ? 'right' : 'left', paddingLeft: isUser ? 0 : 4, paddingRight: isUser ? 4 : 0 }}
+                >
+                  {timeLabel}
+                </div>
               </div>
             </motion.div>
           );

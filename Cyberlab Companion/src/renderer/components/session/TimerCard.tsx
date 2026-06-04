@@ -107,12 +107,24 @@ export default function TimerCard({ onStop }: TimerCardProps) {
     ? 'rgba(210,153,34,0.35)'
     : 'rgba(180,79,255,0.35)';
 
+  // SVG arc constants
+  const ARC_R = 44;
+  const ARC_CX = 52;
+  const ARC_CY = 52;
+  const ARC_STROKE = 3.5;
+  const circumference = 2 * Math.PI * ARC_R;
+  // For count-up we show elapsed fraction vs a 2h cap; for countdown use remaining fraction
+  const arcFraction = mode === 'countdown'
+    ? Math.max(0, Math.min(1, displaySeconds / Math.max(countdownTarget, 1)))
+    : Math.max(0, Math.min(1, elapsed / Math.max(countdownTarget, 1)));
+  const dashOffset = circumference * (1 - arcFraction);
+
   return (
     <motion.div
-      className="p-3 rounded-xl relative overflow-hidden"
+      className={`p-3 rounded-xl relative overflow-hidden ${running && !isCritical && !isWarning ? 'timer-border-running' : ''}`}
       style={{
         background: 'linear-gradient(135deg, var(--surface-2) 0%, var(--surface-1) 100%)',
-        border: `1px solid ${isCritical ? 'rgba(248,81,73,0.4)' : isWarning ? 'rgba(210,153,34,0.3)' : 'rgba(180,79,255,0.2)'}`,
+        border: `1px solid ${isCritical ? 'rgba(248,81,73,0.4)' : isWarning ? 'rgba(210,153,34,0.3)' : running ? 'rgba(63,185,80,0.55)' : 'rgba(180,79,255,0.2)'}`,
         boxShadow: `0 0 20px ${glowColor}`,
       }}
       animate={isCritical ? {
@@ -126,16 +138,43 @@ export default function TimerCard({ onStop }: TimerCardProps) {
         background: `radial-gradient(ellipse at 50% 40%, ${glowColor.replace('0.35', '0.08')} 0%, transparent 65%)`,
       }} />
 
-      {/* Time display */}
-      <div
-        className="text-3xl font-mono font-bold tabular-nums text-center mb-1 relative"
-        style={{
-          color: timerColor,
-          letterSpacing: '0.06em',
-          textShadow: `0 0 20px ${glowColor}, 0 0 40px ${glowColor.replace('0.35', '0.18')}`,
-        }}
-      >
-        {formatTime(displaySeconds)}
+      {/* Progress arc SVG */}
+      <div className="flex justify-center mb-1 relative" style={{ height: 104 }}>
+        <svg width="104" height="104" viewBox="0 0 104 104" fill="none" style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)' }}>
+          {/* Track */}
+          <circle
+            cx={ARC_CX} cy={ARC_CY} r={ARC_R}
+            stroke="rgba(42,51,71,0.45)" strokeWidth={ARC_STROKE} fill="none"
+          />
+          {/* Progress arc */}
+          <circle
+            cx={ARC_CX} cy={ARC_CY} r={ARC_R}
+            stroke={timerColor}
+            strokeWidth={ARC_STROKE}
+            fill="none"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={dashOffset}
+            transform={`rotate(-90 ${ARC_CX} ${ARC_CY})`}
+            style={{
+              transition: running ? 'stroke-dashoffset 1s linear' : 'stroke-dashoffset 0.4s ease',
+              filter: `drop-shadow(0 0 4px ${timerColor})`,
+            }}
+          />
+        </svg>
+        {/* Time display centered inside arc */}
+        <div
+          className="font-mono font-bold tabular-nums text-center absolute"
+          style={{
+            top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+            fontSize: '1.55rem',
+            color: timerColor,
+            letterSpacing: '0.06em',
+            textShadow: `0 0 20px ${glowColor}, 0 0 40px ${glowColor.replace('0.35', '0.18')}`,
+          }}
+        >
+          {formatTime(displaySeconds)}
+        </div>
       </div>
 
       <div className="text-center text-xs mb-3 relative" style={{ color: 'var(--text-muted)' }}>
