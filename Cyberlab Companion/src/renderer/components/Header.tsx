@@ -27,8 +27,9 @@ export default function Header({ onHelp }: HeaderProps) {
     ? `Ollama: ${ollamaModel || '?'}`
     : CLAUDE_MODELS.find(m => m.value === claudeModel)?.label || 'Claude';
 
-  const vpnColor = vpnStatus.status === 'active' ? '#3fb950' :
-                   vpnStatus.status === 'off' ? '#f85149' : '#4a5568';
+  const vpnOnline = vpnStatus.status === 'active';
+  const vpnOff    = vpnStatus.status === 'off';
+  const vpnColor  = vpnOnline ? '#3fb950' : vpnOff ? '#f85149' : '#484f58';
 
   async function handleModelSelect(provider: 'claude' | 'ollama', model?: string) {
     if (!config) return;
@@ -46,78 +47,116 @@ export default function Header({ onHelp }: HeaderProps) {
     try { (window.electronAPI as Record<string, Function>).toggleFullscreen?.(); } catch {}
   }
 
+  const hasSession = session?.labName && session.labName !== 'New Session';
+
   return (
     <div
-      className="h-10 border-b flex items-center px-4 drag-region shrink-0"
+      className="h-10 flex items-center px-4 drag-region shrink-0 relative"
       style={{
-        background: 'rgba(10, 10, 15, 0.92)',
-        borderBottomColor: 'rgba(42, 51, 71, 0.5)',
+        background: 'rgba(7,8,15,0.98)',
+        borderBottom: '1px solid rgba(255,255,255,0.04)',
       }}
     >
+      {/* Purple accent underline */}
+      <div
+        className="absolute bottom-0 left-0 right-0 h-px pointer-events-none"
+        style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(180,79,255,0.18) 40%, rgba(180,79,255,0.18) 60%, transparent 100%)' }}
+      />
+
       {/* macOS traffic light spacer */}
       <div className="w-[70px] no-drag" />
 
       {/* App identity */}
       <div className="flex items-center gap-2 no-drag">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-          <path d="M8 1.5L13.5 4.75V11.25L8 14.5L2.5 11.25V4.75L8 1.5Z" stroke="#b44fff" strokeWidth="1.5" fill="none" />
-          <circle cx="8" cy="8" r="2" fill="#b44fff" />
-        </svg>
-        <span className="text-sm font-medium" style={{ color: '#8b949e' }}>
-          CyberLab Companion
+        <div style={{ filter: 'drop-shadow(0 0 5px rgba(180,79,255,0.45))' }}>
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+            <path d="M8 1.5L13.5 4.75V11.25L8 14.5L2.5 11.25V4.75L8 1.5Z" stroke="#b44fff" strokeWidth="1.5" fill="none" />
+            <circle cx="8" cy="8" r="2" fill="#b44fff" />
+          </svg>
+        </div>
+        <span
+          className="text-[13px] font-semibold tracking-wide"
+          style={{ color: '#8b949e' }}
+        >
+          CyberLab
         </span>
-        {session?.labName && session.labName !== 'New Session' && (
+        <span
+          className="text-[10px] font-mono px-1.5 py-0.5 rounded"
+          style={{
+            background: 'rgba(180,79,255,0.08)',
+            border: '1px solid rgba(180,79,255,0.18)',
+            color: '#b44fff',
+          }}
+        >
+          Companion
+        </span>
+        {hasSession && (
           <>
-            <span style={{ color: '#2a3347' }}>—</span>
-            <span className="text-xs" style={{ color: '#b44fff' }}>{session.labName}</span>
+            <span style={{ color: 'rgba(42,51,71,0.8)', fontSize: 12 }}>—</span>
+            <span className="text-xs font-medium" style={{ color: '#b44fff' }}>
+              {session.labName}
+            </span>
           </>
         )}
       </div>
 
       <div className="flex-1" />
 
-      {/* Session HUD strip (Feature 11) */}
-      {session && session.labName !== 'New Session' && (() => {
+      {/* Session HUD strip */}
+      {hasSession && (() => {
         const totalFlags = (session.findings?.flags?.length ?? 0) + (session.ctfFlags?.length ?? 0);
         const totalPts = (session.ctfFlags ?? []).reduce((s, f) => s + (f.points ?? 0), 0);
         const elapsedHrs = (session.timer?.elapsed ?? 0) / 3600;
         const flagRate = elapsedHrs > 0 ? (totalFlags / elapsedHrs).toFixed(1) : '—';
         return (
-          <div className="flex items-center gap-3 px-3 py-1 rounded" style={{ background: 'rgba(180,79,255,0.06)', border: '1px solid rgba(180,79,255,0.12)' }}>
-            <span className="text-[10px] font-mono" style={{ color: '#3fb950' }}>{totalFlags} flags</span>
-            {totalPts > 0 && <span className="text-[10px] font-mono" style={{ color: '#b44fff' }}>{totalPts} pts</span>}
-            <span className="text-[10px] font-mono" style={{ color: '#8b949e' }}>{flagRate}/hr</span>
+          <div
+            className="flex items-center gap-3 px-3 py-1 rounded-md mr-2"
+            style={{ background: 'rgba(180,79,255,0.06)', border: '1px solid rgba(180,79,255,0.12)' }}
+          >
+            <span className="text-[10px] font-mono tabular-nums" style={{ color: '#3fb950' }}>
+              {totalFlags} flags
+            </span>
+            {totalPts > 0 && (
+              <span className="text-[10px] font-mono tabular-nums" style={{ color: '#b44fff' }}>
+                {totalPts} pts
+              </span>
+            )}
+            <span className="text-[10px] font-mono tabular-nums" style={{ color: '#484f58' }}>
+              {flagRate}/hr
+            </span>
           </div>
         );
       })()}
 
       {/* Right actions */}
-      <div className="flex items-center gap-2 no-drag">
+      <div className="flex items-center gap-1 no-drag">
         {/* VPN indicator */}
-        <div className="flex items-center gap-1.5 text-xs">
-          <div
+        <div
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs"
+          style={{
+            background: vpnOnline ? 'rgba(63,185,80,0.06)' : 'transparent',
+            border: `1px solid ${vpnOnline ? 'rgba(63,185,80,0.2)' : 'transparent'}`,
+          }}
+        >
+          <span
             className="w-1.5 h-1.5 rounded-full"
             style={{
               background: vpnColor,
-              boxShadow: vpnStatus.status === 'active' ? `0 0 4px ${vpnColor}88` : 'none',
+              boxShadow: vpnOnline ? `0 0 4px ${vpnColor}88` : 'none',
             }}
           />
           <span style={{ color: vpnColor, fontSize: '11px' }}>
-            {vpnStatus.status === 'active'
-              ? (vpnStatus.ip || 'VPN')
-              : vpnStatus.status === 'off'
-              ? 'No VPN'
-              : 'VPN?'}
+            {vpnOnline ? (vpnStatus.ip || 'VPN') : vpnOff ? 'No VPN' : 'VPN?'}
           </span>
         </div>
 
         {/* AI provider selector */}
         <div className="relative">
           <button
-            className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md no-drag"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md no-drag"
             style={{
-              background: 'rgba(26, 27, 38, 0.8)',
-              border: '1px solid rgba(42, 51, 71, 0.6)',
+              background: 'rgba(13,14,24,0.8)',
+              border: '1px solid rgba(42,51,71,0.5)',
               color: '#8b949e',
               fontSize: '11px',
             }}
@@ -128,7 +167,7 @@ export default function Header({ onHelp }: HeaderProps) {
               style={{ background: aiProvider === 'ollama' ? '#3fb950' : '#b44fff' }}
             />
             <span>AI: {currentModelLabel}</span>
-            <span style={{ opacity: 0.5 }}>▾</span>
+            <span style={{ opacity: 0.4, fontSize: 9 }}>▾</span>
           </button>
 
           {showAiMenu && (
@@ -137,52 +176,55 @@ export default function Header({ onHelp }: HeaderProps) {
               <div
                 className="absolute right-0 top-8 z-20 p-1 rounded-lg"
                 style={{
-                  background: 'rgba(18, 19, 26, 0.98)',
-                  border: '1px solid rgba(42, 51, 71, 0.8)',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-                  minWidth: '180px',
-                  backdropFilter: 'blur(8px)',
+                  background: 'rgba(7,8,15,0.98)',
+                  border: '1px solid rgba(42,51,71,0.7)',
+                  boxShadow: '0 12px 40px rgba(0,0,0,0.65)',
+                  minWidth: '184px',
+                  backdropFilter: 'blur(12px)',
                 }}
               >
-                <div className="px-2 py-1 mb-1" style={{ fontSize: '10px', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <div
+                  className="px-2 py-1.5 mb-0.5"
+                  style={{ fontSize: '10px', color: '#484f58', textTransform: 'uppercase', letterSpacing: '0.06em' }}
+                >
                   Claude API
                 </div>
                 {CLAUDE_MODELS.map(m => (
                   <button
                     key={m.value}
-                    className="w-full text-left px-3 py-1.5 rounded text-xs flex items-center gap-2"
+                    className="w-full text-left px-3 py-1.5 rounded flex items-center gap-2"
                     style={{
-                      background: aiProvider === 'claude' && claudeModel === m.value ? 'rgba(180, 79, 255, 0.12)' : 'transparent',
-                      color: aiProvider === 'claude' && claudeModel === m.value ? '#b44fff' : '#8b949e',
-                      border: 'none',
-                      fontSize: '12px',
+                      background: aiProvider === 'claude' && claudeModel === m.value
+                        ? 'rgba(180,79,255,0.1)' : 'transparent',
+                      color: aiProvider === 'claude' && claudeModel === m.value
+                        ? '#b44fff' : '#8b949e',
+                      border: 'none', fontSize: '12px',
                     }}
                     onClick={() => handleModelSelect('claude', m.value)}
                   >
                     {aiProvider === 'claude' && claudeModel === m.value && (
-                      <span style={{ color: '#b44fff' }}>✓</span>
+                      <span style={{ color: '#b44fff', fontSize: 10 }}>✓</span>
                     )}
                     {m.label}
                   </button>
                 ))}
+                <div style={{ height: '1px', background: 'rgba(42,51,71,0.5)', margin: '4px 8px' }} />
                 <div
-                  className="my-1"
-                  style={{ height: '1px', background: 'rgba(42, 51, 71, 0.5)', margin: '4px 8px' }}
-                />
-                <div className="px-2 py-1 mb-1" style={{ fontSize: '10px', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  className="px-2 py-1.5 mb-0.5"
+                  style={{ fontSize: '10px', color: '#484f58', textTransform: 'uppercase', letterSpacing: '0.06em' }}
+                >
                   Ollama (Local)
                 </div>
                 <button
-                  className="w-full text-left px-3 py-1.5 rounded text-xs flex items-center gap-2"
+                  className="w-full text-left px-3 py-1.5 rounded flex items-center gap-2"
                   style={{
-                    background: aiProvider === 'ollama' ? 'rgba(63, 185, 80, 0.12)' : 'transparent',
+                    background: aiProvider === 'ollama' ? 'rgba(63,185,80,0.1)' : 'transparent',
                     color: aiProvider === 'ollama' ? '#3fb950' : '#8b949e',
-                    border: 'none',
-                    fontSize: '12px',
+                    border: 'none', fontSize: '12px',
                   }}
                   onClick={() => handleModelSelect('ollama')}
                 >
-                  {aiProvider === 'ollama' && <span style={{ color: '#3fb950' }}>✓</span>}
+                  {aiProvider === 'ollama' && <span style={{ color: '#3fb950', fontSize: 10 }}>✓</span>}
                   {ollamaModel ? `Ollama: ${ollamaModel}` : 'Ollama (configure in Settings)'}
                 </button>
               </div>
@@ -192,12 +234,10 @@ export default function Header({ onHelp }: HeaderProps) {
 
         {/* Fullscreen */}
         <button
-          className="w-7 h-7 flex items-center justify-center rounded-md no-drag"
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: '#4a5568',
-          }}
+          className="w-8 h-8 flex items-center justify-center rounded-md no-drag transition-colors"
+          style={{ background: 'transparent', border: 'none', color: '#484f58' }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(19,21,37,0.8)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
           onClick={handleFullscreen}
           title="Toggle Fullscreen"
         >
@@ -212,7 +252,7 @@ export default function Header({ onHelp }: HeaderProps) {
         {/* CYBERTOOLS badge */}
         <span
           className="flex items-center gap-1 text-[9px] font-semibold tracking-widest uppercase px-2 py-0.5 rounded-full"
-          style={{ background: 'rgba(74,158,255,0.08)', color: '#4a5568', border: '1px solid rgba(74,158,255,0.12)' }}
+          style={{ background: 'rgba(180,79,255,0.06)', color: '#484f58', border: '1px solid rgba(180,79,255,0.1)' }}
         >
           <span>⬡</span>
           <span>CYBERTOOLS</span>
@@ -222,10 +262,18 @@ export default function Header({ onHelp }: HeaderProps) {
         {onHelp && (
           <button
             onClick={onHelp}
-            className="w-7 h-7 flex items-center justify-center rounded-md no-drag"
-            style={{ background: 'transparent', border: '1px solid rgba(42,51,71,0.6)', color: '#4a5568', fontSize: 12, fontWeight: 700 }}
-            onMouseEnter={e => { const el = e.target as HTMLElement; el.style.borderColor = '#b44fff'; el.style.color = '#b44fff' }}
-            onMouseLeave={e => { const el = e.target as HTMLElement; el.style.borderColor = 'rgba(42,51,71,0.6)'; el.style.color = '#4a5568' }}
+            className="w-8 h-8 flex items-center justify-center rounded-md no-drag transition-colors"
+            style={{ background: 'transparent', border: '1px solid rgba(42,51,71,0.5)', color: '#484f58', fontSize: 12, fontWeight: 700 }}
+            onMouseEnter={e => {
+              const el = e.currentTarget;
+              el.style.borderColor = 'rgba(180,79,255,0.5)';
+              el.style.color = '#b44fff';
+            }}
+            onMouseLeave={e => {
+              const el = e.currentTarget;
+              el.style.borderColor = 'rgba(42,51,71,0.5)';
+              el.style.color = '#484f58';
+            }}
             title="Help & onboarding"
           >
             ?

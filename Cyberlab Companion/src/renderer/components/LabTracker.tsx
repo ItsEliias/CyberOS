@@ -1,27 +1,32 @@
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
-import { load, getByColumn, getById, add, update, remove, moveToColumn, searchLabs, serialize, type Lab, type LabColumn } from '../lib/labtracker';
+import {
+  load, getByColumn, getById, add, update, remove, moveToColumn,
+  searchLabs, serialize, type Lab, type LabColumn,
+} from '../lib/labtracker';
+import Badge from './ui/Badge';
 
-const COLUMNS: Array<{ id: LabColumn; label: string; color: string }> = [
-  { id: 'todo',       label: 'To Do',       color: 'var(--text-muted)' },
-  { id: 'inprogress', label: 'In Progress',  color: 'var(--warning)' },
-  { id: 'completed',  label: 'Completed',    color: 'var(--success)' },
+const COLUMNS: Array<{ id: LabColumn; label: string; color: string; rgb: string }> = [
+  { id: 'todo',       label: 'To Do',       color: '#484f58', rgb: '72,79,88'   },
+  { id: 'inprogress', label: 'In Progress',  color: '#d29922', rgb: '210,153,34' },
+  { id: 'completed',  label: 'Completed',    color: '#3fb950', rgb: '63,185,80'  },
 ];
 
 const DIFF_COLORS: Record<string, string> = {
-  Easy: 'var(--success)', Medium: 'var(--warning)', Hard: '#ff7a00', Insane: 'var(--danger)',
+  Easy: '#3fb950', Medium: '#d29922', Hard: '#ff7a00', Insane: '#f85149',
 };
 
 export default function LabTracker() {
   const { labsData, setLabsData } = useStore();
   const [query, setQuery] = useState('');
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({ name: '', platform: 'HTB', difficulty: 'Medium', url: '', notes: '', column: 'todo' as LabColumn });
+  const [form, setForm] = useState({
+    name: '', platform: 'HTB', difficulty: 'Medium', url: '', notes: '', column: 'todo' as LabColumn,
+  });
   const [, forceUpdate] = useState(0);
 
-  useEffect(() => {
-    load(labsData);
-  }, [labsData]);
+  useEffect(() => { load(labsData); }, [labsData]);
 
   function refresh() {
     const data = serialize();
@@ -37,10 +42,7 @@ export default function LabTracker() {
     setForm({ name: '', platform: 'HTB', difficulty: 'Medium', url: '', notes: '', column: 'todo' });
   }
 
-  function deleteLab(id: string) {
-    remove(id);
-    refresh();
-  }
+  function deleteLab(id: string) { remove(id); refresh(); }
 
   function moveCard(id: string, column: LabColumn) {
     const lab = getById(id);
@@ -55,75 +57,177 @@ export default function LabTracker() {
   }
 
   const filteredIds = new Set(query ? searchLabs(query).map(l => l.id) : []);
+  const totalLabs = COLUMNS.reduce((s, c) => s + getByColumn(c.id).length, 0);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" style={{ background: 'var(--surface-0)' }}>
       {/* Toolbar */}
-      <div className="flex items-center gap-2 p-3 border-b border-[var(--border)]">
+      <div
+        className="flex items-center gap-3 px-4 py-3 flex-shrink-0"
+        style={{ borderBottom: '1px solid var(--border-default)', background: 'rgba(7,8,15,0.7)' }}
+      >
+        <div className="flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path d="M8 1.5L13.5 4.75V11.25L8 14.5L2.5 11.25V4.75L8 1.5Z" stroke="#b44fff" strokeWidth="1.5" fill="none" />
+            <circle cx="8" cy="8" r="2" fill="#b44fff" />
+          </svg>
+          <span className="text-xs font-semibold tracking-wide" style={{ color: '#e6edf3' }}>Lab Tracker</span>
+          {totalLabs > 0 && (
+            <span
+              className="text-[10px] font-mono px-1.5 py-0.5 rounded"
+              style={{ background: 'rgba(180,79,255,0.08)', color: '#b44fff', border: '1px solid rgba(180,79,255,0.18)' }}
+            >
+              {totalLabs}
+            </span>
+          )}
+        </div>
         <input
           type="text"
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="Search labs..."
           className="flex-1 text-xs"
+          style={{ maxWidth: 240 }}
         />
-        <button className="btn-accent px-3 py-1.5 text-xs" onClick={() => setCreating(c => !c)}>+ Add Lab</button>
+        <button
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium btn-accent"
+          onClick={() => setCreating(c => !c)}
+        >
+          <span>+</span>
+          <span>Add Lab</span>
+        </button>
       </div>
 
       {/* Create form */}
-      {creating && (
-        <div className="p-3 border-b border-[var(--border)] bg-[var(--bg3)]">
-          <div className="grid grid-cols-3 gap-2">
-            <div className="input-group col-span-3">
-              <label>Lab Name</label>
-              <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="w-full" placeholder="Machine or room name" />
+      <AnimatePresence>
+        {creating && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="flex-shrink-0 overflow-hidden"
+          >
+            <div
+              className="p-4"
+              style={{
+                background: 'rgba(13,14,24,0.9)',
+                borderBottom: '1px solid var(--border-default)',
+              }}
+            >
+              <div className="grid grid-cols-3 gap-3 mb-3">
+                <div className="input-group col-span-3">
+                  <label>Lab Name</label>
+                  <input
+                    type="text"
+                    value={form.name}
+                    onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                    className="w-full"
+                    placeholder="Machine or room name"
+                    autoFocus
+                  />
+                </div>
+                <div className="input-group">
+                  <label>Platform</label>
+                  <select value={form.platform} onChange={e => setForm(f => ({ ...f, platform: e.target.value }))} className="w-full text-xs">
+                    {['HTB','THM','CTF','PentesterLab','PortSwigger','VulnHub','Other'].map(p => <option key={p}>{p}</option>)}
+                  </select>
+                </div>
+                <div className="input-group">
+                  <label>Difficulty</label>
+                  <select value={form.difficulty} onChange={e => setForm(f => ({ ...f, difficulty: e.target.value }))} className="w-full text-xs">
+                    {['Easy','Medium','Hard','Insane'].map(d => <option key={d}>{d}</option>)}
+                  </select>
+                </div>
+                <div className="input-group">
+                  <label>Column</label>
+                  <select value={form.column} onChange={e => setForm(f => ({ ...f, column: e.target.value as LabColumn }))} className="w-full text-xs">
+                    {COLUMNS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  className="btn-accent px-4 py-1.5 text-xs"
+                  onClick={createLab}
+                  disabled={!form.name.trim()}
+                >
+                  Add Lab
+                </button>
+                <button className="btn-ghost px-4 py-1.5 text-xs" onClick={() => setCreating(false)}>
+                  Cancel
+                </button>
+              </div>
             </div>
-            <div className="input-group">
-              <label>Platform</label>
-              <select value={form.platform} onChange={e => setForm(f => ({ ...f, platform: e.target.value }))} className="w-full text-xs">
-                {['HTB','THM','CTF','PentesterLab','PortSwigger','VulnHub','Other'].map(p => <option key={p}>{p}</option>)}
-              </select>
-            </div>
-            <div className="input-group">
-              <label>Difficulty</label>
-              <select value={form.difficulty} onChange={e => setForm(f => ({ ...f, difficulty: e.target.value }))} className="w-full text-xs">
-                {['Easy','Medium','Hard','Insane'].map(d => <option key={d}>{d}</option>)}
-              </select>
-            </div>
-            <div className="input-group">
-              <label>Column</label>
-              <select value={form.column} onChange={e => setForm(f => ({ ...f, column: e.target.value as LabColumn }))} className="w-full text-xs">
-                {COLUMNS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-              </select>
-            </div>
-          </div>
-          <div className="flex gap-2 mt-2">
-            <button className="btn-accent px-4 py-1.5 text-xs" onClick={createLab} disabled={!form.name.trim()}>Add</button>
-            <button className="btn-ghost px-4 py-1.5 text-xs" onClick={() => setCreating(false)}>Cancel</button>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Kanban board */}
-      <div className="flex flex-1 overflow-hidden gap-px bg-[var(--border)]">
+      <div
+        className="flex flex-1 overflow-hidden"
+        style={{ gap: '1px', background: 'rgba(42,51,71,0.3)' }}
+      >
         {COLUMNS.map(col => {
           const cards = getByColumn(col.id).filter(l => !query || filteredIds.has(l.id));
           return (
-            <div key={col.id} className="flex flex-col flex-1 bg-[var(--bg)] overflow-hidden">
+            <div
+              key={col.id}
+              className="flex flex-col flex-1 overflow-hidden"
+              style={{ background: 'var(--surface-0)' }}
+            >
               {/* Column header */}
-              <div className="flex items-center justify-between px-3 py-2.5 border-b border-[var(--border)] flex-shrink-0">
+              <div
+                className="flex items-center justify-between px-4 py-2.5 flex-shrink-0"
+                style={{ borderBottom: '1px solid var(--border-default)' }}
+              >
                 <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: col.color }} />
-                  <span className="text-xs font-semibold text-[var(--text)]">{col.label}</span>
+                  <span
+                    className="w-2 h-2 rounded-full"
+                    style={{
+                      background: col.color,
+                      boxShadow: `0 0 5px rgba(${col.rgb},0.5)`,
+                    }}
+                  />
+                  <span className="text-xs font-semibold" style={{ color: '#e6edf3' }}>
+                    {col.label}
+                  </span>
                 </div>
-                <span className="text-xs text-[var(--text-muted)]">{cards.length}</span>
+                <span
+                  className="text-[10px] font-mono px-1.5 py-0.5 rounded"
+                  style={{
+                    background: `rgba(${col.rgb},0.08)`,
+                    color: col.color,
+                    border: `1px solid rgba(${col.rgb},0.2)`,
+                  }}
+                >
+                  {cards.length}
+                </span>
               </div>
 
               {/* Cards */}
-              <div className="flex-1 overflow-y-auto p-2 space-y-2">
-                {cards.map(lab => (
-                  <LabCard key={lab.id} lab={lab} onDelete={() => deleteLab(lab.id)} onMove={moveCard} />
-                ))}
+              <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                <AnimatePresence>
+                  {cards.map(lab => (
+                    <LabCard
+                      key={lab.id}
+                      lab={lab}
+                      onDelete={() => deleteLab(lab.id)}
+                      onMove={moveCard}
+                    />
+                  ))}
+                </AnimatePresence>
+                {cards.length === 0 && (
+                  <div
+                    className="flex items-center justify-center py-8 rounded-md text-xs"
+                    style={{
+                      border: '1px dashed rgba(42,51,71,0.5)',
+                      color: '#484f58',
+                    }}
+                  >
+                    Empty
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -133,49 +237,102 @@ export default function LabTracker() {
   );
 }
 
-function LabCard({ lab, onDelete, onMove }: { lab: Lab; onDelete: () => void; onMove: (id: string, col: LabColumn) => void }) {
+function LabCard({
+  lab,
+  onDelete,
+  onMove,
+}: {
+  lab: Lab;
+  onDelete: () => void;
+  onMove: (id: string, col: LabColumn) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
+  const diffColor = DIFF_COLORS[lab.difficulty] || '#484f58';
 
   return (
-    <div
-      className="card cursor-pointer hover:border-[var(--accent-dim)] transition-colors group"
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.96 }}
+      transition={{ duration: 0.15 }}
+      className="group cursor-pointer rounded-md overflow-hidden"
+      style={{
+        background: 'var(--surface-1)',
+        border: '1px solid rgba(42,51,71,0.6)',
+        transition: 'border-color 0.15s',
+      }}
+      onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(180,79,255,0.25)')}
+      onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(42,51,71,0.6)')}
       onClick={() => setExpanded(e => !e)}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <div className="text-xs font-semibold text-[var(--text)] truncate">{lab.name}</div>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-[10px] text-[var(--accent)]">{lab.platform}</span>
-            <span className="text-[10px] font-medium" style={{ color: DIFF_COLORS[lab.difficulty] || 'var(--text-muted)' }}>
-              {lab.difficulty}
-            </span>
+      <div className="p-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-semibold truncate" style={{ color: '#e6edf3' }}>
+              {lab.name}
+            </div>
+            <div className="flex items-center gap-2 mt-1.5">
+              <span
+                className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+                style={{
+                  background: 'rgba(180,79,255,0.08)',
+                  color: '#b44fff',
+                  border: '1px solid rgba(180,79,255,0.2)',
+                }}
+              >
+                {lab.platform}
+              </span>
+              <span
+                className="text-[10px] font-semibold"
+                style={{ color: diffColor }}
+              >
+                {lab.difficulty}
+              </span>
+            </div>
           </div>
+          <button
+            className="opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center rounded text-xs"
+            style={{ border: 'none', background: 'rgba(248,81,73,0.1)', color: '#f85149', padding: 0 }}
+            onClick={e => { e.stopPropagation(); onDelete(); }}
+            title="Delete lab"
+          >
+            ×
+          </button>
         </div>
-        <button
-          className="text-[var(--text-muted)] hover:text-[var(--danger)] text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-          style={{ border: 'none', background: 'none', padding: '2px 4px' }}
-          onClick={e => { e.stopPropagation(); onDelete(); }}
-        >
-          ×
-        </button>
       </div>
 
       {expanded && (
-        <div className="mt-2 pt-2 border-t border-[var(--border)]" onClick={e => e.stopPropagation()}>
-          {lab.notes && <p className="text-[10px] text-[var(--text-muted)] mb-2">{lab.notes}</p>}
-          <div className="flex gap-1 flex-wrap">
-            {(['todo','inprogress','completed'] as LabColumn[]).filter(c => c !== lab.column).map(c => (
-              <button
-                key={c}
-                className="text-[10px] px-2 py-0.5 rounded btn-ghost"
-                onClick={() => onMove(lab.id, c)}
-              >
-                → {c === 'todo' ? 'To Do' : c === 'inprogress' ? 'In Progress' : 'Completed'}
-              </button>
-            ))}
+        <div
+          className="px-3 pb-3"
+          style={{ borderTop: '1px solid rgba(42,51,71,0.4)' }}
+          onClick={e => e.stopPropagation()}
+        >
+          {lab.notes && (
+            <p className="text-[11px] py-2" style={{ color: '#8b949e' }}>{lab.notes}</p>
+          )}
+          <div className="flex gap-1.5 flex-wrap pt-1">
+            {(['todo','inprogress','completed'] as LabColumn[]).filter(c => c !== lab.column).map(c => {
+              const col = COLUMNS.find(x => x.id === c)!;
+              return (
+                <button
+                  key={c}
+                  className="text-[10px] px-2 py-1 rounded flex items-center gap-1"
+                  style={{
+                    background: `rgba(${col.rgb},0.08)`,
+                    border: `1px solid rgba(${col.rgb},0.2)`,
+                    color: col.color,
+                    fontWeight: 500,
+                  }}
+                  onClick={() => onMove(lab.id, c)}
+                >
+                  → {col.label}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
