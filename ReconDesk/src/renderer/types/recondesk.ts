@@ -126,6 +126,16 @@ export interface Engagement {
   name: string
   color: string
   createdAt: string
+  // RoE / Scope fields — all optional so existing records default to undefined
+  authorisedBy?: string
+  authorisedDate?: string
+  inScope?: string
+  outOfScope?: string
+  windowStart?: string
+  windowEnd?: string
+  allowedActivity?: string
+  emergencyContact?: string
+  authStorageLocation?: string
 }
 
 export interface LinkedCredential {

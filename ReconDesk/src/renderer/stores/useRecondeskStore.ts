@@ -80,14 +80,19 @@ export const useRecondeskStore = create<RecondeskState>((set, get) => ({
 
   saveTargets: async () => {
     const { targets, activeTargetId, engagements } = get()
+    // Strip plaintext passwords before persisting — CredVault owns encrypted storage
+    const safeTargets = targets.map(t => ({
+      ...t,
+      credentials: t.credentials.map(({ password: _pw, ...c }) => c),
+    }))
     try {
       await window.electronAPI.saveData({
-        targets: targets as any,
+        targets: safeTargets as any,
         cards: [],
         activeTargetId,
         version: '3.0.0',
         engagements,
-      } as any)
+      })
     } catch { /* no-op */ }
   },
 

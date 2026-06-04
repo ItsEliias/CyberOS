@@ -196,7 +196,8 @@ export function normalizeTarget(t: any): Target {
       notes: p.notes || '', addedAt: p.addedAt || now, source: p.source || 'manual',
     })),
     credentials: (t.credentials || []).map((c: any) => ({
-      id: c.id, username: c.username || '', password: c.password, hash: c.hash,
+      // password intentionally omitted — not loaded from disk (one-time migration)
+      id: c.id, username: c.username || '', hash: c.hash,
       hashType: c.hashType, service: c.service || '', port: c.port,
       notes: c.notes || '', source: c.source || '', verified: c.verified || false,
       addedAt: c.addedAt || now,
