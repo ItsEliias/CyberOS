@@ -76,11 +76,14 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="w-[200px] flex flex-col border-r border-white/[0.06] flex-shrink-0"
-      style={{ background: 'rgba(18, 19, 26, 0.85)' }}
+      className="w-[200px] flex flex-col flex-shrink-0"
+      style={{
+        background: 'rgba(10,11,18,0.92)',
+        borderRight: '1px solid rgba(255,255,255,0.04)',
+      }}
     >
       {/* Nav */}
-      <nav className="px-3 py-3 border-b border-white/[0.05]">
+      <nav className="px-2 py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
         <div className="space-y-0.5">
           {NAV.map(item => {
             const isActive = activeView === item.id
@@ -88,24 +91,41 @@ export default function Sidebar() {
               <button
                 key={item.id}
                 onClick={() => setActiveView(item.id)}
-                className={`w-full h-9 flex items-center gap-3 px-3 rounded-md text-sm font-medium transition-colors relative ${
-                  isActive
-                    ? 'text-white bg-white/[0.06]'
-                    : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-                }`}
+                className="w-full h-9 flex items-center gap-3 px-3 rounded-sm text-[13px] font-medium transition-all duration-fast relative"
+                style={{
+                  color: isActive ? '#e6edf3' : '#484f58',
+                  background: isActive ? 'rgba(255,107,107,0.07)' : 'transparent',
+                }}
+                onMouseEnter={e => {
+                  if (!isActive) {
+                    e.currentTarget.style.color = '#8b949e'
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.03)'
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!isActive) {
+                    e.currentTarget.style.color = '#484f58'
+                    e.currentTarget.style.background = 'transparent'
+                  }
+                }}
               >
                 {isActive && (
                   <motion.div
                     layoutId="sb-active"
                     className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
-                    style={{ background: '#ff6b6b', boxShadow: '0 0 8px rgba(255,107,107,0.4)' }}
+                    style={{ background: '#ff6b6b', boxShadow: '0 0 8px rgba(255,107,107,0.5)' }}
                     transition={{ type: 'tween', duration: 0.15 }}
                   />
                 )}
-                <span style={{ color: isActive ? '#ff6b6b' : undefined }}>{item.icon}</span>
+                <span style={{ color: isActive ? '#ff6b6b' : 'inherit' }}>{item.icon}</span>
                 <span>{item.label}</span>
                 {item.id === 'bookmarks' && bookmarks.length > 0 && (
-                  <span className="ml-auto text-[9px] font-mono text-accent/70">{bookmarks.length}</span>
+                  <span
+                    className="ml-auto text-[9px] font-mono tabular-nums"
+                    style={{ color: 'rgba(255,107,107,0.6)' }}
+                  >
+                    {bookmarks.length}
+                  </span>
                 )}
               </button>
             )

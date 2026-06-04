@@ -20,21 +20,52 @@ export default function StatusBar() {
   const enabled = sources.filter(s => s.enabled).length
 
   return (
-    <footer className="h-6 flex items-center justify-between px-4 border-t border-border/50 flex-shrink-0 bg-panel/20">
+    <footer
+      className="h-6 flex items-center justify-between px-4 flex-shrink-0"
+      style={{
+        background: 'rgba(7,8,15,0.9)',
+        borderTop: '1px solid rgba(255,255,255,0.04)',
+      }}
+    >
       <div className="flex items-center gap-1.5">
         <span
-          className={`w-1.5 h-1.5 rounded-full ${refreshing ? 'bg-warning animate-pulse' : 'bg-success'}`}
+          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+          style={{
+            background: refreshing ? '#d29922' : '#3fb950',
+            boxShadow: refreshing ? '0 0 6px rgba(210,153,34,0.5)' : '0 0 6px rgba(63,185,80,0.4)',
+          }}
         />
-        <span className="text-[10px] text-muted">SignalBoard Active</span>
+        <span className="text-[10px]" style={{ color: '#484f58' }}>SignalBoard</span>
+        <span
+          className="text-[9px] px-1.5 py-0 rounded-xs font-mono"
+          style={{ background: 'rgba(255,107,107,0.06)', color: 'rgba(255,107,107,0.5)', border: '1px solid rgba(255,107,107,0.1)' }}
+        >
+          Active
+        </span>
       </div>
-      <div className="flex items-center gap-4 text-[10px] text-muted">
-        <span><span className="text-text">{total}</span> items</span>
-        {unread > 0 && <span><span className="text-accent">{unread}</span> unread</span>}
-        <span><span className="text-text">{enabled}</span> sources</span>
-        {lastRefreshed && !refreshing && (
-          <span>Last refresh: <span className="text-text">{timeAgo(lastRefreshed)}</span></span>
+
+      <div className="flex items-center gap-4">
+        <span className="text-[10px]" style={{ color: '#484f58' }}>
+          <span style={{ color: '#8b949e' }}>{total}</span> items
+        </span>
+        {unread > 0 && (
+          <span className="text-[10px]" style={{ color: '#484f58' }}>
+            <span style={{ color: '#ff6b6b' }}>{unread}</span> unread
+          </span>
         )}
-        {refreshing && <span className="text-warning">Refreshing…</span>}
+        <span className="text-[10px]" style={{ color: '#484f58' }}>
+          <span style={{ color: '#8b949e' }}>{enabled}</span> sources
+        </span>
+        {lastRefreshed && !refreshing && (
+          <span className="text-[10px]" style={{ color: '#484f58' }}>
+            Updated <span style={{ color: '#8b949e' }}>{timeAgo(lastRefreshed)}</span>
+          </span>
+        )}
+        {refreshing && (
+          <span className="text-[10px] animate-pulse" style={{ color: '#d29922' }}>
+            Refreshing…
+          </span>
+        )}
       </div>
     </footer>
   )
