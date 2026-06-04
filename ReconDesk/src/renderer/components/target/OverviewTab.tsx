@@ -138,6 +138,9 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
   const progressPct = totalCards > 0 ? Math.round((doneCards / totalCards) * 100) : 0
   const health      = calcHealthScore(target)
 
+  const targetEngagement = engagements.find(e => e.id === target.engagementId)
+  const showScopeBanner  = (target.platform === 'Client' || target.platform === 'Internal') && !targetEngagement?.inScope
+
   const inputCls    = "bg-[#0a0a0f] border border-[#2a3347] rounded px-2 py-1 text-xs text-[#e2e8f0] focus:outline-none focus:border-[#d29922] transition-colors"
 
   const enrichBadge = target.enrichment?.status === 'pending' ? (
@@ -159,6 +162,19 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
   return (
     <div className="flex-1 overflow-y-auto p-4">
       <div className="max-w-4xl">
+        {/* Scope warning banner — Client/Internal targets with no RoE defined */}
+        {showScopeBanner && (
+          <div className="mb-4 flex items-start gap-3 px-4 py-3 rounded-lg bg-[#d29922]/8 border border-[#d29922]/35">
+            <span className="text-[#d29922] text-base flex-shrink-0 mt-0.5">⚠</span>
+            <div>
+              <p className="text-xs font-semibold text-[#d29922]">Scope not defined</p>
+              <p className="text-[10px] text-[#d29922]/65">
+                No rules of engagement are recorded for this {target.platform.toLowerCase()} target.
+                Use the engagement's <strong className="font-semibold">RoE</strong> button in the sidebar to define scope before proceeding.
+              </p>
+            </div>
+          </div>
+        )}
         {/* Target header */}
         <div className="flex items-start justify-between mb-5">
           <div>

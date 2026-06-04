@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useRecondeskStore } from '../../stores/useRecondeskStore'
 import NewTargetModal from '../target/NewTargetModal'
 import CsvImportModal from '../target/CsvImportModal'
+import EngagementScopePanel from '../engagement/EngagementScopePanel'
 import type { TargetStatus, Platform } from '../../types/recondesk'
 
 const STATUS_DOT: Record<TargetStatus, string> = {
@@ -40,8 +41,9 @@ export default function Sidebar() {
   const activeTarget = targets.find(t => t.id === activeTargetId)
 
   // Collapsible engagement sections
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
-  const [showActions, setShowActions] = useState(false)
+  const [collapsed, setCollapsed]         = useState<Set<string>>(new Set())
+  const [showActions, setShowActions]     = useState(false)
+  const [scopeEngId, setScopeEngId]       = useState<string | null>(null)
 
   function toggleCollapse(id: string) {
     setCollapsed(prev => {
@@ -205,17 +207,27 @@ export default function Sidebar() {
             const isCollapsed = collapsed.has(eng.id)
             return (
               <div key={eng.id}>
-                <button
-                  onClick={() => toggleCollapse(eng.id)}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-[#2a3347]/20 transition-colors group"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: eng.color }} />
-                  <span className="text-[10px] font-semibold uppercase tracking-widest flex-1 text-left" style={{ color: eng.color }}>
-                    {eng.name}
-                  </span>
-                  <span className="text-[9px] text-[#4a5568]">{engTargets.length}</span>
-                  <span className="text-[9px] text-[#4a5568]">{isCollapsed ? '▸' : '▾'}</span>
-                </button>
+                <div className="flex items-center group">
+                  <button
+                    onClick={() => toggleCollapse(eng.id)}
+                    className="flex-1 flex items-center gap-2 px-3 py-1.5 hover:bg-[#2a3347]/20 transition-colors min-w-0"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: eng.color }} />
+                    <span className="text-[10px] font-semibold uppercase tracking-widest flex-1 truncate text-left" style={{ color: eng.color }}>
+                      {eng.name}
+                    </span>
+                    <span className="text-[9px] text-[#4a5568]">{engTargets.length}</span>
+                    <span className="text-[9px] text-[#4a5568]">{isCollapsed ? '▸' : '▾'}</span>
+                  </button>
+                  <button
+                    onClick={e => { e.stopPropagation(); setScopeEngId(eng.id) }}
+                    title="Edit scope / RoE"
+                    className="opacity-0 group-hover:opacity-100 mr-2 px-1.5 py-0.5 text-[9px] rounded border border-[#d29922]/25 text-[#d29922]/60 hover:text-[#d29922] hover:bg-[#d29922]/10 transition-all flex-shrink-0"
+                    style={{ borderColor: !eng.inScope ? '#d29922aa' : undefined, color: !eng.inScope ? '#d2992299' : undefined }}
+                  >
+                    {eng.inScope ? 'RoE' : '⚠ RoE'}
+                  </button>
+                </div>
                 <AnimatePresence>
                   {!isCollapsed && (
                     <motion.div
@@ -241,6 +253,9 @@ export default function Sidebar() {
       </AnimatePresence>
       <AnimatePresence>
         {isCsvImportOpen && <CsvImportModal />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {scopeEngId && <EngagementScopePanel engagementId={scopeEngId} onClose={() => setScopeEngId(null)} />}
       </AnimatePresence>
     </aside>
   )
