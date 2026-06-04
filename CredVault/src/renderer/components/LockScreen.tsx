@@ -113,6 +113,7 @@ export default function LockScreen({ needsSetup }: Props) {
   const [unlocked, setUnlockedAnim] = useState(false)
   const [countdown, setCountdown] = useState(0)
   const [shakeKey, setShakeKey]   = useState(0)
+  const [inputPulseKey, setInputPulseKey] = useState(0)
   const [touchIdAvailable, setTouchIdAvailable] = useState(false)
   const [touchIdLoading, setTouchIdLoading]     = useState(false)
   const [showHint, setShowHint]   = useState(false)
@@ -130,6 +131,11 @@ export default function LockScreen({ needsSetup }: Props) {
   }, [countdown])
 
   function triggerShake() { setShakeKey(k => k + 1) }
+
+  function handlePwChange(v: string) {
+    setPw(v)
+    if (v.length > 0) setInputPulseKey(k => k + 1)
+  }
 
   async function handleSetup(e: FormEvent) {
     e.preventDefault()
@@ -199,17 +205,19 @@ export default function LockScreen({ needsSetup }: Props) {
       >
         {/* Header */}
         <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
-          {/* Lock icon with glow ring — animates on unlock */}
+          {/* Lock icon with glow ring — animates on unlock and on pw input */}
           <motion.div
-            key={loading ? 'loading' : unlocked ? 'unlocked' : 'idle'}
+            key={loading ? 'loading' : unlocked ? 'unlocked' : `idle-${inputPulseKey}`}
             animate={
               unlocked
                 ? { rotate: [0, -15, 5, 0], scale: [1, 1.15, 1.08], borderColor: ['rgba(247,129,102,0.25)', 'rgba(63,185,80,0.6)', 'rgba(63,185,80,0.3)'] }
                 : loading
                   ? { rotate: [0, -5, 5, 0], scale: [1, 0.95, 1] }
-                  : {}
+                  : inputPulseKey > 0
+                    ? { scale: [1, 1.06, 0.97, 1], rotate: [0, -4, 4, 0] }
+                    : {}
             }
-            transition={{ duration: unlocked ? 0.55 : 0.4, ease: [0.2, 0.8, 0.2, 1] }}
+            transition={{ duration: unlocked ? 0.55 : inputPulseKey > 0 ? 0.32 : 0.4, ease: [0.2, 0.8, 0.2, 1] }}
             style={{
               width: 72, height: 72, borderRadius: 18,
               background: unlocked
@@ -283,7 +291,7 @@ export default function LockScreen({ needsSetup }: Props) {
             <PwField
               label="Master Password"
               value={pw}
-              onChange={setPw}
+              onChange={handlePwChange}
               placeholder={needsSetup ? 'At least 8 characters' : 'Enter your master password'}
               disabled={loading || isLocked}
               autoFocus

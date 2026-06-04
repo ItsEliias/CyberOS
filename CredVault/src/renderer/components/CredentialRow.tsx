@@ -7,13 +7,14 @@ import { fuzzyMatch, highlightSegments } from '../utils/fuzzySearch'
 import { playTotpExpiring } from '../utils/audioNotify'
 
 // ─── Password strength bar (mock based on length) ─────────────────────────────
+// Thresholds: <8=weak, 8-12=fair, 12-16=good, 16+=strong
 
 function PasswordStrengthBar({ password }: { password: string }) {
   const len = password.length
   let score = 0
-  if (len >= 6)  score = 1
-  if (len >= 10) score = 2
-  if (len >= 14) score = 3
+  if (len >= 8)  score = 1
+  if (len >= 12) score = 2
+  if (len >= 16) score = 3
   if (len >= 20) score = 4
   const colors = ['#f85149', '#d29922', '#4a9eff', '#3fb950']
   const labels = ['Weak', 'Fair', 'Good', 'Strong']

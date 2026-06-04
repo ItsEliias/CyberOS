@@ -10,14 +10,14 @@ import { scorePassword } from '../utils/passwordStrength'
 const COL_HEADERS = ['Service', 'Category', 'Username', 'IP / Port', 'Tags', 'Source', 'Date', 'Status', 'Age']
 
 const CATEGORY_BADGE_COLORS: Record<string, string> = {
-  'SSH':         '#4a9eff',
-  'API Key':     '#a78bfa',
-  'Web':         '#3fb950',
-  'Database':    '#f78166',
-  'Certificate': '#d29922',
+  'Login':       '#38bdf8',   // blue
+  'API Key':     '#a78bfa',   // purple
+  'Certificate': '#3fb950',   // green
+  'Note':        '#d29922',   // amber
+  'SSH':         '#f78166',   // coral
+  'Web':         '#4a9eff',
+  'Database':    '#f85149',
   'Token':       '#e879f9',
-  'Login':       '#38bdf8',
-  'Note':        '#a78bfa',
   'Other':       '#8b949e',
 }
 
