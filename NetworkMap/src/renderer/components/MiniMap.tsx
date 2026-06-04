@@ -57,30 +57,53 @@ export default function MiniMap({ nodes, transform, canvasW, canvasH, onPan }: P
   }, [mmScale, minX, minY, canvasW, canvasH, transform.scale, onPan])
 
   return (
-    <svg
-      width={W} height={H}
-      onClick={handleClick}
-      style={{
-        position: 'absolute', bottom: 16, right: 16,
-        background: 'rgba(13,14,24,0.92)',
-        border: '1px solid rgba(255,255,255,0.06)',
-        borderRadius: 8, cursor: 'crosshair', zIndex: 20,
-        boxShadow: '0 4px 16px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.4)',
-        backdropFilter: 'blur(8px)',
-      }}
-    >
-      {nodes.map(n => {
-        const [nx, ny] = toMM(n.x, n.y)
-        return <circle key={n.id} cx={nx} cy={ny} r={2} fill="rgba(139,148,158,0.6)" />
-      })}
-      <rect
-        x={r1x} y={r1y}
-        width={rectW} height={rectH}
-        fill="rgba(255,140,66,0.07)"
-        stroke="rgba(255,140,66,0.55)"
-        strokeWidth={1}
-      />
-      <text x={4} y={H - 4} fontSize={8} fill="rgba(139,148,158,0.4)" fontFamily="var(--font-mono)">mini-map</text>
-    </svg>
+    <div style={{
+      position: 'absolute', bottom: 16, right: 16, zIndex: 20,
+      background: 'rgba(13,14,24,0.92)',
+      border: '1px solid rgba(255,255,255,0.06)',
+      borderRadius: 10, overflow: 'hidden',
+      boxShadow: '0 4px 20px rgba(0,0,0,0.6), 0 2px 6px rgba(0,0,0,0.4)',
+      backdropFilter: 'blur(12px)',
+    }}>
+      {/* Header label */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 4,
+        padding: '3px 7px 2px',
+        borderBottom: '1px solid rgba(255,255,255,0.04)',
+        background: 'rgba(255,255,255,0.02)',
+      }}>
+        <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255,140,66,0.5)' }} />
+        <span style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: 'rgba(139,148,158,0.55)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+          overview
+        </span>
+        <span style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: 'rgba(139,148,158,0.3)', marginLeft: 'auto' }}>
+          {nodes.length}n
+        </span>
+      </div>
+      <svg
+        width={W} height={H}
+        onClick={handleClick}
+        style={{ cursor: 'crosshair', display: 'block' }}
+      >
+        {nodes.map(n => {
+          const [nx, ny] = toMM(n.x, n.y)
+          return (
+            <circle
+              key={n.id}
+              cx={nx} cy={ny} r={2.5}
+              fill={n.status === 'up' ? 'rgba(255,140,66,0.55)' : 'rgba(72,79,88,0.5)'}
+            />
+          )
+        })}
+        <rect
+          x={r1x} y={r1y}
+          width={rectW} height={rectH}
+          fill="rgba(255,140,66,0.05)"
+          stroke="rgba(255,140,66,0.5)"
+          strokeWidth={1.5}
+          rx={2}
+        />
+      </svg>
+    </div>
   )
 }

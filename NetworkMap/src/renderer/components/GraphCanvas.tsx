@@ -307,26 +307,42 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
 
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {/* Sidebar */}
-        <div style={{ width: 180, minWidth: 180, borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', background: 'rgba(15,17,23,0.9)' }}>
-          <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)' }}>
-            <div style={secLabel}>LEGEND</div>
-            {[['#3fb950','1–2 ports'],['#d29922','3–5 ports'],['#f85149','6+ ports'],['#484f58','Down']].map(([c, l]) => (
-              <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: c, flexShrink: 0 }} />
-                <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{l}</span>
+        <div style={{ width: 180, minWidth: 180, borderRight: '1px solid rgba(42,51,71,0.5)', display: 'flex', flexDirection: 'column', background: 'rgba(10,11,18,0.95)' }}>
+          <div style={{ padding: '10px 12px', borderBottom: '1px solid rgba(42,51,71,0.4)' }}>
+            <div style={secLabel}>Legend</div>
+            {[
+              { color: '#3fb950', label: '1–2 ports' },
+              { color: '#d29922', label: '3–5 ports' },
+              { color: '#f85149', label: '6+ ports'  },
+              { color: '#484f58', label: 'Down'       },
+            ].map(({ color, label }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
+                <span style={{
+                  width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0,
+                  boxShadow: `0 0 5px ${color}60`,
+                }} />
+                <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{label}</span>
               </div>
             ))}
           </div>
-          <div style={{ padding: '8px 12px 4px' }}><div style={secLabel}>GRAPHS</div></div>
+          <div style={{ padding: '8px 12px 4px' }}><div style={secLabel}>Graphs</div></div>
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {savedGraphs.map(g => (
-              <div key={g.id} onClick={() => onSwitchGraph(g.id)}
-                style={{ padding: '5px 12px', cursor: 'pointer', fontSize: 11, color: g.id === graph.id ? 'var(--accent)' : 'var(--text-muted)', background: g.id === graph.id ? 'rgba(210,153,34,0.08)' : 'transparent', borderLeft: g.id === graph.id ? '2px solid var(--accent)' : '2px solid transparent' }}
-                onMouseEnter={e => { if (g.id !== graph.id) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)' }}
-                onMouseLeave={e => { if (g.id !== graph.id) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+              <div
+                key={g.id}
+                onClick={() => onSwitchGraph(g.id)}
+                style={{
+                  padding: '6px 12px', cursor: 'pointer', fontSize: 11,
+                  color: g.id === graph.id ? '#ff8c42' : 'var(--text-muted)',
+                  background: g.id === graph.id ? 'rgba(255,140,66,0.07)' : 'transparent',
+                  borderLeft: g.id === graph.id ? '2px solid #ff8c42' : '2px solid transparent',
+                  transition: 'all 150ms var(--ease)',
+                }}
+                onMouseEnter={e => { if (g.id !== graph.id) { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)' } }}
+                onMouseLeave={e => { if (g.id !== graph.id) { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' } }}
               >
-                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</div>
-                <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>{g.nodeCount}n</div>
+                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: g.id === graph.id ? 600 : 400 }}>{g.name}</div>
+                <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 1 }}>{g.nodeCount} nodes</div>
               </div>
             ))}
           </div>
@@ -335,10 +351,7 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
         {/* Canvas area */}
         <div ref={containerRef} style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
           {graph.nodes.length === 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 12, color: 'var(--text-muted)' }}>
-              <div style={{ fontSize: 40, opacity: 0.3 }}>⬡</div>
-              <p style={{ fontSize: 13 }}>Empty graph — go back and import nodes</p>
-            </div>
+            <CanvasEmptyState />
           ) : (
             <>
               <GraphSvg
@@ -360,11 +373,32 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
               />
 
               {/* Zoom controls */}
-              <div style={{ position: 'absolute', bottom: 16, left: 16, display: 'flex', gap: 4 }}>
-                {([{l:'+',f:zoomIn},{l:'−',f:zoomOut},{l:'↺',f:resetView},{l:'⊞',f:fitView}] as const).map(b => (
-                  <button key={b.l} onClick={b.f} style={zoomBtn}>{b.l}</button>
+              <div style={{ position: 'absolute', bottom: 16, left: 16, display: 'flex', gap: 3, alignItems: 'center' }}>
+                {([{l:'+', title:'Zoom in', f:zoomIn},{l:'−', title:'Zoom out', f:zoomOut},{l:'↺', title:'Reset view', f:resetView},{l:'⊞', title:'Fit all nodes', f:fitView}] as const).map(b => (
+                  <button
+                    key={b.l}
+                    onClick={b.f}
+                    title={b.title}
+                    style={zoomBtn}
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLElement).style.background = 'rgba(42,51,71,0.4)'
+                      ;(e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'
+                      ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,51,71,1)'
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLElement).style.background = 'rgba(13,14,24,0.92)'
+                      ;(e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'
+                      ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,51,71,0.75)'
+                    }}
+                  >{b.l}</button>
                 ))}
-                {pathStart && <span style={{ padding: '5px 10px', fontSize: 11, color: '#58a6ff', background: 'rgba(15,17,23,0.9)', border: '1px solid rgba(88,166,255,0.3)', borderRadius: 5 }}>Shift+click target</span>}
+                {pathStart && (
+                  <span style={{
+                    padding: '5px 10px', fontSize: 11, color: '#58a6ff',
+                    background: 'rgba(13,14,24,0.95)', border: '1px solid rgba(88,166,255,0.3)',
+                    borderRadius: 7, animation: 'badgePop 0.2s var(--ease)',
+                  }}>Shift+click target</span>
+                )}
               </div>
 
               <MiniMap nodes={graph.nodes} transform={transform} canvasW={canvasSize.w} canvasH={canvasSize.h} onPan={(x, y) => setTransform(t => ({ ...t, x, y }))} />
@@ -389,11 +423,73 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
         </div>
       </div>
 
-      <div style={{ padding: '3px 16px', borderTop: '1px solid var(--border)', fontSize: 10, color: 'var(--text-muted)', display: 'flex', gap: 10 }}>
-        <span>NetworkMap</span><span>·</span>
-        <span>{graphName}</span><span>·</span>
-        <span>{graph.nodes.length}n · {graph.edges.length}e</span>
-        {tracedPath && <><span>·</span><span style={{ color: 'var(--accent)' }}>{tracedPath.length - 1} hops</span></>}
+      <div style={{
+        padding: '4px 16px', borderTop: '1px solid rgba(42,51,71,0.4)',
+        fontSize: 10, color: 'var(--text-muted)',
+        display: 'flex', alignItems: 'center', gap: 8,
+        background: 'rgba(7,8,15,0.6)',
+      }}>
+        <span style={{ color: 'rgba(255,140,66,0.5)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', fontSize: 9 }}>NetworkMap</span>
+        <span style={{ color: 'rgba(42,51,71,0.8)' }}>·</span>
+        <span style={{ color: 'var(--text-secondary)', fontWeight: 500, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{graphName}</span>
+        <span style={{ color: 'rgba(42,51,71,0.8)' }}>·</span>
+        <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ color: '#ff8c42' }}>{graph.nodes.length}</span>
+          <span style={{ color: 'rgba(42,51,71,0.9)', margin: '0 2px' }}>n</span>
+          <span style={{ color: 'rgba(42,51,71,0.8)', margin: '0 2px' }}>·</span>
+          <span>{graph.edges.length}</span>
+          <span style={{ color: 'rgba(42,51,71,0.9)', margin: '0 2px' }}>e</span>
+        </span>
+        {tracedPath && (
+          <>
+            <span style={{ color: 'rgba(42,51,71,0.8)' }}>·</span>
+            <span className="badge-animate" style={{ color: '#ff8c42', fontWeight: 600 }}>{tracedPath.length - 1} hops</span>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Canvas empty state ────────────────────────────────────────────────────
+function CanvasEmptyState() {
+  return (
+    <div className="fade-up" style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', height: '100%', gap: 16,
+    }}>
+      <svg width="96" height="80" viewBox="0 0 96 80" fill="none" aria-hidden="true">
+        <defs>
+          <filter id="cGlow">
+            <feGaussianBlur stdDeviation="2.5" result="blur" />
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+          <radialGradient id="cBg" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="rgba(255,140,66,0.06)" />
+            <stop offset="100%" stopColor="transparent" />
+          </radialGradient>
+        </defs>
+        <ellipse cx="48" cy="40" rx="44" ry="36" fill="url(#cBg)" />
+        {/* Dashed circle outline */}
+        <circle cx="48" cy="40" r="28" stroke="rgba(255,140,66,0.12)" strokeWidth="1" strokeDasharray="4 4" fill="none" />
+        {/* Empty node placeholders */}
+        <circle cx="48" cy="14" r="7" fill="rgba(42,51,71,0.4)" stroke="rgba(42,51,71,0.7)" strokeWidth="1.5" />
+        <circle cx="22" cy="50" r="6" fill="rgba(42,51,71,0.3)" stroke="rgba(42,51,71,0.6)" strokeWidth="1.5" />
+        <circle cx="74" cy="50" r="6" fill="rgba(42,51,71,0.3)" stroke="rgba(42,51,71,0.6)" strokeWidth="1.5" />
+        <circle cx="48" cy="66" r="5" fill="rgba(42,51,71,0.25)" stroke="rgba(42,51,71,0.5)" strokeWidth="1.5" />
+        {/* Ghost edges */}
+        <line x1="48" y1="21" x2="22" y2="44" stroke="rgba(42,51,71,0.35)" strokeWidth="1" strokeDasharray="2 3" />
+        <line x1="48" y1="21" x2="74" y2="44" stroke="rgba(42,51,71,0.35)" strokeWidth="1" strokeDasharray="2 3" />
+        <line x1="22" y1="56" x2="48" y2="61" stroke="rgba(42,51,71,0.25)" strokeWidth="1" strokeDasharray="2 3" />
+        <line x1="74" y1="56" x2="48" y2="61" stroke="rgba(42,51,71,0.25)" strokeWidth="1" strokeDasharray="2 3" />
+        {/* Central import hint */}
+        <circle cx="48" cy="40" r="12" fill="rgba(255,140,66,0.04)" stroke="rgba(255,140,66,0.2)" strokeWidth="1.5" filter="url(#cGlow)" />
+        <line x1="48" y1="35" x2="48" y2="45" stroke="rgba(255,140,66,0.5)" strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="43" y1="40" x2="53" y2="40" stroke="rgba(255,140,66,0.5)" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+      <div style={{ textAlign: 'center' }}>
+        <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>Empty graph</p>
+        <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Go back to the library and import nodes</p>
       </div>
     </div>
   )
@@ -403,5 +499,6 @@ const secLabel: React.CSSProperties = {
   fontSize: 9, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.07em', marginBottom: 6, textTransform: 'uppercase',
 }
 const zoomBtn: React.CSSProperties = {
-  padding: '5px 9px', background: 'rgba(22,27,34,0.9)', border: '1px solid var(--border)', borderRadius: 5, color: 'var(--text-dim)', fontSize: 12,
+  padding: '5px 9px', background: 'rgba(13,14,24,0.92)', border: '1px solid rgba(42,51,71,0.75)', borderRadius: 7, color: 'var(--text-muted)', fontSize: 12,
+  transition: 'all 150ms var(--ease)',
 }

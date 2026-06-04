@@ -372,6 +372,10 @@ function Gns3Tab({ onSave }: { onSave: (g: NetworkGraph) => void }) {
   )
 }
 
+const TAB_LABELS: Record<Tab, string> = {
+  file: 'Import File', paste: 'Paste XML', recondesk: 'ReconDesk', gns3: 'GNS3',
+}
+
 // ─── ImportModal ────────────────────────────────────────────────────────────────
 export default function ImportModal({ onClose, onImport }: Props) {
   const [tab, setTab] = useState<Tab>('file')
@@ -380,44 +384,68 @@ export default function ImportModal({ onClose, onImport }: Props) {
     <div
       style={{
         position: 'fixed', inset: 0,
-        background: 'rgba(0,0,0,0.72)',
+        background: 'rgba(0,0,0,0.78)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         zIndex: 200,
+        backdropFilter: 'blur(4px)',
       }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div style={{
-        background: 'var(--panel)', border: '1px solid var(--border)',
-        borderRadius: 10, width: 580, maxHeight: '80vh',
-        display: 'flex', flexDirection: 'column', overflow: 'hidden',
-      }}>
+      <div
+        className="fade-up"
+        style={{
+          background: 'rgba(13,14,24,0.98)',
+          border: '1px solid rgba(255,255,255,0.055)',
+          borderRadius: 14, width: 580, maxHeight: '82vh',
+          display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          boxShadow: '0 24px 60px rgba(0,0,0,0.7), 0 4px 16px rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(16px)',
+        }}
+      >
         {/* Header */}
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '16px 20px', borderBottom: '1px solid var(--border)',
+          padding: '14px 20px',
+          background: 'rgba(255,140,66,0.04)',
+          borderBottom: '1px solid rgba(255,140,66,0.10)',
         }}>
-          <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>Import Scan Data</span>
-          <button onClick={onClose} style={{ background: 'transparent', color: 'var(--text-dim)', fontSize: 20, lineHeight: 1 }}>×</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 2, height: 16, borderRadius: 1, background: 'linear-gradient(180deg, #ff8c42, rgba(255,140,66,0.4))', flexShrink: 0 }} />
+            <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>Import Scan Data</span>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'transparent', color: 'var(--text-muted)', fontSize: 20, lineHeight: 1,
+              width: 28, height: 28, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all 150ms var(--ease)',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' }}
+          >×</button>
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', padding: '8px 16px 0', gap: 2 }}>
           {(['file', 'paste', 'recondesk', 'gns3'] as Tab[]).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
               style={{
-                flex: 1, padding: '10px 0', fontSize: 11, fontWeight: 500,
+                flex: 1, padding: '8px 4px', fontSize: 11, fontWeight: tab === t ? 600 : 400,
                 background: 'transparent', border: 'none',
-                borderBottom: tab === t ? '2px solid var(--accent)' : '2px solid transparent',
-                color: tab === t ? 'var(--accent)' : 'var(--text-dim)',
-                cursor: 'pointer', transition: 'color 0.15s',
+                borderBottom: `2px solid ${tab === t ? '#ff8c42' : 'transparent'}`,
+                color: tab === t ? '#ff8c42' : 'var(--text-muted)',
+                cursor: 'pointer', transition: 'all 180ms var(--ease)', fontFamily: 'var(--font-display)',
               }}
+              onMouseEnter={e => { if (tab !== t) (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)' }}
+              onMouseLeave={e => { if (tab !== t) (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' }}
             >
-              {t === 'file' ? 'Import File' : t === 'paste' ? 'Paste XML' : t === 'recondesk' ? 'ReconDesk' : 'GNS3'}
+              {TAB_LABELS[t]}
             </button>
           ))}
         </div>
+        <div style={{ height: 1, background: 'rgba(42,51,71,0.5)', margin: '0 0 0 0' }} />
 
         {/* Tab body */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>

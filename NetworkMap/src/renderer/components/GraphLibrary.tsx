@@ -141,10 +141,27 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
       </div>
 
       {/* Section header */}
-      <div style={{ padding: '20px 24px 0' }}>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 4 }}>
-          Network topology graphs from nmap scans
-        </p>
+      <div style={{ padding: '20px 24px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h1 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Graph Library</h1>
+            {graphs.length > 0 && (
+              <span
+                key={graphs.length}
+                className="badge-animate"
+                style={{
+                  fontSize: 10, fontWeight: 700,
+                  background: 'rgba(255,140,66,0.10)', color: '#ff8c42',
+                  border: '1px solid rgba(255,140,66,0.22)',
+                  borderRadius: 10, padding: '2px 8px',
+                }}
+              >{graphs.length}</span>
+            )}
+          </div>
+          <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 3 }}>
+            Network topology graphs from nmap scans
+          </p>
+        </div>
       </div>
 
       {/* Action toolbar */}
@@ -191,28 +208,7 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
       {/* Graph table */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 16px' }}>
         {graphs.length === 0 ? (
-          <div style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            justifyContent: 'center', height: '100%', gap: 12,
-          }}>
-            <svg width="48" height="48" viewBox="0 0 16 16" fill="none" style={{ opacity: 0.18 }}>
-              <path d="M8 1L14.5 4.75V11.25L8 15L1.5 11.25V4.75L8 1Z" stroke="#ff8c42" strokeWidth="1.5" fill="none" />
-              <circle cx="8" cy="8" r="2" fill="#ff8c42" />
-            </svg>
-            <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>No saved graphs yet</p>
-            <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>Import an nmap XML scan to get started</p>
-            <button
-              onClick={onOpenImport}
-              style={{
-                marginTop: 8, padding: '8px 22px', borderRadius: 8,
-                background: 'rgba(255,140,66,0.12)', border: '1px solid rgba(255,140,66,0.30)',
-                color: '#ff8c42', fontWeight: 600, fontSize: 13, cursor: 'pointer',
-                transition: 'all 150ms', fontFamily: 'var(--font-display)',
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,140,66,0.2)' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,140,66,0.12)' }}
-            >Import Scan</button>
-          </div>
+          <EmptyState onOpenImport={onOpenImport} />
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 4 }}>
             <thead>
@@ -231,10 +227,9 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
               {graphs.map(g => (
                 <tr
                   key={g.id}
+                  className="lib-row"
                   onClick={() => handleOpenGraph(g.id)}
-                  style={{ cursor: 'pointer', transition: 'background 100ms' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,140,66,0.03)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  style={{ cursor: 'pointer' }}
                 >
                   <td style={tdStyle}>
                     <span style={{ fontWeight: 500, color: 'var(--text-primary)', fontSize: 13 }}>{g.name}</span>
@@ -247,7 +242,9 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
                     }}>{importSourceLabel(g.importSource)}</span>
                   </td>
                   <td style={{ ...tdStyle, color: 'var(--text-muted)', fontSize: 12 }}>{fmt(g.createdAt)}</td>
-                  <td style={{ ...tdStyle, color: 'var(--text-secondary)', fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>{g.nodeCount}</td>
+                  <td style={{ ...tdStyle, fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
+                    <NodeCountBadge count={g.nodeCount} />
+                  </td>
                   <td style={{ ...tdStyle, color: 'var(--text-secondary)', fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>{g.edgeCount ?? 0}</td>
                   <td style={{ ...tdStyle }} onClick={e => e.stopPropagation()}>
                     <div style={{ display: 'flex', gap: 5 }}>
@@ -264,6 +261,97 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
         )}
       </div>
     </div>
+  )
+}
+
+// ─── Illustrated empty state ────────────────────────────────────────────────
+function EmptyState({ onOpenImport }: { onOpenImport: () => void }) {
+  return (
+    <div className="fade-up" style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', height: '100%', gap: 16, padding: '40px 24px',
+    }}>
+      {/* Network illustration */}
+      <svg width="120" height="100" viewBox="0 0 120 100" fill="none" aria-hidden="true">
+        {/* Glow filter */}
+        <defs>
+          <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+          <radialGradient id="bgGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="rgba(255,140,66,0.07)" />
+            <stop offset="100%" stopColor="transparent" />
+          </radialGradient>
+        </defs>
+        <ellipse cx="60" cy="50" rx="55" ry="45" fill="url(#bgGlow)" />
+        {/* Edges */}
+        <line x1="60" y1="20" x2="25" y2="55" stroke="rgba(255,140,66,0.15)" strokeWidth="1.5" strokeDasharray="3 3" />
+        <line x1="60" y1="20" x2="95" y2="55" stroke="rgba(255,140,66,0.15)" strokeWidth="1.5" strokeDasharray="3 3" />
+        <line x1="25" y1="55" x2="60" y2="80" stroke="rgba(255,140,66,0.12)" strokeWidth="1.5" strokeDasharray="3 3" />
+        <line x1="95" y1="55" x2="60" y2="80" stroke="rgba(255,140,66,0.12)" strokeWidth="1.5" strokeDasharray="3 3" />
+        <line x1="25" y1="55" x2="95" y2="55" stroke="rgba(255,140,66,0.08)" strokeWidth="1" strokeDasharray="4 4" />
+        {/* Nodes */}
+        <circle cx="60" cy="20" r="9" fill="rgba(255,140,66,0.10)" stroke="rgba(255,140,66,0.45)" strokeWidth="1.5" filter="url(#glow)" />
+        <circle cx="60" cy="20" r="4" fill="rgba(255,140,66,0.6)" />
+        <circle cx="25" cy="55" r="7" fill="rgba(255,140,66,0.07)" stroke="rgba(255,140,66,0.28)" strokeWidth="1.5" />
+        <circle cx="25" cy="55" r="3" fill="rgba(255,140,66,0.45)" />
+        <circle cx="95" cy="55" r="7" fill="rgba(255,140,66,0.07)" stroke="rgba(255,140,66,0.28)" strokeWidth="1.5" />
+        <circle cx="95" cy="55" r="3" fill="rgba(255,140,66,0.45)" />
+        <circle cx="60" cy="80" r="6" fill="rgba(139,148,158,0.07)" stroke="rgba(139,148,158,0.25)" strokeWidth="1.5" />
+        <circle cx="60" cy="80" r="2.5" fill="rgba(139,148,158,0.4)" />
+        {/* Plus icon hint */}
+        <circle cx="60" cy="50" r="10" fill="rgba(255,140,66,0.05)" stroke="rgba(255,140,66,0.18)" strokeWidth="1" strokeDasharray="2 2" />
+        <line x1="60" y1="46" x2="60" y2="54" stroke="rgba(255,140,66,0.35)" strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="56" y1="50" x2="64" y2="50" stroke="rgba(255,140,66,0.35)" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+
+      <div style={{ textAlign: 'center' }}>
+        <p style={{ color: 'var(--text-primary)', fontSize: 14, fontWeight: 600, marginBottom: 4 }}>No graphs yet</p>
+        <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>Import an nmap XML scan to visualise your network</p>
+      </div>
+
+      <button
+        onClick={onOpenImport}
+        style={{
+          marginTop: 4, padding: '9px 24px', borderRadius: 9,
+          background: 'rgba(255,140,66,0.12)', border: '1px solid rgba(255,140,66,0.32)',
+          color: '#ff8c42', fontWeight: 600, fontSize: 13, cursor: 'pointer',
+          transition: 'all 200ms var(--ease)', fontFamily: 'var(--font-display)',
+          boxShadow: '0 0 0 0 rgba(255,140,66,0)',
+        }}
+        onMouseEnter={e => {
+          const el = e.currentTarget as HTMLElement
+          el.style.background = 'rgba(255,140,66,0.2)'
+          el.style.boxShadow = '0 0 16px rgba(255,140,66,0.18)'
+          el.style.transform = 'translateY(-1px)'
+        }}
+        onMouseLeave={e => {
+          const el = e.currentTarget as HTMLElement
+          el.style.background = 'rgba(255,140,66,0.12)'
+          el.style.boxShadow = '0 0 0 0 rgba(255,140,66,0)'
+          el.style.transform = 'translateY(0)'
+        }}
+      >Import Scan</button>
+    </div>
+  )
+}
+
+// ─── Animated node count badge ───────────────────────────────────────────────
+function NodeCountBadge({ count }: { count: number }) {
+  return (
+    <span
+      key={count}
+      className="badge-animate"
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 3,
+        padding: '2px 7px', borderRadius: 10,
+        background: 'rgba(255,140,66,0.07)', border: '1px solid rgba(255,140,66,0.18)',
+        color: '#ff8c42', fontSize: 11, fontWeight: 600, fontVariantNumeric: 'tabular-nums',
+      }}
+    >
+      {count}
+    </span>
   )
 }
 

@@ -148,15 +148,19 @@ export default function GraphToolbar({
             onClick={() => onLayoutChange(l.mode)}
             title={l.label}
             style={{
-              padding: '4px 7px', borderRadius: 5, fontSize: 11, cursor: 'pointer',
-              background: layoutMode === l.mode ? 'rgba(255,140,66,0.12)' : '#0d0e18',
+              padding: '4px 7px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
+              background: layoutMode === l.mode ? 'rgba(255,140,66,0.13)' : 'transparent',
               color: layoutMode === l.mode ? '#ff8c42' : 'var(--text-secondary)',
-              border: `1px solid ${layoutMode === l.mode ? 'rgba(255,140,66,0.35)' : 'rgba(42,51,71,0.75)'}`,
-              transition: 'all 150ms',
+              border: `1px solid ${layoutMode === l.mode ? 'rgba(255,140,66,0.38)' : 'rgba(42,51,71,0.6)'}`,
+              transition: 'all 180ms var(--ease)',
+              boxShadow: layoutMode === l.mode ? '0 0 8px rgba(255,140,66,0.12)' : 'none',
             }}
           >{l.icon}</button>
         ))}
       </div>
+
+      {/* Group divider */}
+      <div style={{ width: 1, height: 18, background: 'rgba(42,51,71,0.6)', flexShrink: 0 }} />
 
       {/* Feature toggles */}
       <div className="no-drag flex gap-1">
@@ -206,11 +210,44 @@ export default function GraphToolbar({
 
       {/* Stats + actions */}
       <div className="no-drag flex items-center gap-2">
-        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
-          {nodeCount}n · {edgeCount}e
+        {/* Animated node/edge stat chips */}
+        <span
+          key={nodeCount}
+          className="badge-animate"
+          title="Nodes"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 3,
+            fontSize: 10, fontWeight: 600, fontVariantNumeric: 'tabular-nums',
+            padding: '2px 7px', borderRadius: 8,
+            background: 'rgba(255,140,66,0.07)', border: '1px solid rgba(255,140,66,0.18)',
+            color: '#ff8c42',
+          }}
+        >
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor" style={{ opacity: 0.7 }}>
+            <circle cx="4" cy="4" r="3" />
+          </svg>
+          {nodeCount}
+        </span>
+        <span
+          title="Edges"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 3,
+            fontSize: 10, fontVariantNumeric: 'tabular-nums',
+            padding: '2px 7px', borderRadius: 8,
+            color: 'var(--text-muted)',
+          }}
+        >
+          <svg width="8" height="4" viewBox="0 0 8 4" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.6 }}>
+            <path d="M0 2h8" />
+          </svg>
+          {edgeCount}
         </span>
         {saveMsg && (
-          <span style={{ fontSize: 11, color: saveMsg === 'Saved' ? '#3fb950' : '#f85149' }}>
+          <span
+            key={saveMsg}
+            className="badge-animate"
+            style={{ fontSize: 11, color: saveMsg === 'Saved' ? '#3fb950' : '#f85149' }}
+          >
             {saveMsg}
           </span>
         )}
@@ -266,11 +303,27 @@ function ToggleBtn({ label, active, onClick }: { label: string; active: boolean;
     <button
       onClick={onClick}
       style={{
-        padding: '4px 8px', fontSize: 10, fontWeight: 600, borderRadius: 5, cursor: 'pointer',
-        background: active ? 'rgba(255,140,66,0.12)' : '#0d0e18',
+        padding: '4px 9px', fontSize: 10, fontWeight: active ? 600 : 500, borderRadius: 6, cursor: 'pointer',
+        background: active ? 'rgba(255,140,66,0.13)' : 'transparent',
         color: active ? '#ff8c42' : 'var(--text-muted)',
-        border: `1px solid ${active ? 'rgba(255,140,66,0.35)' : 'rgba(42,51,71,0.75)'}`,
-        letterSpacing: '0.04em', transition: 'all 150ms',
+        border: `1px solid ${active ? 'rgba(255,140,66,0.38)' : 'rgba(42,51,71,0.6)'}`,
+        letterSpacing: '0.04em',
+        transition: 'all 180ms var(--ease)',
+        boxShadow: active ? '0 0 8px rgba(255,140,66,0.12)' : 'none',
+      }}
+      onMouseEnter={e => {
+        if (!active) {
+          (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'
+          ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,51,71,0.9)'
+          ;(e.currentTarget as HTMLElement).style.background = 'rgba(42,51,71,0.2)'
+        }
+      }}
+      onMouseLeave={e => {
+        if (!active) {
+          (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'
+          ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,51,71,0.6)'
+          ;(e.currentTarget as HTMLElement).style.background = 'transparent'
+        }
       }}
     >{label}</button>
   )

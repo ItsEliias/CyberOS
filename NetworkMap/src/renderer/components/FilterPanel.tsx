@@ -76,82 +76,130 @@ export default function FilterPanel({ nodes, filters, onChange, onClose }: Props
 
   const activeCount = activeFilterCount(filters)
 
+  const OS_OPTIONS = [
+    { value: '',        label: 'All',     icon: '◈' },
+    { value: 'windows', label: 'Windows', icon: '⊞' },
+    { value: 'linux',   label: 'Linux',   icon: '🐧' },
+    { value: 'macos',   label: 'macOS',   icon: '◈' },
+    { value: 'router',  label: 'Router',  icon: '⬡' },
+    { value: 'unknown', label: '?',       icon: '?' },
+  ]
+
   return (
     <div style={{
-      position: 'absolute', top: 0, right: 0, bottom: 0, width: 264,
-      background: 'rgba(13,14,24,0.98)',
-      borderLeft: '1px solid rgba(255,255,255,0.04)',
+      position: 'absolute', top: 0, right: 0, bottom: 0, width: 272,
+      background: 'rgba(13,14,24,0.97)',
+      borderLeft: '1px solid rgba(255,255,255,0.05)',
       display: 'flex', flexDirection: 'column', zIndex: 25,
-      animation: 'slideInRight 0.2s ease-out',
-      backdropFilter: 'blur(12px)',
+      animation: 'slideInFromRight 0.22s cubic-bezier(0.2,0.8,0.2,1)',
+      backdropFilter: 'blur(16px)',
+      boxShadow: '-8px 0 32px rgba(0,0,0,0.4)',
     }}>
       {/* Header */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '10px 14px', flexShrink: 0,
-        background: 'rgba(255,140,66,0.05)',
-        borderBottom: '1px solid rgba(255,140,66,0.12)',
+        padding: '12px 16px', flexShrink: 0,
+        background: 'rgba(255,140,66,0.04)',
+        borderBottom: '1px solid rgba(255,140,66,0.10)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div style={{ width: 2, height: 14, borderRadius: 1, background: '#ff8c42', flexShrink: 0 }} />
-          <span style={{ fontSize: 10, fontWeight: 700, color: '#ff8c42', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ width: 2, height: 16, borderRadius: 1, background: 'linear-gradient(180deg, #ff8c42, rgba(255,140,66,0.4))', flexShrink: 0 }} />
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#ff8c42', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
             Filters
           </span>
           {activeCount > 0 && (
-            <span style={{
-              fontSize: 9, fontWeight: 700,
-              background: 'rgba(255,140,66,0.15)', color: '#ff8c42',
-              border: '1px solid rgba(255,140,66,0.3)',
-              borderRadius: 10, padding: '1px 6px',
-            }}>{activeCount}</span>
+            <span
+              key={activeCount}
+              className="badge-animate"
+              style={{
+                fontSize: 9, fontWeight: 700,
+                background: 'rgba(255,140,66,0.18)', color: '#ff8c42',
+                border: '1px solid rgba(255,140,66,0.35)',
+                borderRadius: 10, padding: '2px 7px',
+              }}
+            >{activeCount}</span>
           )}
         </div>
         <button
           onClick={onClose}
           style={{
             background: 'transparent', color: 'var(--text-muted)', fontSize: 18, lineHeight: 1,
-            width: 24, height: 24, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'all 120ms',
+            width: 26, height: 26, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all 150ms var(--ease)',
           }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)' }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' }}
         >×</button>
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 18 }}>
 
-        {/* OS Type */}
+        {/* OS Type — pill selector */}
         <div>
-          <label style={labelStyle}>OS Type</label>
-          <select
-            value={filters.osType}
-            onChange={e => set('osType', e.target.value)}
-            style={inputStyle}
-          >
-            <option value="">All OS</option>
-            <option value="windows">Windows</option>
-            <option value="linux">Linux</option>
-            <option value="macos">macOS</option>
-            <option value="router">Router / Network</option>
-            <option value="unknown">Unknown</option>
-          </select>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <label style={labelStyle}>OS Type</label>
+            {filters.osType && (
+              <button onClick={() => set('osType', '')} style={{ fontSize: 9, color: 'rgba(255,140,66,0.6)', background: 'none', cursor: 'pointer', padding: 0 }}>
+                clear
+              </button>
+            )}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+            {OS_OPTIONS.map(opt => {
+              const active = filters.osType === opt.value
+              return (
+                <button
+                  key={opt.value}
+                  onClick={() => set('osType', opt.value)}
+                  style={{
+                    padding: '5px 10px', fontSize: 11, borderRadius: 8, cursor: 'pointer',
+                    background: active ? 'rgba(255,140,66,0.15)' : 'rgba(42,51,71,0.25)',
+                    border: `1px solid ${active ? 'rgba(255,140,66,0.45)' : 'rgba(42,51,71,0.5)'}`,
+                    color: active ? '#ff8c42' : 'var(--text-secondary)',
+                    fontFamily: 'var(--font-display)', fontWeight: active ? 600 : 400,
+                    transition: 'all 150ms var(--ease)',
+                    boxShadow: active ? '0 0 8px rgba(255,140,66,0.15)' : 'none',
+                  }}
+                >{opt.label}</button>
+              )
+            })}
+          </div>
         </div>
+
+        {/* Divider */}
+        <div style={{ height: 1, background: 'linear-gradient(90deg, rgba(42,51,71,0.6), rgba(42,51,71,0.2))' }} />
 
         {/* Open Port */}
         <div>
-          <label style={labelStyle}>Open Port</label>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <label style={labelStyle}>Open Port</label>
+            {filters.openPort && (
+              <button onClick={() => set('openPort', '')} style={{ fontSize: 9, color: 'rgba(255,140,66,0.6)', background: 'none', cursor: 'pointer', padding: 0 }}>
+                clear
+              </button>
+            )}
+          </div>
           <input
             type="number"
             placeholder="e.g. 22, 80, 443"
             value={filters.openPort}
             onChange={e => set('openPort', e.target.value)}
-            style={inputStyle}
-            onFocus={e => (e.currentTarget.style.borderColor = 'rgba(255,140,66,0.4)')}
-            onBlur={e => (e.currentTarget.style.borderColor = 'rgba(42,51,71,0.75)')}
+            style={{
+              ...inputStyle,
+              transition: 'border-color 150ms var(--ease), box-shadow 150ms var(--ease)',
+            }}
+            onFocus={e => {
+              e.currentTarget.style.borderColor = 'rgba(255,140,66,0.5)'
+              e.currentTarget.style.boxShadow = '0 0 0 2px rgba(255,140,66,0.08)'
+            }}
+            onBlur={e => {
+              e.currentTarget.style.borderColor = 'rgba(42,51,71,0.75)'
+              e.currentTarget.style.boxShadow = 'none'
+            }}
           />
           {commonPorts.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 7 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
               {commonPorts.map(port => {
                 const active = filters.openPort === String(port)
                 return (
@@ -159,11 +207,12 @@ export default function FilterPanel({ nodes, filters, onChange, onClose }: Props
                     key={port}
                     onClick={() => set('openPort', active ? '' : String(port))}
                     style={{
-                      padding: '2px 8px', fontSize: 10, borderRadius: 4, cursor: 'pointer',
-                      background: active ? 'rgba(255,140,66,0.15)' : 'rgba(42,51,71,0.35)',
-                      border: `1px solid ${active ? 'rgba(255,140,66,0.4)' : 'rgba(42,51,71,0.6)'}`,
+                      padding: '3px 8px', fontSize: 10, borderRadius: 6, cursor: 'pointer',
+                      background: active ? 'rgba(255,140,66,0.15)' : 'rgba(42,51,71,0.3)',
+                      border: `1px solid ${active ? 'rgba(255,140,66,0.45)' : 'rgba(42,51,71,0.55)'}`,
                       color: active ? '#ff8c42' : 'var(--text-secondary)',
-                      fontFamily: 'var(--font-mono)', transition: 'all 120ms',
+                      fontFamily: 'var(--font-mono)', transition: 'all 150ms var(--ease)',
+                      fontWeight: active ? 600 : 400,
                     }}
                   >{port}</button>
                 )
@@ -173,19 +222,23 @@ export default function FilterPanel({ nodes, filters, onChange, onClose }: Props
         </div>
 
         {/* Divider */}
-        <div style={{ height: 1, background: 'rgba(42,51,71,0.4)' }} />
+        <div style={{ height: 1, background: 'linear-gradient(90deg, rgba(42,51,71,0.6), rgba(42,51,71,0.2))' }} />
 
-        {/* Clear */}
+        {/* Clear all */}
         <button
           onClick={() => onChange(EMPTY_FILTERS)}
+          disabled={activeCount === 0}
           style={{
-            padding: '7px 12px', borderRadius: 6, cursor: 'pointer',
-            background: '#07080f', border: '1px solid rgba(42,51,71,0.75)',
-            color: 'var(--text-secondary)', fontSize: 11,
-            transition: 'all 150ms', fontFamily: 'var(--font-display)',
-            opacity: activeCount === 0 ? 0.4 : 1,
+            padding: '8px 14px', borderRadius: 8, cursor: activeCount === 0 ? 'not-allowed' : 'pointer',
+            background: activeCount > 0 ? 'rgba(248,81,73,0.06)' : '#07080f',
+            border: `1px solid ${activeCount > 0 ? 'rgba(248,81,73,0.22)' : 'rgba(42,51,71,0.6)'}`,
+            color: activeCount > 0 ? '#f85149' : 'var(--text-muted)', fontSize: 11,
+            transition: 'all 180ms var(--ease)', fontFamily: 'var(--font-display)',
+            opacity: activeCount === 0 ? 0.45 : 1,
           }}
-        >Clear Filters</button>
+          onMouseEnter={e => { if (activeCount > 0) (e.currentTarget as HTMLElement).style.background = 'rgba(248,81,73,0.12)' }}
+          onMouseLeave={e => { if (activeCount > 0) (e.currentTarget as HTMLElement).style.background = 'rgba(248,81,73,0.06)' }}
+        >Clear all filters</button>
       </div>
     </div>
   )

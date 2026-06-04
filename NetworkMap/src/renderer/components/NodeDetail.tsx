@@ -165,17 +165,23 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate }:
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', height: '100%',
-      background: '#0d0e18', borderLeft: '1px solid rgba(255,255,255,0.04)',
+      background: 'rgba(13,14,24,0.99)', borderLeft: '1px solid rgba(255,255,255,0.04)',
     }}>
       {/* Header */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '10px 14px', flexShrink: 0,
-        background: 'rgba(255,140,66,0.05)',
-        borderBottom: '1px solid rgba(255,140,66,0.12)',
+        padding: '11px 14px', flexShrink: 0,
+        background: 'linear-gradient(90deg, rgba(255,140,66,0.06) 0%, rgba(255,140,66,0.02) 60%, transparent 100%)',
+        borderBottom: '1px solid rgba(255,140,66,0.10)',
+        position: 'relative', overflow: 'hidden',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div style={{ width: 2, height: 14, borderRadius: 1, background: '#ff8c42', flexShrink: 0 }} />
+        {/* Subtle shimmer line */}
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, height: 1,
+          background: 'linear-gradient(90deg, transparent 0%, rgba(255,140,66,0.4) 50%, transparent 100%)',
+        }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ width: 2, height: 16, borderRadius: 1, background: 'linear-gradient(180deg, #ff8c42, rgba(255,140,66,0.3))', flexShrink: 0 }} />
           <span style={{ fontSize: 10, fontWeight: 700, color: '#ff8c42', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
             Host Detail
           </span>
@@ -184,10 +190,10 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate }:
           onClick={onClose}
           style={{
             background: 'transparent', color: 'var(--text-muted)', fontSize: 18, lineHeight: 1,
-            width: 24, height: 24, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'all 120ms',
+            width: 26, height: 26, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all 150ms var(--ease)',
           }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)' }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' }}
         >×</button>
       </div>
@@ -229,7 +235,7 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate }:
           <input
             value={annotationDraft}
             onChange={e => setAnnotationDraft(e.target.value)}
-            onBlur={() => onAnnotate(annotationDraft)}
+            onBlur={e => { onAnnotate(annotationDraft); e.currentTarget.style.borderColor = 'rgba(42,51,71,0.75)' }}
             placeholder="Add annotation…"
             style={{
               width: '100%', background: '#07080f', border: '1px solid rgba(42,51,71,0.75)',
@@ -237,7 +243,6 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate }:
               fontFamily: 'var(--font-display)', transition: 'border-color 150ms',
             }}
             onFocus={e => (e.currentTarget.style.borderColor = 'rgba(255,140,66,0.4)')}
-            onBlur={e => (e.currentTarget.style.borderColor = 'rgba(42,51,71,0.75)')}
           />
         </div>
       )}
@@ -245,29 +250,39 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate }:
       {/* Tab bar */}
       <div style={{
         display: 'flex', borderBottom: '1px solid rgba(42,51,71,0.5)',
-        flexShrink: 0, padding: '4px 6px', gap: 2,
-        background: '#0d0e18',
+        flexShrink: 0, padding: '0 6px', gap: 0,
+        background: 'rgba(13,14,24,0.98)',
       }}>
         {TABS.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
             style={{
-              flex: 1, padding: '5px 4px', fontSize: 10, fontWeight: 600,
-              background: tab === t.id ? '#131525' : 'transparent',
-              border: tab === t.id ? '1px solid rgba(42,51,71,0.7)' : '1px solid transparent',
-              borderRadius: 6,
+              flex: 1, padding: '8px 4px', fontSize: 10, fontWeight: tab === t.id ? 600 : 400,
+              background: 'transparent',
+              border: 'none',
+              borderBottom: `2px solid ${tab === t.id ? '#ff8c42' : 'transparent'}`,
               color: tab === t.id ? '#ff8c42' : 'var(--text-muted)',
-              cursor: 'pointer', transition: 'all 120ms', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
+              cursor: 'pointer',
+              transition: 'all 180ms var(--ease)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
             }}
+            onMouseEnter={e => { if (tab !== t.id) (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)' }}
+            onMouseLeave={e => { if (tab !== t.id) (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' }}
           >
             {t.label}
             {t.count !== undefined && t.count > 0 && (
-              <span style={{
-                fontSize: 9, background: tab === t.id ? 'rgba(255,140,66,0.15)' : 'rgba(42,51,71,0.4)',
-                color: tab === t.id ? '#ff8c42' : '#484f58',
-                borderRadius: 4, padding: '0 4px',
-              }}>{t.count}</span>
+              <span
+                key={t.count}
+                className="badge-animate"
+                style={{
+                  fontSize: 9,
+                  background: tab === t.id ? 'rgba(255,140,66,0.18)' : 'rgba(42,51,71,0.45)',
+                  color: tab === t.id ? '#ff8c42' : '#484f58',
+                  borderRadius: 5, padding: '0 5px',
+                  transition: 'all 180ms var(--ease)',
+                }}
+              >{t.count}</span>
             )}
           </button>
         ))}
