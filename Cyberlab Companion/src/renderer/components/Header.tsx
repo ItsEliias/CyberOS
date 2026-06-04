@@ -57,10 +57,14 @@ export default function Header({ onHelp }: HeaderProps) {
         borderBottom: '1px solid rgba(255,255,255,0.04)',
       }}
     >
-      {/* Purple accent underline */}
+      {/* Animated shimmer accent underline */}
       <div
         className="absolute bottom-0 left-0 right-0 h-px pointer-events-none"
-        style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(180,79,255,0.18) 40%, rgba(180,79,255,0.18) 60%, transparent 100%)' }}
+        style={{
+          background: 'linear-gradient(90deg, transparent 0%, rgba(180,79,255,0.0) 10%, rgba(180,79,255,0.35) 30%, rgba(203,128,255,0.55) 50%, rgba(180,79,255,0.35) 70%, rgba(180,79,255,0.0) 90%, transparent 100%)',
+          backgroundSize: '200% 100%',
+          animation: 'shimmer 4s ease-in-out infinite',
+        }}
       />
 
       {/* macOS traffic light spacer */}
@@ -134,8 +138,9 @@ export default function Header({ onHelp }: HeaderProps) {
         <div
           className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs"
           style={{
-            background: vpnOnline ? 'rgba(63,185,80,0.06)' : 'transparent',
-            border: `1px solid ${vpnOnline ? 'rgba(63,185,80,0.2)' : 'transparent'}`,
+            background: vpnOnline ? 'rgba(63,185,80,0.06)' : 'rgba(42,51,71,0.12)',
+            border: `1px solid ${vpnOnline ? 'rgba(63,185,80,0.2)' : 'rgba(42,51,71,0.3)'}`,
+            transition: 'all 0.3s cubic-bezier(0.2,0.8,0.2,1)',
           }}
         >
           <span

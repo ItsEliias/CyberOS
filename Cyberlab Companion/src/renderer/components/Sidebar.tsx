@@ -142,15 +142,28 @@ function NavItem({ panel, isActive, onClick, openHelp, onHelpToggle }: {
         style={{
           flex: 1,
           display: 'flex', alignItems: 'center', gap: '9px',
-          padding: '9px 10px 9px 14px',
-          background: isActive ? 'var(--accent-dim)' : hovered ? 'var(--bg3)' : 'transparent',
+          padding: '8px 10px 8px 14px',
+          margin: '1px 6px 1px 0',
+          background: isActive
+            ? 'rgba(180,79,255,0.12)'
+            : hovered
+            ? 'rgba(19,21,37,0.8)'
+            : 'transparent',
           color: isActive ? 'var(--accent)' : hovered ? 'var(--text)' : 'var(--text-muted)',
-          border: 'none', borderRadius: 0, textAlign: 'left',
-          transition: 'background 0.12s, color 0.12s',
+          border: isActive ? '1px solid rgba(180,79,255,0.2)' : '1px solid transparent',
+          borderRadius: '8px',
+          textAlign: 'left',
+          transition: 'background 0.18s cubic-bezier(0.2,0.8,0.2,1), color 0.18s, border-color 0.18s, box-shadow 0.18s',
+          boxShadow: isActive ? '0 0 10px rgba(180,79,255,0.12)' : 'none',
           minWidth: 0,
         }}
       >
-        <span style={{ fontSize: '14px', flexShrink: 0, lineHeight: 1 }}>{panel.icon}</span>
+        <span style={{
+          fontSize: '13px', flexShrink: 0, lineHeight: 1,
+          transform: isActive ? 'scale(1.1)' : 'scale(1)',
+          transition: 'transform 0.18s cubic-bezier(0.2,0.8,0.2,1)',
+          display: 'inline-block',
+        }}>{panel.icon}</span>
         <span style={{ fontSize: '12px', fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {panel.label}
         </span>

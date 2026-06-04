@@ -103,8 +103,18 @@ export default function FindingsPanel({ onViewAll }: FindingsPanelProps) {
       </div>
 
       {totalCount === 0 ? (
-        <div className="text-xs py-3 text-center" style={{ color: 'var(--text-muted)' }}>
-          No findings yet
+        <div
+          className="flex flex-col items-center justify-center py-5 rounded-lg"
+          style={{ border: '1px dashed rgba(42,51,71,0.5)', background: 'rgba(13,14,24,0.4)' }}
+        >
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style={{ opacity: 0.3, marginBottom: 6 }}>
+            <circle cx="11" cy="11" r="7" stroke="var(--accent)" strokeWidth="1.5" />
+            <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" />
+            <line x1="8" y1="11" x2="14" y2="11" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" />
+            <line x1="11" y1="8" x2="11" y2="14" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>No findings yet</span>
+          <span className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)', opacity: 0.6 }}>Ask the AI or add manually</span>
         </div>
       ) : (
         <div

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
 import type { Session } from '@shared/types';
 
@@ -29,6 +29,8 @@ function inferCategory(session: Session): string {
 export default function StatsView() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [barWidths, setBarWidths] = useState<Record<string, number>>({});
+  const animatedRef = useRef(false);
 
   useEffect(() => {
     async function load() {
@@ -44,7 +46,19 @@ export default function StatsView() {
   }, []);
 
   if (loading) {
-    return <div className="flex items-center justify-center h-full text-sm" style={{ color: 'var(--text-muted)' }}>Loading...</div>;
+    return (
+      <div className="flex flex-col h-full overflow-y-auto p-4 space-y-4">
+        <div className="skeleton-line" style={{ width: '40%', height: 16, borderRadius: 6 }} />
+        <div className="grid grid-cols-4 gap-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="skeleton-box" style={{ height: 56, borderRadius: 8 }} />
+          ))}
+        </div>
+        <div className="skeleton-box" style={{ height: 24, borderRadius: 8 }} />
+        <div className="skeleton-box" style={{ height: 140, borderRadius: 8 }} />
+        <div className="skeleton-box" style={{ height: 120, borderRadius: 8 }} />
+      </div>
+    );
   }
 
   // Compute per-category stats
@@ -93,6 +107,24 @@ export default function StatsView() {
   // Sparkline data: last 10 completed sessions by date
   const recent = [...sessionDurations].sort((a, b) => a.date.localeCompare(b.date)).slice(-10);
 
+  // Animate progress bars in on first render after load
+  useEffect(() => {
+    if (animatedRef.current) return;
+    animatedRef.current = true;
+    const widths: Record<string, number> = {};
+    for (const cat of CTF_CATEGORIES) {
+      const cs = catStats[cat];
+      widths[`flags-${cat}`] = cs.flags > 0 ? Math.round((cs.flags / maxFlags) * 100) : 0;
+      const maxAvg = Math.max(...CTF_CATEGORIES.map(c => catStats[c].avgMins), 1);
+      widths[`avg-${cat}`] = cs.avgMins > 0 ? Math.round((cs.avgMins / maxAvg) * 100) : 0;
+    }
+    // Start at 0, animate to target after a short frame delay
+    setBarWidths({});
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setBarWidths(widths));
+    });
+  }, [sessions]);
+
   return (
     <div className="flex flex-col h-full overflow-y-auto p-4 space-y-4">
       <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Time-to-Solve Analytics</h2>
@@ -131,7 +163,7 @@ export default function StatsView() {
         <div className="space-y-2.5">
           {CTF_CATEGORIES.map(cat => {
             const cs = catStats[cat];
-            const pct = cs.flags > 0 ? Math.round((cs.flags / maxFlags) * 100) : 0;
+            const pct = barWidths[`flags-${cat}`] ?? 0;
             return (
               <div key={cat}>
                 <div className="flex items-center justify-between mb-0.5">
@@ -141,10 +173,15 @@ export default function StatsView() {
                     {cs.bestMins && ` · best ${cs.bestMins}m`}
                   </span>
                 </div>
-                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--bg3)' }}>
+                <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(42,51,71,0.3)' }}>
                   <div
-                    className="h-full rounded-full transition-all"
-                    style={{ width: `${pct}%`, background: CAT_COLORS[cat] }}
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${pct}%`,
+                      background: `linear-gradient(90deg, ${CAT_COLORS[cat]}cc, ${CAT_COLORS[cat]})`,
+                      boxShadow: pct > 0 ? `0 0 8px ${CAT_COLORS[cat]}55` : 'none',
+                      transition: 'width 0.8s cubic-bezier(0.2,0.8,0.2,1)',
+                    }}
                   />
                 </div>
               </div>
@@ -159,13 +196,19 @@ export default function StatsView() {
         <div className="space-y-1.5">
           {CTF_CATEGORIES.filter(cat => catStats[cat].sessions > 0).map(cat => {
             const cs = catStats[cat];
-            const maxAvg = Math.max(...CTF_CATEGORIES.map(c => catStats[c].avgMins), 1);
-            const pct = cs.avgMins > 0 ? Math.round((cs.avgMins / maxAvg) * 100) : 0;
+            const pct = barWidths[`avg-${cat}`] ?? 0;
             return (
               <div key={cat} className="flex items-center gap-3">
                 <span className="text-xs w-16 flex-shrink-0" style={{ color: CAT_COLORS[cat] }}>{cat}</span>
-                <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--bg3)' }}>
-                  <div className="h-full rounded-full" style={{ width: `${pct}%`, background: CAT_COLORS[cat] + '88' }} />
+                <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(42,51,71,0.3)' }}>
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${pct}%`,
+                      background: CAT_COLORS[cat] + '99',
+                      transition: 'width 0.8s cubic-bezier(0.2,0.8,0.2,1)',
+                    }}
+                  />
                 </div>
                 <span className="text-[10px] font-mono w-12 text-right flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
                   {cs.avgMins > 0 ? `${cs.avgMins}m` : '—'}

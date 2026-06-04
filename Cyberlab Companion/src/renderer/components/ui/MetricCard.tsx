@@ -50,6 +50,21 @@ export default function MetricCard({
   return (
     <div
       className={`bg-surface-1 border border-border-default/75 rounded-md p-4 shadow-elevation-2 flex flex-col gap-1 ${className}`}
+      style={{
+        transition: 'transform 0.2s cubic-bezier(0.2,0.8,0.2,1), box-shadow 0.2s cubic-bezier(0.2,0.8,0.2,1), border-color 0.2s',
+      }}
+      onMouseEnter={e => {
+        const el = e.currentTarget as HTMLDivElement;
+        el.style.transform = 'translateY(-2px)';
+        el.style.boxShadow = `0 8px 24px rgba(0,0,0,0.4), 0 0 12px ${accentColor}22`;
+        el.style.borderColor = `${accentColor}40`;
+      }}
+      onMouseLeave={e => {
+        const el = e.currentTarget as HTMLDivElement;
+        el.style.transform = '';
+        el.style.boxShadow = '';
+        el.style.borderColor = '';
+      }}
     >
       <div className="flex items-center justify-between">
         <span className="text-2xs font-medium uppercase tracking-widest text-text-muted">

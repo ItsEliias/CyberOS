@@ -83,41 +83,75 @@ export default function TimerCard({ onStop }: TimerCardProps) {
     ? 'var(--warning)'
     : 'var(--accent)';
 
+  const glowColor = isCritical
+    ? 'rgba(248,81,73,0.45)'
+    : isWarning
+    ? 'rgba(210,153,34,0.35)'
+    : 'rgba(180,79,255,0.35)';
+
   return (
     <motion.div
-      className="p-3 rounded-lg"
+      className="p-3 rounded-xl relative overflow-hidden"
       style={{
-        background: 'var(--bg3)',
-        border: `1px solid ${isCritical ? 'var(--error)' : isWarning ? 'var(--warning)' : 'var(--border)'}`,
+        background: 'linear-gradient(135deg, var(--surface-2) 0%, var(--surface-1) 100%)',
+        border: `1px solid ${isCritical ? 'rgba(248,81,73,0.4)' : isWarning ? 'rgba(210,153,34,0.3)' : 'rgba(180,79,255,0.2)'}`,
+        boxShadow: `0 0 20px ${glowColor}`,
       }}
-      animate={isCritical ? { borderColor: ['var(--error)', '#ff6b6b', 'var(--error)'] } : {}}
+      animate={isCritical ? {
+        boxShadow: ['0 0 20px rgba(248,81,73,0.45)', '0 0 35px rgba(248,81,73,0.65)', '0 0 20px rgba(248,81,73,0.45)'],
+      } : {}}
       transition={{ duration: 1, repeat: isCritical ? Infinity : 0 }}
     >
+      {/* Subtle radial glow behind timer */}
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        background: `radial-gradient(ellipse at 50% 40%, ${glowColor.replace('0.35', '0.08')} 0%, transparent 65%)`,
+      }} />
+
       {/* Time display */}
       <div
-        className="text-3xl font-mono font-bold tabular-nums text-center mb-1"
-        style={{ color: timerColor, letterSpacing: '0.05em' }}
+        className="text-3xl font-mono font-bold tabular-nums text-center mb-1 relative"
+        style={{
+          color: timerColor,
+          letterSpacing: '0.06em',
+          textShadow: `0 0 20px ${glowColor}, 0 0 40px ${glowColor.replace('0.35', '0.18')}`,
+        }}
       >
         {formatTime(displaySeconds)}
       </div>
 
-      <div className="text-center text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
-        {mode === 'countup' ? 'Elapsed' : 'Remaining'}
+      <div className="text-center text-xs mb-3 relative" style={{ color: 'var(--text-muted)' }}>
+        {running ? (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full animate-pulse-dot" style={{ background: timerColor, display: 'inline-block' }} />
+            {mode === 'countup' ? 'Elapsed' : 'Remaining'}
+          </span>
+        ) : (
+          <span style={{ color: 'var(--text-muted)', opacity: 0.6 }}>Paused</span>
+        )}
       </div>
 
       {/* Controls */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 relative">
         <button
-          className={`flex-1 text-xs py-1.5 rounded transition-colors ${
+          className={`flex-1 text-xs py-1.5 rounded-lg transition-all duration-200 ${
             running ? 'btn-ghost' : 'btn-accent'
           }`}
+          style={{
+            borderRadius: '8px',
+            ...(running ? {} : { boxShadow: '0 0 12px rgba(180,79,255,0.3)' }),
+          }}
           onClick={toggle}
         >
           {running ? 'Pause' : 'Resume'}
         </button>
         <button
-          className="flex-1 text-xs py-1.5 rounded btn-ghost"
-          style={{ color: 'var(--error)', borderColor: 'var(--error)' }}
+          className="flex-1 text-xs py-1.5 rounded-lg btn-ghost"
+          style={{
+            color: 'var(--error)',
+            borderColor: 'rgba(248,81,73,0.35)',
+            borderRadius: '8px',
+          }}
           onClick={onStop}
         >
           Stop

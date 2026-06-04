@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
 import { load, computeStats, getAchievementStatus, formatDuration, type ProgressStats } from '../lib/progress';
 import type { Session } from '@shared/types';
@@ -89,6 +89,8 @@ export default function Progress() {
   const [htbProfile, setHtbProfile] = useState<HtbProfile | null>(null);
   const [htbLoading, setHtbLoading] = useState(false);
   const [htbError, setHtbError] = useState('');
+  const [xpBarWidth, setXpBarWidth] = useState(0);
+  const xpAnimated = useRef(false);
 
   useEffect(() => {
     if (progressData) {
@@ -132,6 +134,17 @@ export default function Progress() {
   // XP
   const totalXP = computeXP(sessions);
   const levelInfo = computeLevel(totalXP);
+
+  // Animate XP bar in when viewing the XP tab
+  useEffect(() => {
+    if (activeTab === 'xp' && !xpAnimated.current) {
+      xpAnimated.current = true;
+      setXpBarWidth(0);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setXpBarWidth(levelInfo.pct));
+      });
+    }
+  }, [activeTab, levelInfo.pct]);
   const xpAchievements = checkXpAchievements(sessions);
 
   // Category bars
@@ -298,29 +311,52 @@ export default function Progress() {
       {activeTab === 'xp' && (
         <div className="space-y-4">
           {/* Level card */}
-          <div className="card">
+          <div className="card" style={{ border: '1px solid rgba(180,79,255,0.2)', background: 'linear-gradient(135deg, rgba(180,79,255,0.07) 0%, rgba(13,14,24,0.9) 100%)' }}>
             <div className="flex items-center gap-3 mb-3">
               <div
                 className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0"
-                style={{ background: 'var(--accent-dim)', color: 'var(--accent)', border: '2px solid var(--accent)' }}
+                style={{
+                  background: 'radial-gradient(circle, rgba(180,79,255,0.25) 0%, rgba(180,79,255,0.08) 100%)',
+                  color: 'var(--accent)',
+                  border: '2px solid rgba(180,79,255,0.5)',
+                  boxShadow: '0 0 16px rgba(180,79,255,0.35)',
+                  textShadow: '0 0 10px rgba(180,79,255,0.6)',
+                }}
               >
                 {levelInfo.level}
               </div>
               <div className="flex-1">
                 <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Level {levelInfo.level}</div>
-                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  {levelInfo.currentXp} XP
-                  {levelInfo.level < XP_THRESHOLDS.length && ` / ${levelInfo.nextXp} XP`}
+                <div className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
+                  {levelInfo.currentXp.toLocaleString()} XP
+                  {levelInfo.level < XP_THRESHOLDS.length && (
+                    <span style={{ opacity: 0.6 }}> / {levelInfo.nextXp.toLocaleString()} XP</span>
+                  )}
                 </div>
               </div>
+              <span
+                className="text-[10px] px-2 py-0.5 rounded-full font-mono"
+                style={{ background: 'rgba(180,79,255,0.12)', color: 'var(--accent)', border: '1px solid rgba(180,79,255,0.25)' }}
+              >
+                {xpBarWidth}%
+              </span>
             </div>
-            <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--bg3)' }}>
+            <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(42,51,71,0.4)' }}>
               <div
-                className="h-full rounded-full transition-all"
-                style={{ width: `${levelInfo.pct}%`, background: 'var(--accent)' }}
+                className="h-full rounded-full"
+                style={{
+                  width: `${xpBarWidth}%`,
+                  background: 'linear-gradient(90deg, #b44fff, #cb80ff)',
+                  boxShadow: '0 0 10px rgba(180,79,255,0.5)',
+                  transition: 'width 1s cubic-bezier(0.2,0.8,0.2,1)',
+                }}
               />
             </div>
-            <div className="text-[10px] mt-1 text-right" style={{ color: 'var(--text-muted)' }}>{levelInfo.pct}% to next level</div>
+            <div className="text-[10px] mt-1.5 text-right" style={{ color: 'var(--text-muted)' }}>
+              {levelInfo.level < XP_THRESHOLDS.length
+                ? `${(levelInfo.nextXp - levelInfo.currentXp).toLocaleString()} XP to next level`
+                : 'Max Level'}
+            </div>
           </div>
 
           {/* XP breakdown */}

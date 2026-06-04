@@ -42,21 +42,36 @@ function TabItem({ tab, isActive, canClose, onSelect, onClose }: {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -10, width: 0 }}
-      transition={{ duration: 0.15 }}
-      className="flex-shrink-0 flex items-center gap-2 px-3 cursor-pointer relative"
+      transition={{ duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
+      className="flex-shrink-0 flex items-center gap-2 px-3 cursor-pointer relative group"
       style={{
         height: 36,
         fontSize: '12px',
         color: isActive ? '#b44fff' : '#8b949e',
-        background: isActive ? 'rgba(180, 79, 255, 0.08)' : 'transparent',
+        background: isActive
+          ? 'linear-gradient(180deg, rgba(180,79,255,0.1) 0%, rgba(180,79,255,0.05) 100%)'
+          : 'transparent',
         borderRight: '1px solid rgba(42, 51, 71, 0.4)',
         borderBottom: isActive ? '2px solid #b44fff' : '2px solid transparent',
-        transition: 'all 0.15s ease',
+        boxShadow: isActive ? '0 1px 0 rgba(180,79,255,0.25) inset, 0 -1px 8px rgba(180,79,255,0.08) inset' : 'none',
+        transition: 'all 0.2s cubic-bezier(0.2,0.8,0.2,1)',
         whiteSpace: 'nowrap',
         maxWidth: '200px',
         minWidth: '100px',
       }}
       onClick={onSelect}
+      onMouseEnter={e => {
+        if (!isActive) {
+          (e.currentTarget as HTMLDivElement).style.background = 'rgba(19,21,37,0.7)';
+          (e.currentTarget as HTMLDivElement).style.color = '#c8d1da';
+        }
+      }}
+      onMouseLeave={e => {
+        if (!isActive) {
+          (e.currentTarget as HTMLDivElement).style.background = 'transparent';
+          (e.currentTarget as HTMLDivElement).style.color = '#8b949e';
+        }
+      }}
     >
       {hasLab && (
         <div
@@ -140,10 +155,18 @@ export default function TabBar() {
               color: '#4a5568',
               fontSize: '18px',
               lineHeight: 1,
-              transition: 'color 0.15s',
+              transition: 'color 0.2s cubic-bezier(0.2,0.8,0.2,1), transform 0.2s cubic-bezier(0.2,0.8,0.2,1)',
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#b44fff'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#4a5568'; }}
+            onMouseEnter={e => {
+              const el = e.currentTarget as HTMLButtonElement;
+              el.style.color = '#b44fff';
+              el.style.transform = 'rotate(90deg) scale(1.15)';
+            }}
+            onMouseLeave={e => {
+              const el = e.currentTarget as HTMLButtonElement;
+              el.style.color = '#4a5568';
+              el.style.transform = 'rotate(0deg) scale(1)';
+            }}
             onClick={handleAdd}
             title="New Session"
           >
