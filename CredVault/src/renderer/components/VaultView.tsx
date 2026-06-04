@@ -7,7 +7,33 @@ import type { Credential, BreachCheckResult } from '@shared/types'
 import { fuzzyMatch } from '../utils/fuzzySearch'
 import { scorePassword } from '../utils/passwordStrength'
 
-const COL_HEADERS = ['Service', 'Username', 'IP / Port', 'Tags', 'Source', 'Date', 'Status', 'Age']
+const COL_HEADERS = ['Service', 'Category', 'Username', 'IP / Port', 'Tags', 'Source', 'Date', 'Status', 'Age']
+
+const CATEGORY_BADGE_COLORS: Record<string, string> = {
+  'SSH':         '#4a9eff',
+  'API Key':     '#a78bfa',
+  'Web':         '#3fb950',
+  'Database':    '#f78166',
+  'Certificate': '#d29922',
+  'Token':       '#e879f9',
+  'Login':       '#38bdf8',
+  'Note':        '#a78bfa',
+  'Other':       '#8b949e',
+}
+
+function CategoryBadge({ category }: { category?: string }) {
+  if (!category) return <span style={{ color: '#484f58', fontSize: 11 }}>—</span>
+  const color = CATEGORY_BADGE_COLORS[category] ?? '#8b949e'
+  return (
+    <span style={{
+      fontSize: 9, fontWeight: 600, padding: '2px 7px', borderRadius: 8,
+      border: `1px solid ${color}40`, background: `${color}14`, color,
+      letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap',
+    }}>
+      {category}
+    </span>
+  )
+}
 
 const SORT_OPTIONS: { value: SortOrder; label: string }[] = [
   { value: null,        label: 'Default'   },
@@ -96,6 +122,12 @@ export default function VaultView() {
       .filter(c => c.lastUsed)
       .sort((a, b) => new Date(b.lastUsed!).getTime() - new Date(a.lastUsed!).getTime())
       .slice(0, 5)
+  }, [credentials])
+
+  const recentlyAdded = useMemo(() => {
+    return [...credentials]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 3)
   }, [credentials])
 
   const hasFilters = searchQuery || filterTag || filterStatus || filterSource || filterCategory || (filterFolder && filterFolder !== '__notes__')
@@ -253,6 +285,33 @@ export default function VaultView() {
         </button>
       </div>
 
+      {/* Recently Added */}
+      {recentlyAdded.length > 0 && !searchQuery && !hasFilters && (
+        <div
+          className="shrink-0 px-4 py-2"
+          style={{ borderBottom: '1px solid rgba(42,51,71,0.25)', background: 'rgba(7,8,15,0.4)' }}
+        >
+          <div style={{ fontSize: 9, color: '#484f58', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Recently Added</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {recentlyAdded.map(c => (
+              <div
+                key={c.id}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '4px 10px', borderRadius: 6,
+                  border: '1px solid rgba(247,129,102,0.15)', background: 'rgba(247,129,102,0.04)',
+                }}
+              >
+                <span style={{ fontSize: 11, color: '#c9d1d9', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.service}</span>
+                <span style={{ fontSize: 10, color: '#484f58' }}>·</span>
+                <span style={{ fontSize: 10, color: '#8b949e', fontFamily: 'JetBrains Mono, monospace' }}>{c.username}</span>
+                <span style={{ fontSize: 9, color: '#f78166', marginLeft: 2 }}>new</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Recently Used */}
       {recentlyUsed.length > 0 && !searchQuery && !hasFilters && (
         <div
@@ -326,11 +385,11 @@ export default function VaultView() {
 // improvement #1: Skeleton loader — shimmer rows while vault initialises
 function SkeletonRows() {
   const widths = [
-    ['120px', '90px', '70px', '60px', '55px', '70px', '50px', '48px'],
-    ['85px',  '110px','60px', '80px', '55px', '70px', '50px', '48px'],
-    ['100px', '75px', '90px', '50px', '55px', '70px', '50px', '48px'],
-    ['140px', '95px', '60px', '70px', '55px', '70px', '50px', '48px'],
-    ['90px',  '80px', '80px', '60px', '55px', '70px', '50px', '48px'],
+    ['120px', '60px', '90px', '70px', '60px', '55px', '70px', '50px', '48px'],
+    ['85px',  '50px', '110px','60px', '80px', '55px', '70px', '50px', '48px'],
+    ['100px', '70px', '75px', '90px', '50px', '55px', '70px', '50px', '48px'],
+    ['140px', '55px', '95px', '60px', '70px', '55px', '70px', '50px', '48px'],
+    ['90px',  '65px', '80px', '80px', '60px', '55px', '70px', '50px', '48px'],
   ]
   return (
     <table style={{ width: '100%', borderCollapse: 'collapse' }}>

@@ -478,16 +478,50 @@ export default function CredentialModal({ initial, onSave, onClose }: Props) {
                   {SERVICE_OPTS.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </Row>
-              <Row label="IP">
-                <input value={ip} onChange={e => setIp(e.target.value)} placeholder="10.10.10.1" />
+              <Row label="URL">
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#484f58', display: 'flex', alignItems: 'center' }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="2" y1="12" x2="22" y2="12" />
+                      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                    </svg>
+                  </span>
+                  <input
+                    value={notes.startsWith('http') ? notes.split('\n')[0] : ''}
+                    onChange={e => {
+                      const url = e.target.value
+                      const rest = notes.split('\n').slice(1).join('\n')
+                      setNotes(url ? (rest ? url + '\n' + rest : url) : rest)
+                    }}
+                    placeholder="https://..."
+                    style={{ paddingLeft: 28 }}
+                  />
+                </div>
               </Row>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <Row label="Port">
-                  <input type="number" value={port} onChange={e => setPort(e.target.value)} placeholder="80" min={1} max={65535} />
-                </Row>
-                <Row label="Protocol">
-                  <input value={protocol} onChange={e => setProtocol(e.target.value)} placeholder="tcp" />
-                </Row>
+              <div style={{
+                margin: '2px 0',
+                padding: '10px 12px',
+                borderRadius: 6,
+                background: 'rgba(42,51,71,0.12)',
+                border: '1px solid rgba(42,51,71,0.3)',
+              }}>
+                <div style={{ fontSize: 9, fontWeight: 600, color: '#484f58', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                  Network
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <Row label="IP">
+                    <input value={ip} onChange={e => setIp(e.target.value)} placeholder="10.10.10.1" />
+                  </Row>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <Row label="Port">
+                      <input type="number" value={port} onChange={e => setPort(e.target.value)} placeholder="80" min={1} max={65535} />
+                    </Row>
+                    <Row label="Protocol">
+                      <input value={protocol} onChange={e => setProtocol(e.target.value)} placeholder="tcp" />
+                    </Row>
+                  </div>
+                </div>
               </div>
             </>
           )}

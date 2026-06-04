@@ -1,6 +1,16 @@
 import { useState, useMemo } from 'react'
 import { useStore, type View } from '../store'
 
+const CATEGORY_COLORS: Record<string, string> = {
+  'SSH':         '#4a9eff',
+  'API Key':     '#a78bfa',
+  'Web':         '#3fb950',
+  'Database':    '#f78166',
+  'Certificate': '#d29922',
+  'Token':       '#e879f9',
+  'Other':       '#8b949e',
+}
+
 // ─── SVG icons ────────────────────────────────────────────────────────────────
 
 function VaultIcon() {
@@ -63,15 +73,18 @@ const NAV: { id: View; label: string; Icon: () => JSX.Element }[] = [
 // ─── Sidebar ───────────────────────────────────────────────────────────────────
 
 export default function Sidebar() {
-  const activeView      = useStore(s => s.activeView)
-  const setView         = useStore(s => s.setView)
-  const credentials     = useStore(s => s.credentials)
-  const pendingCount    = useStore(s => s.pendingCount)
-  const filterFolder    = useStore(s => s.filterFolder)
-  const setFilterFolder = useStore(s => s.setFilterFolder)
-  const resetFilters    = useStore(s => s.resetFilters)
+  const activeView         = useStore(s => s.activeView)
+  const setView            = useStore(s => s.setView)
+  const credentials        = useStore(s => s.credentials)
+  const pendingCount       = useStore(s => s.pendingCount)
+  const filterFolder       = useStore(s => s.filterFolder)
+  const filterCategory     = useStore(s => s.filterCategory)
+  const setFilterFolder    = useStore(s => s.setFilterFolder)
+  const setFilterCategory  = useStore(s => s.setFilterCategory)
+  const resetFilters       = useStore(s => s.resetFilters)
 
-  const [foldersOpen, setFoldersOpen] = useState(true)
+  const [foldersOpen, setFoldersOpen]     = useState(true)
+  const [categoriesOpen, setCategoriesOpen] = useState(true)
 
   const folders = useMemo(() => {
     const counts: Record<string, number> = {}
@@ -79,6 +92,14 @@ export default function Sidebar() {
       if (c.folder) counts[c.folder] = (counts[c.folder] ?? 0) + 1
     }
     return Object.entries(counts).sort((a, b) => a[0].localeCompare(b[0]))
+  }, [credentials])
+
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const c of credentials) {
+      if (c.category) counts[c.category] = (counts[c.category] ?? 0) + 1
+    }
+    return Object.entries(counts).sort((a, b) => b[1] - a[1])
   }, [credentials])
 
   const noteCount = useMemo(() => credentials.filter(c => c.type === 'note').length, [credentials])
@@ -167,6 +188,63 @@ export default function Sidebar() {
             <span style={{ flex: 1 }}>Secure Notes</span>
             <span className="text-[10px]" style={{ color: '#484f58' }}>{noteCount}</span>
           </button>
+        </>
+      )}
+
+      {/* Category filter */}
+      {categoryCounts.length > 0 && (
+        <>
+          <div className="mx-4 my-2 h-px" style={{ background: 'rgba(42,51,71,0.35)' }} />
+          <button
+            onClick={() => setCategoriesOpen(o => !o)}
+            className="flex items-center gap-1.5 px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] transition-colors"
+            style={{ color: '#484f58', background: 'none', border: 'none', cursor: 'pointer' }}
+          >
+            <span
+              className="text-[9px] transition-transform duration-150"
+              style={{ transform: categoriesOpen ? 'rotate(90deg)' : 'none', display: 'inline-block' }}
+            >
+              ▶
+            </span>
+            Categories
+          </button>
+
+          {categoriesOpen && (
+            <div>
+              {categoryCounts.map(([cat, count]) => {
+                const active = filterCategory === cat
+                const color  = CATEGORY_COLORS[cat] ?? '#8b949e'
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => {
+                      if (activeView !== 'vault') setView('vault')
+                      setFilterCategory(filterCategory === cat ? null : cat)
+                    }}
+                    className="flex items-center gap-2 py-1.5 pr-4 text-[12px] transition-all w-full"
+                    style={{
+                      paddingLeft: 28,
+                      color: active ? '#e6edf3' : '#8b949e',
+                      background: active ? `${color}12` : 'transparent',
+                      borderLeft: active ? `2px solid ${color}` : '2px solid transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0, opacity: active ? 1 : 0.5 }} />
+                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat}</span>
+                    <span
+                      className="text-[10px] px-1.5 py-0.5 rounded tabular-nums"
+                      style={{ background: active ? `${color}20` : 'rgba(42,51,71,0.5)', color: active ? color : '#484f58', border: `1px solid ${active ? color + '40' : 'transparent'}` }}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </>
       )}
 

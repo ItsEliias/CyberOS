@@ -6,6 +6,33 @@ import { useStore } from '../store'
 import { fuzzyMatch, highlightSegments } from '../utils/fuzzySearch'
 import { playTotpExpiring } from '../utils/audioNotify'
 
+// ─── Password strength bar (mock based on length) ─────────────────────────────
+
+function PasswordStrengthBar({ password }: { password: string }) {
+  const len = password.length
+  let score = 0
+  if (len >= 6)  score = 1
+  if (len >= 10) score = 2
+  if (len >= 14) score = 3
+  if (len >= 20) score = 4
+  const colors = ['#f85149', '#d29922', '#4a9eff', '#3fb950']
+  const labels = ['Weak', 'Fair', 'Good', 'Strong']
+  return (
+    <div style={{ marginTop: 6 }}>
+      <div style={{ display: 'flex', gap: 3, marginBottom: 3 }}>
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: score >= i ? colors[i - 1] : 'rgba(42,51,71,0.5)', transition: 'background 0.25s' }} />
+        ))}
+      </div>
+      {score > 0 && (
+        <span style={{ fontSize: 9, color: colors[score - 1], fontWeight: 600, letterSpacing: '0.04em' }}>
+          {labels[score - 1]}
+        </span>
+      )}
+    </div>
+  )
+}
+
 // ─── Category pill colors ─────────────────────────────────────────────────────
 
 const CATEGORY_COLORS: Record<CredentialCategory, string> = {
@@ -139,6 +166,7 @@ interface Props {
   cred:         Credential
   searchQuery?: string
   breached?:    boolean
+  breachCount?: number
   onEdit:       (c: Credential) => void
   onDelete:     (id: string) => void
   onRotate?:    (id: string) => void
@@ -222,6 +250,23 @@ export default function CredentialRow({ cred, searchQuery = '', breached, onEdit
           </div>
         </td>
 
+        {/* Category */}
+        <td style={{ padding: '9px 14px' }}>
+          {cred.category ? (
+            <span style={{
+              fontSize: 9, fontWeight: 600, padding: '2px 7px', borderRadius: 8,
+              border: `1px solid ${CATEGORY_COLORS[cred.category]}40`,
+              background: `${CATEGORY_COLORS[cred.category]}14`,
+              color: CATEGORY_COLORS[cred.category],
+              letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap',
+            }}>
+              {cred.category}
+            </span>
+          ) : (
+            <span style={{ color: '#484f58', fontSize: 11 }}>—</span>
+          )}
+        </td>
+
         {/* Username */}
         <td style={{ padding: '9px 14px', fontSize: 12, fontFamily: 'JetBrains Mono, monospace', color: '#c9d1d9' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -283,7 +328,7 @@ export default function CredentialRow({ cred, searchQuery = '', breached, onEdit
       <AnimatePresence>
         {expanded && (
           <tr>
-            <td colSpan={8} style={{ padding: 0 }}>
+            <td colSpan={9} style={{ padding: 0 }}>
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
@@ -315,6 +360,7 @@ export default function CredentialRow({ cred, searchQuery = '', breached, onEdit
                           Copy
                         </button>
                       </div>
+                      <PasswordStrengthBar password={cred.password} />
                     </Field>
                   )}
 

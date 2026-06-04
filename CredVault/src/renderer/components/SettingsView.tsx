@@ -1,8 +1,9 @@
-import { useState, FormEvent, type ReactNode } from 'react'
+import { useState, FormEvent, type ReactNode, useMemo } from 'react'
 import { useStore } from '../store'
 import { auditPasswords, type AuditReport, type AuditIssue } from '../utils/passwordAudit'
 import { setAudioVolume, getAudioVolume, playAutoLock } from '../utils/audioNotify'
 import MetricCard from './ui/MetricCard'
+import type { Credential } from '@shared/types'
 
 const AUTO_LOCK_OPTIONS = [
   { label: 'Never',    ms: 0 },
@@ -347,6 +348,13 @@ export default function SettingsView() {
         )}
       </Card>
 
+      {/* ── Vault Health Score ────────────────────────────────────────────── */}
+      {credentials.length > 0 && (
+        <Card title="Vault Health Score">
+          <VaultHealthRing credentials={credentials} />
+        </Card>
+      )}
+
       {/* ── Vault statistics — improvement #3: count-up MetricCards ─────── */}
       {stats && (
         <Card title="Vault Statistics">
@@ -413,6 +421,70 @@ export default function SettingsView() {
           </div>
         </Card>
       )}
+    </div>
+  )
+}
+
+// ─── Vault Health Ring ────────────────────────────────────────────────────────
+
+function VaultHealthRing({ credentials }: { credentials: Credential[] }) {
+  const score = useMemo(() => {
+    if (!credentials.length) return 0
+    let pts = 0
+    const total = credentials.length
+    const active = credentials.filter(c => c.status === 'active').length
+    const withPw = credentials.filter(c => c.password).length
+    const strongPw = credentials.filter(c => {
+      if (!c.password) return false
+      return c.password.length >= 14
+    }).length
+    const expired = credentials.filter(c => c.expiresAt && new Date(c.expiresAt).getTime() < Date.now()).length
+    pts += Math.round((active / total) * 30)
+    pts += withPw > 0 ? Math.round((strongPw / withPw) * 40) : 40
+    pts += Math.round(Math.max(0, 1 - expired / total) * 30)
+    return Math.min(100, pts)
+  }, [credentials])
+
+  const r = 36
+  const circ = 2 * Math.PI * r
+  const dashOff = circ * (1 - score / 100)
+  const color = score >= 80 ? '#3fb950' : score >= 50 ? '#d29922' : '#f85149'
+  const label = score >= 80 ? 'Healthy' : score >= 50 ? 'Fair' : 'Needs Attention'
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+      <svg width="96" height="96" viewBox="0 0 96 96">
+        <circle cx="48" cy="48" r={r} fill="none" stroke="rgba(42,51,71,0.5)" strokeWidth="8" />
+        <circle
+          cx="48" cy="48" r={r} fill="none"
+          stroke={color} strokeWidth="8"
+          strokeDasharray={circ} strokeDashoffset={dashOff}
+          strokeLinecap="round" transform="rotate(-90 48 48)"
+          style={{ transition: 'stroke-dashoffset 1s ease, stroke 0.5s' }}
+        />
+        <text x="48" y="52" textAnchor="middle" fontSize="18" fontWeight="700" fill={color} fontFamily="inherit">
+          {score}
+        </text>
+      </svg>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div style={{ fontSize: 16, fontWeight: 600, color }}>
+          {label}
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+          Based on active credentials, password strength, and expiry status.
+        </div>
+        <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+          {[
+            { label: 'Active',    val: `${credentials.filter(c => c.status === 'active').length}/${credentials.length}` },
+            { label: 'Strong pw', val: `${credentials.filter(c => c.password && c.password.length >= 14).length}` },
+          ].map(item => (
+            <div key={item.label} style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <span style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{item.label}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{item.val}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

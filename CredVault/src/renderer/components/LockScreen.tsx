@@ -110,10 +110,12 @@ export default function LockScreen({ needsSetup }: Props) {
   const [confirm, setConfirm] = useState('')
   const [error, setError]     = useState('')
   const [loading, setLoading] = useState(false)
+  const [unlocked, setUnlockedAnim] = useState(false)
   const [countdown, setCountdown] = useState(0)
   const [shakeKey, setShakeKey]   = useState(0)
   const [touchIdAvailable, setTouchIdAvailable] = useState(false)
   const [touchIdLoading, setTouchIdLoading]     = useState(false)
+  const [showHint, setShowHint]   = useState(false)
 
   useEffect(() => {
     if (!needsSetup) {
@@ -136,7 +138,7 @@ export default function LockScreen({ needsSetup }: Props) {
     setLoading(true); setError('')
     const res = await window.electronAPI.setupVault(pw)
     setLoading(false)
-    if (res.ok) { setSetup(true); setUnlocked(true) }
+    if (res.ok) { setUnlockedAnim(true); setTimeout(() => { setSetup(true); setUnlocked(true) }, 600) }
     else { setError(res.error ?? 'Setup failed'); triggerShake() }
   }
 
@@ -146,7 +148,7 @@ export default function LockScreen({ needsSetup }: Props) {
     setLoading(true); setError('')
     const res = await window.electronAPI.unlockVault(pw, autoLockMs)
     setLoading(false)
-    if (res.ok) { setUnlocked(true) }
+    if (res.ok) { setUnlockedAnim(true); setTimeout(() => setUnlocked(true), 600) }
     else {
       if (res.lockoutSeconds) setCountdown(res.lockoutSeconds)
       setError(res.error ?? 'Unlock failed')
@@ -159,7 +161,7 @@ export default function LockScreen({ needsSetup }: Props) {
     setTouchIdLoading(true); setError('')
     try {
       const res = await window.electronAPI.touchIdPrompt()
-      if (res.ok) { setUnlocked(true) }
+      if (res.ok) { setUnlockedAnim(true); setTimeout(() => setUnlocked(true), 600) }
       else { setError(res.error ?? 'Touch ID failed'); triggerShake() }
     } catch { setError('Touch ID unavailable') }
     setTouchIdLoading(false)
@@ -197,24 +199,43 @@ export default function LockScreen({ needsSetup }: Props) {
       >
         {/* Header */}
         <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
-          {/* Lock icon with glow ring */}
+          {/* Lock icon with glow ring — animates on unlock */}
           <motion.div
-            key={loading ? 'loading' : 'idle'}
-            animate={loading ? { rotate: [0, -5, 5, 0], scale: [1, 0.95, 1] } : {}}
-            transition={{ duration: 0.4 }}
+            key={loading ? 'loading' : unlocked ? 'unlocked' : 'idle'}
+            animate={
+              unlocked
+                ? { rotate: [0, -15, 5, 0], scale: [1, 1.15, 1.08], borderColor: ['rgba(247,129,102,0.25)', 'rgba(63,185,80,0.6)', 'rgba(63,185,80,0.3)'] }
+                : loading
+                  ? { rotate: [0, -5, 5, 0], scale: [1, 0.95, 1] }
+                  : {}
+            }
+            transition={{ duration: unlocked ? 0.55 : 0.4, ease: [0.2, 0.8, 0.2, 1] }}
             style={{
               width: 72, height: 72, borderRadius: 18,
-              background: 'radial-gradient(circle at 50% 40%, rgba(247,129,102,0.14) 0%, rgba(247,129,102,0.04) 100%)',
+              background: unlocked
+                ? 'radial-gradient(circle at 50% 40%, rgba(63,185,80,0.18) 0%, rgba(63,185,80,0.06) 100%)'
+                : 'radial-gradient(circle at 50% 40%, rgba(247,129,102,0.14) 0%, rgba(247,129,102,0.04) 100%)',
               border: '1px solid rgba(247,129,102,0.25)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 0 24px rgba(247,129,102,0.15), inset 0 1px 0 rgba(255,255,255,0.05)',
+              boxShadow: unlocked
+                ? '0 0 32px rgba(63,185,80,0.25), inset 0 1px 0 rgba(255,255,255,0.05)'
+                : '0 0 24px rgba(247,129,102,0.15), inset 0 1px 0 rgba(255,255,255,0.05)',
+              transition: 'background 0.5s, box-shadow 0.5s',
             }}
           >
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#f78166" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              <circle cx="12" cy="16" r="1" fill="#f78166" />
-            </svg>
+            {unlocked ? (
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#3fb950" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+                <circle cx="12" cy="16" r="1" fill="#3fb950" />
+              </svg>
+            ) : (
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#f78166" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                <circle cx="12" cy="16" r="1" fill="#f78166" />
+              </svg>
+            )}
           </motion.div>
 
           <div>
@@ -347,8 +368,28 @@ export default function LockScreen({ needsSetup }: Props) {
         )}
 
         {!needsSetup && !isLocked && (
-          <div style={{ textAlign: 'center', fontSize: 11, color: '#484f58', marginTop: -8 }}>
-            5 failed attempts triggers a 60-second lockout
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, marginTop: -8 }}>
+            <div style={{ fontSize: 11, color: '#484f58' }}>
+              5 failed attempts triggers a 60-second lockout
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowHint(h => !h)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: '#484f58', textDecoration: 'underline', textDecorationStyle: 'dotted', padding: 0 }}
+            >
+              Forgot password?
+            </button>
+            {showHint && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                style={{ fontSize: 11, color: '#d29922', padding: '8px 12px', borderRadius: 8, background: 'rgba(210,153,34,0.07)', border: '1px solid rgba(210,153,34,0.2)', textAlign: 'center', lineHeight: 1.5, maxWidth: 320 }}
+              >
+                Recovery hint: CredVault uses AES-256-GCM encryption. Your master password cannot be recovered. Restore from an encrypted backup if you have one.
+              </motion.div>
+            )}
           </div>
         )}
       </motion.div>

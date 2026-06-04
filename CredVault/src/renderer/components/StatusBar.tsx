@@ -47,7 +47,7 @@ function CountdownRing({ totalMs, onReset }: CountdownRingProps) {
       onClick={onReset}
       title={`Auto-locks in ${label} — click to reset`}
       className="flex items-center gap-1 transition-opacity hover:opacity-75"
-      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px' }}
+      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', display: 'flex', alignItems: 'center', gap: 5 }}
     >
       <svg width="16" height="16" viewBox="0 0 16 16">
         <circle cx="8" cy="8" r={RADIUS} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="2" />
@@ -59,6 +59,15 @@ function CountdownRing({ totalMs, onReset }: CountdownRingProps) {
           style={{ transition: 'stroke 0.5s' }}
         />
       </svg>
+      {/* Draining bar visualization */}
+      <div style={{ width: 36, height: 3, borderRadius: 2, background: 'rgba(42,51,71,0.5)', overflow: 'hidden' }}>
+        <div style={{
+          height: '100%', borderRadius: 2,
+          width: `${frac * 100}%`,
+          background: ringColor,
+          transition: 'width 1s linear, background 0.5s',
+        }} />
+      </div>
       <span className="tabular-nums" style={{ fontSize: 10, color: ringColor }}>{label}</span>
     </button>
   )
