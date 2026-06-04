@@ -25,7 +25,7 @@ export default function SectionHeader({
             {title}
           </h2>
           {subtitle && (
-            <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{subtitle}</p>
+            <p className="text-[10px] mt-0.5 tabular-nums" style={{ color: 'var(--text-muted)' }}>{subtitle}</p>
           )}
         </div>
       </div>

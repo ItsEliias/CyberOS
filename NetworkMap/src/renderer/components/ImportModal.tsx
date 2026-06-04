@@ -1,8 +1,9 @@
-// NetworkMap — ImportModal.tsx  (3-tab: File / Paste / ReconDesk)
+// NetworkMap — ImportModal.tsx  (4-tab: File / Paste / ReconDesk / GNS3)
 import { useState } from 'react'
 import type { NetworkGraph, NetworkNode, NetworkEdge } from '@shared/types'
-import { parseNmapXml, parseGns3Json, type ParseResult } from '../lib/nmapParser'
+import { parseNmapXml, type ParseResult } from '../lib/nmapParser'
 import { inferEdges } from '../lib/edgeInference'
+import { ReconDeskTab, Gns3Tab } from './ImportModalTabs'
 
 interface Props {
   onClose: () => void
@@ -266,177 +267,66 @@ function PasteTab({ onSave }: { onSave: (g: NetworkGraph) => void }) {
   )
 }
 
-// ─── Tab: ReconDesk ───────────────────────────────────────────────────────────
-function ReconDeskTab({ onSave }: { onSave: (g: NetworkGraph) => void }) {
-  const [loading, setLoading] = useState(false)
-  const [nodes, setNodes]     = useState<NetworkNode[] | null>(null)
-  const [targetName, setTargetName] = useState('')
-  const [error, setError]     = useState<string | null>(null)
-
-  async function handleLoad() {
-    setLoading(true)
-    setError(null)
-    try {
-      const result = await window.electronAPI.generateFromReconDesk()
-      if (!result || result.nodes.length === 0) {
-        setError('No active ReconDesk target found.')
-        return
-      }
-      setTargetName(result.name)
-      const mapped: NetworkNode[] = result.nodes.map((n: any) => ({
-        id:            n.ip,
-        ip:            n.ip,
-        hostname:      n.label !== n.ip ? n.label : undefined,
-        status:        'up' as const,
-        ports:         n.ports.map((p: any) => ({
-          port:     p.number,
-          protocol: p.protocol,
-          state:    p.state as 'open' | 'filtered' | 'closed',
-          service:  p.service,
-        })),
-        openPortCount: n.ports.filter((p: any) => p.state === 'open').length,
-        x: 0, y: 0, fx: null, fy: null,
-      }))
-      setNodes(mapped)
-    } catch (e) {
-      setError((e as Error).message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-        Import ports for the active ReconDesk target:
-      </div>
-
-      {!nodes && (
-        <button
-          onClick={handleLoad}
-          disabled={loading}
-          style={{
-            padding: '7px 14px', borderRadius: 5,
-            background: 'var(--panel)', border: '1px solid var(--border)',
-            color: 'var(--text)', fontSize: 12,
-            opacity: loading ? 0.5 : 1, cursor: loading ? 'not-allowed' : 'pointer',
-          }}
-        >{loading ? 'Loading…' : 'Load from ReconDesk'}</button>
-      )}
-
-      {error && <div style={{ fontSize: 12, color: 'var(--error)' }}>{error}</div>}
-
-      {nodes && nodes.length > 0 && (
-        <>
-          <div style={{ fontSize: 12, color: 'var(--text)' }}>
-            Target: <strong style={{ color: 'var(--accent)' }}>{targetName}</strong>
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-            {nodes.reduce((a, n) => a + n.openPortCount, 0)} open ports available
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-            {nodes.flatMap(n => n.ports.filter(p => p.state === 'open')).map(p => (
-              <span key={`${p.port}-${p.protocol}`} style={{
-                padding: '2px 8px', borderRadius: 4,
-                background: 'rgba(210,153,34,0.1)', border: '1px solid rgba(210,153,34,0.25)',
-                color: 'var(--accent)', fontSize: 11, fontFamily: 'monospace',
-              }}>{p.port}/{p.protocol}{p.service ? ` ${p.service}` : ''}</span>
-            ))}
-          </div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-            This will create a single-node graph.
-          </div>
-          <SaveRow
-            nodes={nodes}
-            importSource="recondesk"
-            defaultName={targetName || `ReconDesk ${new Date().toLocaleDateString()}`}
-            onSave={onSave}
-          />
-        </>
-      )}
-    </div>
-  )
-}
-
-// ─── Tab: GNS3 ────────────────────────────────────────────────────────────────
-function Gns3Tab({ onSave }: { onSave: (g: NetworkGraph) => void }) {
-  const [result, setResult]     = useState<ParseResult | null>(null)
-  const [dragging, setDragging] = useState(false)
-  const [filename, setFilename] = useState('')
-
-  function processFile(content: string, name: string) {
-    setFilename(name)
-    const r = parseGns3Json(content)
-    setResult(r)
-  }
-
-  function onDrop(e: React.DragEvent) {
-    e.preventDefault(); setDragging(false)
-    const file = e.dataTransfer.files[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = ev => processFile(ev.target?.result as string, file.name.replace(/\.gns3$/i, ''))
-    reader.readAsText(file)
-  }
-
-  function handlePick() {
-    const input = document.createElement('input')
-    input.type = 'file'; input.accept = '.gns3,.json'
-    input.onchange = () => {
-      const f = input.files?.[0]; if (!f) return
-      const reader = new FileReader()
-      reader.onload = ev => processFile(ev.target?.result as string, f.name.replace(/\.(gns3|json)$/i, ''))
-      reader.readAsText(f)
-    }
-    input.click()
-  }
-
-  const defaultName = filename || `GNS3 Topology ${new Date().toLocaleDateString()}`
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-        Import a GNS3 <code style={{ fontFamily: 'monospace', color: 'var(--accent)' }}>.gns3</code> topology file. Nodes, positions, and links are extracted automatically.
-      </div>
-      <div
-        onDragOver={e => { e.preventDefault(); setDragging(true) }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={onDrop}
-        onClick={handlePick}
-        style={{ border: `2px dashed ${dragging ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 8, padding: '28px 20px', textAlign: 'center', cursor: 'pointer', background: dragging ? 'rgba(210,153,34,0.05)' : 'transparent' }}
-      >
-        <div style={{ fontSize: 24, marginBottom: 8, opacity: 0.5 }}>🗺</div>
-        <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>Click or drag a .gns3 file here</div>
-        {filename && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>{filename}.gns3</div>}
-      </div>
-
-      {result && (
-        <div style={{ fontSize: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div style={{ color: 'var(--success)' }}>✓ {result.nodes.length} devices loaded</div>
-          {result.errors.map((e, i) => <div key={i} style={{ color: 'var(--error)' }}>✗ {e}</div>)}
-        </div>
-      )}
-
-      {result && result.nodes.length > 0 && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 10 }}>
-          <span style={{ fontSize: 12, color: 'var(--text-dim)', flex: 1 }}>Ready: {result.nodes.length} nodes from GNS3</span>
-          <button
-            onClick={() => onSave(makeGraph(result.nodes, defaultName, 'gns3'))}
-            style={{ padding: '6px 14px', borderRadius: 5, background: 'var(--accent)', border: 'none', color: '#0d1117', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}
-          >Import ({result.nodes.length} nodes)</button>
-        </div>
-      )}
-    </div>
-  )
-}
-
 const TAB_LABELS: Record<Tab, string> = {
   file: 'Import File', paste: 'Paste XML', recondesk: 'ReconDesk', gns3: 'GNS3',
+}
+
+// ─── Import history chip ───────────────────────────────────────────────────────
+interface HistoryEntry { name: string; importedAt: string; nodeCount: number }
+
+function HistoryChip({ entry }: { entry: HistoryEntry }) {
+  const ts = new Date(entry.importedAt)
+  const timeStr = ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const dateStr = ts.toLocaleDateString([], { month: 'short', day: 'numeric' })
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 6,
+      padding: '4px 10px 4px 8px',
+      borderRadius: 20,
+      background: 'rgba(42,51,71,0.25)',
+      border: '1px solid rgba(42,51,71,0.55)',
+      flexShrink: 0,
+    }}>
+      <div style={{
+        width: 6, height: 6, borderRadius: '50%',
+        background: 'rgba(63,185,80,0.7)',
+        boxShadow: '0 0 4px rgba(63,185,80,0.5)',
+        flexShrink: 0,
+      }} />
+      <span style={{
+        fontSize: 10, color: 'var(--text-secondary)', fontWeight: 500,
+        maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+      }}>{entry.name}</span>
+      <span style={{ fontSize: 9, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+        {entry.nodeCount}n · {dateStr} {timeStr}
+      </span>
+    </div>
+  )
 }
 
 // ─── ImportModal ────────────────────────────────────────────────────────────────
 export default function ImportModal({ onClose, onImport }: Props) {
   const [tab, setTab] = useState<Tab>('file')
+  const [history, setHistory] = useState<HistoryEntry[]>(() => {
+    try {
+      const raw = localStorage.getItem('nm_import_history')
+      return raw ? JSON.parse(raw) : []
+    } catch { return [] }
+  })
+
+  function handleImport(g: NetworkGraph) {
+    const entry: HistoryEntry = {
+      name: g.name,
+      importedAt: g.createdAt,
+      nodeCount: g.nodes.length,
+    }
+    setHistory(prev => {
+      const next = [entry, ...prev].slice(0, 5)
+      try { localStorage.setItem('nm_import_history', JSON.stringify(next)) } catch {}
+      return next
+    })
+    onImport(g)
+  }
 
   return (
     <div
@@ -505,12 +395,31 @@ export default function ImportModal({ onClose, onImport }: Props) {
         </div>
         <div style={{ height: 1, background: 'rgba(42,51,71,0.5)', margin: '0 0 0 0' }} />
 
+        {/* Import history chips */}
+        {history.length > 0 && (
+          <div style={{
+            padding: '8px 20px 6px',
+            borderBottom: '1px solid rgba(42,51,71,0.4)',
+            background: 'rgba(42,51,71,0.06)',
+          }}>
+            <div style={{
+              fontSize: 9, fontWeight: 700, color: 'rgba(139,148,158,0.45)',
+              letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6,
+            }}>Recent imports</div>
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
+              {history.map((entry, i) => (
+                <HistoryChip key={i} entry={entry} />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Tab body */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
-          {tab === 'file'      && <FileTab      onSave={g => { onImport(g); onClose() }} />}
-          {tab === 'paste'     && <PasteTab     onSave={g => { onImport(g); onClose() }} />}
-          {tab === 'recondesk' && <ReconDeskTab onSave={g => { onImport(g); onClose() }} />}
-          {tab === 'gns3'      && <Gns3Tab      onSave={g => { onImport(g); onClose() }} />}
+          {tab === 'file'      && <FileTab      onSave={g => { handleImport(g); onClose() }} />}
+          {tab === 'paste'     && <PasteTab     onSave={g => { handleImport(g); onClose() }} />}
+          {tab === 'recondesk' && <ReconDeskTab onSave={g => { handleImport(g); onClose() }} />}
+          {tab === 'gns3'      && <Gns3Tab      onSave={g => { handleImport(g); onClose() }} />}
         </div>
       </div>
     </div>

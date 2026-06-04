@@ -13,6 +13,7 @@ import FilterPanel, { FilterState, EMPTY_FILTERS, applyFilters, activeFilterCoun
 import DiffPanel, { DiffResult, computeDiff } from './DiffPanel'
 import NodeContextMenu from './NodeContextMenu'
 import NodeDetail from './NodeDetail'
+import { GraphLegend, CanvasEmptyState } from './GraphCanvasExtras'
 
 interface Transform { x: number; y: number; scale: number }
 interface ContextMenu { nodeId: string; x: number; y: number }
@@ -401,6 +402,8 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
                 )}
               </div>
 
+              <GraphLegend />
+
               <MiniMap nodes={graph.nodes} transform={transform} canvasW={canvasSize.w} canvasH={canvasSize.h} onPan={(x, y) => setTransform(t => ({ ...t, x, y }))} />
 
               {filterOpen && <FilterPanel nodes={graph.nodes} filters={filters} onChange={setFilters} onClose={() => setFilterOpen(false)} />}
@@ -411,7 +414,7 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
 
               {selectedNode && (
                 <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 320, background: 'var(--panel)', borderLeft: '1px solid var(--border)', overflowY: 'auto', zIndex: 30, animation: 'slideInRight 0.25s ease-out', display: 'flex', flexDirection: 'column' }}>
-                  <NodeDetail node={selectedNode} onClose={() => setSelectedId(null)} allScans={allScans} onAnnotate={text => handleAnnotate(selectedNode.id, text)} />
+                  <NodeDetail node={selectedNode} onClose={() => setSelectedId(null)} allScans={allScans} onAnnotate={text => handleAnnotate(selectedNode.id, text)} searchQuery={searchQuery} />
                 </div>
               )}
 
@@ -447,66 +450,6 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
           </>
         )}
       </div>
-    </div>
-  )
-}
-
-// ─── Canvas empty state ────────────────────────────────────────────────────
-function CanvasEmptyState({ savedCount }: { savedCount: number }) {
-  return (
-    <div className="fade-up" style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      justifyContent: 'center', height: '100%', gap: 16,
-    }}>
-      <svg width="96" height="80" viewBox="0 0 96 80" fill="none" aria-hidden="true">
-        <defs>
-          <filter id="cGlow">
-            <feGaussianBlur stdDeviation="2.5" result="blur" />
-            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
-          <radialGradient id="cBg" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="rgba(255,140,66,0.06)" />
-            <stop offset="100%" stopColor="transparent" />
-          </radialGradient>
-        </defs>
-        <ellipse cx="48" cy="40" rx="44" ry="36" fill="url(#cBg)" />
-        {/* Dashed circle outline */}
-        <circle cx="48" cy="40" r="28" stroke="rgba(255,140,66,0.12)" strokeWidth="1" strokeDasharray="4 4" fill="none" />
-        {/* Empty node placeholders */}
-        <circle cx="48" cy="14" r="7" fill="rgba(42,51,71,0.4)" stroke="rgba(42,51,71,0.7)" strokeWidth="1.5" />
-        <circle cx="22" cy="50" r="6" fill="rgba(42,51,71,0.3)" stroke="rgba(42,51,71,0.6)" strokeWidth="1.5" />
-        <circle cx="74" cy="50" r="6" fill="rgba(42,51,71,0.3)" stroke="rgba(42,51,71,0.6)" strokeWidth="1.5" />
-        <circle cx="48" cy="66" r="5" fill="rgba(42,51,71,0.25)" stroke="rgba(42,51,71,0.5)" strokeWidth="1.5" />
-        {/* Ghost edges */}
-        <line x1="48" y1="21" x2="22" y2="44" stroke="rgba(42,51,71,0.35)" strokeWidth="1" strokeDasharray="2 3" />
-        <line x1="48" y1="21" x2="74" y2="44" stroke="rgba(42,51,71,0.35)" strokeWidth="1" strokeDasharray="2 3" />
-        <line x1="22" y1="56" x2="48" y2="61" stroke="rgba(42,51,71,0.25)" strokeWidth="1" strokeDasharray="2 3" />
-        <line x1="74" y1="56" x2="48" y2="61" stroke="rgba(42,51,71,0.25)" strokeWidth="1" strokeDasharray="2 3" />
-        {/* Central import hint */}
-        <circle cx="48" cy="40" r="12" fill="rgba(255,140,66,0.04)" stroke="rgba(255,140,66,0.2)" strokeWidth="1.5" filter="url(#cGlow)" />
-        <line x1="48" y1="35" x2="48" y2="45" stroke="rgba(255,140,66,0.5)" strokeWidth="1.5" strokeLinecap="round" />
-        <line x1="43" y1="40" x2="53" y2="40" stroke="rgba(255,140,66,0.5)" strokeWidth="1.5" strokeLinecap="round" />
-      </svg>
-      <div style={{ textAlign: 'center' }}>
-        <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>Empty graph</p>
-        <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Go back to the library and import nodes</p>
-      </div>
-      {savedCount > 0 && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 6,
-          padding: '6px 12px', borderRadius: 8,
-          background: 'rgba(255,140,66,0.06)',
-          border: '1px solid rgba(255,140,66,0.18)',
-        }}>
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-            <circle cx="5" cy="5" r="4" stroke="rgba(255,140,66,0.7)" strokeWidth="1.2" fill="none" />
-            <circle cx="5" cy="5" r="1.5" fill="rgba(255,140,66,0.7)" />
-          </svg>
-          <span style={{ fontSize: 10, color: 'rgba(255,140,66,0.7)', fontVariantNumeric: 'tabular-nums' }}>
-            You have <span style={{ fontWeight: 700, color: '#ff8c42' }}>{savedCount}</span> saved {savedCount === 1 ? 'graph' : 'graphs'} — switch from the sidebar
-          </span>
-        </div>
-      )}
     </div>
   )
 }

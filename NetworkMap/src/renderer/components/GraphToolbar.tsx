@@ -215,11 +215,7 @@ export default function GraphToolbar({
         <ToggleBtn label="Vulns"   active={showVulnOverlay} onClick={onToggleVulnOverlay} />
         <ToggleBtn label="Heat"    active={showHeatmap} onClick={onToggleHeatmap} />
         <ToggleBtn label="Diff"    active={compareMode} onClick={onToggleCompare} />
-        <ToggleBtn
-          label={filterCount > 0 ? `Filter (${filterCount})` : 'Filter'}
-          active={filterOpen}
-          onClick={onToggleFilter}
-        />
+        <FilterToggle filterCount={filterCount} active={filterOpen} onClick={onToggleFilter} />
       </div>
 
       {/* Layer view */}
@@ -373,6 +369,58 @@ function ToggleBtn({ label, active, onClick }: { label: string; active: boolean;
         }
       }}
     >{label}</button>
+  )
+}
+
+function FilterToggle({ filterCount, active, onClick }: { filterCount: number; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        position: 'relative',
+        padding: '4px 9px', fontSize: 10, fontWeight: active ? 600 : 500, borderRadius: 8, cursor: 'pointer',
+        background: active ? 'rgba(255,140,66,0.13)' : 'transparent',
+        color: active ? '#ff8c42' : 'var(--text-muted)',
+        border: `1px solid ${active ? 'rgba(255,140,66,0.38)' : 'rgba(42,51,71,0.6)'}`,
+        letterSpacing: '0.04em',
+        transition: 'all 180ms var(--ease)',
+        boxShadow: active ? '0 0 8px rgba(255,140,66,0.12)' : 'none',
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+      }}
+      onMouseEnter={e => {
+        if (!active) {
+          (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'
+          ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,51,71,0.9)'
+          ;(e.currentTarget as HTMLElement).style.background = 'rgba(42,51,71,0.2)'
+        }
+      }}
+      onMouseLeave={e => {
+        if (!active) {
+          (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'
+          ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,51,71,0.6)'
+          ;(e.currentTarget as HTMLElement).style.background = 'transparent'
+        }
+      }}
+    >
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M1 2h8M2.5 5h5M4 8h2" strokeLinecap="round" />
+      </svg>
+      Filter
+      {filterCount > 0 && (
+        <span
+          key={filterCount}
+          className="badge-animate"
+          style={{
+            fontSize: 9, fontWeight: 700,
+            background: active ? 'rgba(255,140,66,0.25)' : 'rgba(255,140,66,0.18)',
+            color: '#ff8c42',
+            border: '1px solid rgba(255,140,66,0.4)',
+            borderRadius: 8, padding: '0 5px',
+            lineHeight: '14px', minWidth: 14, textAlign: 'center',
+          }}
+        >{filterCount}</span>
+      )}
+    </button>
   )
 }
 

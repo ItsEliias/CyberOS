@@ -206,7 +206,7 @@ export default function DashboardView() {
           actions={
             <div className="flex items-center gap-2">
               <span
-                className="text-[10px] font-mono px-2 py-1 rounded-lg border"
+                className="text-[10px] font-mono tabular-nums px-2 py-1 rounded-lg border"
                 style={{
                   background: 'var(--surface-glass)',
                   borderColor: 'var(--border-subtle)',

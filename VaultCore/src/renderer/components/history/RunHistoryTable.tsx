@@ -135,7 +135,7 @@ export default function RunHistoryTable() {
       <div className="flex items-center justify-between px-5 py-3 border-b shrink-0" style={{ borderColor: 'var(--border)' }}>
         <div>
           <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Run History</div>
-          <div className="text-[11px]" style={{ color: 'var(--text-dim)' }}>
+          <div className="text-[11px] tabular-nums" style={{ color: 'var(--text-dim)' }}>
             {filtered.length} of {runs.length} run{runs.length !== 1 ? 's' : ''}
           </div>
         </div>
@@ -249,7 +249,7 @@ export default function RunHistoryTable() {
                         <td className="px-4 py-2.5 font-medium" style={{ color: 'var(--text)' }}>
                           {run.sourceName}
                         </td>
-                        <td className="px-4 py-2.5 font-mono" style={{ color: 'var(--text-muted)' }}>
+                        <td className="px-4 py-2.5 font-mono tabular-nums" style={{ color: 'var(--text-muted)' }}>
                           {formatDate(run.startedAt)}
                         </td>
                         <td className="px-4 py-2.5" style={{ minWidth: 100 }}>

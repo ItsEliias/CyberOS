@@ -1,13 +1,15 @@
 // NetworkMap — NodeDetail.tsx — Glass panel host detail (UI redesign, logic unchanged)
 import { useState } from 'react'
 import type { NetworkNode } from '@shared/types'
-import { osIcon } from '../lib/nmapParser'
+import { OsIcon, ProtoBadge, HighlightText, thStyle } from './NodeDetailParts'
+import { PortTimeline, VulnsTab } from './NodeDetailTabs'
 
 interface Props {
   node: NetworkNode
   onClose: () => void
   allScans?: { scanName: string; nodes: NetworkNode[] }[]
   onAnnotate?: (text: string) => void
+  searchQuery?: string
 }
 
 type Tab = 'ports' | 'timeline' | 'vulns' | 'recondesk'
@@ -55,146 +57,8 @@ function getServiceName(port: number, service?: string): string {
   return PORT_NAMES[port] ?? '—'
 }
 
-// ─── Port Timeline ─────────────────────────────────────────────────────────────
-function PortTimeline({ node, allScans }: { node: NetworkNode; allScans: { scanName: string; nodes: NetworkNode[] }[] }) {
-  const scans = allScans.filter(s => s.nodes.some(n => n.id === node.id))
-  if (scans.length === 0) {
-    return (
-      <p style={{ fontSize: 11, color: 'var(--text-muted)', padding: 8 }}>
-        No multi-scan timeline data. Import multiple scans to compare.
-      </p>
-    )
-  }
-
-  const allPorts = new Set<number>()
-  for (const s of scans) {
-    s.nodes.find(nd => nd.id === node.id)?.ports.forEach(p => allPorts.add(p.port))
-  }
-  const sortedPorts = Array.from(allPorts).sort((a, b) => a - b)
-
-  function cellColor(state: string | undefined): string {
-    if (state === 'open')     return 'rgba(63,185,80,0.55)'
-    if (state === 'filtered' || state === 'closed') return 'rgba(248,81,73,0.45)'
-    return 'rgba(139,148,158,0.15)'
-  }
-
-  return (
-    <div style={{ overflowX: 'auto' }}>
-      <table style={{ borderCollapse: 'collapse', fontSize: 10, minWidth: '100%' }}>
-        <thead>
-          <tr>
-            <th style={thStyle}>PORT</th>
-            {scans.map(s => <th key={s.scanName} style={thStyle}>{s.scanName.slice(0, 10)}</th>)}
-          </tr>
-        </thead>
-        <tbody>
-          {sortedPorts.map(port => (
-            <tr key={port}>
-              <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)' }}>{port}</td>
-              {scans.map(s => {
-                const n = s.nodes.find(nd => nd.id === node.id)
-                const p = n?.ports.find(pp => pp.port === port)
-                return (
-                  <td key={s.scanName} style={{ ...tdStyle, background: cellColor(p?.state), width: 32 }}>
-                    {p ? p.state[0].toUpperCase() : '—'}
-                  </td>
-                )
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-// ─── Risk bar for vuln entries ─────────────────────────────────────────────────
-function RiskBar({ severity }: { severity: string }) {
-  const levels: Record<string, { pct: number; color: string; label: string }> = {
-    critical: { pct: 100, color: '#f85149', label: 'Critical' },
-    high:     { pct: 75,  color: '#ff8c42', label: 'High' },
-    medium:   { pct: 50,  color: '#d29922', label: 'Medium' },
-    low:      { pct: 25,  color: '#3fb950', label: 'Low' },
-    info:     { pct: 10,  color: '#8b949e', label: 'Info' },
-  }
-  const { pct, color } = levels[severity] ?? levels.info
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
-      <span style={{ fontSize: 9, color: 'var(--text-muted)', width: 28, flexShrink: 0 }}>Risk</span>
-      <div style={{
-        flex: 1, height: 4, borderRadius: 2,
-        background: 'rgba(42,51,71,0.4)',
-        overflow: 'hidden',
-      }}>
-        <div style={{
-          width: `${pct}%`, height: '100%', borderRadius: 2,
-          background: `linear-gradient(90deg, ${color}99, ${color})`,
-          boxShadow: `0 0 6px ${color}55`,
-          transition: 'width 0.4s var(--ease)',
-        }} />
-      </div>
-      <span style={{ fontSize: 9, color, fontWeight: 600, width: 26, flexShrink: 0 }}>{pct}%</span>
-    </div>
-  )
-}
-
-// ─── Vulns Tab ────────────────────────────────────────────────────────────────
-function VulnsTab({ node }: { node: NetworkNode }) {
-  const vulns = node.vulns ?? []
-  if (vulns.length === 0) {
-    return (
-      <p style={{ fontSize: 11, color: 'var(--text-muted)', padding: 8 }}>
-        No vulnerability data loaded. Use "Import Vulns" in the toolbar.
-      </p>
-    )
-  }
-
-  function sevColor(s: string): string {
-    if (s === 'critical') return '#f85149'
-    if (s === 'high')     return '#ff8c42'
-    if (s === 'medium')   return '#d29922'
-    if (s === 'low')      return '#3fb950'
-    return '#8b949e'
-  }
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      {vulns.map((v, i) => (
-        <div key={i} style={{
-          padding: '8px 10px', borderRadius: 8,
-          border: `1px solid ${sevColor(v.severity)}38`,
-          background: `${sevColor(v.severity)}09`,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-            <span style={{
-              fontSize: 9, fontWeight: 700, letterSpacing: '0.08em',
-              color: sevColor(v.severity), textTransform: 'uppercase',
-              background: `${sevColor(v.severity)}18`,
-              border: `1px solid ${sevColor(v.severity)}35`,
-              borderRadius: 4, padding: '1px 6px',
-            }}>{v.severity}</span>
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-            {v.cves.map(cve => (
-              <span key={cve} style={{
-                fontSize: 10, fontFamily: 'var(--font-mono)', padding: '1px 6px', borderRadius: 4,
-                background: 'rgba(139,148,158,0.12)', color: 'var(--text-secondary)',
-                border: '1px solid rgba(42,51,71,0.5)',
-              }}>{cve}</span>
-            ))}
-          </div>
-          {v.description && (
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>{v.description}</div>
-          )}
-          <RiskBar severity={v.severity} />
-        </div>
-      ))}
-    </div>
-  )
-}
-
 // ─── Main NodeDetail ──────────────────────────────────────────────────────────
-export default function NodeDetail({ node, onClose, allScans = [], onAnnotate }: Props) {
+export default function NodeDetail({ node, onClose, allScans = [], onAnnotate, searchQuery = '' }: Props) {
   const openPorts = node.ports.filter(p => p.state === 'open')
   const [rdMsg, setRdMsg] = useState<{ text: string; ok: boolean } | null>(null)
   const [tab, setTab] = useState<Tab>('ports')
@@ -275,7 +139,7 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate }:
           {/* IP + Copy IP inline */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>
-              {node.ip}
+              <HighlightText text={node.ip} query={searchQuery} />
             </span>
             <button
               onClick={handleCopyIP}
@@ -328,15 +192,36 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate }:
         </div>
         {node.hostname && (
           <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {node.hostname}
+            <HighlightText text={node.hostname} query={searchQuery} />
           </div>
         )}
         {node.os && (
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
-            <span>{osIcon(node.os)}</span>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
+            <OsIcon os={node.os} />
             <span>{node.os}{node.osAccuracy ? ` (${node.osAccuracy}%)` : ''}</span>
           </div>
         )}
+        {searchQuery && (() => {
+          const q = searchQuery.toLowerCase()
+          const matchFields: string[] = []
+          if (node.ip.includes(q)) matchFields.push('IP')
+          if (node.hostname && node.hostname.toLowerCase().includes(q)) matchFields.push('hostname')
+          if (node.ports.some(p => String(p.port).includes(q) || (p.service ?? '').toLowerCase().includes(q))) matchFields.push('ports')
+          if (matchFields.length === 0) return null
+          return (
+            <div style={{
+              marginTop: 5, display: 'flex', alignItems: 'center', gap: 4,
+              animation: 'badgePop 0.18s var(--ease)',
+            }}>
+              <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="#ff8c42" strokeWidth="1.5">
+                <circle cx="4" cy="4" r="3" /><path d="M6.5 6.5l1.5 1.5" strokeLinecap="round" />
+              </svg>
+              <span style={{ fontSize: 9, color: 'rgba(255,140,66,0.7)', fontWeight: 600 }}>
+                Match in {matchFields.join(', ')}
+              </span>
+            </div>
+          )
+        })()}
         {node.annotation && (
           <div style={{ marginTop: 5, fontSize: 11, color: '#ff8c42', fontStyle: 'italic', opacity: 0.85 }}>
             {node.annotation}
@@ -421,52 +306,54 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate }:
                 <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: 6, textTransform: 'uppercase' }}>
                   Ports ({node.ports.length})
                 </div>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      {(['PORT', 'SERVICE', 'NAME', 'STATE'] as const).map(h => (
-                        <th key={h} style={thStyle}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {node.ports.map(p => (
-                      <tr key={`${p.port}-${p.protocol}`}
-                        style={{ transition: 'background 100ms', background: stateBg(p.state) }}
-                        onMouseEnter={e => (e.currentTarget.style.background = p.state === 'open' ? 'rgba(63,185,80,0.12)' : p.state === 'filtered' ? 'rgba(210,153,34,0.12)' : 'rgba(72,79,88,0.12)')}
-                        onMouseLeave={e => (e.currentTarget.style.background = stateBg(p.state))}
-                      >
-                        <td style={{ padding: '4px 4px 4px 0', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-primary)' }}>
-                          {p.port}/{p.protocol}
-                        </td>
-                        <td style={{ padding: '4px 4px', fontSize: 11, color: 'var(--text-secondary)', maxWidth: 64, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {p.service || '—'}
-                        </td>
-                        <td style={{ padding: '4px 4px', fontSize: 10, color: 'var(--text-muted)', maxWidth: 58, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {getServiceName(p.port, p.service) !== (p.service || '—') ? getServiceName(p.port, p.service) : '—'}
-                        </td>
-                        <td style={{ padding: '4px 0' }}>
-                          <span style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 3,
-                            fontSize: 10, fontWeight: p.state === 'open' ? 600 : 400,
-                            color: stateColor(p.state),
-                            background: `${stateColor(p.state)}12`,
-                            border: `1px solid ${stateBorder(p.state)}`,
-                            borderRadius: 8, padding: '1px 6px',
-                          }}>
-                            <span style={{
-                              width: 5, height: 5, borderRadius: '50%',
-                              background: stateColor(p.state),
-                              boxShadow: p.state === 'open' ? `0 0 4px ${stateColor(p.state)}` : 'none',
-                              flexShrink: 0,
-                            }} />
-                            {p.state}
-                          </span>
-                        </td>
+                <div style={{ overflowY: 'auto', maxHeight: 320, borderRadius: 6, border: '1px solid rgba(42,51,71,0.4)' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead style={{ position: 'sticky', top: 0, zIndex: 1, background: 'rgba(13,14,24,0.98)' }}>
+                      <tr>
+                        {(['PORT', 'PROTO', 'SERVICE', 'STATE'] as const).map(h => (
+                          <th key={h} style={thStyle}>{h}</th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {node.ports.map(p => (
+                        <tr key={`${p.port}-${p.protocol}`}
+                          style={{ transition: 'background 100ms', background: stateBg(p.state) }}
+                          onMouseEnter={e => (e.currentTarget.style.background = p.state === 'open' ? 'rgba(63,185,80,0.12)' : p.state === 'filtered' ? 'rgba(210,153,34,0.12)' : 'rgba(72,79,88,0.12)')}
+                          onMouseLeave={e => (e.currentTarget.style.background = stateBg(p.state))}
+                        >
+                          <td style={{ padding: '5px 6px 5px 8px', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                            {p.port}
+                          </td>
+                          <td style={{ padding: '5px 4px' }}>
+                            <ProtoBadge proto={p.protocol} service={p.service} />
+                          </td>
+                          <td style={{ padding: '5px 4px', fontSize: 11, color: 'var(--text-secondary)', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {getServiceName(p.port, p.service)}
+                          </td>
+                          <td style={{ padding: '5px 8px 5px 4px' }}>
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 3,
+                              fontSize: 10, fontWeight: p.state === 'open' ? 600 : 400,
+                              color: stateColor(p.state),
+                              background: `${stateColor(p.state)}12`,
+                              border: `1px solid ${stateBorder(p.state)}`,
+                              borderRadius: 8, padding: '1px 6px', whiteSpace: 'nowrap',
+                            }}>
+                              <span style={{
+                                width: 5, height: 5, borderRadius: '50%',
+                                background: stateColor(p.state),
+                                boxShadow: p.state === 'open' ? `0 0 4px ${stateColor(p.state)}` : 'none',
+                                flexShrink: 0,
+                              }} />
+                              {p.state}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </>
             )}
           </>
@@ -507,13 +394,3 @@ function ActionBtn({ children, onClick }: { children: React.ReactNode; onClick: 
   )
 }
 
-const thStyle: React.CSSProperties = {
-  textAlign: 'left', fontSize: 9, fontWeight: 700, color: 'var(--text-muted)',
-  letterSpacing: '0.07em', padding: '3px 4px 5px', borderBottom: '1px solid rgba(42,51,71,0.5)',
-  textTransform: 'uppercase',
-}
-
-const tdStyle: React.CSSProperties = {
-  padding: '3px 4px', fontSize: 10, color: 'var(--text-secondary)',
-  textAlign: 'center', borderBottom: '1px solid rgba(42,51,71,0.25)',
-}

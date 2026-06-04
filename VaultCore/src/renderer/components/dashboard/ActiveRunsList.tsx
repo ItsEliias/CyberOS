@@ -94,7 +94,7 @@ export default function ActiveRunsList({ runs, onCancel }: Props) {
                     startedAt={run.startedAt}
                     itemsSaved={run.result?.newNotes ?? 0}
                   />
-                  <span className="text-[10px]" style={{ color: 'var(--text-dim)' }}>
+                  <span className="text-[10px] font-mono tabular-nums" style={{ color: 'var(--text-dim)' }}>
                     {timeAgo(run.startedAt)} ago
                   </span>
                   <button

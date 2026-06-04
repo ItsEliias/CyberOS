@@ -20,7 +20,7 @@ export default function SourceList({ sources, selectedId, onSelect, onAdd }: Pro
         className="flex items-center justify-between px-4 py-3 border-b shrink-0"
         style={{ borderColor: 'var(--border)' }}
       >
-        <span className="text-[11px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-dim)' }}>
+        <span className="text-[11px] uppercase tracking-widest font-medium tabular-nums" style={{ color: 'var(--text-dim)' }}>
           Sources ({sources.length})
         </span>
       </div>

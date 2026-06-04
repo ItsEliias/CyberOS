@@ -305,7 +305,7 @@ export default function SourceHealthView() {
           <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
             Source Health Monitor
           </div>
-          <div className="text-[11px]" style={{ color: 'var(--text-dim)' }}>
+          <div className="text-[11px] tabular-nums" style={{ color: 'var(--text-dim)' }}>
             {sources.length} source{sources.length !== 1 ? 's' : ''} ·{' '}
             {errorSources.length > 0 && (
               <span style={{ color: '#f85149' }}>{errorSources.length} error · </span>
@@ -355,7 +355,7 @@ export default function SourceHealthView() {
         {errorSources.length > 0 && (
           <section>
             <div
-              className="text-[10px] uppercase tracking-widest mb-3 flex items-center gap-2"
+              className="text-[10px] uppercase tracking-widest mb-3 flex items-center gap-2 tabular-nums"
               style={{ color: '#f85149' }}
             >
               <span>Errors ({errorSources.length})</span>
@@ -379,7 +379,7 @@ export default function SourceHealthView() {
         {warnSources.length > 0 && (
           <section>
             <div
-              className="text-[10px] uppercase tracking-widest mb-3 flex items-center gap-2"
+              className="text-[10px] uppercase tracking-widest mb-3 flex items-center gap-2 tabular-nums"
               style={{ color: '#d29922' }}
             >
               <span>Warnings ({warnSources.length})</span>
@@ -402,7 +402,7 @@ export default function SourceHealthView() {
         {healthySources.length > 0 && (
           <section>
             <div
-              className="text-[10px] uppercase tracking-widest mb-3"
+              className="text-[10px] uppercase tracking-widest mb-3 tabular-nums"
               style={{ color: '#3fb950' }}
             >
               Healthy ({healthySources.length})
