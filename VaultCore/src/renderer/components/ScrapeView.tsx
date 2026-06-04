@@ -135,20 +135,24 @@ export default function ScrapeView() {
     info: 'var(--text-secondary)', success: '#3fb950', error: '#f85149', warn: '#d29922',
   };
 
-  function LogMessage({ message }: { message: string }) {
-    // Split the message into highlighted tokens
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
+  function LogMessage({ message, type }: { message: string; type: string }) {
+    // Split the message into highlighted tokens: URLs, error keywords, warning keywords
+    const tokenRegex = /(https?:\/\/[^\s]+)|\b(error|fail(?:ed)?|exception|critical|fatal)\b|\b(warn(?:ing)?|caution|skip(?:ped)?)\b/gi;
     const parts: React.ReactNode[] = [];
     let lastIdx = 0;
     let match: RegExpExecArray | null;
-    urlRegex.lastIndex = 0;
-    while ((match = urlRegex.exec(message)) !== null) {
+    tokenRegex.lastIndex = 0;
+    while ((match = tokenRegex.exec(message)) !== null) {
       if (match.index > lastIdx) {
         parts.push(message.slice(lastIdx, match.index));
       }
-      parts.push(
-        <span key={match.index} className="log-url">{match[0]}</span>
-      );
+      if (match[1]) {
+        parts.push(<span key={match.index} className="log-url">{match[1]}</span>);
+      } else if (match[2]) {
+        parts.push(<span key={match.index} style={{ color: '#f85149', fontWeight: 600 }}>{match[2]}</span>);
+      } else if (match[3]) {
+        parts.push(<span key={match.index} style={{ color: '#d29922', fontWeight: 600 }}>{match[3]}</span>);
+      }
       lastIdx = match.index + match[0].length;
     }
     if (lastIdx < message.length) parts.push(message.slice(lastIdx));
@@ -390,7 +394,7 @@ export default function ScrapeView() {
             {logEntries.map((entry, i) => (
               <div key={i} style={{ color: LOG_COLORS[entry.type] ?? 'var(--text-secondary)' }}>
                 <span className="log-timestamp">[{entry.time}]</span>{' '}
-                <LogMessage message={entry.message} />
+                <LogMessage message={entry.message} type={entry.type} />
               </div>
             ))}
           </div>

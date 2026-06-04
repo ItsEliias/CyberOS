@@ -73,11 +73,11 @@ export default function VaultCompositionChart({ byFolder, onFolderClick }: Props
                 </div>
               </div>
               <span
-                className="text-[10px] font-mono w-10 text-right shrink-0 tabular-nums"
+                className="text-[10px] font-mono w-16 text-right shrink-0 tabular-nums flex items-center justify-end gap-0.5"
                 style={{ color: 'var(--accent)' }}
               >
                 <CountUp target={f.count} delay={i * 0.05} />
-                <span style={{ color: 'var(--text-dim)', fontSize: 9 }}> f</span>
+                <span style={{ color: 'var(--text-dim)', fontSize: 9 }}> files</span>
               </span>
             </div>
           );
