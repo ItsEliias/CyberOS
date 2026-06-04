@@ -13,6 +13,33 @@ interface Props {
   exitCode?: number | null;
   /** When true the animated handshake icon shows; after 1.8s it resolves to steady dot */
   connecting?: boolean;
+  /** Latency in ms to display signal quality bars */
+  latencyMs?: number;
+}
+
+/** 3-bar signal strength indicator */
+function SignalBars({ ms }: { ms: number }) {
+  // 1 bar <50ms green, 2 bars <100ms amber, 3 bars (<=20ms) bright green
+  const bars = ms <= 20 ? 3 : ms < 50 ? 2 : ms < 100 ? 1 : 0;
+  const color = ms <= 20 ? '#00ff41' : ms < 50 ? '#3fb950' : ms < 100 ? '#d29922' : '#f85149';
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'flex-end', gap: 1.5, height: 9 }} title={`${ms}ms latency`}>
+      {[4, 6.5, 9].map((h, i) => (
+        <span
+          key={i}
+          style={{
+            width: 3,
+            height: h,
+            borderRadius: 1,
+            background: i < bars ? color : 'rgba(0,255,65,0.12)',
+            boxShadow: i < bars ? `0 0 4px ${color}80` : 'none',
+            transition: 'background 0.3s ease, box-shadow 0.3s ease',
+            flexShrink: 0,
+          }}
+        />
+      ))}
+    </span>
+  );
 }
 
 function Sep() {
@@ -60,7 +87,7 @@ function ConnIndicator({ connecting }: { connecting: boolean }) {
   );
 }
 
-export default function StatusBar({ sessionCtx, commandCount, sessionName, cwd, exitCode, connecting = false }: Props) {
+export default function StatusBar({ sessionCtx, commandCount, sessionName, cwd, exitCode, connecting = false, latencyMs = 28 }: Props) {
   const hasTarget = Boolean(sessionCtx.activeTarget || sessionCtx.activeIP);
 
   return (
@@ -121,6 +148,15 @@ export default function StatusBar({ sessionCtx, commandCount, sessionName, cwd, 
       {/* Line/column counter (mock values) */}
       <span style={{ color: 'rgba(0,255,65,0.35)', fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.04em' }}>
         Ln 24 Col 7
+      </span>
+      <Sep />
+
+      {/* Latency + signal bars */}
+      <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9 }}>
+        <SignalBars ms={latencyMs} />
+        <span style={{ color: latencyMs <= 20 ? '#00ff41' : latencyMs < 50 ? '#3fb950' : latencyMs < 100 ? '#d29922' : '#f85149', fontFamily: 'var(--font-mono)' }}>
+          {latencyMs}ms
+        </span>
       </span>
       <Sep />
 

@@ -2,7 +2,7 @@
  * SessionsView — TerminalLink
  * Lists terminal sessions, SSH profiles, and recorded sessions with export.
  */
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { TerminalSession, SshProfile, RecordedSession } from '../types/terminallink';
 import SshManager from './SshManager';
 
@@ -224,6 +224,62 @@ function SessionRow({ session, isActive, lastCmd, onSelect }: {
   );
 }
 
+/* ── Session group detection ─────────────────────────────────────────────── */
+interface GroupDef { id: string; label: string; color: string; re: RegExp }
+
+const SESSION_GROUPS: GroupDef[] = [
+  { id: 'htb',    label: 'HTB',    color: '#9fef00', re: /htb|hack.?the.?box/i },
+  { id: 'ctf',    label: 'CTF',    color: '#56d4dd', re: /ctf/i },
+  { id: 'client', label: 'Client', color: '#d29922', re: /client|pentest|pt/i },
+  { id: 'lab',    label: 'Lab',    color: '#b44fff', re: /lab|home|local|kali/i },
+]
+
+function detectGroup(name: string): GroupDef | null {
+  for (const g of SESSION_GROUPS) { if (g.re.test(name)) return g; }
+  return null;
+}
+
+function groupSessions(sessions: TerminalSession[]): Array<{ group: GroupDef | null; items: TerminalSession[] }> {
+  const groups = new Map<string, { group: GroupDef | null; items: TerminalSession[] }>()
+  groups.set('other', { group: null, items: [] })
+  for (const g of SESSION_GROUPS) groups.set(g.id, { group: g, items: [] })
+  for (const s of sessions) {
+    const g = detectGroup(s.name)
+    groups.get(g?.id ?? 'other')!.items.push(s)
+  }
+  return Array.from(groups.values()).filter(g => g.items.length > 0)
+}
+
+function GroupHeader({ group, collapsed, onToggle }: {
+  group: GroupDef | null; collapsed: boolean; onToggle: () => void;
+}) {
+  const color = group?.color ?? 'rgba(0,255,65,0.4)'
+  const label = group?.label ?? 'Other'
+  return (
+    <button
+      onClick={onToggle}
+      style={{
+        width: '100%', textAlign: 'left',
+        padding: '5px 16px',
+        background: `${color}08`,
+        border: 'none',
+        borderTop: '1px solid rgba(0,255,65,0.06)',
+        borderLeft: `2px solid ${color}60`,
+        display: 'flex', alignItems: 'center', gap: 7,
+        cursor: 'pointer', fontFamily: 'var(--font-mono)',
+        transition: 'background 0.15s ease',
+      }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = `${color}12`; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = `${color}08`; }}
+    >
+      <span style={{ fontSize: 9, color, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', flex: 1 }}>
+        {label}
+      </span>
+      <span style={{ fontSize: 9, color: `${color}80` }}>{collapsed ? '▶' : '▼'}</span>
+    </button>
+  )
+}
+
 function formatDuration(start: string, end?: string): string {
   const ms = (end ? new Date(end) : new Date()).getTime() - new Date(start).getTime();
   const s  = Math.floor(ms / 1000);
@@ -241,7 +297,17 @@ export default function SessionsView({
   const [tab, setTab] = useState<Tab>('sessions');
   const [loading, setLoading] = useState(true);
   const [quickConnectVal, setQuickConnectVal] = useState('');
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const sorted = [...sessions].sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+  const groupedSessions = useMemo(() => groupSessions(sorted), [sorted]);
+
+  const toggleGroup = useCallback((id: string) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }, []);
 
   // Derive recent hosts: SSH profiles + hardcoded known hosts, deduplicated
   const recentHosts = useMemo(() => {
@@ -391,18 +457,37 @@ export default function SessionsView({
               </>
             ) : sorted.length === 0 ? (
               <EmptyState onNew={onNewSession} />
+            ) : groupedSessions.length === 1 ? (
+              /* Single group — flat list */
+              sorted.map(session => (
+                <SessionRow
+                  key={session.id}
+                  session={session}
+                  isActive={session.id === activeSessionId}
+                  lastCmd={lastCommands[session.id]}
+                  onSelect={onSelectSession}
+                />
+              ))
             ) : (
-              <>
-                {sorted.map(session => (
-                  <SessionRow
-                    key={session.id}
-                    session={session}
-                    isActive={session.id === activeSessionId}
-                    lastCmd={lastCommands[session.id]}
-                    onSelect={onSelectSession}
-                  />
-                ))}
-              </>
+              /* Multiple groups — collapsible */
+              groupedSessions.map(({ group, items }) => {
+                const gid = group?.id ?? 'other'
+                const isCollapsed = collapsedGroups.has(gid)
+                return (
+                  <div key={gid}>
+                    <GroupHeader group={group} collapsed={isCollapsed} onToggle={() => toggleGroup(gid)} />
+                    {!isCollapsed && items.map(session => (
+                      <SessionRow
+                        key={session.id}
+                        session={session}
+                        isActive={session.id === activeSessionId}
+                        lastCmd={lastCommands[session.id]}
+                        onSelect={onSelectSession}
+                      />
+                    ))}
+                  </div>
+                )
+              })
             )}
           </div>
         </div>

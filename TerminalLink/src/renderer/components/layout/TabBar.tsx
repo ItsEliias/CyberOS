@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import type { TerminalSession } from '../../types/terminallink';
 
 /* ── Session tag definitions ─────────────────────────────────────────────── */
@@ -35,6 +35,7 @@ const SESSION_COLORS = [
 ];
 
 interface CtxMenu { id: string; x: number; y: number }
+interface GhostTab { id: string; x: number; y: number; label: string; color: string }
 
 export default function TabBar({
   sessions, activeSessionId, onSelect, onNew, onClose, onRename, onColorChange,
@@ -42,7 +43,38 @@ export default function TabBar({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [ctxMenu,   setCtxMenu]   = useState<CtxMenu | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [ghostTab,  setGhostTab]  = useState<GhostTab | null>(null);
+  const dragOrigin  = useRef<{ x: number; y: number } | null>(null);
+  const inputRef    = useRef<HTMLInputElement>(null);
+
+  // Clear ghost on mouseup anywhere
+  useEffect(() => {
+    function onUp() { setGhostTab(null); dragOrigin.current = null; }
+    window.addEventListener('mouseup', onUp);
+    return () => window.removeEventListener('mouseup', onUp);
+  }, []);
+
+  function handleTabMouseDown(e: React.MouseEvent, sess: TerminalSession) {
+    if (e.button !== 0) return;
+    dragOrigin.current = { x: e.clientX, y: e.clientY };
+    const color = sess.color ?? '#00ff41';
+    function onMove(mv: MouseEvent) {
+      if (!dragOrigin.current) return;
+      const dx = mv.clientX - dragOrigin.current.x;
+      const dy = mv.clientY - dragOrigin.current.y;
+      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+        setGhostTab({ id: sess.id, x: mv.clientX + 8, y: mv.clientY - 14, label: sess.name, color });
+      }
+    }
+    function onUp() {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      setGhostTab(null);
+      dragOrigin.current = null;
+    }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
 
   const startRename = useCallback((id: string, name: string) => {
     setEditingId(id);
@@ -82,6 +114,7 @@ export default function TabBar({
               onClick={() => onSelect(sess.id)}
               onDoubleClick={() => startRename(sess.id, sess.name)}
               onContextMenu={e => handleTabCtx(e, sess.id)}
+              onMouseDown={e => handleTabMouseDown(e, sess)}
               title={sess.name}
               style={{
                 display: 'flex',
@@ -233,6 +266,33 @@ export default function TabBar({
           +
         </button>
       </div>
+
+      {/* Drag ghost tab */}
+      {ghostTab && (
+        <div
+          style={{
+            position: 'fixed',
+            top: ghostTab.y,
+            left: ghostTab.x,
+            zIndex: 10000,
+            pointerEvents: 'none',
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '3px 10px',
+            background: `${ghostTab.color}12`,
+            border: `1px solid ${ghostTab.color}60`,
+            borderRadius: 4,
+            fontSize: 10,
+            color: '#c8ffc8',
+            fontFamily: 'var(--font-mono)',
+            opacity: 0.88,
+            boxShadow: `0 4px 16px rgba(0,0,0,0.5), 0 0 12px ${ghostTab.color}30`,
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <span style={{ width: 5, height: 5, borderRadius: '50%', background: ghostTab.color, flexShrink: 0, boxShadow: `0 0 5px ${ghostTab.color}` }} />
+          {ghostTab.label}
+        </div>
+      )}
 
       {/* Context menu */}
       {ctxMenu && (

@@ -13,6 +13,19 @@ interface Props {
   onClose: () => void;
 }
 
+const RECENT_KEY = 'terminallink_palette_recent';
+const MAX_RECENT = 3;
+
+function getRecentIds(): string[] {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]'); }
+  catch { return []; }
+}
+
+function addRecentId(id: string) {
+  const prev = getRecentIds().filter(x => x !== id);
+  localStorage.setItem(RECENT_KEY, JSON.stringify([id, ...prev].slice(0, MAX_RECENT)));
+}
+
 function highlight(text: string, query: string): React.ReactNode {
   if (!query) return text;
   const idx = text.toLowerCase().indexOf(query.toLowerCase());
@@ -31,8 +44,21 @@ function highlight(text: string, query: string): React.ReactNode {
 export default function CommandPalette({ items, onClose }: Props) {
   const [query,    setQuery]    = useState('');
   const [selected, setSelected] = useState(0);
+  const [recentIds, setRecentIds] = useState<string[]>(() => getRecentIds());
   const inputRef   = useRef<HTMLInputElement>(null);
   const listRef    = useRef<HTMLDivElement>(null);
+
+  const recentItems = useMemo(() =>
+    recentIds.map(id => items.find(i => i.id === id)).filter(Boolean) as PaletteItem[],
+    [recentIds, items]
+  );
+
+  function handleSelect(item: PaletteItem) {
+    addRecentId(item.id);
+    setRecentIds(getRecentIds());
+    item.action();
+    onClose();
+  }
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -63,8 +89,7 @@ export default function CommandPalette({ items, onClose }: Props) {
       e.preventDefault();
       setSelected(s => Math.max(s - 1, 0));
     } else if (e.key === 'Enter' && filtered[selected]) {
-      filtered[selected].action();
-      onClose();
+      handleSelect(filtered[selected]);
     }
   }
 
@@ -114,6 +139,55 @@ export default function CommandPalette({ items, onClose }: Props) {
         </div>
 
         <div ref={listRef} style={{ maxHeight: 360, overflowY: 'auto' }}>
+          {/* Recently used section — only when no active query */}
+          {!query.trim() && recentItems.length > 0 && (
+            <div>
+              <div style={{
+                padding: '5px 14px 3px',
+                fontSize: 9, color: 'rgba(0,255,65,0.35)',
+                textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 700,
+                borderBottom: '1px solid rgba(0,255,65,0.07)',
+                background: 'rgba(0,255,65,0.03)',
+                fontFamily: 'var(--font-mono)',
+                display: 'flex', alignItems: 'center', gap: 5,
+              }}>
+                <span style={{ fontSize: 10 }}>↺</span>
+                Recently used
+              </div>
+              {recentItems.map((item, i) => (
+                <div
+                  key={item.id}
+                  onClick={() => handleSelect(item)}
+                  style={{
+                    padding: '8px 14px',
+                    cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                    background: i === selected ? 'rgba(0,255,65,0.07)' : 'transparent',
+                    borderLeft: i === selected ? '2px solid var(--accent)' : '2px solid transparent',
+                    transition: 'background 0.1s ease',
+                  }}
+                  onMouseEnter={() => setSelected(i)}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {item.label}
+                    </div>
+                    {item.description && (
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {item.description}
+                      </div>
+                    )}
+                  </div>
+                  <span style={{
+                    fontSize: 8, padding: '1px 5px', borderRadius: 2,
+                    background: 'rgba(0,255,65,0.05)', border: '1px solid rgba(0,255,65,0.12)',
+                    color: 'rgba(0,255,65,0.35)', fontFamily: 'var(--font-mono)', flexShrink: 0,
+                  }}>{item.category}</span>
+                </div>
+              ))}
+              <div style={{ height: 1, background: 'rgba(0,255,65,0.07)', margin: '2px 0' }} />
+            </div>
+          )}
           {filtered.length === 0 && (
             <div style={{ padding: 28, textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
               <div style={{ fontSize: 20, marginBottom: 8, opacity: 0.3 }}>⌕</div>
@@ -156,7 +230,7 @@ export default function CommandPalette({ items, onClose }: Props) {
                   return (
                     <div
                       key={item.id}
-                      onClick={() => { item.action(); onClose(); }}
+                      onClick={() => handleSelect(item)}
                       style={{
                         padding: '8px 14px',
                         cursor: 'pointer',
