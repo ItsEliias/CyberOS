@@ -114,34 +114,6 @@ function CategoryIcon({ cat }: { cat: string }) {
   )
 }
 
-// ─── Vault Health Score widget ────────────────────────────────────────────────
-
-function VaultHealthWidget({ score, color, label }: { score: number; color: string; label: string }) {
-  return (
-    <div style={{
-      margin: '8px 12px', padding: '10px 12px', borderRadius: 8,
-      background: 'rgba(13,14,24,0.6)', border: '1px solid rgba(42,51,71,0.4)',
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-        <span style={{ fontSize: 10, fontWeight: 600, color: '#484f58', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-          Vault Health
-        </span>
-        <span style={{ fontSize: 12, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums' }}>
-          {score}% <span style={{ fontSize: 9, fontWeight: 500, opacity: 0.7 }}>{label}</span>
-        </span>
-      </div>
-      <div style={{ height: 4, borderRadius: 2, background: 'rgba(42,51,71,0.5)', overflow: 'hidden' }}>
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${score}%` }}
-          transition={{ duration: 0.7, ease: [0.2, 0.8, 0.2, 1] }}
-          style={{ height: '100%', borderRadius: 2, background: color }}
-        />
-      </div>
-    </div>
-  )
-}
-
 // ─── Nav config ────────────────────────────────────────────────────────────────
 
 const NAV: { id: View; label: string; Icon: () => JSX.Element }[] = [
@@ -426,13 +398,6 @@ export default function Sidebar() {
         </>
       )}
 
-      {/* Vault health score — pass 5 */}
-      {credCount > 0 && (
-        <>
-          <div className="mx-4 my-2 h-px" style={{ background: 'rgba(42,51,71,0.35)' }} />
-          <VaultHealthWidget score={vaultHealth} color={healthColor} label={healthLabel} />
-        </>
-      )}
     </aside>
   )
 }
