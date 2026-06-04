@@ -129,8 +129,37 @@ export default function SeverityChart({ findings }: Props) {
           })}
         </g>
       </svg>
-      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 6 }}>
-        {total} finding{total !== 1 ? 's' : ''} total
+      {/* Mini data table */}
+      <div style={{ marginTop: 10, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 8 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
+          <thead>
+            <tr style={{ color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              <th style={{ textAlign: 'left', padding: '2px 0', fontWeight: 600 }}>Severity</th>
+              <th style={{ textAlign: 'right', padding: '2px 0', fontWeight: 600 }}>Count</th>
+              <th style={{ textAlign: 'right', padding: '2px 0', fontWeight: 600 }}>%</th>
+            </tr>
+          </thead>
+          <tbody>
+            {SEVERITIES.filter(sev => counts[sev] > 0).map(sev => (
+              <tr key={sev}>
+                <td style={{ padding: '2px 0', color: SEV_COLORS[sev], fontWeight: 600, textTransform: 'capitalize' }}>
+                  {SEV_LABELS[sev]}
+                </td>
+                <td style={{ textAlign: 'right', padding: '2px 0', fontFamily: 'var(--font-mono)', color: SEV_COLORS[sev], fontWeight: 700 }}>
+                  {counts[sev]}
+                </td>
+                <td style={{ textAlign: 'right', padding: '2px 0', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                  {Math.round((counts[sev] / total) * 100)}%
+                </td>
+              </tr>
+            ))}
+            <tr style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+              <td style={{ padding: '3px 0', color: 'var(--text-muted)', fontWeight: 600 }}>Total</td>
+              <td style={{ textAlign: 'right', padding: '3px 0', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{total}</td>
+              <td style={{ textAlign: 'right', padding: '3px 0', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>100%</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   );

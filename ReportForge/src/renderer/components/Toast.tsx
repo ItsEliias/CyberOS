@@ -61,7 +61,7 @@ const TYPE_CONFIG: Record<ToastType, { color: string; icon: React.ReactNode; bg:
 
 export function ToastContainer({ toasts, onRemove }: { toasts: ToastItem[]; onRemove: (id: string) => void }) {
   return (
-    <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 8, pointerEvents: 'none' }}>
+    <div style={{ position: 'fixed', top: 60, right: 16, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 8, pointerEvents: 'none' }}>
       <AnimatePresence>
         {toasts.map(t => {
           const cfg = TYPE_CONFIG[t.type];

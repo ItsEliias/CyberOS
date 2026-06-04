@@ -91,16 +91,27 @@ export default function EditorHeader({ dirty, onSave, onBack, onExportMd, onExpo
               }}
             />
           ) : (
-            <div
-              onClick={() => { setEditingTitle(true); setTitleVal(activeReport.title); }}
-              style={{
-                fontSize: 14, fontWeight: 600, color: 'var(--text-primary)',
-                cursor: 'text', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}
-              title="Click to rename"
-            >
-              {activeReport.title}
-              {dirty && <span style={{ color: 'var(--accent)', marginLeft: 6, fontSize: 12, fontWeight: 400 }}>•</span>}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
+              <div
+                onClick={() => { setEditingTitle(true); setTitleVal(activeReport.title); }}
+                style={{
+                  fontSize: 14, fontWeight: 600, color: 'var(--text-primary)',
+                  cursor: 'text', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}
+                title="Click to rename"
+              >
+                {activeReport.title}
+              </div>
+              {dirty && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                  <div style={{
+                    width: 7, height: 7, borderRadius: '50%', background: '#d29922',
+                    boxShadow: '0 0 5px rgba(210,153,34,0.6)',
+                    animation: 'pulse 2s ease-in-out infinite',
+                  }} />
+                  <span style={{ fontSize: 10, color: '#d29922', fontWeight: 500 }}>unsaved</span>
+                </div>
+              )}
             </div>
           )}
           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1, fontFamily: 'var(--font-mono)' }}>

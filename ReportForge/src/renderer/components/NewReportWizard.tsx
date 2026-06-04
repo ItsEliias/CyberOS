@@ -134,8 +134,9 @@ export default function NewReportWizard({ onComplete, onCancel }: Props) {
         animate={{ opacity: 1, scale: 1 }}
         style={{
           background: 'var(--panel)', border: '1px solid var(--border)',
-          borderRadius: 10, width: 560, maxHeight: '85vh', overflow: 'hidden',
-          display: 'flex', flexDirection: 'column'
+          borderRadius: 10, width: step === 1 ? 780 : 560, maxHeight: '85vh', overflow: 'hidden',
+          display: 'flex', flexDirection: 'column',
+          transition: 'width 0.35s cubic-bezier(0.2,0.8,0.2,1)',
         }}
       >
         {/* Header */}
@@ -190,8 +191,15 @@ export default function NewReportWizard({ onComplete, onCancel }: Props) {
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
           <AnimatePresence mode="wait">
             {step === 1 && (
-              <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                <StepTemplate selected={selectedTemplate} onSelect={handleTemplateSelect} />
+              <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+                style={{ display: 'flex', gap: 20 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <StepTemplate selected={selectedTemplate} onSelect={handleTemplateSelect} />
+                </div>
+                <div style={{ width: 200, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, margin: 0 }}>Preview</p>
+                  <ReportCoverPreview template={selectedTemplate} title={draft.title || 'Untitled Report'} />
+                </div>
               </motion.div>
             )}
             {step === 2 && (
@@ -484,6 +492,66 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
       <label style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</label>
       {children}
+    </div>
+  );
+}
+
+// ── Mock Report Cover Preview ─────────────────────────────────────────────────
+function ReportCoverPreview({ template, title }: { template: ReportTemplate; title: string }) {
+  const typeMap: Record<string, string> = {
+    blank: 'General', ptes: 'Pentest', 'owasp-web': 'Web Audit',
+    'htb-machine': 'HTB Write-up', 'network-pentest': 'Network',
+    'active-directory': 'Red Team', 'api-security': 'API Audit',
+    'mobile-app': 'Mobile', 'executive-summary': 'Executive',
+  };
+  const today = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  return (
+    <div style={{
+      background: 'linear-gradient(160deg, #0d0e18 0%, #0a0c16 100%)',
+      border: '1px solid rgba(74,158,255,0.25)',
+      borderRadius: 8,
+      padding: '14px 12px',
+      display: 'flex', flexDirection: 'column', gap: 10,
+      boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(74,158,255,0.06)',
+      minHeight: 240,
+      position: 'relative',
+      overflow: 'hidden',
+    }}>
+      {/* Background glow */}
+      <div style={{
+        position: 'absolute', top: -20, right: -20, width: 100, height: 100,
+        background: 'radial-gradient(circle, rgba(74,158,255,0.08) 0%, transparent 70%)',
+        pointerEvents: 'none',
+      }} />
+      {/* CYBERTOOLS logo mock */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        <div style={{ width: 16, height: 16, borderRadius: 4, background: 'rgba(74,158,255,0.2)', border: '1px solid rgba(74,158,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4a9eff' }} />
+        </div>
+        <span style={{ fontSize: 8, fontWeight: 700, color: '#4a9eff', letterSpacing: '0.1em', textTransform: 'uppercase' }}>CYBERTOOLS</span>
+      </div>
+      {/* Divider */}
+      <div style={{ height: 1, background: 'rgba(74,158,255,0.15)' }} />
+      {/* Report type */}
+      <span style={{
+        fontSize: 8, fontWeight: 700, color: '#4a9eff', textTransform: 'uppercase',
+        letterSpacing: '0.1em',
+      }}>
+        {typeMap[template] ?? 'General'} Report
+      </span>
+      {/* Title */}
+      <div style={{ fontSize: 11, fontWeight: 700, color: '#e6edf3', lineHeight: 1.4, wordBreak: 'break-word' }}>
+        {title || 'Untitled Report'}
+      </div>
+      {/* Spacer */}
+      <div style={{ flex: 1 }} />
+      {/* Divider */}
+      <div style={{ height: 1, background: 'rgba(74,158,255,0.10)' }} />
+      {/* Footer */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Confidential</span>
+        <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace' }}>{today}</span>
+      </div>
     </div>
   );
 }

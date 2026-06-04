@@ -8,6 +8,76 @@ import ImportFindingsModal from './ImportFindingsModal';
 import SeverityChart from './SeverityChart';
 import type { Severity } from '@shared/types';
 
+// Mini severity donut (SVG) — shown at top of panel when findings > 0
+function SeverityDonut({ findings }: { findings: { severity: string }[] }) {
+  const SEV_DOT_COLORS: Record<string, string> = {
+    critical: '#f85149',
+    high    : '#ff8c42',
+    medium  : '#d29922',
+    low     : '#4a9eff',
+    info    : '#484f58',
+  };
+  const order = ['critical', 'high', 'medium', 'low', 'info'];
+  const counts = order.reduce((acc, s) => {
+    acc[s] = findings.filter(f => f.severity === s).length;
+    return acc;
+  }, {} as Record<string, number>);
+  const total = findings.length;
+  const r = 22;
+  const cx = 28;
+  const cy = 28;
+  const circumference = 2 * Math.PI * r;
+
+  // Build arc segments
+  let offset = 0;
+  const segments: { sev: string; dash: number; gap: number; dashOffset: number }[] = [];
+  for (const sev of order) {
+    const count = counts[sev];
+    if (count === 0) continue;
+    const dash = (count / total) * circumference;
+    segments.push({ sev, dash, gap: circumference - dash, dashOffset: -offset });
+    offset += dash;
+  }
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px 4px', flexShrink: 0 }}>
+      <svg width={56} height={56} viewBox="0 0 56 56" style={{ flexShrink: 0 }}>
+        {/* Track */}
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={6} />
+        {/* Segments */}
+        {segments.map(seg => (
+          <circle
+            key={seg.sev}
+            cx={cx} cy={cy} r={r}
+            fill="none"
+            stroke={SEV_DOT_COLORS[seg.sev]}
+            strokeWidth={6}
+            strokeDasharray={`${seg.dash} ${seg.gap}`}
+            strokeDashoffset={seg.dashOffset}
+            transform={`rotate(-90 ${cx} ${cy})`}
+            style={{ transition: 'stroke-dasharray 0.4s ease' }}
+          />
+        ))}
+        {/* Center count */}
+        <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central"
+          fontSize={11} fontWeight={700} fill="var(--text-primary)" style={{ fontFamily: 'inherit' }}>
+          {total}
+        </text>
+      </svg>
+      {/* Legend */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {order.filter(s => counts[s] > 0).map(sev => (
+          <div key={sev} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: SEV_DOT_COLORS[sev], flexShrink: 0 }} />
+            <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'capitalize' }}>{sev}</span>
+            <span style={{ fontSize: 10, fontWeight: 700, color: SEV_DOT_COLORS[sev], marginLeft: 2 }}>{counts[sev]}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function FindingsPanel() {
   const { activeReport, setActiveFindingId, activeFindingId, removeFinding } = useStore();
   const [showEditor, setShowEditor] = useState(false);
@@ -102,6 +172,13 @@ export default function FindingsPanel() {
           </button>
         </div>
       </div>
+
+      {/* Mini severity donut */}
+      {findings.length > 0 && (
+        <div style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', flexShrink: 0 }}>
+          <SeverityDonut findings={findings} />
+        </div>
+      )}
 
       {/* Severity summary + optional chart */}
       {findings.length > 0 && (

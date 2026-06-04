@@ -281,6 +281,20 @@ function SectionItem({ section, isActive, onClick, onToggleVisible }: SectionIte
           {section.title}
         </span>
 
+        {/* Reading time badge */}
+        {section.content && section.content.trim().length > 0 && (() => {
+          const words = section.content.trim().split(/\s+/).length;
+          const mins = Math.max(1, Math.round(words / 200));
+          return (
+            <span style={{
+              fontSize: 9, color: 'var(--text-muted)', flexShrink: 0,
+              whiteSpace: 'nowrap', opacity: 0.7,
+            }}>
+              ~{mins}m
+            </span>
+          );
+        })()}
+
         {/* Unresolved comments badge */}
         {unresolvedCount(section) > 0 && (
           <span style={{

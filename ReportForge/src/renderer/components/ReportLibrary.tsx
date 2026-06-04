@@ -250,7 +250,23 @@ function timeAgoShort(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+type ReportTypeBadge = { label: string; color: string; bg: string; border: string };
+
+function getReportType(platform: string): ReportTypeBadge {
+  const p = platform.toLowerCase();
+  if (p.includes('htb') || p.includes('tryhackme') || p.includes('pentest') || p.includes('ptes'))
+    return { label: 'Pentest', color: '#ff8c42', bg: 'rgba(255,140,66,0.10)', border: 'rgba(255,140,66,0.25)' };
+  if (p.includes('vdp') || p.includes('bug') || p.includes('bounty'))
+    return { label: 'VDP', color: '#3fb950', bg: 'rgba(63,185,80,0.10)', border: 'rgba(63,185,80,0.25)' };
+  if (p.includes('red') || p.includes('ad') || p.includes('active'))
+    return { label: 'Red Team', color: '#f85149', bg: 'rgba(248,81,73,0.10)', border: 'rgba(248,81,73,0.25)' };
+  if (p.includes('audit') || p.includes('web') || p.includes('api') || p.includes('mobile'))
+    return { label: 'Audit', color: '#a78bfa', bg: 'rgba(167,139,250,0.10)', border: 'rgba(167,139,250,0.25)' };
+  return { label: 'Pentest', color: '#ff8c42', bg: 'rgba(255,140,66,0.10)', border: 'rgba(255,140,66,0.25)' };
+}
+
 function ReportCard({ report: r, index, onOpen, onDuplicate, onDelete }: CardProps) {
+  const reportType = getReportType(r.platform || '');
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -289,14 +305,31 @@ function ReportCard({ report: r, index, onOpen, onDuplicate, onDelete }: CardPro
 
       {/* Title + status */}
       <div className="flex items-start justify-between gap-2">
-        <div style={{
-          fontWeight: 700, fontSize: 13, color: 'var(--text-primary)',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0,
-          letterSpacing: '-0.01em',
-        }}>
-          {r.title}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontWeight: 700, fontSize: 13, color: 'var(--text-primary)',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            letterSpacing: '-0.01em',
+          }}>
+            {r.title}
+          </div>
+          {r.operator && (
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>
+              by {r.operator}
+            </div>
+          )}
         </div>
-        <StatusPill status={r.status} />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+          <StatusPill status={r.status} />
+          <span style={{
+            fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+            padding: '2px 6px', borderRadius: 99,
+            background: reportType.bg, color: reportType.color,
+            border: `1px solid ${reportType.border}`,
+          }}>
+            {reportType.label}
+          </span>
+        </div>
       </div>
 
       {/* Meta row */}
