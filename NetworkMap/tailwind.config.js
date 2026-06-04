@@ -1,5 +1,10 @@
+import { createRequire } from 'module'
+const _require = createRequire(import.meta.url)
+const preset = _require('../../design-system/tailwind-preset.cjs')
+
 /** @type {import('tailwindcss').Config} */
 export default {
+  presets: [preset],
   content: ['./src/renderer/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
@@ -20,10 +25,10 @@ export default {
           muted: '#4a5568',
         },
 
-        // ─── Accent Colors ───────────────────────────────────────────────
+        // ─── Accent Colors (NetworkMap orange) ───────────────────────────
         accent: {
-          DEFAULT: '#d29922',
-          emphasis: '#e8b84b',
+          DEFAULT: '#ff8c42',
+          emphasis: '#ffaa6e',
         },
         info: '#4a9eff',
         success: '#3fb950',
@@ -38,7 +43,7 @@ export default {
           signalboard: '#ff6b6b',
           credvault: '#f78166',
           cyberlab: '#b44fff',
-          networkmap: '#d29922',
+          networkmap: '#ff8c42',
           terminallink: '#00ff41',
           playbookstudio: '#4a9eff',
           reportforge: '#3fb950',
@@ -61,9 +66,9 @@ export default {
         DEFAULT: '6px',
       },
       boxShadow: {
-        glow: '0 0 20px rgba(210, 153, 34, 0.15)',
-        'glow-sm': '0 0 10px rgba(210, 153, 34, 0.1)',
-        'glow-accent': '0 0 8px rgba(210, 153, 34, 0.5)',
+        glow: '0 0 20px rgba(255,140,66,0.15)',
+        'glow-sm': '0 0 10px rgba(255,140,66,0.1)',
+        'glow-accent': '0 0 8px rgba(255,140,66,0.5)',
       },
       animation: {
         statusPulse: 'statusPulse 2s ease-out infinite',
