@@ -33,7 +33,6 @@ const inputCls = [
   'focus:outline-none focus:border-[#d29922] transition-colors',
 ].join(' ')
 
-const panelSkel = { background: '#0d0e18', border: '1px solid rgba(42,51,71,0.4)' }
 function OverviewSkeleton() {
   return (
     <div className="flex-1 overflow-y-auto p-4">
@@ -51,7 +50,7 @@ function OverviewSkeleton() {
         </div>
         <div className="grid grid-cols-3 gap-4 mb-4">
           {[0,1,2].map(i => (
-            <div key={i} className="rounded-lg p-3.5" style={panelSkel}>
+            <div key={i} className="panel-card rounded-lg p-3.5">
               <div className="skeleton h-2.5 w-20 rounded mb-3" />
               <div className="grid grid-cols-2 gap-2">
                 {[0,1,2,3].map(j => <div key={j} className="skeleton h-8 rounded" />)}
@@ -59,7 +58,7 @@ function OverviewSkeleton() {
             </div>
           ))}
         </div>
-        <div className="rounded-lg p-3.5" style={panelSkel}>
+        <div className="panel-card rounded-lg p-3.5">
           <div className="skeleton h-2.5 w-14 rounded mb-3" />
           <div className="skeleton h-28 w-full rounded-md" />
         </div>
@@ -214,9 +213,8 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
     ? <span className="text-[9px] px-1.5 py-0.5 rounded bg-[rgba(72,79,88,0.20)] border border-[rgba(72,79,88,0.30)] text-[#484f58]">Private IP</span>
     : null
 
-  const panelCls = 'rounded-lg p-3.5'
-  const panelStyle = { background: '#0d0e18', border: '1px solid rgba(42,51,71,0.6)' }
-  const labelCls = 'text-[10px] uppercase tracking-widest mb-3 block font-semibold'
+  const panelCls = 'panel-card rounded-lg p-3.5'
+  const labelCls = 'label-caps mb-3 block'
 
   if (isLoading) return <OverviewSkeleton />
 
@@ -268,7 +266,7 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
               <>
                 <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
                   <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: STATUS_COLORS[target.status] }} />
-                  <h1 className="text-xl font-bold" style={{ color: '#e6edf3' }}>{target.name}</h1>
+                  <h1 className="heading-xl" style={{ color: '#e6edf3' }}>{target.name}</h1>
                   {enrichBadge}
                   <span className="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold" style={{ color: healthColor(health), background: `${healthColor(health)}12`, border: `1px solid ${healthColor(health)}25` }}>
                     {health}
@@ -315,7 +313,7 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
 
         {/* Stats + Attack Progress + Context */}
         <div className="grid grid-cols-3 gap-4 mb-4">
-          <div className={panelCls} style={panelStyle}>
+          <div className={panelCls}>
             <p className={labelCls} style={{ color: '#484f58' }}>Quick Stats</p>
             <div className="grid grid-cols-2 gap-2">
               {[
@@ -338,7 +336,7 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
             </div>
           </div>
 
-          <div className={panelCls} style={panelStyle}>
+          <div className={panelCls}>
             <p className={labelCls} style={{ color: '#484f58' }}>Attack Progress</p>
             {totalCards === 0 ? (
               <p className="text-xs" style={{ color: '#484f58' }}>No attack cards yet</p>
@@ -361,22 +359,27 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
                     )
                   })}
                 </div>
-                {/* Overall progress bar */}
-                <div className="rounded-full overflow-hidden h-1 mb-2" style={{ background: 'rgba(42,51,71,0.4)' }}>
-                  <motion.div
-                    className="h-full rounded-full"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progressPct}%` }}
-                    transition={{ duration: 0.8, ease: [0.2, 0.8, 0.2, 1] }}
-                    style={{ background: 'linear-gradient(90deg, #3fb950, #d29922)' }}
-                  />
+                {/* Overall progress bar with percentage label */}
+                <div className="progress-with-label mb-2">
+                  <div className="progress-track h-1.5">
+                    <motion.div
+                      className="h-full rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${progressPct}%` }}
+                      transition={{ duration: 0.8, ease: [0.2, 0.8, 0.2, 1] }}
+                      style={{ background: 'linear-gradient(90deg, #3fb950, #d29922)' }}
+                    />
+                  </div>
+                  <span className="progress-pct" style={{ color: progressPct === 100 ? '#3fb950' : '#8b949e' }}>
+                    {progressPct}%
+                  </span>
                 </div>
-                <p className="text-xs"><span className="text-[#3fb950] font-medium">{doneCards}</span><span className="text-[#484f58]"> of </span><span className="text-[#e6edf3] font-medium">{totalCards}</span><span className="text-[#484f58]"> cards · {progressPct}%</span></p>
+                <p className="text-xs"><span className="font-medium" style={{ color: '#3fb950' }}>{doneCards}</span><span style={{ color: '#484f58' }}> of </span><span className="font-medium" style={{ color: '#e6edf3' }}>{totalCards}</span><span style={{ color: '#484f58' }}> cards done</span></p>
               </>
             )}
           </div>
 
-          <div className={panelCls} style={panelStyle}>
+          <div className={panelCls}>
             <p className={labelCls} style={{ color: '#484f58' }}>Linked Context</p>
             <div className="flex flex-col gap-1.5 text-xs">
               <div><span style={{ color: '#484f58' }}>Lab: </span><span style={{ color: '#e6edf3' }}>{target.name}</span></div>
@@ -390,7 +393,7 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
         </div>
 
         {/* Screenshots */}
-        <div className={`${panelCls} mb-4`} style={panelStyle}>
+        <div className={`${panelCls} mb-4`}>
           <div className="flex items-center justify-between mb-3">
             <p className={labelCls} style={{ color: '#484f58', marginBottom: 0 }}>Screenshots</p>
             <button
@@ -417,7 +420,7 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
 
         {/* CredVault Linked Credentials */}
         {credVaultItems.length > 0 && (
-          <div className={`${panelCls} mb-4`} style={panelStyle}>
+          <div className={`${panelCls} mb-4`}>
             <p className={labelCls} style={{ color: '#484f58' }}>Linked Credentials (CredVault)</p>
             <div className="flex flex-col gap-1.5">
               {credVaultItems.slice(0, 10).map((c, i) => (
@@ -433,7 +436,7 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
         )}
 
         {/* Notes editor */}
-        <div className={`${panelCls} mb-4`} style={panelStyle}>
+        <div className={`${panelCls} mb-4`}>
           <div className="flex items-center justify-between mb-3">
             <p className={labelCls} style={{ color: '#484f58', marginBottom: 0 }}>Notes</p>
             <div className="flex items-center gap-2">
@@ -452,7 +455,7 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
         </div>
 
         {/* AI Next-Step Suggestions */}
-        <div className={panelCls} style={panelStyle}>
+        <div className={panelCls}>
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <p className={labelCls} style={{ color: '#484f58', marginBottom: 0 }}>AI Suggestions</p>

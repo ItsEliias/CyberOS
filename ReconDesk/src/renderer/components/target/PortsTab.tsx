@@ -63,10 +63,10 @@ export default function PortsTab({ targetId }: { targetId: string }) {
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Header bar */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#2a3347] flex-shrink-0">
+      <div className="flex items-center justify-between px-4 py-2.5 flex-shrink-0" style={{ borderBottom: '1px solid rgba(42,51,71,0.5)', background: 'rgba(7,8,15,0.3)' }}>
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-[#e2e8f0]">
-            Ports <span className="text-[#4a5568] text-xs font-normal">({openCount} open)</span>
+          <span className="heading-sm" style={{ color: '#e6edf3' }}>
+            Ports <span className="text-[10px] font-normal" style={{ color: '#484f58' }}>({openCount} open)</span>
           </span>
           <div className="flex items-center gap-1 ml-2">
             {SORT_OPTIONS.map(s => (
@@ -175,13 +175,13 @@ export default function PortsTab({ targetId }: { targetId: string }) {
         ) : (
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-[#2a3347]">
-                <th className="px-4 py-2 text-left text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest w-20">Port</th>
-                <th className="px-2 py-2 text-left text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest w-16">Proto</th>
-                <th className="px-2 py-2 text-left text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest">Service</th>
-                <th className="px-2 py-2 text-left text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest">Version</th>
-                <th className="px-2 py-2 text-left text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest w-20">State</th>
-                <th className="px-4 py-2 w-16" />
+              <tr style={{ borderBottom: '1px solid rgba(42,51,71,0.6)', background: 'rgba(7,8,15,0.5)' }}>
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest w-20" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Port</th>
+                <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest w-16" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Proto</th>
+                <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Service</th>
+                <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Version</th>
+                <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest w-20" style={{ color: '#484f58', letterSpacing: '0.07em' }}>State</th>
+                <th className="px-4 py-2.5 w-16" />
               </tr>
             </thead>
             <tbody>
@@ -194,7 +194,11 @@ export default function PortsTab({ targetId }: { targetId: string }) {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
                       transition={{ delay: i * 0.02, duration: 0.15 }}
-                      className="group border-b border-[#2a3347]/50 hover:bg-[#2a3347]/20 cursor-pointer transition-colors"
+                      className="table-row-alt group cursor-pointer"
+                      style={{
+                        borderBottom: '1px solid rgba(42,51,71,0.25)',
+                        transition: 'background 120ms ease, border-color 120ms ease',
+                      }}
                       onClick={() => setExpandedId(expandedId === port.id ? null : port.id)}
                     >
                       <td className="px-4 py-2.5 font-mono font-bold text-[#e2e8f0]">{port.port}</td>

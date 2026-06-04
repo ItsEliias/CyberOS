@@ -77,9 +77,9 @@ export default function CredentialsTab({ targetId }: { targetId: string }) {
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#2a3347] flex-shrink-0">
-        <span className="text-sm font-medium text-[#e2e8f0]">
-          Credentials <span className="text-[#4a5568] text-xs font-normal">({creds.length})</span>
+      <div className="flex items-center justify-between px-4 py-2.5 flex-shrink-0" style={{ borderBottom: '1px solid rgba(42,51,71,0.5)', background: 'rgba(7,8,15,0.3)' }}>
+        <span className="heading-sm" style={{ color: '#e6edf3' }}>
+          Credentials <span className="text-[10px] font-normal" style={{ color: '#484f58' }}>({creds.length})</span>
         </span>
         <div className="flex items-center gap-2">
           <button
@@ -194,13 +194,13 @@ export default function CredentialsTab({ targetId }: { targetId: string }) {
         ) : (
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-[#2a3347]">
-                <th className="px-4 py-2 text-left text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest">Username</th>
-                <th className="px-2 py-2 text-left text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest">Password / Hash</th>
-                <th className="px-2 py-2 text-left text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest">Service</th>
-                <th className="px-2 py-2 text-left text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest w-16">Port</th>
-                <th className="px-2 py-2 text-left text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest w-20">Verified</th>
-                <th className="px-4 py-2 w-20" />
+              <tr style={{ borderBottom: '1px solid rgba(42,51,71,0.6)', background: 'rgba(7,8,15,0.5)' }}>
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Username</th>
+                <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Password / Hash</th>
+                <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Service</th>
+                <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest w-16" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Port</th>
+                <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest w-20" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Status</th>
+                <th className="px-4 py-2.5 w-8" />
               </tr>
             </thead>
             <tbody>
@@ -209,6 +209,7 @@ export default function CredentialsTab({ targetId }: { targetId: string }) {
                   const isRevealed = revealed.has(cred.id)
                   const secret     = cred.password ?? cred.hash ?? ''
                   const isCopied   = copied === cred.id
+                  const isUserCopied = copied === `user-${cred.id}`
 
                   return (
                     <motion.tr
@@ -217,67 +218,97 @@ export default function CredentialsTab({ targetId }: { targetId: string }) {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
                       transition={{ delay: i * 0.02, duration: 0.15 }}
-                      className="group border-b border-[#2a3347]/50 hover:bg-[#2a3347]/20 transition-colors"
+                      className="table-row-alt group"
+                      style={{
+                        borderBottom: '1px solid rgba(42,51,71,0.25)',
+                        transition: 'background 120ms ease',
+                      }}
                     >
+                      {/* Username cell — monospace, copy on hover */}
                       <td className="px-4 py-2.5">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-[#e2e8f0]">{cred.username || <span className="text-[#4a5568]">—</span>}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-[#e2e8f0] text-[11px]">{cred.username || <span className="text-[#4a5568]">—</span>}</span>
                           {cred.username && (
                             <button
                               onClick={() => copyToClipboard(cred.username, `user-${cred.id}`)}
-                              className="opacity-0 group-hover:opacity-100 text-[9px] px-1 py-0.5 rounded bg-[#2a3347] text-[#4a5568] hover:text-[#8b949e] transition-all"
+                              className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded border transition-all"
+                              style={{
+                                background: isUserCopied ? 'rgba(63,185,80,0.12)' : 'rgba(42,51,71,0.45)',
+                                borderColor: isUserCopied ? 'rgba(63,185,80,0.30)' : 'rgba(42,51,71,0.7)',
+                                color: isUserCopied ? '#3fb950' : '#8b949e',
+                              }}
                             >
-                              {copied === `user-${cred.id}` ? '✓' : 'copy'}
+                              {isUserCopied ? '✓' : 'copy'}
                             </button>
                           )}
                         </div>
                       </td>
-                      <td className="px-2 py-2.5 max-w-[200px]">
+
+                      {/* Secret cell — monospace, show/hide/copy */}
+                      <td className="px-2 py-2.5 max-w-[220px]">
                         {secret ? (
                           <div className="flex items-center gap-1.5">
-                            <span className="font-mono text-[#d29922]/70 truncate">
+                            <span
+                              className="font-mono text-[11px] truncate flex-1"
+                              style={{ color: isRevealed ? (cred.hash ? '#4a9eff' : '#d29922') : '#8b949e', opacity: isRevealed ? 1 : 0.7 }}
+                            >
                               {isRevealed
-                                ? cred.hash
-                                  ? (secret.length > 32 ? secret.slice(0, 32) + '…' : secret)
-                                  : secret
-                                : '••••••••'}
+                                ? (cred.hash
+                                    ? (secret.length > 32 ? secret.slice(0, 32) + '…' : secret)
+                                    : secret)
+                                : '••••••••••'}
                             </span>
                             {cred.hashType && (
-                              <span className={`text-[9px] px-1 py-0.5 rounded border flex-shrink-0 ${HASH_TYPE_BADGE[cred.hashType]}`}>
+                              <span className={`text-[9px] px-1 py-0.5 rounded border flex-shrink-0 font-mono ${HASH_TYPE_BADGE[cred.hashType]}`}>
                                 {cred.hashType}
                               </span>
                             )}
+                            {/* Reveal toggle always visible on hover */}
                             <button
                               onClick={() => toggleReveal(cred.id)}
-                              className="opacity-0 group-hover:opacity-100 text-[9px] px-1 py-0.5 rounded bg-[#2a3347] text-[#4a5568] hover:text-[#8b949e] transition-all flex-shrink-0"
+                              className="opacity-0 group-hover:opacity-100 text-[9px] px-1.5 py-0.5 rounded border transition-all flex-shrink-0"
+                              style={{
+                                background: 'rgba(42,51,71,0.45)',
+                                borderColor: 'rgba(42,51,71,0.7)',
+                                color: '#8b949e',
+                              }}
                             >
                               {isRevealed ? 'hide' : 'show'}
                             </button>
-                            {isRevealed && (
-                              <button
-                                onClick={() => copyToClipboard(secret, cred.id)}
-                                className="opacity-0 group-hover:opacity-100 text-[9px] px-1 py-0.5 rounded bg-[#2a3347] text-[#4a5568] hover:text-[#8b949e] transition-all flex-shrink-0"
-                              >
-                                {isCopied ? '✓' : 'copy'}
-                              </button>
-                            )}
+                            {/* Copy — always available, not only when revealed */}
+                            <button
+                              onClick={() => copyToClipboard(secret, cred.id)}
+                              className="opacity-0 group-hover:opacity-100 text-[9px] px-1.5 py-0.5 rounded border transition-all flex-shrink-0"
+                              style={{
+                                background: isCopied ? 'rgba(63,185,80,0.12)' : 'rgba(42,51,71,0.45)',
+                                borderColor: isCopied ? 'rgba(63,185,80,0.30)' : 'rgba(42,51,71,0.7)',
+                                color: isCopied ? '#3fb950' : '#8b949e',
+                              }}
+                            >
+                              {isCopied ? '✓' : 'copy'}
+                            </button>
                           </div>
                         ) : (
                           <span className="text-[#4a5568]">—</span>
                         )}
                       </td>
-                      <td className="px-2 py-2.5 font-mono text-[#8b949e]">{cred.service || <span className="text-[#4a5568]">—</span>}</td>
-                      <td className="px-2 py-2.5 font-mono text-[#8b949e]">{cred.port ?? <span className="text-[#4a5568]">—</span>}</td>
+
+                      <td className="px-2 py-2.5 font-mono text-[11px]" style={{ color: '#8b949e' }}>{cred.service || <span className="text-[#4a5568]">—</span>}</td>
+                      <td className="px-2 py-2.5 font-mono text-[11px] tabular-nums" style={{ color: '#8b949e' }}>{cred.port ?? <span className="text-[#4a5568]">—</span>}</td>
                       <td className="px-2 py-2.5">
                         <button
                           onClick={() => updateCredential(targetId, cred.id, { verified: !cred.verified })}
-                          className={`text-sm transition-colors ${cred.verified ? 'text-[#3fb950]' : 'text-[#4a5568] hover:text-[#8b949e]'}`}
+                          className="flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded border transition-all"
+                          style={cred.verified
+                            ? { color: '#3fb950', background: 'rgba(63,185,80,0.10)', borderColor: 'rgba(63,185,80,0.25)' }
+                            : { color: '#484f58', background: 'transparent', borderColor: 'rgba(42,51,71,0.4)' }
+                          }
                           title={cred.verified ? 'Verified — click to unverify' : 'Click to mark verified'}
                         >
-                          {cred.verified ? '✓' : '○'}
+                          {cred.verified ? '✓ verified' : '○ unverified'}
                         </button>
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-2 py-2.5">
                         <button
                           onClick={() => deleteCredential(targetId, cred.id)}
                           className="opacity-0 group-hover:opacity-100 text-[#4a5568] hover:text-[#f85149] text-[10px] px-1 py-0.5 rounded hover:bg-[#f85149]/10 transition-all"

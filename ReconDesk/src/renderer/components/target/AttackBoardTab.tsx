@@ -262,16 +262,22 @@ function KanbanCard({ card, target, delay, onOpen, onDragStart }: KanbanCardProp
   const statusDotColor  = statusColor(card.status)
   const subtaskDone     = card.subtasks?.filter(s => s.done).length ?? 0
   const subtaskTotal    = card.subtasks?.length ?? 0
-  const cardBg = card.status === 'done' ? 'bg-[#3fb950]/4 border-[#3fb950]/15' : card.status === 'blocked' ? 'bg-[#f85149]/4 border-[#f85149]/15' : 'bg-[#12131a] border-[#2a3347]'
+  const cardBg = card.status === 'done'
+    ? { background: 'rgba(63,185,80,0.04)', borderColor: 'rgba(63,185,80,0.18)' }
+    : card.status === 'blocked'
+    ? { background: 'rgba(248,81,73,0.04)', borderColor: 'rgba(248,81,73,0.18)' }
+    : { background: '#12131a', borderColor: 'rgba(42,51,71,0.7)' }
 
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }} transition={{ delay, duration: 0.18 }}
-      whileHover={{ y: -2, boxShadow: '0 6px 20px rgba(0,0,0,0.4), 0 0 0 1px rgba(210,153,34,0.18)' }}
       draggable onDragStart={onDragStart} onClick={onOpen}
-      className={`rounded-lg border p-3 cursor-pointer transition-colors group ${cardBg}`}
-      style={{ transitionProperty: 'border-color, background-color' }}
+      className="kanban-card rounded-lg border p-3 cursor-pointer group"
+      style={{
+        ...cardBg,
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.025)',
+      }}
     >
       <div className="flex items-start gap-1.5 mb-1.5">
         <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1" style={{ backgroundColor: statusDotColor }} />
@@ -295,9 +301,20 @@ function KanbanCard({ card, target, delay, onOpen, onDragStart }: KanbanCardProp
             return <span className="text-[9px] px-1 py-0.5 rounded font-bold font-mono" style={{ color: col, background: `${col}15`, border: `1px solid ${col}25` }}>{score}</span>
           })()}
           {subtaskTotal > 0 && (
-            <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono ${subtaskDone === subtaskTotal ? 'text-[#3fb950] bg-[#3fb950]/10 border border-[#3fb950]/20' : 'text-[#8b949e] bg-[#2a3347]/40 border border-[#2a3347]'}`}>
-              {subtaskDone}/{subtaskTotal}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-12 h-1 rounded-full overflow-hidden" style={{ background: 'rgba(42,51,71,0.5)' }}>
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${Math.round((subtaskDone / subtaskTotal) * 100)}%`,
+                    background: subtaskDone === subtaskTotal ? '#3fb950' : '#d29922',
+                  }}
+                />
+              </div>
+              <span className={`text-[9px] font-mono tabular-nums ${subtaskDone === subtaskTotal ? 'text-[#3fb950]' : 'text-[#8b949e]'}`}>
+                {subtaskDone}/{subtaskTotal}
+              </span>
+            </div>
           )}
         </div>
       </div>
@@ -340,9 +357,9 @@ export default function AttackBoardTab({ targetId }: { targetId: string }) {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#2a3347] flex-shrink-0">
+      <div className="flex items-center justify-between px-4 py-2.5 flex-shrink-0" style={{ borderBottom: '1px solid rgba(42,51,71,0.5)', background: 'rgba(7,8,15,0.3)' }}>
         <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-[#e2e8f0]">Attack Board <span className="text-[#4a5568] text-xs font-normal">({cards.length} cards)</span></span>
+          <span className="heading-sm" style={{ color: '#e6edf3' }}>Attack Board <span className="text-[10px] font-normal" style={{ color: '#484f58' }}>({cards.length} cards)</span></span>
           <span className="text-[10px] px-1.5 py-0.5 rounded font-mono font-bold" style={{ color: healthColor(health), background: `${healthColor(health)}15`, border: `1px solid ${healthColor(health)}25` }}>
             Health {health}
           </span>

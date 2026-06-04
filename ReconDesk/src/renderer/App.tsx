@@ -69,15 +69,16 @@ export default function App() {
               {/* Tab bar */}
               <div
                 className="flex items-center gap-0.5 px-3 flex-shrink-0 h-10"
-                style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: 'rgba(7,8,15,0.4)' }}
               >
                 {TABS.map(t => (
                   <button
                     key={t.id}
                     onClick={() => setActiveTab(t.id)}
-                    className="relative px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
+                    className="relative px-3 py-1.5 text-[11px] font-medium rounded-md"
                     style={{
                       color: activeTab === t.id ? 'var(--text-primary)' : 'var(--text-muted)',
+                      transition: 'color 150ms ease',
                     }}
                     onMouseEnter={e => {
                       if (activeTab !== t.id) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'
@@ -90,8 +91,12 @@ export default function App() {
                       <motion.div
                         layoutId="tab-pill"
                         className="absolute inset-0 rounded-md"
-                        style={{ background: 'rgba(210,153,34,0.10)', border: '1px solid rgba(210,153,34,0.18)' }}
-                        transition={{ type: 'spring', stiffness: 450, damping: 38 }}
+                        style={{
+                          background: 'rgba(210,153,34,0.10)',
+                          border: '1px solid rgba(210,153,34,0.22)',
+                          boxShadow: '0 1px 4px rgba(210,153,34,0.08)',
+                        }}
+                        transition={{ type: 'spring', stiffness: 480, damping: 40 }}
                       />
                     )}
                     <span className="relative z-10">{t.label}</span>
@@ -102,10 +107,10 @@ export default function App() {
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeTab}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.12 }}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -2 }}
+                  transition={{ duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
                   className="flex-1 min-h-0 overflow-hidden flex flex-col"
                 >
                   {activeTab === 'overview'    && <OverviewTab targetId={activeTargetId} />}

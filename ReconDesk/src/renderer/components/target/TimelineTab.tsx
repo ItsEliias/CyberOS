@@ -32,14 +32,25 @@ const FILTER_GROUPS: { label: string; types: TimelineEntryType[] }[] = [
   { label: 'CVE Alerts',  types: ['cve_alert'] },
 ]
 
-function formatTimestamp(iso: string): string {
+function formatTimestamp(iso: string): { date: string; time: string; relative: string } {
   try {
-    const d = new Date(iso)
+    const d   = new Date(iso)
+    const now = Date.now()
+    const diff = now - d.getTime()
+
     const date = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
     const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
-    return `${date}  ${time}`
+
+    let relative = ''
+    if (diff < 60_000)                       relative = 'just now'
+    else if (diff < 3_600_000)               relative = `${Math.floor(diff / 60_000)}m ago`
+    else if (diff < 86_400_000)              relative = `${Math.floor(diff / 3_600_000)}h ago`
+    else if (diff < 7 * 86_400_000)          relative = `${Math.floor(diff / 86_400_000)}d ago`
+    else                                     relative = date
+
+    return { date, time, relative }
   } catch {
-    return iso
+    return { date: iso, time: '', relative: '' }
   }
 }
 
@@ -74,10 +85,10 @@ export default function TimelineTab({ targetId }: { targetId: string }) {
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#2a3347] flex-shrink-0">
-        <span className="text-sm font-medium text-[#e2e8f0]">
+      <div className="flex items-center justify-between px-4 py-2.5 flex-shrink-0" style={{ borderBottom: '1px solid rgba(42,51,71,0.5)', background: 'rgba(7,8,15,0.3)' }}>
+        <span className="heading-sm" style={{ color: '#e6edf3' }}>
           Timeline
-          <span className="text-[#4a5568] text-xs font-normal ml-1.5">
+          <span className="text-[10px] font-normal ml-1.5" style={{ color: '#484f58' }}>
             ({filtered.length}{filtered.length !== timeline.length ? ` of ${timeline.length}` : ''})
           </span>
         </span>
@@ -168,28 +179,36 @@ export default function TimelineTab({ targetId }: { targetId: string }) {
                     >
                       {/* Dot */}
                       <span
-                        className="absolute left-0 top-4 w-2.5 h-2.5 rounded-full border-2 border-[#0a0a0f] flex-shrink-0"
-                        style={{ backgroundColor: cfg.color }}
+                        className="absolute left-[1px] top-[14px] w-2 h-2 rounded-full border-2 flex-shrink-0"
+                        style={{ backgroundColor: cfg.color, borderColor: '#07080f', boxShadow: `0 0 6px ${cfg.color}50` }}
                       />
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span
-                            className="text-[9px] px-1 py-0.5 rounded font-semibold uppercase tracking-wider flex-shrink-0"
+                            className="text-[9px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider flex-shrink-0"
                             style={{
                               color:           cfg.color,
                               backgroundColor: `${cfg.color}15`,
-                              border:          `1px solid ${cfg.color}25`,
+                              border:          `1px solid ${cfg.color}28`,
                             }}
                           >
                             {cfg.label}
                           </span>
-                          <span className="text-[10px] font-mono text-[#4a5568] flex-shrink-0">
-                            {formatTimestamp(entry.timestamp)}
+                          {/* Relative time + full datetime on hover */}
+                          <span
+                            className="text-[10px] font-mono flex-shrink-0 tabular-nums"
+                            style={{ color: '#484f58' }}
+                            title={`${formatTimestamp(entry.timestamp).date} ${formatTimestamp(entry.timestamp).time}`}
+                          >
+                            {formatTimestamp(entry.timestamp).relative}
+                            <span className="ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-[9px]" style={{ color: '#484f58' }}>
+                              {formatTimestamp(entry.timestamp).time}
+                            </span>
                           </span>
                         </div>
-                        <p className="text-xs text-[#e2e8f0] mt-0.5 leading-relaxed">{entry.description}</p>
+                        <p className="text-xs mt-0.5 leading-relaxed" style={{ color: '#e2e8f0' }}>{entry.description}</p>
                       </div>
                     </motion.div>
                   )
