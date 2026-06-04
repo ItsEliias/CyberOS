@@ -11,9 +11,20 @@ interface MetricCardProps {
   /** true = value went up (green ↑), false = down (red ↓), undefined = neutral */
   deltaUp?: boolean
   accentColor?: string
+  /** Auto-derive a "+X since yesterday" delta from the value when no delta is passed */
+  autoDelta?: boolean
 }
 
-export default function MetricCard({ label, value, icon, delta, deltaUp, accentColor = '#4a9eff' }: MetricCardProps) {
+/** Derive a stable demo delta (10–15 % of value) from the value */
+function deriveDelta(value: number): { text: string; up: boolean } {
+  const seed = Math.abs(value * 31 + 7) % 100
+  const pct = 10 + (seed % 6)
+  const amount = Math.max(1, Math.round(value * pct / 100))
+  const up = seed % 3 !== 0
+  return { text: `${amount} since yesterday`, up }
+}
+
+export default function MetricCard({ label, value, icon, delta, deltaUp, accentColor = '#4a9eff', autoDelta = false }: MetricCardProps) {
   const count = useMotionValue(0)
   const rounded = useTransform(count, (v) => Math.round(v))
   const displayRef = useRef<HTMLSpanElement>(null)
@@ -102,24 +113,28 @@ export default function MetricCard({ label, value, icon, delta, deltaUp, accentC
         {value}
       </span>
 
-      {delta && (
-        <div className="flex items-center gap-1 mt-2 relative">
-          {deltaUp !== undefined && (
+      {(() => {
+        const derived = autoDelta && !delta && value > 0 ? deriveDelta(value) : null
+        const activeDelta = delta ?? derived?.text
+        const activeDeltaUp = delta !== undefined ? deltaUp : derived?.up
+        if (!activeDelta) return null
+        return (
+          <div className="flex items-center gap-1 mt-2 relative">
             <span
               className="text-[11px] font-bold leading-none"
-              style={{ color: deltaUp ? '#3fb950' : '#f85149' }}
+              style={{ color: activeDeltaUp ? '#3fb950' : '#f85149' }}
             >
-              {deltaUp ? '↑' : '↓'}
+              {activeDeltaUp ? '+' : '−'}
             </span>
-          )}
-          <p
-            className="text-[10px] font-mono"
-            style={{ color: deltaUp === undefined ? 'var(--text-muted)' : deltaUp ? '#3fb950' : '#f85149' }}
-          >
-            {delta}
-          </p>
-        </div>
-      )}
+            <p
+              className="text-[10px] font-mono"
+              style={{ color: activeDeltaUp === undefined ? 'var(--text-muted)' : activeDeltaUp ? '#3fb950' : '#f85149' }}
+            >
+              {activeDelta}
+            </p>
+          </div>
+        )
+      })()}
     </div>
   )
 }

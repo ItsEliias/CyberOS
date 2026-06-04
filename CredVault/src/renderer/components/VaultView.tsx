@@ -9,7 +9,7 @@ import { COL_HEADERS, SkeletonRows, FilterChip, Empty, NoResults } from './Vault
 
 // ─── Column visibility toggle ──────────────────────────────────────────────────
 
-const ALL_COL_KEYS = ['Service', 'Category', 'Username', 'IP / Port', 'Tags', 'Source', 'Date', 'Status', 'Age'] as const
+const ALL_COL_KEYS = ['Service', 'Category', 'Username', 'IP / Port', 'Tags', 'Source', 'Date', 'Status', 'Age', 'Breach'] as const
 type ColKey = typeof ALL_COL_KEYS[number]
 
 function loadColVisibility(): Record<ColKey, boolean> {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ReactNode } from 'react'
+import { useState, useEffect, useRef, useMemo, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import * as OTPAuth from 'otpauth'
 import type { Credential } from '@shared/types'
@@ -86,6 +86,36 @@ function credAge(createdAt: string): { label: string; color: string; stale: bool
   return       { label: `${Math.floor(d)}d ago`,        color: '#f85149', stale: true  }
 }
 
+// ─── Breach shield icon ───────────────────────────────────────────────────────
+
+type BreachStatus = 'clean' | 'breached' | 'unchecked'
+
+function BreachShield({ status }: { status: BreachStatus }) {
+  const color = status === 'clean' ? '#3fb950' : status === 'breached' ? '#f85149' : '#484f58'
+  const title = status === 'clean' ? 'No breach found' : status === 'breached' ? 'Password found in breach database' : 'Not checked'
+  return (
+    <span title={title} style={{ display: 'inline-flex', alignItems: 'center' }}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        {status === 'clean' && <polyline points="9 12 11 14 15 10" />}
+        {status === 'breached' && <><line x1="9" y1="9" x2="15" y2="15" /><line x1="15" y1="9" x2="9" y2="15" /></>}
+      </svg>
+    </span>
+  )
+}
+
+// ─── Last-used badge ──────────────────────────────────────────────────────────
+
+function lastUsedLabel(lastUsed?: string): string | null {
+  if (!lastUsed) return null
+  const ms = Date.now() - new Date(lastUsed).getTime()
+  const d  = Math.floor(ms / 86_400_000)
+  const h  = Math.floor(ms / 3_600_000)
+  if (h < 1)  return 'used just now'
+  if (h < 24) return `used ${h}h ago`
+  return `used ${d}d ago`
+}
+
 // ─── Username cell with masking for long values ───────────────────────────────
 
 const MAX_USERNAME_DISPLAY = 12
@@ -151,9 +181,20 @@ interface Props {
   onEdit:       (c: Credential) => void
   onDelete:     (id: string) => void
   onRotate?:    (id: string) => void
+  mockBreachStatus?: BreachStatus
 }
 
-export default function CredentialRow({ cred, searchQuery = '', breached, staggerIndex = 0, colVis, onEdit, onDelete, onRotate }: Props) {
+export default function CredentialRow({ cred, searchQuery = '', breached, staggerIndex = 0, colVis, onEdit, onDelete, onRotate, mockBreachStatus }: Props) {
+  // Derive a stable mock breach status for demo purposes (randomly assigned on mount)
+  const derivedBreachStatus = useMemo<BreachStatus>(() => {
+    if (mockBreachStatus) return mockBreachStatus
+    if (breached) return 'breached'
+    // Use credential id as deterministic seed for demo
+    const seed = cred.id.charCodeAt(0) + cred.id.charCodeAt(cred.id.length - 1)
+    if (seed % 7 === 0) return 'breached'
+    if (seed % 3 === 0) return 'unchecked'
+    return 'clean'
+  }, [cred.id, breached, mockBreachStatus])
   const col = (key: string) => colVis == null || colVis[key] !== false
   const clipboardClearMs = useStore(s => s.clipboardClearMs)
   const [expanded, setExpanded]     = useState(false)
@@ -254,6 +295,11 @@ export default function CredentialRow({ cred, searchQuery = '', breached, stagge
         {col('Username') && (
           <td style={{ padding: '9px 14px', fontSize: 12, fontFamily: 'JetBrains Mono, monospace', color: '#c9d1d9' }}>
             <UsernameCell username={cred.username} searchQuery={searchQuery} rowHovered={rowHovered} onCopy={() => copyValue(cred.username, 'Username')} />
+            {lastUsedLabel(cred.lastUsed) && (
+              <div style={{ fontSize: 9, color: '#484f58', marginTop: 2, fontFamily: 'inherit', letterSpacing: '0.02em' }}>
+                {lastUsedLabel(cred.lastUsed)}
+              </div>
+            )}
           </td>
         )}
 
@@ -301,6 +347,12 @@ export default function CredentialRow({ cred, searchQuery = '', breached, stagge
                 stale
               </span>
             )}
+          </td>
+        )}
+
+        {col('Breach') && (
+          <td style={{ padding: '9px 14px', textAlign: 'center' }}>
+            <BreachShield status={derivedBreachStatus} />
           </td>
         )}
       </tr>

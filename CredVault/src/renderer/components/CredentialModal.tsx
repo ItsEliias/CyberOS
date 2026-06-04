@@ -1,9 +1,10 @@
-import { useState, FormEvent, type ReactNode } from 'react'
+import { useState, useMemo, FormEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Credential, CredentialCategory, CredentialType } from '@shared/types'
 import {
   StrengthBar, TagInput, PasswordGeneratorPanel, TemplatesPicker,
   CATEGORY_COLORS, CATEGORIES, SERVICE_OPTS, HASH_TYPES, SOURCE_OPTS,
+  ValidationIcon, ValidatedInput, SectionLabel, Row,
   type ServiceTemplate,
 } from './CredentialModalParts'
 
@@ -48,6 +49,24 @@ export default function CredentialModal({ initial, onSave, onClose }: Props) {
   const [showTemplates, setShowTemplates] = useState(false)
   const [error, setError]           = useState('')
   const [submitAttempted, setSubmitAttempted] = useState(false)
+
+  // pass 5: tabbed detail — Details / History / Notes
+  type ModalTab = 'details' | 'history' | 'notes'
+  const [activeTab, setActiveTab] = useState<ModalTab>('details')
+  const [extraNotes, setExtraNotes] = useState(initial?.notes ?? '')
+
+  // Mock access log for History tab
+  const mockHistory = useMemo(() => {
+    if (!initial) return []
+    const now = Date.now()
+    return [
+      { time: now - 3_600_000 * 2,   action: 'Password copied' },
+      { time: now - 86_400_000,       action: 'Credential viewed' },
+      { time: now - 86_400_000 * 3,   action: 'Password copied' },
+      { time: now - 86_400_000 * 7,   action: 'Credential edited' },
+      { time: now - 86_400_000 * 14,  action: 'Credential created' },
+    ]
+  }, [initial])
 
   function applyTemplate(tpl: ServiceTemplate) {
     setService(tpl.service)
@@ -162,6 +181,80 @@ export default function CredentialModal({ initial, onSave, onClose }: Props) {
           </div>
         </div>
 
+        {/* pass 5: tab bar — Details / History / Notes */}
+        <div style={{ display: 'flex', gap: 2, borderBottom: '1px solid rgba(42,51,71,0.4)', paddingBottom: 0, marginBottom: -8 }}>
+          {(['details', 'history', 'notes'] as const).map(tab => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab)}
+              style={{
+                fontSize: 12, padding: '6px 14px', borderRadius: '6px 6px 0 0',
+                border: 'none', cursor: 'pointer', fontWeight: activeTab === tab ? 600 : 400,
+                background: activeTab === tab ? 'rgba(247,129,102,0.1)' : 'transparent',
+                color: activeTab === tab ? '#f78166' : '#8b949e',
+                borderBottom: activeTab === tab ? '2px solid #f78166' : '2px solid transparent',
+                marginBottom: -1,
+                transition: 'color 0.15s, background 0.15s',
+              }}
+            >
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab === 'history' && initial && (
+                <span style={{ marginLeft: 5, fontSize: 9, background: 'rgba(247,129,102,0.15)', color: '#f78166', borderRadius: 8, padding: '1px 5px' }}>5</span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* History tab */}
+        {activeTab === 'history' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 4 }}>
+            {!initial ? (
+              <div style={{ fontSize: 12, color: '#484f58', textAlign: 'center', padding: '24px 0' }}>No history yet — save first</div>
+            ) : mockHistory.map((entry, i) => {
+              const d = new Date(entry.time)
+              const daysAgo = Math.floor((Date.now() - entry.time) / 86_400_000)
+              const label = daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo}d ago`
+              return (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 6, background: 'rgba(42,51,71,0.12)', border: '1px solid rgba(42,51,71,0.2)' }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#484f58', flexShrink: 0 }} />
+                  <span style={{ flex: 1, fontSize: 12, color: '#c9d1d9' }}>{entry.action}</span>
+                  <span style={{ fontSize: 10, color: '#484f58', fontFamily: 'JetBrains Mono, monospace' }}>
+                    {label} · {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Notes tab */}
+        {activeTab === 'notes' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 4 }}>
+            <label style={{ fontSize: 11, color: '#8b949e' }}>Secure Notes</label>
+            <textarea
+              value={extraNotes}
+              onChange={e => setExtraNotes(e.target.value)}
+              placeholder="Add secure notes for this credential…"
+              style={{ resize: 'vertical', minHeight: 140 }}
+            />
+            <button
+              type="button"
+              className="btn btn-accent"
+              style={{ alignSelf: 'flex-end', fontSize: 12, padding: '5px 14px' }}
+              onClick={() => {
+                setNotes(extraNotes)
+                setActiveTab('details')
+              }}
+            >
+              Save Notes
+            </button>
+          </div>
+        )}
+
+        {/* Details tab / Template picker / Form */}
+        {activeTab === 'details' && (
+          <>
         {/* Template picker */}
         {showTemplates && <TemplatesPicker onSelect={applyTemplate} />}
 
@@ -398,66 +491,9 @@ export default function CredentialModal({ initial, onSave, onClose }: Props) {
             {initial ? 'Save Changes' : type === 'note' ? 'Add Note' : 'Add Credential'}
           </button>
         </form>
+          </>
+        )}
       </motion.div>
     </motion.div>
-  )
-}
-
-// ─── Validation helpers ───────────────────────────────────────────────────────
-
-function ValidationIcon({ valid, touched }: { valid: boolean; touched: boolean }) {
-  if (!touched) return null
-  return valid ? (
-    <span style={{ position: 'absolute', right: 8, color: '#3fb950', fontSize: 12, pointerEvents: 'none', lineHeight: 1 }}>✓</span>
-  ) : (
-    <span style={{ position: 'absolute', right: 8, color: '#f85149', fontSize: 12, pointerEvents: 'none', lineHeight: 1 }}>✕</span>
-  )
-}
-
-function ValidatedInput({
-  value, onChange, placeholder, required, submitAttempted, autoFocus,
-}: {
-  value: string; onChange: (v: string) => void; placeholder?: string
-  required?: boolean; submitAttempted?: boolean; autoFocus?: boolean
-}) {
-  const touched = submitAttempted ?? false
-  const isValid = !required || value.trim().length > 0
-  return (
-    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-      <input
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        autoFocus={autoFocus}
-        style={{
-          flex: 1,
-          paddingRight: touched ? 28 : undefined,
-          borderColor: touched && !isValid ? 'rgba(248,81,73,0.6)' : undefined,
-          boxShadow: touched && !isValid ? '0 0 0 1px rgba(248,81,73,0.25)' : undefined,
-        }}
-      />
-      <ValidationIcon valid={isValid} touched={touched} />
-    </div>
-  )
-}
-
-function SectionLabel({ children }: { children: ReactNode }) {
-  return (
-    <div style={{
-      fontSize: 10, fontWeight: 600, letterSpacing: '0.08em',
-      textTransform: 'uppercase', color: 'var(--text-muted)',
-      paddingTop: 4, borderTop: '1px solid var(--border)',
-    }}>
-      {children}
-    </div>
-  )
-}
-
-function Row({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <label style={{ fontSize: 11, color: 'var(--text-dim)' }}>{label}</label>
-      {children}
-    </div>
   )
 }

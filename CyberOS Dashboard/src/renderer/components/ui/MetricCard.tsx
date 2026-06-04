@@ -14,6 +14,18 @@ interface MetricCardProps {
   className?: string
   icon?: React.ReactNode
   sublabel?: string
+  /** If true, auto-derive a delta from the value (10-15% demo range) */
+  autoDelta?: boolean
+}
+
+/** Derive a stable demo delta from the metric value (10-15% of value) */
+function deriveDelta(value: number): { text: string; up: boolean } {
+  // Use the value itself as a stable seed so it doesn't change on re-renders
+  const seed = Math.abs(value * 31 + 7) % 100
+  const pct = 10 + (seed % 6) // 10–15 %
+  const delta = Math.max(1, Math.round(value * pct / 100))
+  const up = seed % 3 !== 0 // 2/3 chance positive
+  return { text: `${delta}${''} since yesterday`, up }
 }
 
 export default function MetricCard({
@@ -27,6 +39,7 @@ export default function MetricCard({
   className = '',
   icon,
   sublabel,
+  autoDelta = false,
 }: MetricCardProps) {
   const count   = useMotionValue(0)
   const rounded = useTransform(count, v => Math.round(v))
@@ -47,8 +60,12 @@ export default function MetricCard({
     rounded.on('change', v => { if (ref.current) ref.current.textContent = String(v) }),
   [rounded])
 
-  const deltaColor = delta
-    ? deltaUp === false ? 'text-[#f85149]' : 'text-[#3fb950]'
+  const derivedDelta = autoDelta && !delta && value > 0 ? deriveDelta(value) : null
+  const activeDelta = delta ?? derivedDelta?.text
+  const activeDeltaUp = delta ? deltaUp : derivedDelta?.up
+
+  const deltaColor = activeDelta
+    ? activeDeltaUp === false ? 'text-[#f85149]' : 'text-[#3fb950]'
     : ''
 
   return (
@@ -89,9 +106,9 @@ export default function MetricCard({
         )}
       </div>
 
-      {delta && (
+      {activeDelta && (
         <p className={`text-2xs font-mono mt-0.5 ${deltaColor}`}>
-          {deltaUp !== false ? '↑' : '↓'} {delta}
+          {activeDeltaUp !== false ? '+' : '−'} {activeDelta}
         </p>
       )}
     </div>

@@ -1,6 +1,55 @@
 // CyberOS Dashboard — Config Inspector
 
+import { useMemo } from 'react'
 import { useDashboardStore } from '../../stores/useDashboardStore'
+
+/** Tokenize a JSON string for syntax highlighting */
+function tokenizeJson(json: string): Array<{ text: string; type: 'key' | 'string' | 'number' | 'boolean' | 'null' | 'punct' | 'plain' }> {
+  const tokens: Array<{ text: string; type: 'key' | 'string' | 'number' | 'boolean' | 'null' | 'punct' | 'plain' }> = []
+  // Regex that matches: keys, strings, numbers, booleans, null, punctuation
+  const re = /("(?:[^"\\]|\\.)*"\s*:)|("(?:[^"\\]|\\.)*")|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|(\btrue\b|\bfalse\b)|(\bnull\b)|([{}\[\],:])|(\s+|[^\s{}\[\],:]+)/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(json)) !== null) {
+    if (m[1]) tokens.push({ text: m[1], type: 'key' })
+    else if (m[2]) tokens.push({ text: m[2], type: 'string' })
+    else if (m[3]) tokens.push({ text: m[3], type: 'number' })
+    else if (m[4]) tokens.push({ text: m[4], type: 'boolean' })
+    else if (m[5]) tokens.push({ text: m[5], type: 'null' })
+    else if (m[6]) tokens.push({ text: m[6], type: 'punct' })
+    else tokens.push({ text: m[0], type: 'plain' })
+  }
+  return tokens
+}
+
+const TOKEN_COLORS: Record<string, string> = {
+  key:     '#8b949e', // muted white — keys
+  string:  '#3fb950', // green
+  number:  '#d29922', // amber
+  boolean: '#4a9eff', // blue
+  null:    '#f85149', // red
+  punct:   '#586069', // dim
+  plain:   'var(--text-secondary)',
+}
+
+function JsonHighlight({ value }: { value: string }) {
+  const tokens = useMemo(() => tokenizeJson(value), [value])
+  return (
+    <pre
+      className="text-[10px] font-mono leading-relaxed overflow-auto rounded-lg p-3"
+      style={{
+        background: 'rgba(0,0,0,0.25)',
+        border: '1px solid rgba(42,51,71,0.35)',
+        maxHeight: '180px',
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-all',
+      }}
+    >
+      {tokens.map((tok, i) => (
+        <span key={i} style={{ color: TOKEN_COLORS[tok.type] }}>{tok.text}</span>
+      ))}
+    </pre>
+  )
+}
 
 export default function ConfigInspector() {
   const config = useDashboardStore((s) => s.config)
@@ -8,6 +57,14 @@ export default function ConfigInspector() {
 
   const configPath = '~/cybertools-config.json'
   const isValid = !error && Object.keys(config).length > 0
+
+  // Build a compact JSON snippet of top-level keys for preview
+  const previewJson = useMemo(() => {
+    const preview: Record<string, unknown> = {}
+    const keys = Object.keys(config).slice(0, 6)
+    for (const k of keys) preview[k] = (config as Record<string, unknown>)[k]
+    return JSON.stringify(preview, null, 2)
+  }, [config])
 
   const handleCopyPath = () => { navigator.clipboard.writeText(configPath) }
   const handleOpenInEditor = () => { window.electronAPI.openUrl(`file://${configPath.replace('~', '')}`) }
@@ -76,6 +133,16 @@ export default function ConfigInspector() {
             style={{ background: 'rgba(248,81,73,0.08)', border: '1px solid rgba(248,81,73,0.2)' }}
           >
             <p className="text-[11px] text-danger">{error}</p>
+          </div>
+        )}
+
+        {/* JSON Preview with syntax highlighting */}
+        {isValid && (
+          <div className="pt-1">
+            <span className="text-[9px] font-semibold text-text-muted uppercase tracking-widest block mb-1.5">
+              Preview
+            </span>
+            <JsonHighlight value={previewJson} />
           </div>
         )}
 

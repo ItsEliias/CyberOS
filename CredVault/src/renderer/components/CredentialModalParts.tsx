@@ -1,6 +1,6 @@
 // CredVault — CredentialModal helper components and constants (extracted for file-size compliance)
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { CredentialCategory } from '@shared/types'
 import { scorePassword } from '../utils/passwordStrength'
 
@@ -216,6 +216,67 @@ export function TemplatesPicker({ onSelect }: { onSelect: (tpl: ServiceTemplate)
           {tpl.label}
         </button>
       ))}
+    </div>
+  )
+}
+
+// ─── Modal layout helpers (shared with CredentialModal) ──────────────────────
+
+import type { ReactNode } from 'react'
+
+export function ValidationIcon({ valid, touched }: { valid: boolean; touched: boolean }) {
+  if (!touched) return null
+  return valid ? (
+    <span style={{ position: 'absolute', right: 8, color: '#3fb950', fontSize: 12, pointerEvents: 'none', lineHeight: 1 }}>✓</span>
+  ) : (
+    <span style={{ position: 'absolute', right: 8, color: '#f85149', fontSize: 12, pointerEvents: 'none', lineHeight: 1 }}>✕</span>
+  )
+}
+
+export function ValidatedInput({
+  value, onChange, placeholder, required, submitAttempted, autoFocus,
+}: {
+  value: string; onChange: (v: string) => void; placeholder?: string
+  required?: boolean; submitAttempted?: boolean; autoFocus?: boolean
+}) {
+  const touched = submitAttempted ?? false
+  const isValid = !required || value.trim().length > 0
+  return (
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        autoFocus={autoFocus}
+        style={{
+          flex: 1,
+          paddingRight: touched ? 28 : undefined,
+          borderColor: touched && !isValid ? 'rgba(248,81,73,0.6)' : undefined,
+          boxShadow: touched && !isValid ? '0 0 0 1px rgba(248,81,73,0.25)' : undefined,
+        }}
+      />
+      <ValidationIcon valid={isValid} touched={touched} />
+    </div>
+  )
+}
+
+export function SectionLabel({ children }: { children: ReactNode }) {
+  return (
+    <div style={{
+      fontSize: 10, fontWeight: 600, letterSpacing: '0.08em',
+      textTransform: 'uppercase', color: 'var(--text-muted)',
+      paddingTop: 4, borderTop: '1px solid var(--border)',
+    }}>
+      {children}
+    </div>
+  )
+}
+
+export function Row({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <label style={{ fontSize: 11, color: 'var(--text-dim)' }}>{label}</label>
+      {children}
     </div>
   )
 }

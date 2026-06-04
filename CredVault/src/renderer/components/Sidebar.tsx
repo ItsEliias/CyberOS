@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useStore, type View } from '../store'
+import { scorePassword } from '../utils/passwordStrength'
 
 const CATEGORY_COLORS: Record<string, string> = {
   'SSH':         '#4a9eff',
@@ -113,6 +114,34 @@ function CategoryIcon({ cat }: { cat: string }) {
   )
 }
 
+// ─── Vault Health Score widget ────────────────────────────────────────────────
+
+function VaultHealthWidget({ score, color, label }: { score: number; color: string; label: string }) {
+  return (
+    <div style={{
+      margin: '8px 12px', padding: '10px 12px', borderRadius: 8,
+      background: 'rgba(13,14,24,0.6)', border: '1px solid rgba(42,51,71,0.4)',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+        <span style={{ fontSize: 10, fontWeight: 600, color: '#484f58', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          Vault Health
+        </span>
+        <span style={{ fontSize: 12, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums' }}>
+          {score}% <span style={{ fontSize: 9, fontWeight: 500, opacity: 0.7 }}>{label}</span>
+        </span>
+      </div>
+      <div style={{ height: 4, borderRadius: 2, background: 'rgba(42,51,71,0.5)', overflow: 'hidden' }}>
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${score}%` }}
+          transition={{ duration: 0.7, ease: [0.2, 0.8, 0.2, 1] }}
+          style={{ height: '100%', borderRadius: 2, background: color }}
+        />
+      </div>
+    </div>
+  )
+}
+
 // ─── Nav config ────────────────────────────────────────────────────────────────
 
 const NAV: { id: View; label: string; Icon: () => JSX.Element }[] = [
@@ -155,6 +184,17 @@ export default function Sidebar() {
 
   const noteCount = useMemo(() => credentials.filter(c => c.type === 'note').length, [credentials])
   const credCount = credentials.length
+
+  // Vault health score: % of credentials with strong password + no obvious breach marker
+  const vaultHealth = useMemo(() => {
+    const withPw = credentials.filter(c => c.password)
+    if (withPw.length === 0) return credCount > 0 ? 50 : 0
+    const strongCount = withPw.filter(c => scorePassword(c.password!).level >= 3).length
+    return Math.round((strongCount / withPw.length) * 100)
+  }, [credentials, credCount])
+
+  const healthColor = vaultHealth >= 80 ? '#3fb950' : vaultHealth >= 50 ? '#d29922' : '#f85149'
+  const healthLabel = vaultHealth >= 80 ? 'Good' : vaultHealth >= 50 ? 'Fair' : 'Weak'
 
   function navClick(id: View) { setView(id); resetFilters() }
 
@@ -218,6 +258,34 @@ export default function Sidebar() {
           </button>
         )
       })}
+
+      {/* Vault Health Score */}
+      {credCount > 0 && (
+        <>
+          <div className="mx-4 my-2 h-px" style={{ background: 'rgba(42,51,71,0.35)' }} />
+          <div className="px-4 py-2 flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] font-semibold uppercase tracking-[0.08em]" style={{ color: '#484f58' }}>
+                Vault Health
+              </span>
+              <span className="text-[10px] font-bold tabular-nums" style={{ color: healthColor }}>
+                {vaultHealth}%
+              </span>
+            </div>
+            <div style={{ height: 4, borderRadius: 99, background: 'rgba(42,51,71,0.5)', overflow: 'hidden' }}>
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${vaultHealth}%` }}
+                transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }}
+                style={{ height: '100%', borderRadius: 99, background: healthColor, boxShadow: `0 0 6px ${healthColor}60` }}
+              />
+            </div>
+            <span className="text-[9px]" style={{ color: '#484f58' }}>
+              {healthLabel} · {credentials.filter(c => c.password && scorePassword(c.password).level >= 3).length}/{credentials.filter(c => c.password).length} strong passwords
+            </span>
+          </div>
+        </>
+      )}
 
       {/* Secure Notes */}
       {noteCount > 0 && (
@@ -355,6 +423,14 @@ export default function Sidebar() {
               })}
             </div>
           )}
+        </>
+      )}
+
+      {/* Vault health score — pass 5 */}
+      {credCount > 0 && (
+        <>
+          <div className="mx-4 my-2 h-px" style={{ background: 'rgba(42,51,71,0.35)' }} />
+          <VaultHealthWidget score={vaultHealth} color={healthColor} label={healthLabel} />
         </>
       )}
     </aside>

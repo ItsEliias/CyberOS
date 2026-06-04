@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import type { AppCardData } from '../../types/ecosystem'
 import { timeAgo } from '../../utils/timeAgo'
 import { useDashboardStore } from '../../stores/useDashboardStore'
+import { normalizeEvents } from '../../utils/eventParser'
 
 interface AppStatusCardProps {
   card: AppCardData
@@ -16,6 +17,17 @@ const STATUS_STRINGS = ['Running', 'Inactive', 'No active session', 'Idle', 'Loc
 export default function AppStatusCard({ card, index }: AppStatusCardProps) {
   const [hovered, setHovered] = useState(false)
   const liveStats = useDashboardStore((s) => s.liveStats)
+  const events = useDashboardStore((s) => s.events)
+
+  const launchCount = useMemo(() => {
+    const normalized = normalizeEvents(events)
+    return normalized.filter(
+      (e) =>
+        e.app.toLowerCase() === card.id.toLowerCase() ||
+        e.app.toLowerCase() === card.name.toLowerCase() ||
+        e.event === 'session:started' && (e.app.toLowerCase().includes(card.id.toLowerCase()))
+    ).length
+  }, [events, card.id, card.name])
 
   const handleLaunch = () => {
     if (card.execPath) {
@@ -205,9 +217,23 @@ export default function AppStatusCard({ card, index }: AppStatusCardProps) {
 
         {/* Footer */}
         <div className="flex items-center justify-between pt-1.5" style={{ borderTop: '1px solid rgba(42,51,71,0.25)' }}>
-          <span className="text-[9px] text-text-muted font-mono">
-            {card.lastActive ? timeAgo(card.lastActive) : '—'}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[9px] text-text-muted font-mono">
+              {card.lastActive ? timeAgo(card.lastActive) : '—'}
+            </span>
+            {launchCount > 0 && (
+              <span
+                className="text-[8px] font-mono tabular-nums px-1 py-0.5 rounded"
+                style={{
+                  background: 'rgba(139,148,158,0.1)',
+                  color: 'var(--text-muted)',
+                  border: '1px solid rgba(139,148,158,0.15)',
+                }}
+              >
+                {launchCount}x
+              </span>
+            )}
+          </div>
           {card.execPath && (
             <motion.button
               initial={false}

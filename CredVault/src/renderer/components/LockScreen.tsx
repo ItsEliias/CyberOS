@@ -180,6 +180,9 @@ export default function LockScreen({ needsSetup }: Props) {
   const isLocked  = countdown > 0
   const canCreate = needsSetup && pw.length >= 8 && pw === confirm
 
+  // Derive shimmer rotation speed: slower when idle, faster near unlock
+  const shimmerClass = unlocked ? 'keyhole-shimmer-unlock' : 'keyhole-shimmer-idle'
+
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%', position: 'relative', overflow: 'hidden', background: '#07080f' }}>
       {/* Pass 3: animated shifting multi-radial background */}
@@ -211,12 +214,24 @@ export default function LockScreen({ needsSetup }: Props) {
       >
         {/* Header */}
         <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
-          {/* Lock icon with glow ring — animates on unlock and on pw input */}
+          {/* Lock icon with glow ring — shimmer when idle, scale+fade on unlock */}
+          <div style={{ position: 'relative', width: 72, height: 72 }}>
+            {/* Rotating shimmer ring — idle animation */}
+            {!unlocked && (
+              <span
+                className={shimmerClass}
+                style={{
+                  position: 'absolute', inset: -3, borderRadius: 22,
+                  pointerEvents: 'none',
+                  background: 'conic-gradient(from 0deg, transparent 60%, rgba(247,129,102,0.35) 80%, transparent 100%)',
+                }}
+              />
+            )}
           <motion.div
             key={loading ? 'loading' : unlocked ? 'unlocked' : `idle-${inputPulseKey}`}
             animate={
               unlocked
-                ? { rotate: [0, -15, 5, 0], scale: [1, 1.15, 1.08], borderColor: ['rgba(247,129,102,0.25)', 'rgba(63,185,80,0.6)', 'rgba(63,185,80,0.3)'] }
+                ? { rotate: [0, -15, 5, 0], scale: [1, 1.15, 1.08, 0], opacity: [1, 1, 1, 0], borderColor: ['rgba(247,129,102,0.25)', 'rgba(63,185,80,0.6)', 'rgba(63,185,80,0.3)'] }
                 : loading
                   ? { rotate: [0, -5, 5, 0], scale: [1, 0.95, 1] }
                   : inputPulseKey > 0
@@ -251,6 +266,7 @@ export default function LockScreen({ needsSetup }: Props) {
               </svg>
             )}
           </motion.div>
+          </div>
 
           <div>
             <div style={{ fontSize: 24, fontWeight: 700, color: '#e6edf3', letterSpacing: '-0.5px', lineHeight: 1.2 }}>
@@ -418,7 +434,17 @@ export default function LockScreen({ needsSetup }: Props) {
         )}
       </motion.div>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes keyholeShimmer { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes keyholeUnlock { 0%{opacity:1;transform:scale(1) rotate(0deg);} 50%{opacity:1;transform:scale(1.2) rotate(15deg);} 100%{opacity:0;transform:scale(1.5) rotate(30deg);} }
+        .keyhole-shimmer-idle {
+          animation: keyholeShimmer 3s linear infinite;
+        }
+        .keyhole-shimmer-unlock {
+          animation: keyholeUnlock 0.55s ease-out forwards;
+        }
+      `}</style>
     </div>
   )
 }

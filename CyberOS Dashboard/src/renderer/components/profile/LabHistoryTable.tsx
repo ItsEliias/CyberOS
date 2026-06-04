@@ -10,9 +10,36 @@ interface LabEntry {
   date: string
   flags: number
   skills: string[]
+  solved: number
+  total: number
 }
 
 type SortKey = 'name' | 'platform' | 'date' | 'flags'
+
+function RateBar({ solved, total }: { solved: number; total: number }) {
+  const pct = total > 0 ? Math.min(1, solved / total) : 0
+  return (
+    <div className="flex items-center gap-1.5">
+      <div
+        className="relative overflow-hidden rounded-[2px]"
+        style={{ width: 40, height: 4, background: 'rgba(42,51,71,0.5)' }}
+        title={`${solved}/${total}`}
+      >
+        <div
+          className="absolute inset-y-0 left-0 rounded-[2px]"
+          style={{
+            width: `${pct * 100}%`,
+            background: pct >= 0.8 ? '#3fb950' : pct >= 0.5 ? '#d29922' : '#f85149',
+            transition: 'width 0.4s ease',
+          }}
+        />
+      </div>
+      <span className="text-[9px] font-mono tabular-nums text-text-muted">
+        {solved}/{total}
+      </span>
+    </div>
+  )
+}
 
 const PLATFORM_STYLE: Record<string, { bg: string; color: string }> = {
   HTB:    { bg: 'rgba(248,81,73,0.12)',  color: '#f85149' },
@@ -115,13 +142,19 @@ export default function LabHistoryTable() {
     const normalized = normalizeEvents(events)
     return normalized
       .filter((e) => e.event === 'lab:completed' || e.event === 'session:ended')
-      .map((e): LabEntry => ({
-        name: (e.data.lab as string) ?? (e.data.name as string) ?? 'Unknown Lab',
-        platform: (e.data.platform as string) ?? 'Unknown',
-        date: e.timestamp.slice(0, 10),
-        flags: (e.data.flags as number) ?? 0,
-        skills: (e.data.skills as string[]) ?? [],
-      }))
+      .map((e): LabEntry => {
+        const flags = (e.data.flags as number) ?? 0
+        const tasks = (e.data.tasks as number) ?? (e.data.totalTasks as number) ?? Math.max(flags, 2)
+        return {
+          name: (e.data.lab as string) ?? (e.data.name as string) ?? 'Unknown Lab',
+          platform: (e.data.platform as string) ?? 'Unknown',
+          date: e.timestamp.slice(0, 10),
+          flags,
+          skills: (e.data.skills as string[]) ?? [],
+          solved: flags,
+          total: tasks,
+        }
+      })
   }, [events])
 
   const sorted = useMemo(() => {
@@ -192,6 +225,7 @@ export default function LabHistoryTable() {
                     <SortIcon active={sortKey === col.key} dir={sortDir} />
                   </th>
                 ))}
+                <th className="text-left px-4 py-2 font-medium text-text-muted">Rate</th>
                 <th className="text-left px-4 py-2 font-medium text-text-muted">Skills</th>
               </tr>
             </thead>
@@ -206,6 +240,7 @@ export default function LabHistoryTable() {
                   <td className="px-4 py-2"><PlatformBadge platform={lab.platform} /></td>
                   <td className="px-4 py-2 text-text-secondary font-mono">{lab.date}</td>
                   <td className="px-4 py-2 text-text-primary tabular-nums font-mono">{lab.flags}</td>
+                  <td className="px-4 py-2"><RateBar solved={lab.solved} total={lab.total} /></td>
                   <td className="px-4 py-2 text-text-muted">{lab.skills.join(', ') || '—'}</td>
                 </tr>
               ))}

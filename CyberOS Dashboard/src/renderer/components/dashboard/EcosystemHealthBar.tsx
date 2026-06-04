@@ -46,6 +46,42 @@ function hexToRgbStr(hex: string): string {
 // Number of segments in the progress bar
 const SEGMENTS = 20
 
+/** 5-point sparkline for tooltip — deterministic mock from seed string */
+function MiniSparkline({ color, seed, active }: { color: string; seed: string; active: boolean }) {
+  const pts = Array.from({ length: 5 }, (_, i) => {
+    const s = seed.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+    return 10 + Math.abs(Math.sin(s * 0.1 + i * 1.3) * 14 + Math.cos(s * 0.07 + i * 0.9) * 6)
+  })
+  const W = 80; const H = 20
+  const step = W / (pts.length - 1)
+  const max = Math.max(...pts); const min = Math.min(...pts); const range = max - min || 1
+  const coords = pts.map((v, i) => ({
+    x: i * step,
+    y: H - ((v - min) / range) * (H - 2) - 1,
+  }))
+  const linePath = `M${coords.map((p) => `${p.x},${p.y}`).join(' L')}`
+  const areaPath = `${linePath} L${W},${H} L0,${H} Z`
+  const dotId = `dot-${seed.replace(/[^a-z0-9]/gi, '')}`
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: 'block', overflow: 'visible' }}>
+      <defs>
+        <linearGradient id={dotId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={active ? '0.45' : '0.15'} />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={areaPath} fill={`url(#${dotId})`} />
+      <path d={linePath} fill="none" stroke={color} strokeWidth="1.5"
+        strokeLinecap="round" strokeLinejoin="round" opacity={active ? 0.9 : 0.4}
+        style={{ filter: active ? `drop-shadow(0 0 3px ${color}88)` : 'none' }}
+      />
+      {coords.map((p, i) => (
+        <circle key={i} cx={p.x} cy={p.y} r="2" fill={color} opacity={active ? 0.85 : 0.3} />
+      ))}
+    </svg>
+  )
+}
+
 export default function EcosystemHealthBar() {
   const config = useDashboardStore((s) => s.config)
   const cards = buildAppCards(config)
@@ -183,31 +219,36 @@ export default function EcosystemHealthBar() {
               {card.name.length > 6 ? card.name.slice(0, 6) : card.name}
             </span>
 
-            {/* Tooltip */}
+            {/* Tooltip with sparkline */}
             {hoveredId === card.id && (
               <motion.div
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.1 }}
-                className="absolute z-50 whitespace-nowrap"
+                className="absolute z-50"
                 style={{
                   bottom: '100%',
                   left: '50%',
                   transform: 'translateX(-50%)',
                   marginBottom: '6px',
-                  background: 'rgba(13,14,24,0.96)',
-                  border: '1px solid rgba(42,51,71,0.75)',
-                  borderRadius: '6px',
-                  padding: '5px 10px',
-                  boxShadow: 'var(--elevation-3)',
+                  background: 'rgba(13,14,24,0.97)',
+                  backdropFilter: 'blur(16px)',
+                  WebkitBackdropFilter: 'blur(16px)',
+                  border: `1px solid ${card.accentColor}30`,
+                  borderRadius: '8px',
+                  padding: '8px 10px',
+                  boxShadow: `var(--elevation-3), 0 0 0 1px rgba(255,255,255,0.04)`,
+                  minWidth: '100px',
                 }}
               >
-                <p className="text-[11px] font-semibold" style={{ color: card.accentColor }}>
+                <p className="text-[11px] font-semibold mb-0.5" style={{ color: card.accentColor }}>
                   {card.name}
                 </p>
-                <p className="text-[10px] text-text-secondary">
+                <p className="text-[10px] text-text-secondary mb-2">
                   {card.active ? 'Online' : `Last: ${timeAgo(card.lastActive)}`}
                 </p>
+                {/* 5-point mock sparkline */}
+                <MiniSparkline color={card.accentColor} seed={card.id} active={card.active} />
               </motion.div>
             )}
           </div>
