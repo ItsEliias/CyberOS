@@ -268,6 +268,13 @@ function KanbanCard({ card, target, delay, onOpen, onDragStart }: KanbanCardProp
     ? { background: 'rgba(248,81,73,0.04)', borderColor: 'rgba(248,81,73,0.18)' }
     : { background: '#12131a', borderColor: 'rgba(42,51,71,0.7)' }
 
+  // Derive left border color from CVSS severity
+  const cvssLeftBorder = (() => {
+    if (!card.cvss) return null
+    const score = calcCvssScore(card.cvss)
+    return cvssColor(score)
+  })()
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
@@ -277,6 +284,7 @@ function KanbanCard({ card, target, delay, onOpen, onDragStart }: KanbanCardProp
       style={{
         ...cardBg,
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.025)',
+        borderLeft: cvssLeftBorder ? `3px solid ${cvssLeftBorder}70` : undefined,
       }}
     >
       <div className="flex items-start gap-1.5 mb-1.5">
@@ -394,32 +402,33 @@ export default function AttackBoardTab({ targetId }: { targetId: string }) {
                 onDrop={e => handleDrop(e, stage.id)}
                 onDragLeave={() => setDragOverStage(null)}
               >
-                <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#2a3347]/50 flex-shrink-0">
+                {/* Column header — colored left border accent */}
+                <div
+                  className="flex items-center justify-between px-3 py-2.5 border-b border-[#2a3347]/50 flex-shrink-0"
+                  style={{ borderLeft: `3px solid ${stage.color}55` }}
+                >
                   <div className="flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: stage.color }} />
                     <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: stage.color }}>{stage.label}</span>
                   </div>
-                  {stageCards.length > 0 ? (
-                    <span
-                      className="text-[9px] font-bold font-mono min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1"
-                      style={{
-                        color: stage.color,
-                        background: `${stage.color}18`,
-                        border: `1px solid ${stage.color}30`,
-                      }}
-                    >
-                      {stageCards.length}
-                    </span>
-                  ) : (
-                    <span className="text-[10px] text-[#4a5568]">0</span>
-                  )}
+                  {/* Task count chip — always shown, color-keyed to stage */}
+                  <span
+                    className="text-[9px] font-bold font-mono tabular-nums min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1"
+                    style={{
+                      color:      stageCards.length > 0 ? stage.color : '#484f58',
+                      background: stageCards.length > 0 ? `${stage.color}18` : 'rgba(42,51,71,0.18)',
+                      border:     `1px solid ${stageCards.length > 0 ? stage.color + '30' : 'rgba(42,51,71,0.3)'}`,
+                    }}
+                  >
+                    {stageCards.length}
+                  </span>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
                   <AnimatePresence initial>
                     {stageCards.map((card, i) => (
                       <KanbanCard
-                        key={card.id} card={card} target={target} delay={i * 0.05}
+                        key={card.id} card={card} target={target} delay={i * 0.07}
                         onOpen={() => setOpenCardId(card.id)}
                         onDragStart={e => handleDragStart(e, card.id)}
                       />
@@ -442,9 +451,14 @@ export default function AttackBoardTab({ targetId }: { targetId: string }) {
                   <div className="p-2 flex-shrink-0">
                     <button
                       onClick={() => setAddingInStage(stage.id)}
-                      className="w-full text-[10px] py-1.5 rounded border border-dashed border-[#2a3347] text-[#4a5568] hover:text-[#d29922] hover:border-[#d29922]/30 transition-colors"
+                      className="w-full text-[10px] py-1.5 rounded border border-dashed border-[#2a3347] text-[#4a5568] hover:text-[#d29922] hover:border-[#d29922]/30 transition-colors group/add flex items-center justify-center gap-1.5"
+                      title="Add card (click)"
                     >
-                      + Add
+                      <span>+ Add</span>
+                      <kbd className="hidden group-hover/add:inline-flex items-center px-1 py-0.5 rounded text-[8px] font-mono leading-none transition-all"
+                        style={{ background: 'rgba(42,51,71,0.6)', color: '#4a5568', border: '1px solid rgba(42,51,71,0.8)' }}>
+                        click
+                      </kbd>
                     </button>
                   </div>
                 )}

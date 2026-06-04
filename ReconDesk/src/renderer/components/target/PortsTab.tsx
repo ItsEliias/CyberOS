@@ -210,8 +210,8 @@ export default function PortsTab({ targetId }: { targetId: string }) {
                       initial={{ opacity: 0, y: 4 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
-                      transition={{ delay: i * 0.02, duration: 0.15 }}
-                      className="table-row-alt group cursor-pointer"
+                      transition={{ delay: i * 0.05, duration: 0.15 }}
+                      className="table-row-alt table-row-accent group cursor-pointer"
                       style={{
                         borderBottom: '1px solid rgba(42,51,71,0.25)',
                         background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)',
@@ -219,10 +219,17 @@ export default function PortsTab({ targetId }: { targetId: string }) {
                       }}
                       onClick={() => setExpandedId(expandedId === port.id ? null : port.id)}
                     >
-                      <td className="px-4 py-2.5 font-mono font-bold text-[#e2e8f0]">{port.port}</td>
+                      <td className="px-4 py-2.5 font-mono font-bold tabular-nums text-[#e2e8f0]">{port.port}</td>
                       <td className="px-2 py-2.5 font-mono text-[#8b949e]">{port.protocol}</td>
                       <td className="px-2 py-2.5 text-[#e2e8f0]">{port.service || <span className="text-[#4a5568]">—</span>}</td>
-                      <td className="px-2 py-2.5 text-[#8b949e] max-w-[200px] truncate">{port.version || <span className="text-[#4a5568]">—</span>}</td>
+                      <td className="px-2 py-2.5 max-w-[200px]">
+                        <span
+                          className="block truncate text-[#8b949e]"
+                          title={port.version || undefined}
+                        >
+                          {port.version || <span className="text-[#4a5568]">—</span>}
+                        </span>
+                      </td>
                       <td className="px-2 py-2.5">
                         <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${STATE_BADGE[port.state]}`}>
                           {port.state}

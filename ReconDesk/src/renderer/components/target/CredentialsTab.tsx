@@ -217,8 +217,8 @@ export default function CredentialsTab({ targetId }: { targetId: string }) {
                       initial={{ opacity: 0, y: 4 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
-                      transition={{ delay: i * 0.02, duration: 0.15 }}
-                      className="table-row-alt group"
+                      transition={{ delay: i * 0.05, duration: 0.15 }}
+                      className="table-row-alt table-row-accent group"
                       style={{
                         borderBottom: '1px solid rgba(42,51,71,0.25)',
                         transition: 'background 120ms ease',

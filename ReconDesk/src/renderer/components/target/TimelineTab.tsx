@@ -162,8 +162,11 @@ export default function TimelineTab({ targetId }: { targetId: string }) {
           </motion.div>
         ) : (
           <div className="relative">
-            {/* Vertical line */}
-            <div className="absolute left-[5px] top-2 bottom-2 w-px bg-[#2a3347]" />
+            {/* Vertical line — gradient from accent top to muted bottom */}
+            <div
+              className="absolute left-[5px] top-2 bottom-2 w-px"
+              style={{ background: 'linear-gradient(to bottom, rgba(210,153,34,0.35) 0%, rgba(42,51,71,0.5) 40%, rgba(42,51,71,0.2) 100%)' }}
+            />
 
             <div className="flex flex-col gap-0">
               <AnimatePresence initial>
@@ -174,13 +177,18 @@ export default function TimelineTab({ targetId }: { targetId: string }) {
                       key={entry.id}
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.025, duration: 0.18 }}
+                      transition={{ delay: i * 0.06, duration: 0.18 }}
                       className="flex items-start gap-3 py-2.5 pl-5 relative group"
                     >
-                      {/* Dot */}
+                      {/* Dot — pulses for the most recent entry (i === 0) */}
                       <span
-                        className="absolute left-[1px] top-[14px] w-2 h-2 rounded-full border-2 flex-shrink-0"
-                        style={{ backgroundColor: cfg.color, borderColor: '#07080f', boxShadow: `0 0 6px ${cfg.color}50` }}
+                        className={`absolute left-[1px] top-[14px] w-2 h-2 rounded-full border-2 flex-shrink-0${i === 0 ? ' status-dot-pulse' : ''}`}
+                        style={{
+                          backgroundColor: cfg.color,
+                          borderColor: '#07080f',
+                          boxShadow: `0 0 6px ${cfg.color}50`,
+                          '--pulse-rgb': cfg.color.replace(/^#/, '').match(/.{2}/g)?.map(h => parseInt(h, 16)).join(',') ?? '210,153,34',
+                        } as React.CSSProperties}
                       />
 
                       {/* Content */}
