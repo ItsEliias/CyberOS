@@ -78,6 +78,13 @@ interface ToolbarAction {
   block?: (line: string) => string;
 }
 
+// Visual hint: icons for B/I/Code formatting buttons
+const TOOLBAR_ICONS: Record<string, React.ReactNode> = {
+  'B': <strong style={{ fontFamily: 'inherit', fontSize: 12 }}>B</strong>,
+  'I': <em style={{ fontFamily: 'Georgia, serif', fontSize: 12 }}>I</em>,
+  '`': <span style={{ fontFamily: 'monospace', fontSize: 11 }}>{'<>'}</span>,
+};
+
 const TOOLBAR_ACTIONS: ToolbarAction[] = [
   { label: 'B',    title: 'Bold',         wrap: ['**', '**'] },
   { label: 'I',    title: 'Italic',       wrap: ['*', '*'] },
