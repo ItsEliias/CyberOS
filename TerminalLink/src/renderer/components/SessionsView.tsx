@@ -80,12 +80,15 @@ interface Props {
   activeSessionId: string | null;
   onSelectSession: (id: string) => void;
   onNewSession: () => void;
+  onQuickConnect?: (cmd: string) => void;
   sshProfiles?: SshProfile[];
   onAddSsh?: (p: Omit<SshProfile, 'id'>) => void;
   onRemoveSsh?: (id: string) => void;
   onSshConnect?: (cmd: string) => void;
   recordedSessions?: RecordedSession[];
   onExportSession?: (s: RecordedSession, fmt: 'cast' | 'txt') => void;
+  /** Map of sessionId → last command string */
+  lastCommands?: Record<string, string>;
 }
 
 type Tab = 'sessions' | 'ssh' | 'recordings';
@@ -94,6 +97,22 @@ function formatTime(iso: string): string {
   try {
     return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   } catch { return iso; }
+}
+
+/** Detect session type from the session name / command */
+function detectSessionType(name: string): 'SSH' | 'Telnet' | 'Serial' | 'Local' {
+  const lc = name.toLowerCase();
+  if (lc.includes('ssh') || lc.startsWith('ssh ')) return 'SSH';
+  if (lc.includes('telnet')) return 'Telnet';
+  if (lc.includes('/dev/') || lc.includes('serial') || lc.includes('com')) return 'Serial';
+  return 'Local';
+}
+
+const SESSION_TYPE_COLORS: Record<string, string> = {
+  SSH:    '#4a9eff',
+  Telnet: '#d29922',
+  Serial: '#b44fff',
+  Local:  '#00ff41',
 }
 
 function formatDuration(start: string, end?: string): string {
@@ -105,11 +124,14 @@ function formatDuration(start: string, end?: string): string {
 
 export default function SessionsView({
   sessions, activeSessionId, onSelectSession, onNewSession,
+  onQuickConnect,
   sshProfiles = [], onAddSsh, onRemoveSsh, onSshConnect,
   recordedSessions = [], onExportSession,
+  lastCommands = {},
 }: Props) {
   const [tab, setTab] = useState<Tab>('sessions');
   const [loading, setLoading] = useState(true);
+  const [quickConnectVal, setQuickConnectVal] = useState('');
   const sorted = [...sessions].sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
 
   useEffect(() => {
@@ -181,7 +203,43 @@ export default function SessionsView({
 
       {/* Sessions tab */}
       {tab === 'sessions' && (
-        <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          {/* Quick Connect row */}
+          <div style={{
+            padding: '8px 12px',
+            borderBottom: '1px solid rgba(0,255,65,0.08)',
+            background: 'rgba(0,255,65,0.02)',
+            display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0,
+          }}>
+            <span style={{ fontSize: 9, color: 'rgba(0,255,65,0.35)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', flexShrink: 0 }}>ssh/cmd</span>
+            <input
+              value={quickConnectVal}
+              onChange={e => setQuickConnectVal(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && quickConnectVal.trim()) {
+                  onQuickConnect?.(quickConnectVal.trim());
+                  setQuickConnectVal('');
+                }
+              }}
+              placeholder="Quick connect…"
+              style={{
+                flex: 1, background: 'rgba(0,255,65,0.04)', border: '1px solid rgba(0,255,65,0.15)',
+                borderRadius: 6, padding: '4px 8px', color: '#c8ffc8',
+                fontSize: 10, fontFamily: 'var(--font-mono)', outline: 'none',
+              }}
+            />
+            <button
+              onClick={() => { if (quickConnectVal.trim()) { onQuickConnect?.(quickConnectVal.trim()); setQuickConnectVal(''); } }}
+              style={{
+                fontSize: 10, padding: '4px 10px', borderRadius: 6,
+                background: 'rgba(0,255,65,0.1)', border: '1px solid rgba(0,255,65,0.3)',
+                color: '#00ff41', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontWeight: 600, flexShrink: 0,
+              }}
+            >
+              ↵
+            </button>
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
           {loading ? (
             <>
               <SkeletonRow />
