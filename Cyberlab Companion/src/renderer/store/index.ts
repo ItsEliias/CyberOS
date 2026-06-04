@@ -97,6 +97,7 @@ export const useStore = create<AppStore>((set, get) => {
     apiKeyConfigured: false,
 
     addTab(session) {
+      if (get().tabs.length >= 6) return; // max 6 tabs
       const s = session || createSession({ name: 'New Session' });
       const tab = makeTab(s);
       set(state => ({ tabs: [...state.tabs, tab], activeTabId: tab.id }));

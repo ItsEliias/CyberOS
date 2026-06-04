@@ -76,6 +76,21 @@ export default function Header({ onHelp }: HeaderProps) {
 
       <div className="flex-1" />
 
+      {/* Session HUD strip (Feature 11) */}
+      {session && session.labName !== 'New Session' && (() => {
+        const totalFlags = (session.findings?.flags?.length ?? 0) + (session.ctfFlags?.length ?? 0);
+        const totalPts = (session.ctfFlags ?? []).reduce((s, f) => s + (f.points ?? 0), 0);
+        const elapsedHrs = (session.timer?.elapsed ?? 0) / 3600;
+        const flagRate = elapsedHrs > 0 ? (totalFlags / elapsedHrs).toFixed(1) : '—';
+        return (
+          <div className="flex items-center gap-3 px-3 py-1 rounded" style={{ background: 'rgba(180,79,255,0.06)', border: '1px solid rgba(180,79,255,0.12)' }}>
+            <span className="text-[10px] font-mono" style={{ color: '#3fb950' }}>{totalFlags} flags</span>
+            {totalPts > 0 && <span className="text-[10px] font-mono" style={{ color: '#b44fff' }}>{totalPts} pts</span>}
+            <span className="text-[10px] font-mono" style={{ color: '#8b949e' }}>{flagRate}/hr</span>
+          </div>
+        );
+      })()}
+
       {/* Right actions */}
       <div className="flex items-center gap-2 no-drag">
         {/* VPN indicator */}

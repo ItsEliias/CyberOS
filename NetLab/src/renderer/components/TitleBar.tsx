@@ -2,7 +2,11 @@
 
 import { useNetLabStore } from '../store'
 
-export default function TitleBar() {
+interface Props {
+  onOpenSearch: () => void
+}
+
+export default function TitleBar({ onOpenSearch }: Props) {
   const activeLab  = useNetLabStore(s => s.activeLab)
   const activeView = useNetLabStore(s => s.activeView)
 
@@ -23,6 +27,10 @@ export default function TitleBar() {
         <span className="text-sm font-semibold tracking-wide" style={{ color: '#5ec4ff' }}>
           NetLab
         </span>
+        <span className="text-2xs px-1.5 py-0.5 rounded text-text-muted"
+          style={{ background: '#161b27', border: '1px solid #2a3347', letterSpacing: '0.08em' }}>
+          CYBERTOOLS
+        </span>
       </div>
 
       {/* Active lab badge */}
@@ -36,6 +44,20 @@ export default function TitleBar() {
 
       {/* Spacer */}
       <div className="flex-1" />
+
+      {/* Search trigger */}
+      <button
+        onClick={onOpenSearch}
+        className="no-drag flex items-center gap-2 px-3 py-1.5 rounded text-xs transition-colors"
+        style={{ background: '#0f1117', color: '#8b949e', border: '1px solid #2a3347' }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = '#5ec4ff'; e.currentTarget.style.color = '#5ec4ff' }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a3347'; e.currentTarget.style.color = '#8b949e' }}
+      >
+        <span>Search</span>
+        <kbd className="text-2xs px-1 py-0.5 rounded" style={{ background: '#161b27', border: '1px solid #2a3347' }}>
+          ⌘K
+        </kbd>
+      </button>
     </div>
   )
 }

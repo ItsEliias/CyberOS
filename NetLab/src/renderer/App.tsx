@@ -28,6 +28,18 @@ export default function App() {
   const openSearch  = useCallback(() => setSearchOpen(true),  [])
   const closeSearch = useCallback(() => setSearchOpen(false), [])
 
+  // Cmd+K global search
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setSearchOpen(v => !v)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   // Bootstrap data on mount
   useEffect(() => {
     async function init() {
@@ -58,7 +70,7 @@ export default function App() {
       className="flex flex-col"
       style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: '#0a0a0f' }}
     >
-      <TitleBar />
+      <TitleBar onOpenSearch={openSearch} />
 
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
@@ -76,6 +88,7 @@ export default function App() {
       </div>
 
       <StatusBar />
+      <SearchModal open={searchOpen} onClose={closeSearch} />
     </div>
   )
 }
