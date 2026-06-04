@@ -1,5 +1,4 @@
-// CyberOS Dashboard — Event Log (Full View)
-// Searchable, filterable full event log
+// CyberOS Dashboard — Event Log (searchable, filterable)
 
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -22,31 +21,67 @@ export default function EventLog() {
   )
 
   return (
-    <div className="glass-card overflow-hidden">
-      <div className="px-4 py-3 border-b border-border-subtle flex items-center justify-between">
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{
+        background: 'var(--surface-glass)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        border: '1px solid var(--border-glass)',
+        boxShadow: 'var(--elevation-1)',
+      }}
+    >
+      {/* Header */}
+      <div
+        className="px-4 py-3 flex items-center justify-between"
+        style={{ borderBottom: '1px solid rgba(42,51,71,0.35)' }}
+      >
         <div className="flex items-center gap-2">
-          <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-widest">
+          <span className="text-[10px] font-semibold text-text-muted uppercase tracking-widest">
             Event Log
-          </p>
-          <span className="text-[10px] text-text-muted bg-bg-interactive px-1.5 py-0.5 rounded-full">
+          </span>
+          <span
+            className="text-[10px] font-mono px-1.5 py-0.5 rounded"
+            style={{ background: 'rgba(74,158,255,0.1)', color: 'var(--accent)' }}
+          >
             {filtered.length}
           </span>
         </div>
       </div>
 
-      {/* Search and filter bar */}
-      <div className="px-4 py-2 border-b border-border-subtle flex items-center gap-3">
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search events..."
-          className="flex-1 bg-bg-interactive border border-border-default rounded-md px-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20"
-        />
+      {/* Search + filter */}
+      <div
+        className="px-4 py-2 flex items-center gap-2"
+        style={{ borderBottom: '1px solid rgba(42,51,71,0.25)' }}
+      >
+        <div className="flex-1 relative">
+          <svg
+            width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search events..."
+            className="w-full text-[11px] pl-7 pr-3 py-1.5 rounded-lg text-text-primary placeholder:text-text-muted focus:outline-none transition-colors"
+            style={{
+              background: 'rgba(42,51,71,0.3)',
+              border: '1px solid rgba(42,51,71,0.5)',
+            }}
+          />
+        </div>
         <select
           value={appFilter ?? ''}
           onChange={(e) => setAppFilter(e.target.value || null)}
-          className="bg-bg-interactive border border-border-default rounded-md px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent/50"
+          className="text-[11px] px-2 py-1.5 rounded-lg text-text-primary focus:outline-none transition-colors"
+          style={{
+            background: 'rgba(42,51,71,0.3)',
+            border: '1px solid rgba(42,51,71,0.5)',
+          }}
         >
           <option value="">All Apps</option>
           {appNames.map((app) => (
@@ -56,57 +91,67 @@ export default function EventLog() {
       </div>
 
       {/* Event list */}
-      <div className="max-h-[400px] overflow-y-auto">
+      <div className="max-h-[360px] overflow-y-auto">
         {filtered.length === 0 ? (
           <div className="px-4 py-8 text-center">
             <p className="text-xs text-text-muted">No events match your filters</p>
           </div>
         ) : (
-          filtered.map((event) => (
-            <div key={event.id}>
-              <div
-                className="px-4 py-2 border-b border-border-subtle/50 hover:bg-bg-interactive/30 cursor-pointer flex items-center gap-3"
-                onClick={() => setExpandedId(expandedId === event.id ? null : event.id)}
-              >
-                <span className="text-[10px] text-text-muted font-mono w-[60px] shrink-0">
-                  {formatTimestamp(event.timestamp)}
-                </span>
-                <span
-                  className="text-xs font-medium w-[90px] shrink-0"
-                  style={{ color: getAppAccentColor(event.app) }}
+          filtered.map((event) => {
+            const accentColor = getAppAccentColor(event.app)
+            const isExpanded = expandedId === event.id
+            return (
+              <div key={event.id}>
+                <div
+                  className="px-4 py-2 flex items-center gap-3 cursor-pointer transition-colors hover:bg-white/[0.025]"
+                  style={{ borderBottom: '1px solid rgba(42,51,71,0.2)' }}
+                  onClick={() => setExpandedId(isExpanded ? null : event.id)}
                 >
-                  {event.app}
-                </span>
-                <span className="text-xs text-text-primary flex-1">
-                  {humanizeEventType(event.event)}
-                </span>
-                <svg
-                  width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                  className={`text-text-muted transition-transform ${expandedId === event.id ? 'rotate-180' : ''}`}
-                >
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </div>
-              <AnimatePresence>
-                {expandedId === event.id && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.15 }}
-                    className="overflow-hidden"
+                  <span className="text-[10px] text-text-muted font-mono w-[52px] shrink-0 tabular-nums">
+                    {formatTimestamp(event.timestamp)}
+                  </span>
+                  <span
+                    className="text-[10px] font-semibold w-[80px] shrink-0 truncate"
+                    style={{ color: accentColor }}
                   >
-                    <div className="px-4 py-2 bg-bg-interactive/20">
-                      <pre className="text-[10px] text-text-secondary font-mono whitespace-pre-wrap">
-                        {JSON.stringify(event.data, null, 2)}
-                      </pre>
-                      <p className="text-[10px] text-text-muted mt-1">{formatDate(event.timestamp)}</p>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          ))
+                    {event.app}
+                  </span>
+                  <span className="text-[11px] text-text-primary flex-1 truncate">
+                    {humanizeEventType(event.event)}
+                  </span>
+                  <svg
+                    width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                    className="text-text-muted transition-transform shrink-0"
+                    style={{ transform: isExpanded ? 'rotate(180deg)' : 'none' }}
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </div>
+
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.12 }}
+                      className="overflow-hidden"
+                    >
+                      <div
+                        className="px-4 py-2.5 mx-2 my-1 rounded-lg"
+                        style={{ background: 'rgba(42,51,71,0.2)', border: '1px solid rgba(42,51,71,0.3)' }}
+                      >
+                        <pre className="text-[10px] text-text-secondary font-mono whitespace-pre-wrap">
+                          {JSON.stringify(event.data, null, 2)}
+                        </pre>
+                        <p className="text-[10px] text-text-muted mt-1.5 font-mono">{formatDate(event.timestamp)}</p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )
+          })
         )}
       </div>
     </div>

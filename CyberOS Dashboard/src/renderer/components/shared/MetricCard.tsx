@@ -1,6 +1,4 @@
-// CyberOS Dashboard — Metric Card Component
-// Numeric KPI card with icon, large number, and optional delta
-// Glassmorphism + metric glow styling
+// CyberOS Dashboard — Metric Card (shared KPI card)
 
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion'
 import { useEffect, useRef } from 'react'
@@ -21,7 +19,7 @@ export default function MetricCard({ label, value, icon, delta, accentColor = '#
 
   useEffect(() => {
     if (!hasAnimated.current) {
-      const controls = animate(count, value, { duration: 0.6, ease: 'easeOut' })
+      const controls = animate(count, value, { duration: 0.8, ease: 'easeOut' })
       hasAnimated.current = true
       return controls.stop
     } else {
@@ -30,33 +28,42 @@ export default function MetricCard({ label, value, icon, delta, accentColor = '#
   }, [value, count])
 
   useEffect(() => {
-    const unsubscribe = rounded.on('change', (v) => {
-      if (displayRef.current) {
-        displayRef.current.textContent = String(v)
-      }
+    const unsub = rounded.on('change', (v) => {
+      if (displayRef.current) displayRef.current.textContent = String(v)
     })
-    return unsubscribe
+    return unsub
   }, [rounded])
 
   return (
-    <div className="glass-card p-4">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-[11px] text-text-secondary font-medium uppercase tracking-wider">{label}</span>
-        <span className="text-text-muted">{icon}</span>
+    <div
+      className="rounded-xl p-4 relative overflow-hidden"
+      style={{
+        background: 'var(--surface-2)',
+        border: `1px solid ${accentColor}22`,
+        boxShadow: 'var(--elevation-1)',
+      }}
+    >
+      {/* Glow blob */}
+      <div
+        className="absolute -top-4 -right-4 w-16 h-16 rounded-full pointer-events-none"
+        style={{ background: `${accentColor}0f`, filter: 'blur(12px)' }}
+      />
+
+      <div className="flex items-center justify-between mb-3 relative">
+        <span className="text-[10px] text-text-muted font-semibold uppercase tracking-widest">{label}</span>
+        <span style={{ color: `${accentColor}99` }}>{icon}</span>
       </div>
+
       <span
         ref={displayRef}
-        className="text-lg font-bold tabular-nums metric-glow"
-        style={{
-          color: accentColor,
-          '--glow-color': `${accentColor}80`,
-          textShadow: `0 0 12px ${accentColor}66, 0 0 24px ${accentColor}1a`,
-        } as React.CSSProperties}
+        className="text-[28px] font-bold tabular-nums leading-none relative block"
+        style={{ color: accentColor, textShadow: `0 0 16px ${accentColor}44` }}
       >
         {value}
       </span>
+
       {delta && (
-        <p className="text-[10px] text-text-muted mt-1">{delta}</p>
+        <p className="text-[10px] text-text-muted mt-2 relative">{delta}</p>
       )}
     </div>
   )

@@ -1,5 +1,4 @@
-// CyberOS Dashboard — Lab History Table
-// Sortable table of completed labs with platform badges
+// CyberOS Dashboard — Lab History Table (sortable)
 
 import { useState, useMemo } from 'react'
 import { useDashboardStore } from '../../stores/useDashboardStore'
@@ -15,28 +14,57 @@ interface LabEntry {
 
 type SortKey = 'name' | 'platform' | 'date' | 'flags'
 
+const PLATFORM_STYLE: Record<string, { bg: string; color: string }> = {
+  HTB:    { bg: 'rgba(248,81,73,0.12)',  color: '#f85149' },
+  THM:    { bg: 'rgba(63,185,80,0.12)',  color: '#3fb950' },
+  CTF:    { bg: 'rgba(180,79,255,0.12)', color: '#b44fff' },
+  Client: { bg: 'rgba(74,158,255,0.12)', color: '#4a9eff' },
+}
+
+function PlatformBadge({ platform }: { platform: string }) {
+  const style = PLATFORM_STYLE[platform] ?? { bg: 'rgba(42,51,71,0.4)', color: '#8b949e' }
+  return (
+    <span
+      className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+      style={{ background: style.bg, color: style.color, border: `1px solid ${style.color}25` }}
+    >
+      {platform}
+    </span>
+  )
+}
+
+function SortIcon({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
+  return (
+    <svg
+      width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+      className="inline ml-1"
+      style={{ color: active ? '#4a9eff' : 'rgba(139,148,158,0.5)' }}
+    >
+      {dir === 'asc'
+        ? <polyline points="18 15 12 9 6 15" />
+        : <polyline points="6 9 12 15 18 9" />}
+    </svg>
+  )
+}
+
 export default function LabHistoryTable() {
   const events = useDashboardStore((s) => s.events)
   const [sortKey, setSortKey] = useState<SortKey>('date')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
-  // Extract lab completions from events
   const labs = useMemo(() => {
     const normalized = normalizeEvents(events)
-    const labEvents = normalized.filter(
-      (e) => e.event === 'lab:completed' || e.event === 'session:ended'
-    )
-
-    return labEvents.map((e): LabEntry => ({
-      name: (e.data.lab as string) ?? (e.data.name as string) ?? 'Unknown Lab',
-      platform: (e.data.platform as string) ?? 'Unknown',
-      date: e.timestamp.slice(0, 10),
-      flags: (e.data.flags as number) ?? 0,
-      skills: (e.data.skills as string[]) ?? [],
-    }))
+    return normalized
+      .filter((e) => e.event === 'lab:completed' || e.event === 'session:ended')
+      .map((e): LabEntry => ({
+        name: (e.data.lab as string) ?? (e.data.name as string) ?? 'Unknown Lab',
+        platform: (e.data.platform as string) ?? 'Unknown',
+        date: e.timestamp.slice(0, 10),
+        flags: (e.data.flags as number) ?? 0,
+        skills: (e.data.skills as string[]) ?? [],
+      }))
   }, [events])
 
-  // Sort
   const sorted = useMemo(() => {
     const copy = [...labs]
     copy.sort((a, b) => {
@@ -51,88 +79,74 @@ export default function LabHistoryTable() {
   }, [labs, sortKey, sortDir])
 
   const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortKey(key)
-      setSortDir('desc')
-    }
+    if (sortKey === key) setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
+    else { setSortKey(key); setSortDir('desc') }
   }
-
-  const platformBadge = (platform: string) => {
-    const colors: Record<string, string> = {
-      HTB: 'bg-danger/20 text-danger',
-      THM: 'bg-success/20 text-success',
-      CTF: 'bg-[#b44fff]/20 text-[#b44fff]',
-      Client: 'bg-accent/20 text-accent',
-    }
-    const cls = colors[platform] ?? 'bg-bg-interactive text-text-secondary'
-    return (
-      <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${cls}`}>
-        {platform}
-      </span>
-    )
-  }
-
-  const SortIcon = ({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) => (
-    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-      className={`inline ml-1 ${active ? 'text-accent' : 'text-text-muted'}`}
-    >
-      {dir === 'asc' ? <polyline points="18 15 12 9 6 15" /> : <polyline points="6 9 12 15 18 9" />}
-    </svg>
-  )
 
   return (
-    <div className="glass-card overflow-hidden">
-      <div className="px-4 py-3 border-b border-border-subtle">
-        <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-widest">
-          Lab History
-        </p>
+    <div
+      className="rounded-xl overflow-hidden flex flex-col"
+      style={{
+        background: 'var(--surface-glass)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        border: '1px solid var(--border-glass)',
+        boxShadow: 'var(--elevation-2)',
+      }}
+    >
+      {/* Header */}
+      <div
+        className="px-4 py-3 flex items-center justify-between shrink-0"
+        style={{ borderBottom: '1px solid rgba(42,51,71,0.35)' }}
+      >
+        <span className="text-[10px] font-semibold text-text-muted uppercase tracking-widest">Lab History</span>
+        <span
+          className="text-[10px] font-mono px-1.5 py-0.5 rounded"
+          style={{ background: 'rgba(74,158,255,0.1)', color: 'var(--accent)' }}
+        >
+          {sorted.length}
+        </span>
       </div>
 
       {sorted.length === 0 ? (
-        <div className="px-4 py-8 text-center">
+        <div className="px-4 py-10 text-center flex-1">
           <p className="text-xs text-text-muted">No lab completions recorded yet</p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-auto flex-1">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-border-subtle">
-                <th
-                  className="text-left px-4 py-2 text-text-secondary font-medium cursor-pointer hover:text-text-primary"
-                  onClick={() => handleSort('name')}
-                >
-                  Lab Name <SortIcon active={sortKey === 'name'} dir={sortDir} />
-                </th>
-                <th
-                  className="text-left px-4 py-2 text-text-secondary font-medium cursor-pointer hover:text-text-primary"
-                  onClick={() => handleSort('platform')}
-                >
-                  Platform <SortIcon active={sortKey === 'platform'} dir={sortDir} />
-                </th>
-                <th
-                  className="text-left px-4 py-2 text-text-secondary font-medium cursor-pointer hover:text-text-primary"
-                  onClick={() => handleSort('date')}
-                >
-                  Date <SortIcon active={sortKey === 'date'} dir={sortDir} />
-                </th>
-                <th
-                  className="text-left px-4 py-2 text-text-secondary font-medium cursor-pointer hover:text-text-primary"
-                  onClick={() => handleSort('flags')}
-                >
-                  Flags <SortIcon active={sortKey === 'flags'} dir={sortDir} />
-                </th>
-                <th className="text-left px-4 py-2 text-text-secondary font-medium">Skills</th>
+              <tr style={{ borderBottom: '1px solid rgba(42,51,71,0.35)' }}>
+                {([
+                  { key: 'name', label: 'Lab Name' },
+                  { key: 'platform', label: 'Platform' },
+                  { key: 'date', label: 'Date' },
+                  { key: 'flags', label: 'Flags' },
+                ] as { key: SortKey; label: string }[]).map((col) => (
+                  <th
+                    key={col.key}
+                    className="text-left px-4 py-2 font-medium cursor-pointer select-none transition-colors hover:text-text-primary"
+                    style={{ color: sortKey === col.key ? 'var(--accent)' : 'var(--text-muted)' }}
+                    onClick={() => handleSort(col.key)}
+                  >
+                    {col.label}
+                    <SortIcon active={sortKey === col.key} dir={sortDir} />
+                  </th>
+                ))}
+                <th className="text-left px-4 py-2 font-medium text-text-muted">Skills</th>
               </tr>
             </thead>
             <tbody>
               {sorted.map((lab, i) => (
-                <tr key={i} className="border-b border-border-subtle/50 hover:bg-bg-interactive/30">
+                <tr
+                  key={i}
+                  className="transition-colors hover:bg-white/[0.025]"
+                  style={{ borderBottom: '1px solid rgba(42,51,71,0.2)' }}
+                >
                   <td className="px-4 py-2 text-text-primary font-medium">{lab.name}</td>
-                  <td className="px-4 py-2">{platformBadge(lab.platform)}</td>
+                  <td className="px-4 py-2"><PlatformBadge platform={lab.platform} /></td>
                   <td className="px-4 py-2 text-text-secondary font-mono">{lab.date}</td>
-                  <td className="px-4 py-2 text-text-primary tabular-nums">{lab.flags}</td>
+                  <td className="px-4 py-2 text-text-primary tabular-nums font-mono">{lab.flags}</td>
                   <td className="px-4 py-2 text-text-muted">{lab.skills.join(', ') || '—'}</td>
                 </tr>
               ))}
