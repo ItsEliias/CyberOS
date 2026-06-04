@@ -292,7 +292,24 @@ export default function RunView() {
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null)
   const [showModal, setShowModal]   = useState(false)
   const [exporting, setExporting]   = useState(false)
+  const [paused,    setPaused]      = useState(false)
+  const [runElapsed, setRunElapsed] = useState('0:00')
   const notesFocusRef = useRef<HTMLTextAreaElement>(null)
+
+  // Real-time elapsed timer (improvement 4)
+  useEffect(() => {
+    if (!activeRun) return
+    function tick() {
+      if (!activeRun) return
+      const ms = Date.now() - new Date(activeRun.startedAt).getTime()
+      const m  = Math.floor(ms / 60_000)
+      const s  = Math.floor((ms % 60_000) / 1_000)
+      setRunElapsed(`${m}:${String(s).padStart(2, '0')}`)
+    }
+    tick()
+    const t = setInterval(tick, 1000)
+    return () => clearInterval(t)
+  }, [activeRun?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Determine if a step is blocked by unmet dependencies
   const isBlocked = useCallback((step: PlaybookStep, steps: PlaybookStep[]) => {
@@ -440,9 +457,21 @@ export default function RunView() {
 
       {/* Bottom bar */}
       <div className="flex items-center gap-2 px-4 py-2 flex-shrink-0" style={{ borderTop: '1px solid var(--border)', background: 'var(--panel)' }}>
-        <span className="text-xs mr-auto" style={{ color: 'var(--text-muted)' }}>
+        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
           [{String.fromCharCode(8592)}/{String.fromCharCode(8594)}] nav  [P] pass  [F/S] skip  [N] notes
         </span>
+        {/* Elapsed timer */}
+        <span
+          className="text-xs font-mono px-2 py-0.5 rounded flex items-center gap-1.5 flex-shrink-0"
+          style={{ background: 'rgba(45,212,191,0.06)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.15)' }}
+        >
+          <span
+            className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+            style={{ background: paused ? '#484f58' : '#2dd4bf', animation: paused ? 'none' : 'pulse 2s ease-in-out infinite' }}
+          />
+          Running for {runElapsed}
+        </span>
+        <div className="flex-1" />
         {activeRun.status === 'completed' && (
           <button onClick={handleExportReport} disabled={exporting} className="text-xs px-3 py-1.5 rounded font-medium"
             style={{ background: 'rgba(63,185,80,0.15)', color: 'var(--success)', border: '1px solid rgba(63,185,80,0.3)' }}>
@@ -450,6 +479,18 @@ export default function RunView() {
           </button>
         )}
         <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{done}/{total} steps</span>
+        {/* Pause/Resume button (visual only) */}
+        <button
+          onClick={() => setPaused(p => !p)}
+          className="text-xs px-3 py-1.5 rounded font-medium flex-shrink-0"
+          style={{
+            background: 'transparent',
+            color: '#2dd4bf',
+            border: '1px solid rgba(45,212,191,0.35)',
+          }}
+        >
+          {paused ? '▶ Resume' : '⏸ Pause'}
+        </button>
         <button onClick={() => setShowModal(true)} className="text-xs px-4 py-1.5 rounded font-semibold"
           style={{ background: done === total ? 'var(--success)' : 'var(--accent)', color: done === total ? '#000' : '#fff' }}>
           {done === total ? '✓ Complete Run' : 'End Run'}

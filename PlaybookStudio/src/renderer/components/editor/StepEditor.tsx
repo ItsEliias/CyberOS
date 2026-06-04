@@ -13,6 +13,62 @@ const STEP_TYPE_COLORS: Record<StepType, string> = {
   decision:      '#bc8cff',
 }
 
+// Step type icons (SVG paths, 12×12 viewBox)
+function StepTypeIcon({ type, color }: { type: StepType; color: string }) {
+  if (type === 'command') {
+    // Wrench
+    return (
+      <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M8.5 1.5a2.5 2.5 0 0 1 0 4L3 11 1 9l5.5-5.5a2.5 2.5 0 0 1 2-2z" />
+      </svg>
+    )
+  }
+  if (type === 'action') {
+    // Person
+    return (
+      <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="6" cy="3" r="2" />
+        <path d="M2 11c0-2.2 1.8-4 4-4s4 1.8 4 4" />
+      </svg>
+    )
+  }
+  if (type === 'verification') {
+    // Checkmark
+    return (
+      <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2 6l3 3 5-5" />
+      </svg>
+    )
+  }
+  if (type === 'documentation') {
+    // Pencil
+    return (
+      <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M8 2l2 2-6 6H2v-2z" />
+        <path d="M7 3l2 2" />
+      </svg>
+    )
+  }
+  if (type === 'decision') {
+    // Diamond
+    return (
+      <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 1l5 5-5 5-5-5z" />
+      </svg>
+    )
+  }
+  return null
+}
+
+// Segmented pill for step type selection
+const STEP_TYPE_LABELS: { type: StepType; label: string }[] = [
+  { type: 'command',       label: 'Tool' },
+  { type: 'action',        label: 'Manual' },
+  { type: 'verification',  label: 'Check' },
+  { type: 'documentation', label: 'Note' },
+  { type: 'decision',      label: 'Decision' },
+]
+
 function VariableToken({ text }: { text: string }) {
   const parts = text.split(/({{[^}]+}})/)
   return (
@@ -55,6 +111,13 @@ export default function StepEditor({
         <span className="text-xs w-5 h-5 rounded flex items-center justify-center font-mono flex-shrink-0" style={{ background: 'var(--border)', color: 'var(--text-dim)' }}>
           {index + 1}
         </span>
+        <span
+          className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center"
+          style={{ background: `${typeColor}18` }}
+          title={step.stepType ?? 'action'}
+        >
+          <StepTypeIcon type={step.stepType ?? 'action'} color={typeColor} />
+        </span>
         <span className="flex-1 text-sm font-medium truncate" style={{ color: 'var(--text)' }}>
           {step.title || <span style={{ color: 'var(--text-muted)' }}>Untitled step</span>}
         </span>
@@ -91,7 +154,7 @@ export default function StepEditor({
           style={{ overflow: 'hidden' }}
         >
         <div className="px-3 pb-3 flex flex-col gap-2" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg)' }}>
-          {/* Row 1: title + type + category */}
+          {/* Row 1: title + category */}
           <div className="flex gap-2 mt-2">
             <div className="flex-1">
               <label className="text-xs block mb-1" style={{ color: 'var(--text-muted)' }}>Title</label>
@@ -99,18 +162,42 @@ export default function StepEditor({
                 value={step.title} disabled={disabled} onChange={e => onChange({ ...step, title: e.target.value })} />
             </div>
             <div>
-              <label className="text-xs block mb-1" style={{ color: 'var(--text-muted)' }}>Type</label>
-              <select className="rounded px-2 py-1 text-sm" style={{ background: 'var(--panel)', border: '1px solid var(--border)', color: typeColor }}
-                value={step.stepType ?? 'action'} disabled={disabled} onChange={e => onChange({ ...step, stepType: e.target.value as StepType })}>
-                {STEP_TYPES.map(t => <option key={t} value={t} style={{ color: STEP_TYPE_COLORS[t] }}>{t}</option>)}
-              </select>
-            </div>
-            <div>
               <label className="text-xs block mb-1" style={{ color: 'var(--text-muted)' }}>Category</label>
               <select className="rounded px-2 py-1 text-sm" style={{ background: 'var(--panel)', border: '1px solid var(--border)', color: 'var(--text)' }}
                 value={step.category} disabled={disabled} onChange={e => onChange({ ...step, category: e.target.value as StepCategory })}>
                 {STEP_CATS.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
+            </div>
+          </div>
+
+          {/* Step type segmented pill selector */}
+          <div>
+            <label className="text-xs block mb-1" style={{ color: 'var(--text-muted)' }}>Step Type</label>
+            <div
+              className="flex items-center gap-1 p-0.5 rounded-full"
+              style={{ background: 'var(--bg)', border: '1px solid var(--border)', width: 'fit-content' }}
+            >
+              {STEP_TYPE_LABELS.map(({ type, label }) => {
+                const active = (step.stepType ?? 'action') === type
+                const tColor = STEP_TYPE_COLORS[type]
+                return (
+                  <button
+                    key={type}
+                    onClick={() => !disabled && onChange({ ...step, stepType: type })}
+                    disabled={disabled}
+                    className="text-xs px-2.5 py-0.5 rounded-full flex items-center gap-1 transition-all"
+                    style={{
+                      background: active ? `${tColor}22` : 'transparent',
+                      color: active ? tColor : 'var(--text-muted)',
+                      border: `1px solid ${active ? `${tColor}44` : 'transparent'}`,
+                      fontWeight: active ? 600 : 400,
+                    }}
+                  >
+                    <StepTypeIcon type={type} color={active ? tColor : 'var(--text-muted)'} />
+                    {label}
+                  </button>
+                )
+              })}
             </div>
           </div>
 

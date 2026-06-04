@@ -28,6 +28,16 @@ export default function OnboardingModal({ onClose }: Props) {
       className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}
     >
+      {/* Skip button in corner */}
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 text-xs px-2.5 py-1 rounded z-50 transition-colors"
+        style={{ background: 'rgba(42,51,71,0.4)', color: '#484f58', border: '1px solid rgba(42,51,71,0.5)' }}
+        onMouseEnter={e => { const el = e.currentTarget; el.style.color = '#8b949e' }}
+        onMouseLeave={e => { const el = e.currentTarget; el.style.color = '#484f58' }}
+      >
+        Skip
+      </button>
       <div
         className="w-[520px] rounded-xl overflow-hidden"
         style={{
@@ -128,19 +138,19 @@ export default function OnboardingModal({ onClose }: Props) {
           <div className="flex items-center gap-2">
             <button
               onClick={handleMoreInfo}
-              className="h-8 px-4 rounded text-xs font-medium border transition-colors"
-              style={{ borderColor: 'rgba(255,255,255,0.1)', color: '#8b949e', background: 'transparent' }}
-              onMouseEnter={e => { const el = e.target as HTMLElement; el.style.borderColor = ACCENT; el.style.color = ACCENT }}
-              onMouseLeave={e => { const el = e.target as HTMLElement; el.style.borderColor = 'rgba(255,255,255,0.1)'; el.style.color = '#8b949e' }}
+              className="h-9 px-5 rounded-lg text-sm font-medium border transition-colors"
+              style={{ borderColor: 'rgba(255,255,255,0.12)', color: '#8b949e', background: 'rgba(42,51,71,0.2)' }}
+              onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = ACCENT; el.style.color = ACCENT }}
+              onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = 'rgba(255,255,255,0.12)'; el.style.color = '#8b949e' }}
             >
               More Info
             </button>
             <button
               onClick={handleClose}
-              className="h-8 px-4 rounded text-xs font-medium text-white transition-opacity hover:opacity-80"
-              style={{ background: ACCENT }}
+              className="h-9 px-6 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-85"
+              style={{ background: ACCENT, boxShadow: `0 0 16px rgba(45,212,191,0.25)` }}
             >
-              Close
+              Get Started
             </button>
           </div>
         </div>

@@ -10,10 +10,37 @@ const CATEGORIES: { id: string; label: string }[] = [
   { id: 'active-directory', label: 'Active Directory' },
   { id: 'linux',            label: 'Linux' },
   { id: 'windows',          label: 'Windows' },
+  { id: 'cloud',            label: 'Cloud' },
+  { id: 'social-eng',       label: 'Social Eng' },
   { id: 'ctf',              label: 'CTF' },
   { id: 'ccna',             label: 'CCNA' },
   { id: 'custom',           label: 'Custom' },
 ]
+
+// Rough estimate: ~3 minutes per step
+function estimatedTime(stepCount: number): string {
+  const mins = stepCount * 3
+  if (mins < 60) return `~${mins} min`
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return m > 0 ? `~${h}h ${m}m` : `~${h}h`
+}
+
+// Highlight search term in text — returns JSX with matched chars wrapped in <em>
+function HighlightMatch({ text, term }: { text: string; term: string }) {
+  if (!term.trim()) return <>{text}</>
+  const idx = text.toLowerCase().indexOf(term.toLowerCase())
+  if (idx === -1) return <>{text}</>
+  return (
+    <>
+      {text.slice(0, idx)}
+      <em style={{ fontStyle: 'normal', color: '#2dd4bf', background: 'rgba(45,212,191,0.12)', borderRadius: 2 }}>
+        {text.slice(idx, idx + term.length)}
+      </em>
+      {text.slice(idx + term.length)}
+    </>
+  )
+}
 
 const CAT_COLORS: Record<PlaybookCategory, string> = {
   'web-app':          '#e3b341',
@@ -162,7 +189,7 @@ function ImportPreviewModal({
 
 // ─── Playbook Card ─────────────────────────────────────────────────────────────
 
-function PlaybookCard({ pb }: { pb: Playbook }) {
+function PlaybookCard({ pb, searchTerm = '' }: { pb: Playbook; searchTerm?: string }) {
   const setView           = useStore(s => s.setView)
   const setActivePlaybook = useStore(s => s.setActivePlaybook)
   const setRuns           = useStore(s => s.setRuns)
@@ -265,16 +292,27 @@ function PlaybookCard({ pb }: { pb: Playbook }) {
               </span>
             ))}
           </div>
-          <div className="font-medium text-sm" style={{ color: '#e6edf3' }}>{pb.name}</div>
+          <div className="font-medium text-sm" style={{ color: '#e6edf3' }}>
+            <HighlightMatch text={pb.name} term={searchTerm} />
+          </div>
           <div className="text-xs mt-0.5 line-clamp-2" style={{ color: '#8b949e' }}>{pb.description}</div>
         </div>
       </div>
 
       {/* Footer row */}
       <div className="flex items-center justify-between pt-1" style={{ borderTop: '1px solid rgba(42,51,71,0.35)' }}>
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-mono" style={{ color: '#484f58' }}>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span
+            className="text-xs px-2 py-0.5 rounded-full font-mono"
+            style={{ background: 'rgba(45,212,191,0.07)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.18)' }}
+          >
             {pb.steps.length} steps
+          </span>
+          <span
+            className="text-xs px-2 py-0.5 rounded-full"
+            style={{ background: 'rgba(42,51,71,0.25)', color: '#484f58', border: '1px solid rgba(42,51,71,0.4)' }}
+          >
+            {estimatedTime(pb.steps.length)}
           </span>
           {lastRunLabel && (
             <span className="text-xs" style={{ color: '#484f58' }}>
@@ -343,6 +381,7 @@ export default function LibraryView() {
   const [importStatus,  setImportStatus]  = useState<string | null>(null)
   const [showVapt,      setShowVapt]      = useState(false)
   const [mitreFilter,   setMitreFilter]   = useState('')
+  const [searchTerm,    setSearchTerm]    = useState('')
 
   const filtered = (() => {
     let list = playbooks
@@ -354,6 +393,10 @@ export default function LibraryView() {
       list = list.filter(p => p.steps.some(s =>
         s.mitreTechniqueId?.toUpperCase().includes(q) || s.mitreTechniqueName?.toUpperCase().includes(q)
       ))
+    }
+    if (searchTerm.trim()) {
+      const q = searchTerm.trim().toLowerCase()
+      list = list.filter(p => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q))
     }
     return list
   })()
@@ -460,6 +503,17 @@ export default function LibraryView() {
           })}
         </div>
         <div className="flex-shrink-0 flex items-center gap-1.5">
+          <input
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            placeholder="Search playbooks…"
+            className="no-drag text-xs rounded px-2.5 py-1.5 w-36"
+            style={{
+              background: '#07080f',
+              border: '1px solid rgba(42,51,71,0.6)',
+              color: '#e6edf3',
+            }}
+          />
           <input
             value={mitreFilter}
             onChange={e => setMitreFilter(e.target.value)}
@@ -583,7 +637,7 @@ export default function LibraryView() {
           </div>
         ) : (
           <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
-            {filtered.map(pb => <PlaybookCard key={pb.id} pb={pb} />)}
+            {filtered.map(pb => <PlaybookCard key={pb.id} pb={pb} searchTerm={searchTerm} />)}
           </div>
         )}
       </div>

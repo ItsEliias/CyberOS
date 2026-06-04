@@ -314,16 +314,22 @@ export default function HistoryView() {
                   <div className="text-xs tabular-nums" style={{ color: 'var(--text-muted)' }}>{pct}%</div>
                 </div>
               </div>
-              {/* Mini progress track */}
-              <div className="rounded-full h-1 w-full overflow-hidden" style={{ background: 'rgba(42,51,71,0.45)' }}>
-                <div
-                  className="rounded-full h-1"
-                  style={{
-                    width: `${pct}%`,
-                    background: run.status === 'abandoned' ? 'var(--error)' : pct === 100 ? 'var(--success)' : 'var(--accent)',
-                    transition: 'width 600ms cubic-bezier(0.2,0.8,0.2,1)',
-                  }}
-                />
+              {/* Mini step completion bar with label */}
+              <div className="flex items-center gap-2 mt-1">
+                <div className="flex-1 rounded-full overflow-hidden" style={{ height: 5, background: 'rgba(42,51,71,0.45)' }}>
+                  <div
+                    className="rounded-full"
+                    style={{
+                      height: 5,
+                      width: `${pct}%`,
+                      background: run.status === 'abandoned' ? 'var(--error)' : pct === 100 ? 'var(--success)' : 'var(--accent)',
+                      transition: 'width 600ms cubic-bezier(0.2,0.8,0.2,1)',
+                    }}
+                  />
+                </div>
+                <span className="flex-shrink-0 text-xs font-mono tabular-nums" style={{ color: pct === 100 ? 'var(--success)' : 'var(--text-muted)', minWidth: 54, textAlign: 'right' }}>
+                  {done}/{total} steps
+                </span>
               </div>
             </button>
           )

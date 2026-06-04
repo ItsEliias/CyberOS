@@ -66,12 +66,26 @@ export default function StatusBar() {
             {activeRun.playbookName}
           </span>
           {(() => {
-            const done  = activeRun.steps.filter(s => s.status === 'done' || s.status === 'skipped').length
-            const total = activeRun.steps.length
+            const done      = activeRun.steps.filter(s => s.status === 'done' || s.status === 'skipped').length
+            const total     = activeRun.steps.length
+            const remaining = total - done
             return (
-              <span className="ml-1.5" style={{ color: '#484f58' }}>
-                ({done}/{total})
-              </span>
+              <>
+                <span className="ml-1.5" style={{ color: '#484f58' }}>
+                  ({done}/{total})
+                </span>
+                {remaining > 0 && (
+                  <>
+                    <span className="mx-1.5" style={{ color: '#2d3548' }}>·</span>
+                    <span
+                      className="text-xs px-1.5 py-0.5 rounded"
+                      style={{ background: 'rgba(210,153,34,0.10)', color: '#d29922', border: '1px solid rgba(210,153,34,0.20)' }}
+                    >
+                      {remaining} step{remaining !== 1 ? 's' : ''} remaining
+                    </span>
+                  </>
+                )}
+              </>
             )
           })()}
         </>
