@@ -64,6 +64,20 @@ export default function ReadingPane() {
   const [aiLoading, setAiLoading]   = useState(false)
   const [aiError, setAiError]       = useState<string | null>(null)
   const [readerMode, setReaderMode] = useState(!!settings.readerLightMode)
+
+  // Font size: 3 steps persisted in localStorage
+  type FontStep = 'sm' | 'base' | 'lg'
+  const FONT_SIZES: Record<FontStep, number> = { sm: 12, base: 14, lg: 16 }
+  const FONT_STEPS: FontStep[] = ['sm', 'base', 'lg']
+  const [fontStep, setFontStep] = useState<FontStep>(() => {
+    try { return (localStorage.getItem('sb-reading-font') as FontStep) || 'base' } catch { return 'base' }
+  })
+  function cycleFontSize(dir: 1 | -1) {
+    const idx = FONT_STEPS.indexOf(fontStep)
+    const next = FONT_STEPS[Math.max(0, Math.min(FONT_STEPS.length - 1, idx + dir))]
+    setFontStep(next)
+    try { localStorage.setItem('sb-reading-font', next) } catch {}
+  }
   const [cveData, setCveData]       = useState<Record<string, { cvss?: number; severity?: string }>>({})
   const [reconResult, setReconResult] = useState<{ targets: string[] } | null>(null)
   const [tagInput, setTagInput]     = useState('')
@@ -220,6 +234,35 @@ export default function ReadingPane() {
               {readMins} min read
             </span>
             <div className="ml-auto flex items-center gap-1.5">
+              {/* Font size controls */}
+              <button
+                onClick={() => cycleFontSize(-1)}
+                disabled={fontStep === 'sm'}
+                className="text-[10px] px-1.5 py-0.5 rounded border transition-colors"
+                style={{
+                  color: readerMode ? '#374151' : '#8b949e',
+                  borderColor: readerMode ? '#d1d5db' : 'rgba(42,51,71,0.6)',
+                  background: 'transparent',
+                  opacity: fontStep === 'sm' ? 0.35 : 1,
+                }}
+                title="Decrease font size"
+              >
+                A−
+              </button>
+              <button
+                onClick={() => cycleFontSize(1)}
+                disabled={fontStep === 'lg'}
+                className="text-[10px] px-1.5 py-0.5 rounded border transition-colors"
+                style={{
+                  color: readerMode ? '#374151' : '#8b949e',
+                  borderColor: readerMode ? '#d1d5db' : 'rgba(42,51,71,0.6)',
+                  background: 'transparent',
+                  opacity: fontStep === 'lg' ? 0.35 : 1,
+                }}
+                title="Increase font size"
+              >
+                A+
+              </button>
               <button
                 onClick={() => setReaderMode(v => !v)}
                 className="text-[10px] px-2 py-0.5 rounded border transition-colors"
@@ -295,6 +338,7 @@ export default function ReadingPane() {
           hostname={hostname}
           contentRef={contentRef}
           onScroll={handleScroll}
+          fontSize={FONT_SIZES[fontStep]}
         />
       </motion.div>
     </AnimatePresence>

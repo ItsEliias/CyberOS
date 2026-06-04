@@ -1,7 +1,75 @@
 // TrendsView — keyword frequency, source activity, score distribution, tag cloud
-import { useMemo, useEffect, useRef } from 'react'
+import { useMemo, useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
 import type { FeedItem } from '../../../shared/types'
+
+// ── 24h Activity Histogram ────────────────────────────────────────────────────
+
+function build24hBuckets(items: FeedItem[]): number[] {
+  const now = Date.now()
+  const buckets = Array<number>(24).fill(0)
+  items.forEach(item => {
+    const msAgo = now - new Date(item.publishedAt).getTime()
+    const hoursAgo = Math.floor(msAgo / 3_600_000)
+    if (hoursAgo >= 0 && hoursAgo < 24) buckets[23 - hoursAgo]++
+  })
+  return buckets
+}
+
+function ActivityHistogram({ items }: { items: FeedItem[] }) {
+  const buckets = useMemo(() => build24hBuckets(items), [items])
+  const max = Math.max(...buckets, 1)
+  const [animated, setAnimated] = useState(false)
+
+  useEffect(() => {
+    const t = requestAnimationFrame(() => setAnimated(true))
+    return () => cancelAnimationFrame(t)
+  }, [])
+
+  const now = new Date()
+  const hourLabels = Array.from({ length: 24 }, (_, i) => {
+    const h = (now.getHours() - 23 + i + 24) % 24
+    return i % 6 === 0 ? `${h.toString().padStart(2, '0')}h` : ''
+  })
+
+  return (
+    <div className="col-span-2 p-5 border border-border/40 rounded bg-panel/20">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-xs font-semibold text-text">24h Article Volume</h3>
+        <span className="text-[9px] font-mono text-muted/40">{items.length} items indexed</span>
+      </div>
+      <div className="flex items-end gap-[2px]" style={{ height: 56 }}>
+        {buckets.map((count, i) => {
+          const pct = animated ? (count / max) * 100 : 0
+          const isRecent = i >= 20
+          return (
+            <div
+              key={i}
+              className="flex-1 rounded-sm"
+              title={`${hourLabels[i] || ''} — ${count} items`}
+              style={{
+                height: `${Math.max(pct, count > 0 ? 4 : 0)}%`,
+                minHeight: count > 0 ? 2 : 0,
+                background: isRecent
+                  ? 'linear-gradient(180deg, #ff6b6b, rgba(255,107,107,0.5))'
+                  : 'linear-gradient(180deg, rgba(74,158,255,0.7), rgba(74,158,255,0.3))',
+                transition: `height 0.5s cubic-bezier(0.2,0.8,0.2,1) ${i * 15}ms`,
+                alignSelf: 'flex-end',
+              }}
+            />
+          )
+        })}
+      </div>
+      <div className="flex items-center mt-1" style={{ height: 14 }}>
+        {hourLabels.map((label, i) => (
+          <div key={i} className="flex-1 text-[8px] font-mono" style={{ color: 'rgba(255,255,255,0.2)', textAlign: 'center' }}>
+            {label}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 // ── Sparkline ────────────────────────────────────────────────────────────────
 
@@ -398,6 +466,7 @@ export default function TrendsView() {
       <p className="text-xs text-muted/50 mb-6">Intelligence patterns across your feed.</p>
 
       <div className="grid grid-cols-2 gap-4">
+        <ActivityHistogram items={items} />
         <div className="col-span-2"><KeywordFrequency items={items} /></div>
         <SourceActivity items={items} />
         <ScoreDistribution items={items} />

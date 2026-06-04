@@ -53,12 +53,13 @@ interface ContentProps {
   hostname: string
   contentRef: React.RefObject<HTMLDivElement>
   onScroll: () => void
+  fontSize?: number
 }
 
 export function ReadingPaneBody({
   item, readerMode, aiLoading, aiError,
   tagInput, setTagInput, onAiSummarise, onAddBookmarkTag,
-  hostname, contentRef, onScroll,
+  hostname, contentRef, onScroll, fontSize = 14,
 }: ContentProps) {
   const bookmarks    = useStore(s => s.bookmarks)
   const bookmarkTags = useStore(s => s.bookmarkTags)
@@ -66,7 +67,7 @@ export function ReadingPaneBody({
   const bmTags       = bookmarkTags[item.id] ?? []
 
   return (
-    <div ref={contentRef} onScroll={onScroll} className="flex-1 overflow-y-auto px-5 py-4 reading-pane-content">
+    <div ref={contentRef} onScroll={onScroll} className="flex-1 overflow-y-auto px-5 py-4 reading-pane-content" style={{ fontSize }}>
       {/* Bookmark tags */}
       {isBookmarked && (
         <div className="mb-4 p-3 rounded border" style={{ borderColor: readerMode ? '#e5e7eb' : 'rgba(42,51,71,0.5)', background: readerMode ? '#f9fafb' : 'rgba(22,27,39,0.3)' }}>

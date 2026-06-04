@@ -33,12 +33,14 @@ function applyFilter(items: FeedItem[], filter: string): FeedItem[] {
 
 export default function FeedView() {
   const items        = useStore(s => s.items)
+  const patchItem    = useStore(s => s.patchItem)
   const activeFilter = useStore(s => s.activeFilter)
   const selectedId   = useStore(s => s.selectedId)
   const refreshing   = useStore(s => s.refreshing)
   const [digestItems, setDigestItems] = useState<FeedItem[]>([])
   const [showDigest, setShowDigest]   = useState(false)
   const [newCount, setNewCount]       = useState(0)
+  const [markAllFlash, setMarkAllFlash] = useState(false)
   const prevItemCount = useRef(items.length)
   const feedListRef   = useRef<HTMLDivElement>(null)
 
@@ -79,6 +81,19 @@ export default function FeedView() {
     [items, activeFilter]
   )
 
+  function handleMarkAllRead() {
+    const unread = filtered.filter(i => !i.read)
+    if (unread.length === 0) return
+    setMarkAllFlash(true)
+    unread.forEach((item, idx) => {
+      setTimeout(() => {
+        window.electronAPI.markRead(item.id).catch(() => {})
+        patchItem(item.id, { read: true })
+      }, idx * 40)
+    })
+    setTimeout(() => setMarkAllFlash(false), unread.length * 40 + 600)
+  }
+
   return (
     <div className="flex-1 flex min-w-0">
       {/* Feed column */}
@@ -86,18 +101,40 @@ export default function FeedView() {
         {/* Column header with refresh indicator */}
         <div className="flex items-center justify-between px-3 pt-2 pb-1" style={{ minHeight: '28px' }}>
           <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.2)' }}>Feed</span>
-          {refreshing && (
-            <svg
-              className="refresh-glow-spin w-3.5 h-3.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="#ff6b6b"
-              strokeWidth={2.2}
-              style={{ color: '#ff6b6b' }}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          )}
+          <div className="flex items-center gap-2">
+            {filtered.filter(i => !i.read).length > 0 && (
+              <button
+                onClick={handleMarkAllRead}
+                className="text-[9px] px-1.5 py-0.5 rounded transition-colors flex items-center gap-1"
+                style={{
+                  background: markAllFlash ? 'rgba(63,185,80,0.12)' : 'transparent',
+                  border: `1px solid ${markAllFlash ? 'rgba(63,185,80,0.3)' : 'rgba(42,51,71,0.4)'}`,
+                  color: markAllFlash ? '#3fb950' : 'rgba(255,255,255,0.25)',
+                  transition: 'all 0.2s',
+                }}
+                title="Mark all visible items as read"
+              >
+                {markAllFlash ? (
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                ) : (
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                )}
+                {markAllFlash ? 'Done' : 'Mark all read'}
+              </button>
+            )}
+            {refreshing && (
+              <svg
+                className="refresh-glow-spin w-3.5 h-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="#ff6b6b"
+                strokeWidth={2.2}
+                style={{ color: '#ff6b6b' }}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            )}
+          </div>
         </div>
         <FeedFilterBar />
 

@@ -4,6 +4,52 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../../store'
 import type { FeedItem as FeedItemType } from '../../../shared/types'
 
+// ── Source Trust Badge ────────────────────────────────────────────────────────
+
+type TrustLevel = 'verified' | 'community' | 'unknown'
+
+const VERIFIED_DOMAINS = [
+  'cve.org','nvd.nist.gov','cisa.gov','cert.org','us-cert.gov','github.com',
+  'microsoft.com','google.com','apple.com','mozilla.org','ubuntu.com','debian.org',
+  'redhat.com','exploit-db.com','vulhub.org.cn','kb.cert.org','securityfocus.com',
+  'krebs','bleepingcomputer','thehackernews','threatpost','darkreading','securityweek',
+]
+const COMMUNITY_DOMAINS = [
+  'reddit.com','medium.com','hackernews','news.ycombinator','twitter','x.com',
+  'infosec.exchange','mastodon','discord','telegram','substack',
+]
+
+function getSourceTrust(name: string): TrustLevel {
+  const lower = name.toLowerCase()
+  if (VERIFIED_DOMAINS.some(d => lower.includes(d))) return 'verified'
+  if (COMMUNITY_DOMAINS.some(d => lower.includes(d))) return 'community'
+  return 'unknown'
+}
+
+function TrustBadge({ sourceName }: { sourceName: string }) {
+  const trust = getSourceTrust(sourceName)
+  const config = {
+    verified:  { color: '#3fb950', title: 'Verified source', path: 'M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7L12 2z M9 12l2 2 4-4' },
+    community: { color: '#d29922', title: 'Community source', path: 'M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7L12 2z' },
+    unknown:   { color: '#484f58', title: 'Unknown source',   path: 'M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7L12 2z' },
+  }[trust]
+  return (
+    <svg
+      width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={config.color}
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      style={{ flexShrink: 0, opacity: trust === 'unknown' ? 0.4 : 1 }}
+      title={config.title}
+    >
+      <path d={config.path} />
+      {trust === 'verified' && (
+        <>
+          <polyline points="9 12 11 14 15 10" strokeWidth="2.2" />
+        </>
+      )}
+    </svg>
+  )
+}
+
 // Stagger delay cap: first 10 items stagger, rest appear instantly
 const MAX_STAGGER_IDX = 10
 
@@ -137,9 +183,10 @@ export default function FeedItemCard({ item, index = 0 }: { item: FeedItemType; 
           )}
           <SourceAvatar name={item.sourceName} color={sourceColor} />
           <span
-            className="text-[9px] font-bold uppercase px-1.5 py-[2px] rounded flex-shrink-0"
+            className="text-[9px] font-bold uppercase px-1.5 py-[2px] rounded flex-shrink-0 inline-flex items-center gap-1"
             style={{ background: `${sourceColor}18`, color: sourceColor, border: `1px solid ${sourceColor}33` }}
           >
+            <TrustBadge sourceName={item.sourceName} />
             {item.sourceName}
           </span>
           <span
