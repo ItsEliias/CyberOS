@@ -26,6 +26,7 @@ export default function EditorHeader({ dirty, onSave, onBack, onExportMd, onExpo
   const [showVariables, setShowVariables] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [versionLabel, setVersionLabel] = useState('');
+  const [versionBadgeHovered, setVersionBadgeHovered] = useState(false);
 
   if (!activeReport) return null;
 
@@ -118,6 +119,8 @@ export default function EditorHeader({ dirty, onSave, onBack, onExportMd, onExpo
                 )}
                 {activeReport.title}
               </div>
+              {/* Version badge with hover tooltip */}
+              <VersionBadge count={versions.length} />
               {dirty && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                   <div style={{
@@ -344,5 +347,41 @@ function MenuItem({ children, onClick }: { children: React.ReactNode; onClick: (
     >
       {children}
     </button>
+  );
+}
+
+// ── Version badge with hover tooltip ─────────────────────────────────────────
+function VersionBadge({ count }: { count: number }) {
+  const [hovered, setHovered] = useState(false);
+  const vNum = count > 0 ? count : 1;
+  return (
+    <span
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{ position: 'relative', flexShrink: 0 }}
+    >
+      <span style={{
+        fontSize: 9, fontWeight: 700, padding: '2px 5px', borderRadius: 4,
+        background: 'rgba(74,158,255,0.12)', color: '#4a9eff',
+        border: '1px solid rgba(74,158,255,0.25)',
+        letterSpacing: '0.02em', cursor: 'default',
+        userSelect: 'none',
+      }}>
+        V{vNum}
+      </span>
+      {hovered && (
+        <span style={{
+          position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
+          marginBottom: 5, whiteSpace: 'nowrap',
+          background: 'rgba(13,14,24,0.97)', border: '1px solid rgba(42,51,71,0.75)',
+          borderRadius: 5, padding: '5px 8px', fontSize: 11,
+          color: 'var(--text-secondary)', zIndex: 50,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+          pointerEvents: 'none',
+        }}>
+          {count === 0 ? 'No saved versions' : `${count} version${count !== 1 ? 's' : ''} saved`}
+        </span>
+      )}
+    </span>
   );
 }

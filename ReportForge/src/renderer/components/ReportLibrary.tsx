@@ -66,7 +66,8 @@ export default function ReportLibrary({ onNew, onOpen, onDelete, onDuplicate }: 
       return (
         r.title.toLowerCase().includes(q) ||
         r.targetName.toLowerCase().includes(q) ||
-        r.platform.toLowerCase().includes(q)
+        r.platform.toLowerCase().includes(q) ||
+        (r.operator ?? '').toLowerCase().includes(q)
       );
     })
     .slice()
@@ -90,8 +91,8 @@ export default function ReportLibrary({ onNew, onOpen, onDelete, onDuplicate }: 
       >
         <div style={{ width: 72, flexShrink: 0 }} />
 
-        {/* Search input (no-drag) */}
-        <div className="flex items-center gap-2 flex-1 no-drag" style={{ maxWidth: 340 }}>
+        {/* Search input with clear button (no-drag) */}
+        <div className="flex items-center gap-2 flex-1 no-drag" style={{ maxWidth: 340, position: 'relative' }}>
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{ color: '#484f58', flexShrink: 0 }}>
             <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" strokeWidth="1.5" />
             <line x1="10.5" y1="10.5" x2="14" y2="14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -99,9 +100,25 @@ export default function ReportLibrary({ onNew, onOpen, onDelete, onDuplicate }: 
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search reports…"
-            style={{ background: 'transparent', border: 'none', padding: 0, fontSize: 13, flex: 1 }}
+            placeholder="Search by title, operator, or target…"
+            style={{ background: 'transparent', border: 'none', padding: 0, fontSize: 13, flex: 1, paddingRight: search ? 20 : 0 }}
           />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              title="Clear search"
+              style={{
+                position: 'absolute', right: 0,
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: '#484f58', fontSize: 14, lineHeight: 1, padding: '0 2px',
+                transition: 'color 0.15s',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#484f58'; }}
+            >
+              ×
+            </button>
+          )}
         </div>
 
         <div className="flex-1" />

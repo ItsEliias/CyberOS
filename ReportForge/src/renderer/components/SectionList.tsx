@@ -256,6 +256,26 @@ function SectionItem({ section, isActive, onClick, onToggleVisible }: SectionIte
           position: 'relative',
         }}
       >
+        {/* Completion indicator dot: green=has content, amber=placeholder, gray=empty */}
+        <span
+          title={
+            !section.content || section.content.trim().length === 0
+              ? 'Empty section'
+              : section.content.trim().length < 30
+                ? 'Template placeholder'
+                : 'Has content'
+          }
+          style={{
+            width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+            background: !section.content || section.content.trim().length === 0
+              ? '#484f58'
+              : section.content.trim().length < 30
+                ? '#d29922'
+                : '#3fb950',
+            transition: 'background 0.2s',
+          }}
+        />
+
         {/* Drag handle — visible on row hover */}
         <span
           onPointerDown={e => { e.stopPropagation(); setDragging(true); controls.start(e); }}
@@ -272,6 +292,27 @@ function SectionItem({ section, isActive, onClick, onToggleVisible }: SectionIte
         >
           ⠿
         </span>
+
+        {/* Completion dot — green=has content, amber=placeholder, gray=empty */}
+        {(() => {
+          const content = section.content?.trim() ?? '';
+          const dotColor = content.length === 0
+            ? '#484f58'
+            : content.length < 20
+              ? '#d29922'
+              : '#3fb950';
+          const dotTitle = content.length === 0
+            ? 'Empty section'
+            : content.length < 20
+              ? 'Placeholder content'
+              : 'Has content';
+          return (
+            <span
+              title={dotTitle}
+              style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, flexShrink: 0, transition: 'background 0.2s' }}
+            />
+          );
+        })()}
 
         {/* Type indicator */}
         {section.type && section.type !== 'body' && (
