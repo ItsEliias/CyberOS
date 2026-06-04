@@ -62,23 +62,25 @@ export default function MiniMap({ nodes, transform, canvasW, canvasH, onPan }: P
       onClick={handleClick}
       style={{
         position: 'absolute', bottom: 16, right: 16,
-        background: 'rgba(15,17,23,0.92)', border: '1px solid rgba(42,51,71,0.8)',
-        borderRadius: 6, cursor: 'crosshair', zIndex: 20,
-        boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+        background: 'rgba(13,14,24,0.92)',
+        border: '1px solid rgba(255,255,255,0.06)',
+        borderRadius: 8, cursor: 'crosshair', zIndex: 20,
+        boxShadow: '0 4px 16px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.4)',
+        backdropFilter: 'blur(8px)',
       }}
     >
       {nodes.map(n => {
         const [nx, ny] = toMM(n.x, n.y)
-        return <circle key={n.id} cx={nx} cy={ny} r={2} fill="rgba(139,148,158,0.7)" />
+        return <circle key={n.id} cx={nx} cy={ny} r={2} fill="rgba(139,148,158,0.6)" />
       })}
       <rect
         x={r1x} y={r1y}
         width={rectW} height={rectH}
-        fill="rgba(210,153,34,0.08)"
-        stroke="rgba(210,153,34,0.6)"
+        fill="rgba(255,140,66,0.07)"
+        stroke="rgba(255,140,66,0.55)"
         strokeWidth={1}
       />
-      <text x={4} y={H - 4} fontSize={8} fill="rgba(139,148,158,0.5)">mini-map</text>
+      <text x={4} y={H - 4} fontSize={8} fill="rgba(139,148,158,0.4)" fontFamily="var(--font-mono)">mini-map</text>
     </svg>
   )
 }
