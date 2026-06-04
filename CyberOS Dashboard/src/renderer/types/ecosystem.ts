@@ -233,7 +233,7 @@ export interface DashboardSettings {
 
 // ─── Navigation ──────────────────────────────────────────────────────────────
 
-export type ViewId = 'dashboard' | 'profile' | 'ecosystem' | 'settings' | 'apps'
+export type ViewId = 'dashboard' | 'profile' | 'ecosystem' | 'settings' | 'apps' | 'design-system'
 
 // ─── Live Stats ───────────────────────────────────────────────────────────────
 

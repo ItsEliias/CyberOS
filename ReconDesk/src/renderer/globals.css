@@ -1,3 +1,11 @@
+@import '@fontsource/geist-sans/400.css';
+@import '@fontsource/geist-sans/500.css';
+@import '@fontsource/geist-sans/600.css';
+@import '@fontsource/geist-sans/700.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+@import '@fontsource/jetbrains-mono/600.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,18 +14,36 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+:root {
+  --surface-0: #07080f; --surface-1: #0d0e18; --surface-2: #131525; --surface-3: #191c32;
+  --surface-glass: rgba(13,14,24,0.72); --surface-glass-strong: rgba(10,11,20,0.88);
+  --elevation-1: 0 1px 3px rgba(0,0,0,.5), 0 1px 2px rgba(0,0,0,.35);
+  --elevation-2: 0 4px 16px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.4);
+  --elevation-3: 0 12px 40px rgba(0,0,0,.6), 0 4px 12px rgba(0,0,0,.45);
+  --elevation-4: 0 24px 64px rgba(0,0,0,.65), 0 8px 24px rgba(0,0,0,.5);
+  --border-subtle: rgba(42,51,71,0.35); --border-default: rgba(42,51,71,0.75);
+  --border-strong: rgba(61,79,107,0.9); --border-glass: rgba(255,255,255,0.055);
+  --text-primary: #e6edf3; --text-secondary: #8b949e; --text-muted: #484f58;
+  --sev-critical: #f85149; --sev-high: #ff8c42; --sev-medium: #d29922;
+  --sev-low: #4a9eff; --sev-info: #8b949e;
+  --state-online: #3fb950; --state-offline: #484f58; --state-blocked: #f85149; --state-pending: #d29922;
+  --accent: #d29922; --accent-rgb: 210,153,34;
+  --accent-tint: rgba(210,153,34,0.08); --accent-tint2: rgba(210,153,34,0.15);
+  --accent-glow: rgba(210,153,34,0.28); --accent-border: rgba(210,153,34,0.30);
+  --font-display: 'Geist Sans', 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --radius-xs: 4px; --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px; --radius-xl: 20px;
+  --motion-fast: 150ms; --motion-base: 250ms; --motion-slow: 400ms;
+  --ease: cubic-bezier(0.2,0.8,0.2,1); --spring: cubic-bezier(0.34,1.56,0.64,1);
+}
+
 html, body, #root {
-  height: 100%;
-  min-height: 100vh;
-  overflow: hidden;
-  background-color: #0a0a0f !important;
-  background: radial-gradient(ellipse at 20% 0%, rgba(210, 153, 34, 0.04) 0%, #0a0a0f 50%) !important;
-  color: #e2e8f0;
-  font-family: 'Inter', 'SF Pro Display', system-ui, sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
+  height: 100%; overflow: hidden;
+  background: radial-gradient(ellipse at 18% 0%, rgba(210,153,34,0.04) 0%, transparent 55%), #07080f;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 14px; line-height: 1.6;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ─── Selection ───────────────────────────────────────────────────────────── */
@@ -39,13 +65,8 @@ input, textarea, select, button {
 
 /* ─── Drag Regions (macOS frameless) ──────────────────────────────────────── */
 
-.drag-region {
-  -webkit-app-region: drag;
-}
-
-.no-drag {
-  -webkit-app-region: no-drag;
-}
+.drag-region { -webkit-app-region: drag; }
+.no-drag { -webkit-app-region: no-drag; }
 
 /* ─── Scrollbars ──────────────────────────────────────────────────────────── */
 
@@ -77,9 +98,7 @@ input, textarea, select, button {
 
 /* ─── Tabular Nums ────────────────────────────────────────────────────────── */
 
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
-}
+.tabular-nums { font-variant-numeric: tabular-nums; }
 
 /* ─── Transitions ─────────────────────────────────────────────────────────── */
 
@@ -90,30 +109,43 @@ button, a, input, select {
 /* ─── Glassmorphism Card ──────────────────────────────────────────────────── */
 
 .glass-card {
-  background: rgba(22, 27, 39, 0.75);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(42, 51, 71, 0.6);
-  border-radius: 8px;
+  background: var(--surface-glass); backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px); border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  box-shadow: var(--elevation-2), inset 0 1px 0 rgba(255,255,255,0.04), inset 0 -1px 0 rgba(0,0,0,0.2);
+}
+
+/* ─── Premium Panel Card ──────────────────────────────────────────────────── */
+
+.panel-card {
+  background: #0d0e18;
+  border: 1px solid rgba(42,51,71,0.6);
+  border-radius: var(--radius-md);
+  box-shadow: var(--elevation-1),
+              inset 0 1px 0 rgba(255,255,255,0.025),
+              inset 0 -1px 0 rgba(0,0,0,0.15);
+  transition: border-color var(--motion-fast) var(--ease),
+              box-shadow var(--motion-fast) var(--ease),
+              background var(--motion-fast) var(--ease);
+}
+
+.panel-card:hover {
+  border-color: rgba(42,51,71,0.9);
+  box-shadow: var(--elevation-2),
+              inset 0 1px 0 rgba(255,255,255,0.035),
+              inset 0 -1px 0 rgba(0,0,0,0.2),
+              0 0 0 1px rgba(210,153,34,0.06);
 }
 
 /* ─── Status Pulse Glow Animation ─────────────────────────────────────────── */
 
 @keyframes statusPulse {
-  0% {
-    box-shadow: 0 0 0 0 var(--pulse-color, rgba(210, 153, 34, 0.4));
-  }
-  70% {
-    box-shadow: 0 0 0 6px var(--pulse-color-fade, rgba(210, 153, 34, 0));
-  }
-  100% {
-    box-shadow: 0 0 0 0 var(--pulse-color-fade, rgba(210, 153, 34, 0));
-  }
+  0% { box-shadow: 0 0 0 0 rgba(var(--pulse-rgb, 63,185,80), 0.5); }
+  70% { box-shadow: 0 0 0 5px rgba(var(--pulse-rgb, 63,185,80), 0); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--pulse-rgb, 63,185,80), 0); }
 }
 
-.status-dot-pulse {
-  animation: statusPulse 2s ease-out infinite;
-}
+.status-dot-pulse { animation: statusPulse 2s ease-out infinite; }
 
 /* ─── Metric Glow ─────────────────────────────────────────────────────────── */
 
@@ -126,3 +158,178 @@ button, a, input, select {
 .accent-border-left {
   border-left: 3px solid var(--accent-color, #d29922);
 }
+
+/* ─── Skeleton Shimmer ────────────────────────────────────────────────────── */
+
+@keyframes skeletonShimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(42,51,71,0.25) 25%,
+    rgba(42,51,71,0.45) 37%,
+    rgba(42,51,71,0.25) 63%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.6s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Animated Progress Bar ───────────────────────────────────────────────── */
+
+@keyframes progressFill {
+  from { width: 0%; }
+}
+
+.progress-bar-fill {
+  animation: progressFill 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+/* ─── Kanban card hover lift ──────────────────────────────────────────────── */
+
+.kanban-card {
+  transition: transform 150ms cubic-bezier(0.2,0.8,0.2,1),
+              box-shadow 150ms cubic-bezier(0.2,0.8,0.2,1),
+              border-color 150ms ease,
+              background 150ms ease;
+}
+
+.kanban-card:hover {
+  transform: translateY(-2px);
+  background: rgba(13,14,24,0.95);
+  border-color: rgba(61,79,107,0.7);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5),
+              0 0 0 1px rgba(210,153,34,0.15),
+              inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+/* ─── Tab pill active indicator ───────────────────────────────────────────── */
+
+.tab-pill-active {
+  background: rgba(210,153,34,0.10);
+  border-radius: 6px;
+}
+
+/* ─── Sidebar row hover slide ─────────────────────────────────────────────── */
+
+.sidebar-row {
+  transition: background 150ms ease, transform 120ms cubic-bezier(0.2,0.8,0.2,1), border-color 150ms ease;
+}
+
+.sidebar-row:hover:not(.sidebar-row-active) {
+  transform: translateX(2px);
+}
+
+/* ─── Glow ring on active target ──────────────────────────────────────────── */
+
+.sidebar-row-active {
+  box-shadow: inset 3px 0 0 #d29922, inset 0 0 16px rgba(210,153,34,0.06);
+}
+
+/* ─── Tab content transition ──────────────────────────────────────────────── */
+
+@keyframes tabSlideIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+.tab-content-enter {
+  animation: tabSlideIn 0.2s cubic-bezier(0.2,0.8,0.2,1) forwards;
+}
+
+/* ─── Table row alternating ───────────────────────────────────────────────── */
+
+.table-row-alt:nth-child(odd) { background: rgba(13,14,24,0.55); }
+.table-row-alt:nth-child(even) { background: rgba(7,8,15,0.35); }
+.table-row-alt:hover { background: rgba(42,51,71,0.22) !important; }
+
+/* ─── Table row left-accent sweep on hover ────────────────────────────────── */
+
+@keyframes accentSweep {
+  from { transform: scaleY(0); opacity: 0; }
+  to   { transform: scaleY(1); opacity: 1; }
+}
+
+.table-row-accent {
+  position: relative;
+}
+
+.table-row-accent::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent);
+  transform: scaleY(0);
+  transform-origin: center;
+  transition: transform 150ms cubic-bezier(0.2,0.8,0.2,1), opacity 150ms ease;
+  opacity: 0;
+}
+
+.table-row-accent:hover::before {
+  transform: scaleY(1);
+  opacity: 1;
+  animation: accentSweep 150ms cubic-bezier(0.2,0.8,0.2,1) forwards;
+}
+
+/* ─── Progress bar with label ─────────────────────────────────────────────── */
+
+.progress-with-label {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progress-with-label .progress-track {
+  flex: 1;
+  border-radius: 4px;
+  overflow: hidden;
+  background: rgba(42,51,71,0.40);
+}
+
+.progress-with-label .progress-pct {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: #8b949e;
+  min-width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ─── Form field premium ──────────────────────────────────────────────────── */
+
+.field-premium {
+  background: rgba(7,8,15,0.8);
+  border: 1px solid rgba(42,51,71,0.65);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  transition: border-color var(--motion-fast) var(--ease),
+              box-shadow var(--motion-fast) var(--ease),
+              background var(--motion-fast) var(--ease);
+}
+
+.field-premium:focus,
+.field-premium:focus-within {
+  outline: none;
+  border-color: rgba(210,153,34,0.55);
+  background: rgba(10,11,20,0.9);
+  box-shadow: 0 0 0 3px rgba(210,153,34,0.08), inset 0 1px 0 rgba(255,255,255,0.02);
+}
+
+.field-premium::placeholder { color: var(--text-muted); }
+
+/* ─── Typography scale utilities ──────────────────────────────────────────── */
+
+.heading-xl  { font-size: 20px; font-weight: 700; line-height: 1.25; letter-spacing: -0.3px; }
+.heading-lg  { font-size: 16px; font-weight: 600; line-height: 1.35; letter-spacing: -0.2px; }
+.heading-md  { font-size: 13px; font-weight: 600; line-height: 1.4;  letter-spacing: -0.1px; }
+.heading-sm  { font-size: 11px; font-weight: 600; line-height: 1.45; letter-spacing: 0.02em; }
+.label-caps  { font-size: 10px; font-weight: 600; line-height: 1.5;  letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+.body-sm     { font-size: 12px; font-weight: 400; line-height: 1.6; }
+.body-xs     { font-size: 11px; font-weight: 400; line-height: 1.6; }

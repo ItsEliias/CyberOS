@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
 import { load, computeStats, getAchievementStatus, formatDuration, type ProgressStats } from '../lib/progress';
 import type { Session } from '@shared/types';
@@ -89,6 +89,11 @@ export default function Progress() {
   const [htbProfile, setHtbProfile] = useState<HtbProfile | null>(null);
   const [htbLoading, setHtbLoading] = useState(false);
   const [htbError, setHtbError] = useState('');
+  const [xpBarWidth, setXpBarWidth] = useState(0);
+  const xpAnimated = useRef(false);
+  const [sparkles, setSparkles] = useState<Array<{ id: number; tx: string; ty: string; color: string; left: string }>>([]);
+  const prevLevelRef = useRef<number | null>(null);
+  let sparkleId = useRef(0);
 
   useEffect(() => {
     if (progressData) {
@@ -132,6 +137,39 @@ export default function Progress() {
   // XP
   const totalXP = computeXP(sessions);
   const levelInfo = computeLevel(totalXP);
+
+  // Animate XP bar in when viewing the XP tab
+  useEffect(() => {
+    if (activeTab === 'xp' && !xpAnimated.current) {
+      xpAnimated.current = true;
+      setXpBarWidth(0);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setXpBarWidth(levelInfo.pct));
+      });
+    }
+  }, [activeTab, levelInfo.pct]);
+
+  // Sparkle burst on level-up
+  useEffect(() => {
+    if (prevLevelRef.current !== null && levelInfo.level > prevLevelRef.current) {
+      const COLORS = ['#b44fff','#cb80ff','#3fb950','#4a9eff','#d29922','#ff7a00'];
+      const particles = Array.from({ length: 14 }, () => {
+        const angle = Math.random() * 360;
+        const dist = 24 + Math.random() * 36;
+        const rad = (angle * Math.PI) / 180;
+        return {
+          id: ++sparkleId.current,
+          tx: `${Math.round(Math.cos(rad) * dist)}px`,
+          ty: `${Math.round(Math.sin(rad) * dist - 20)}px`,
+          color: COLORS[Math.floor(Math.random() * COLORS.length)],
+          left: `${20 + Math.random() * 60}%`,
+        };
+      });
+      setSparkles(particles);
+      setTimeout(() => setSparkles([]), 950);
+    }
+    prevLevelRef.current = levelInfo.level;
+  }, [levelInfo.level]);
   const xpAchievements = checkXpAchievements(sessions);
 
   // Category bars
@@ -298,30 +336,180 @@ export default function Progress() {
       {activeTab === 'xp' && (
         <div className="space-y-4">
           {/* Level card */}
-          <div className="card">
+          <div className="card" style={{ border: '1px solid rgba(180,79,255,0.2)', background: 'linear-gradient(135deg, rgba(180,79,255,0.07) 0%, rgba(13,14,24,0.9) 100%)', position: 'relative', overflow: 'hidden' }}>
+            {/* CSS-only sparkle burst on level-up */}
+            {sparkles.map(p => (
+              <span
+                key={p.id}
+                className="sparkle-particle"
+                style={{
+                  background: p.color,
+                  left: p.left,
+                  bottom: '40%',
+                  '--tx': p.tx,
+                  '--ty': p.ty,
+                  boxShadow: `0 0 4px ${p.color}`,
+                } as React.CSSProperties}
+              />
+            ))}
             <div className="flex items-center gap-3 mb-3">
               <div
                 className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0"
-                style={{ background: 'var(--accent-dim)', color: 'var(--accent)', border: '2px solid var(--accent)' }}
+                style={{
+                  background: 'radial-gradient(circle, rgba(180,79,255,0.25) 0%, rgba(180,79,255,0.08) 100%)',
+                  color: 'var(--accent)',
+                  border: '2px solid rgba(180,79,255,0.5)',
+                  boxShadow: '0 0 16px rgba(180,79,255,0.35)',
+                  textShadow: '0 0 10px rgba(180,79,255,0.6)',
+                }}
               >
                 {levelInfo.level}
               </div>
               <div className="flex-1">
                 <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Level {levelInfo.level}</div>
-                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  {levelInfo.currentXp} XP
-                  {levelInfo.level < XP_THRESHOLDS.length && ` / ${levelInfo.nextXp} XP`}
+                <div className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
+                  {levelInfo.currentXp.toLocaleString()} XP
+                  {levelInfo.level < XP_THRESHOLDS.length && (
+                    <span style={{ opacity: 0.6 }}> / {levelInfo.nextXp.toLocaleString()} XP</span>
+                  )}
+                </div>
+              </div>
+              <span
+                className="text-[10px] px-2 py-0.5 rounded-full font-mono"
+                style={{ background: 'rgba(180,79,255,0.12)', color: 'var(--accent)', border: '1px solid rgba(180,79,255,0.25)' }}
+              >
+                {xpBarWidth}%
+              </span>
+            </div>
+            {/* XP bar with milestone ticks */}
+            <div className="relative" style={{ paddingBottom: '18px' }}>
+              {/* Level tick marks above bar */}
+              {XP_THRESHOLDS.slice(1).map((xpThreshold, idx) => {
+                const base = XP_THRESHOLDS[Math.max(0, idx)];
+                const next = XP_THRESHOLDS[Math.min(idx + 1, XP_THRESHOLDS.length - 1)];
+                const levelNum = idx + 2;
+                // Position as % within the full 0→maxXP range
+                const maxXP = XP_THRESHOLDS[XP_THRESHOLDS.length - 1];
+                const pctPos = (xpThreshold / maxXP) * 100;
+                const isPassed = levelInfo.currentXp >= xpThreshold;
+                if (pctPos >= 100) return null;
+                return (
+                  <div
+                    key={xpThreshold}
+                    className="absolute flex flex-col items-center"
+                    style={{ left: `${pctPos}%`, bottom: 0, transform: 'translateX(-50%)', pointerEvents: 'none' }}
+                    title={`Level ${levelNum} — ${xpThreshold.toLocaleString()} XP`}
+                  >
+                    <span
+                      className="text-[9px] font-mono mb-0.5"
+                      style={{ color: isPassed ? '#b44fff' : '#484f58', lineHeight: 1 }}
+                    >
+                      {levelNum}
+                    </span>
+                    <span
+                      style={{
+                        display: 'block',
+                        width: '1px',
+                        height: '6px',
+                        background: isPassed ? 'rgba(180,79,255,0.6)' : 'rgba(42,51,71,0.7)',
+                      }}
+                    />
+                  </div>
+                );
+              })}
+              <div
+                className="h-2.5 rounded-full overflow-hidden relative group/xpbar cursor-help"
+                style={{ background: 'rgba(42,51,71,0.4)' }}
+                title={`${levelInfo.currentXp.toLocaleString()} / ${levelInfo.nextXp.toLocaleString()} XP to next level`}
+              >
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${xpBarWidth}%`,
+                    background: 'linear-gradient(90deg, #b44fff, #cb80ff)',
+                    boxShadow: '0 0 10px rgba(180,79,255,0.5)',
+                    transition: 'width 1s cubic-bezier(0.2,0.8,0.2,1)',
+                  }}
+                />
+                {/* Tooltip */}
+                <div
+                  className="absolute bottom-full left-1/2 mb-2 pointer-events-none opacity-0 group-hover/xpbar:opacity-100 transition-opacity duration-150 whitespace-nowrap z-10"
+                  style={{ transform: 'translateX(-50%)' }}
+                >
+                  <div
+                    className="text-[11px] font-mono px-2 py-1 rounded"
+                    style={{
+                      background: 'rgba(7,8,15,0.96)',
+                      border: '1px solid rgba(180,79,255,0.35)',
+                      color: '#cb80ff',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
+                    }}
+                  >
+                    {levelInfo.currentXp.toLocaleString()} / {levelInfo.nextXp.toLocaleString()} XP to next level
+                  </div>
+                  <div
+                    style={{
+                      position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
+                      width: 0, height: 0,
+                      borderLeft: '5px solid transparent', borderRight: '5px solid transparent',
+                      borderTop: '5px solid rgba(180,79,255,0.35)',
+                    }}
+                  />
                 </div>
               </div>
             </div>
-            <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--bg3)' }}>
-              <div
-                className="h-full rounded-full transition-all"
-                style={{ width: `${levelInfo.pct}%`, background: 'var(--accent)' }}
-              />
+            <div className="text-[10px] mt-1.5 text-right" style={{ color: 'var(--text-muted)' }}>
+              {levelInfo.level < XP_THRESHOLDS.length
+                ? `${(levelInfo.nextXp - levelInfo.currentXp).toLocaleString()} XP to next level`
+                : 'Max Level'}
             </div>
-            <div className="text-[10px] mt-1 text-right" style={{ color: 'var(--text-muted)' }}>{levelInfo.pct}% to next level</div>
           </div>
+
+          {/* Next rank card */}
+          {levelInfo.level < XP_THRESHOLDS.length && (
+            <div
+              className="p-3 rounded-lg"
+              style={{
+                background: 'rgba(180,79,255,0.04)',
+                border: '1px solid rgba(180,79,255,0.14)',
+              }}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: '#484f58' }}>
+                    Next Rank
+                  </span>
+                  <span
+                    className="text-[10px] font-mono px-1.5 py-0.5 rounded"
+                    style={{ background: 'rgba(180,79,255,0.1)', color: '#b44fff', border: '1px solid rgba(180,79,255,0.2)' }}
+                  >
+                    Lv {levelInfo.level + 1}
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono tabular-nums" style={{ color: '#8b949e' }}>
+                  {(levelInfo.nextXp - levelInfo.currentXp).toLocaleString()} XP needed
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(42,51,71,0.5)' }}>
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${xpBarWidth}%`,
+                    background: 'linear-gradient(90deg, rgba(180,79,255,0.5), rgba(203,128,255,0.8))',
+                    transition: 'width 1s cubic-bezier(0.2,0.8,0.2,1)',
+                  }}
+                />
+              </div>
+              <div className="flex justify-between mt-1.5">
+                <span className="text-[10px] font-mono tabular-nums" style={{ color: '#484f58' }}>
+                  {levelInfo.currentXp.toLocaleString()} XP
+                </span>
+                <span className="text-[10px] font-mono tabular-nums" style={{ color: '#484f58' }}>
+                  {levelInfo.nextXp.toLocaleString()} XP
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* XP breakdown */}
           <div className="card">

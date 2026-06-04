@@ -1,5 +1,6 @@
 // Sidebar — SignalBoard
-import { motion } from 'framer-motion'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../../store'
 import AutoContextPanel from '../context/AutoContextPanel'
 import CustomKeywords from '../context/CustomKeywords'
@@ -73,39 +74,123 @@ export default function Sidebar() {
   const activeView    = useStore(s => s.activeView)
   const setActiveView = useStore(s => s.setActiveView)
   const bookmarks     = useStore(s => s.bookmarks)
+  const items         = useStore(s => s.items)
+  const unread        = items.filter(i => !i.read).length
+
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem('sb-sidebar-collapsed') === '1' } catch { return false }
+  })
+
+  function toggleCollapsed() {
+    const next = !collapsed
+    setCollapsed(next)
+    try { localStorage.setItem('sb-sidebar-collapsed', next ? '1' : '0') } catch {}
+  }
+
+  // Per-category unread counts for badges
+  const categoryUnread: Record<string, number> = {
+    feed:      unread,
+    timeline:  items.filter(i => !i.read && i.relevanceTier !== 'low').length,
+    bookmarks: bookmarks.length,
+    trends:    items.filter(i => (i.alertMatches?.length ?? 0) > 0).length,
+    sources:   0,
+    settings:  0,
+  }
 
   return (
     <aside
-      className="w-[200px] flex flex-col border-r border-white/[0.06] flex-shrink-0"
-      style={{ background: 'rgba(18, 19, 26, 0.85)' }}
+      className="flex flex-col flex-shrink-0"
+      style={{
+        width: collapsed ? 48 : 200,
+        transition: 'width 0.22s cubic-bezier(0.2,0.8,0.2,1)',
+        background: 'rgba(10,11,18,0.92)',
+        borderRight: '1px solid rgba(255,255,255,0.04)',
+        overflow: 'hidden',
+      }}
     >
+      {/* Collapse toggle */}
+      <div className="flex items-center justify-end px-1.5 pt-2 pb-1 flex-shrink-0">
+        <button
+          onClick={toggleCollapsed}
+          className="w-7 h-7 flex items-center justify-center rounded transition-colors"
+          style={{ background: 'transparent', border: 'none', color: '#484f58' }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#8b949e')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#484f58')}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            style={{ transform: collapsed ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
+          >
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+      </div>
+
       {/* Nav */}
-      <nav className="px-3 py-3 border-b border-white/[0.05]">
+      <nav className="px-2 pb-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
         <div className="space-y-0.5">
           {NAV.map(item => {
             const isActive = activeView === item.id
+            const cnt = categoryUnread[item.id] ?? 0
             return (
               <button
                 key={item.id}
                 onClick={() => setActiveView(item.id)}
-                className={`w-full h-9 flex items-center gap-3 px-3 rounded-md text-sm font-medium transition-colors relative ${
-                  isActive
-                    ? 'text-white bg-white/[0.06]'
-                    : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-                }`}
+                className="w-full h-9 flex items-center rounded-sm font-medium transition-all duration-fast relative"
+                style={{
+                  padding: collapsed ? '0 12px' : '0 12px',
+                  justifyContent: collapsed ? 'center' : 'flex-start',
+                  gap: collapsed ? 0 : 12,
+                  color: isActive ? '#e6edf3' : '#484f58',
+                  background: isActive ? 'rgba(255,107,107,0.07)' : 'transparent',
+                }}
+                onMouseEnter={e => {
+                  if (!isActive) {
+                    e.currentTarget.style.color = '#8b949e'
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.03)'
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!isActive) {
+                    e.currentTarget.style.color = '#484f58'
+                    e.currentTarget.style.background = 'transparent'
+                  }
+                }}
+                title={collapsed ? item.label : undefined}
               >
                 {isActive && (
                   <motion.div
                     layoutId="sb-active"
                     className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
-                    style={{ background: '#ff6b6b', boxShadow: '0 0 8px rgba(255,107,107,0.4)' }}
+                    style={{ background: '#ff6b6b', boxShadow: '0 0 8px rgba(255,107,107,0.5)' }}
                     transition={{ type: 'tween', duration: 0.15 }}
                   />
                 )}
-                <span style={{ color: isActive ? '#ff6b6b' : undefined }}>{item.icon}</span>
-                <span>{item.label}</span>
-                {item.id === 'bookmarks' && bookmarks.length > 0 && (
-                  <span className="ml-auto text-[9px] font-mono text-accent/70">{bookmarks.length}</span>
+                <span style={{ color: isActive ? '#ff6b6b' : 'inherit', flexShrink: 0 }}>{item.icon}</span>
+                {!collapsed && <span className="text-[13px] truncate">{item.label}</span>}
+                {!collapsed && (
+                  <AnimatePresence>
+                    {cnt > 0 && (
+                      <motion.span
+                        key={cnt}
+                        initial={{ scale: 0.6, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0.6, opacity: 0 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                        className="ml-auto min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full text-[9px] font-bold tabular-nums leading-none"
+                        style={{ background: 'rgba(255,107,107,0.18)', color: '#ff6b6b', border: '1px solid rgba(255,107,107,0.3)' }}
+                      >
+                        {cnt > 99 ? '99+' : cnt}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                )}
+                {/* Collapsed dot badge */}
+                {collapsed && cnt > 0 && (
+                  <span
+                    className="absolute top-1 right-1 w-2 h-2 rounded-full"
+                    style={{ background: '#ff6b6b', boxShadow: '0 0 4px rgba(255,107,107,0.7)' }}
+                  />
                 )}
               </button>
             )
@@ -113,11 +198,13 @@ export default function Sidebar() {
         </div>
       </nav>
 
-      {/* Context + Keywords panels */}
-      <div className="flex-1 overflow-y-auto flex flex-col">
-        <AutoContextPanel />
-        <CustomKeywords />
-      </div>
+      {/* Context + Keywords panels — hidden when collapsed */}
+      {!collapsed && (
+        <div className="flex-1 overflow-y-auto flex flex-col">
+          <AutoContextPanel />
+          <CustomKeywords />
+        </div>
+      )}
     </aside>
   )
 }

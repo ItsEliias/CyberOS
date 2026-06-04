@@ -1,5 +1,6 @@
 // FeedFilterBar — All / High / Medium / Low / Starred / Unread
 import { useMemo } from 'react'
+import { motion } from 'framer-motion'
 import { useStore } from '../../store'
 import type { ActiveFilter } from '../../../shared/types'
 
@@ -28,39 +29,54 @@ export default function FeedFilterBar() {
     unread:  items.filter(i => !i.read).length,
   }), [items])
 
+  const activeCount = counts[activeFilter]
+
   return (
-    <div
-      className="flex items-center gap-0 px-2"
-      style={{ borderBottom: '1px solid rgba(42,51,71,0.5)' }}
-    >
-      {TABS.map(tab => {
-        const count = counts[tab.id]
-        const active = activeFilter === tab.id
-        return (
-          <button
-            key={tab.id}
-            onClick={() => setFilter(tab.id)}
-            className="relative px-2.5 py-2.5 text-[11px] transition-colors whitespace-nowrap"
-            style={{ color: active ? '#e2e8f0' : '#8b949e' }}
-          >
-            {tab.label}
-            {count > 0 && (
-              <span
-                className="ml-1 text-[9px] font-mono"
-                style={{ color: active ? '#ff6b6b' : 'rgba(139,148,158,0.5)' }}
-              >
-                {count}
-              </span>
-            )}
-            {active && (
-              <span
-                className="absolute bottom-0 left-1 right-1 h-[2px] rounded-t"
-                style={{ background: '#ff6b6b' }}
-              />
-            )}
-          </button>
-        )
-      })}
+    <div style={{ borderBottom: '1px solid rgba(42,51,71,0.5)' }}>
+      <div className="flex items-center gap-0 px-2">
+        {TABS.map(tab => {
+          const count = counts[tab.id]
+          const active = activeFilter === tab.id
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setFilter(tab.id)}
+              className="relative px-2.5 py-2.5 text-[11px] whitespace-nowrap transition-colors duration-150"
+              style={{ color: active ? '#e2e8f0' : '#8b949e' }}
+              onMouseEnter={e => { if (!active) e.currentTarget.style.color = '#c9d1d9' }}
+              onMouseLeave={e => { if (!active) e.currentTarget.style.color = '#8b949e' }}
+            >
+              {tab.label}
+              {count > 0 && (
+                <span
+                  className="ml-1 text-[9px] font-mono tabular-nums"
+                  style={{ color: active ? '#ff6b6b' : 'rgba(139,148,158,0.4)' }}
+                >
+                  {count}
+                </span>
+              )}
+              {active && (
+                <motion.span
+                  layoutId="filter-pill"
+                  className="absolute bottom-0 left-1 right-1 h-[2px] rounded-t"
+                  style={{ background: 'linear-gradient(90deg, #ff6b6b, #ff9b9b)' }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                />
+              )}
+            </button>
+          )
+        })}
+        <motion.span
+          key={activeCount}
+          initial={{ opacity: 0, scale: 0.85 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.15 }}
+          className="ml-auto text-[9px] font-mono tabular-nums px-1.5 py-0.5 rounded"
+          style={{ color: '#ff6b6b', background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.2)' }}
+        >
+          {activeCount} shown
+        </motion.span>
+      </div>
     </div>
   )
 }

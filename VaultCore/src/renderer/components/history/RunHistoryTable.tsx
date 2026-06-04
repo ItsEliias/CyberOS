@@ -39,52 +39,67 @@ function ExpandedRow({ run }: { run: ScrapeRun }) {
   const [showDiff, setShowDiff] = useState(false);
   const r = run.result;
   const hasDiff = r && r.diffs.some((d) => d.type !== 'unchanged');
+  const durationMs = run.duration != null
+    ? run.duration
+    : run.completedAt
+    ? new Date(run.completedAt).getTime() - new Date(run.startedAt).getTime()
+    : null;
 
   return (
-    <motion.tr
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-    >
-      <td colSpan={7} className="px-4 pb-3">
-        <div
-          className="rounded-lg p-3 text-[11px] space-y-2"
-          style={{ background: 'var(--bg3)', border: '1px solid var(--border)' }}
+    <tr>
+      <td colSpan={7} className="px-4 pb-0">
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
+          style={{ overflow: 'hidden' }}
         >
-          {run.status === 'failed' && run.error && (
-            <div style={{ color: '#f85149' }}>Error: {run.error}</div>
-          )}
-          {r && hasDiff && (
-            <>
-              {r.diffs.filter((d) => d.type === 'updated').slice(0, 3).map((d) => (
-                <div key={d.path} className="font-mono space-y-0.5">
-                  <div className="truncate" style={{ color: 'var(--text-muted)' }}>
-                    ~ {d.path} {d.changePercent != null && <span style={{ color: 'var(--text-dim)' }}>({d.changePercent}%)</span>}
+          <div className="rounded-lg p-3 mb-2 text-[11px] space-y-2"
+            style={{ background: 'var(--bg3)', border: '1px solid var(--border)' }}>
+            {/* Item counts */}
+            {r && (
+              <div className="flex gap-4 font-mono text-[10px]">
+                <span style={{ color: '#3fb950' }}>+{r.newNotes} new</span>
+                <span style={{ color: '#4a9eff' }}>~{r.updatedNotes} updated</span>
+                <span style={{ color: 'var(--text-dim)' }}>{r.unchangedNotes} unchanged</span>
+                {durationMs != null && (
+                  <span style={{ color: 'var(--text-dim)' }}>· {formatDuration(durationMs)}</span>
+                )}
+              </div>
+            )}
+            {/* Error message */}
+            {run.status === 'failed' && run.error && (
+              <div className="font-mono" style={{ color: '#f85149' }}>Error: {run.error}</div>
+            )}
+            {r && hasDiff && (
+              <>
+                {r.diffs.filter((d) => d.type === 'updated').slice(0, 3).map((d) => (
+                  <div key={d.path} className="font-mono space-y-0.5">
+                    <div className="truncate" style={{ color: 'var(--text-muted)' }}>
+                      ~ {d.path} {d.changePercent != null && <span style={{ color: 'var(--text-dim)' }}>({d.changePercent}%)</span>}
+                    </div>
+                    {d.oldFirstLine && (
+                      <div className="ml-2 truncate" style={{ color: '#f85149' }}>− {d.oldFirstLine}</div>
+                    )}
+                    {d.newFirstLine && (
+                      <div className="ml-2 truncate" style={{ color: '#3fb950' }}>+ {d.newFirstLine}</div>
+                    )}
                   </div>
-                  {d.oldFirstLine && (
-                    <div className="ml-2 truncate" style={{ color: '#f85149' }}>− {d.oldFirstLine}</div>
-                  )}
-                  {d.newFirstLine && (
-                    <div className="ml-2 truncate" style={{ color: '#3fb950' }}>+ {d.newFirstLine}</div>
-                  )}
-                </div>
-              ))}
-              <button
-                onClick={() => setShowDiff(true)}
-                className="text-[10px] mt-1 transition-colors"
-                style={{ color: 'var(--accent)' }}
-              >
-                Open full diff →
-              </button>
-            </>
-          )}
-          {r && !hasDiff && (
-            <div style={{ color: 'var(--text-dim)' }}>No content changes in this run</div>
-          )}
-        </div>
+                ))}
+                <button onClick={() => setShowDiff(true)} className="text-[10px] mt-1 transition-colors" style={{ color: 'var(--accent)' }}>
+                  Open full diff →
+                </button>
+              </>
+            )}
+            {r && !hasDiff && !run.error && (
+              <div style={{ color: 'var(--text-dim)' }}>No content changes in this run</div>
+            )}
+          </div>
+        </motion.div>
         {showDiff && <DiffViewer run={run} onClose={() => setShowDiff(false)} />}
       </td>
-    </motion.tr>
+    </tr>
   );
 }
 
@@ -109,6 +124,20 @@ export default function RunHistoryTable() {
     });
   }, [runs, statusFilter, sourceFilter]);
 
+  /** Longest run duration among filtered runs — used as 100% baseline for progress bars */
+  const maxDuration = useMemo(() => {
+    let max = 0;
+    for (const r of filtered) {
+      const d = r.duration != null
+        ? r.duration
+        : r.completedAt
+        ? new Date(r.completedAt).getTime() - new Date(r.startedAt).getTime()
+        : 0;
+      if (d > max) max = d;
+    }
+    return max || 1;
+  }, [filtered]);
+
   function handleClear() {
     if (!confirmClear) { setConfirmClear(true); return; }
     clearRuns();
@@ -121,7 +150,7 @@ export default function RunHistoryTable() {
       <div className="flex items-center justify-between px-5 py-3 border-b shrink-0" style={{ borderColor: 'var(--border)' }}>
         <div>
           <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Run History</div>
-          <div className="text-[11px]" style={{ color: 'var(--text-dim)' }}>
+          <div className="text-[11px] tabular-nums" style={{ color: 'var(--text-dim)' }}>
             {filtered.length} of {runs.length} run{runs.length !== 1 ? 's' : ''}
           </div>
         </div>
@@ -173,10 +202,27 @@ export default function RunHistoryTable() {
       {/* Table */}
       <div className="flex-1 overflow-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: 'var(--border) transparent' }}>
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full py-20 text-center">
-            <div className="text-3xl mb-3">📜</div>
-            <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              {runs.length === 0 ? 'No runs yet' : 'No runs match filters'}
+          <div className="flex flex-col items-center justify-center h-full py-20 text-center gap-3">
+            {/* Illustrated table/log SVG */}
+            <svg width="52" height="52" viewBox="0 0 52 52" fill="none" style={{ opacity: 0.4 }}>
+              <rect x="4" y="8" width="44" height="36" rx="4" stroke="#8b949e" strokeWidth="1.5" fill="none"/>
+              <line x1="4" y1="18" x2="48" y2="18" stroke="#484f58" strokeWidth="1"/>
+              <line x1="4" y1="28" x2="48" y2="28" stroke="#484f58" strokeWidth="1"/>
+              <line x1="4" y1="38" x2="48" y2="38" stroke="#484f58" strokeWidth="1"/>
+              <line x1="18" y1="18" x2="18" y2="44" stroke="#484f58" strokeWidth="1"/>
+              <rect x="8" y="21" width="6" height="4" rx="1" fill="rgba(63,185,80,0.3)" stroke="#3fb950" strokeWidth="0.5"/>
+              <rect x="22" y="21" width="14" height="4" rx="1" fill="rgba(42,51,71,0.4)"/>
+              <rect x="22" y="31" width="10" height="4" rx="1" fill="rgba(42,51,71,0.3)"/>
+            </svg>
+            <div>
+              <div className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
+                {runs.length === 0 ? 'No runs yet' : 'No runs match filters'}
+              </div>
+              {runs.length === 0 && (
+                <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
+                  Run a scrape to populate this log
+                </div>
+              )}
             </div>
           </div>
         ) : (
@@ -218,26 +264,54 @@ export default function RunHistoryTable() {
                         <td className="px-4 py-2.5 font-medium" style={{ color: 'var(--text)' }}>
                           {run.sourceName}
                         </td>
-                        <td className="px-4 py-2.5 font-mono" style={{ color: 'var(--text-muted)' }}>
+                        <td className="px-4 py-2.5 font-mono tabular-nums" style={{ color: 'var(--text-muted)' }}>
                           {formatDate(run.startedAt)}
                         </td>
-                        <td className="px-4 py-2.5 font-mono" style={{ color: 'var(--text-dim)' }}>
-                          {run.duration != null
-                            ? formatDuration(run.duration)
-                            : run.completedAt
-                            ? formatDuration(new Date(run.completedAt).getTime() - new Date(run.startedAt).getTime())
-                            : '—'}
+                        <td className="px-4 py-2.5" style={{ minWidth: 100 }}>
+                          {(() => {
+                            const durationMs = run.duration != null
+                              ? run.duration
+                              : run.completedAt
+                              ? new Date(run.completedAt).getTime() - new Date(run.startedAt).getTime()
+                              : null;
+                            if (durationMs == null) return <span style={{ color: 'var(--text-dim)' }}>—</span>;
+                            const pct = Math.max(4, Math.round((durationMs / maxDuration) * 100));
+                            return (
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="font-mono tabular-nums text-[11px] shrink-0 w-10 text-right"
+                                  style={{ color: 'var(--text-dim)' }}
+                                >
+                                  {formatDuration(durationMs)}
+                                </span>
+                                <div
+                                  className="flex-1 h-1.5 rounded-full overflow-hidden"
+                                  style={{ background: 'rgba(42,51,71,0.45)', minWidth: 40 }}
+                                >
+                                  <div
+                                    className="h-full rounded-full transition-all duration-500"
+                                    style={{
+                                      width: `${pct}%`,
+                                      background: run.status === 'failed'
+                                        ? 'rgba(248,81,73,0.55)'
+                                        : 'rgba(63,185,80,0.55)',
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td className="px-4 py-2.5">
                           <StatusBadge status={run.status} />
                         </td>
-                        <td className="px-4 py-2.5 font-mono" style={{ color: r ? '#3fb950' : 'var(--text-dim)' }}>
+                        <td className="px-4 py-2.5 font-mono tabular-nums" style={{ color: r ? '#3fb950' : 'var(--text-dim)' }}>
                           {r ? r.newNotes : '—'}
                         </td>
-                        <td className="px-4 py-2.5 font-mono" style={{ color: r ? '#7bb8ff' : 'var(--text-dim)' }}>
+                        <td className="px-4 py-2.5 font-mono tabular-nums" style={{ color: r ? '#7bb8ff' : 'var(--text-dim)' }}>
                           {r ? r.updatedNotes : '—'}
                         </td>
-                        <td className="px-4 py-2.5 font-mono" style={{ color: 'var(--text-dim)' }}>
+                        <td className="px-4 py-2.5 font-mono tabular-nums" style={{ color: 'var(--text-dim)' }}>
                           {r ? r.unchangedNotes : '—'}
                         </td>
                       </motion.tr>

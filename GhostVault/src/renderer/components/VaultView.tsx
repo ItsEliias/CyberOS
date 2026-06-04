@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import type { NoteFile } from '@shared/types';
+import { VaultStatRing, VaultWordSpark } from './ui/VaultStats';
 
 interface TreeNode {
   name: string;
@@ -282,15 +283,15 @@ export default function VaultView({ onOpenNote }: Props) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => window.ghostvault.revealInFinder(vaultPath)}
-            className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-white/5"
-            style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+            className="text-xs px-3 py-1.5 rounded-xl border transition-all hover:bg-white/5 press-scale"
+            style={{ borderColor: 'rgba(42,51,71,0.6)', color: 'var(--text-muted)' }}
           >
             Reveal in Finder
           </button>
           <button
             onClick={() => setNewNoteFolder(folders[0] || 'Notes')}
-            className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all hover:opacity-80"
-            style={{ background: '#7bb8ff', color: '#0a0a0f' }}
+            className="text-xs px-4 py-1.5 rounded-xl font-semibold transition-all hover:opacity-90 press-scale"
+            style={{ background: '#7bb8ff', color: '#07080f' }}
           >
             + New Note
           </button>
@@ -298,16 +299,29 @@ export default function VaultView({ onOpenNote }: Props) {
       </div>
 
       {/* Stats row */}
-      <div className="px-6 py-3 border-b flex gap-6 shrink-0" style={{ borderColor: 'var(--border)' }}>
-        {[
-          { label: 'Notes', value: notes.length },
-          { label: 'Folders', value: folders.length },
-        ].map(s => (
-          <div key={s.label} className="glass-card px-4 py-2 flex items-center gap-3">
-            <span className="text-lg font-bold font-mono" style={{ color: '#7bb8ff' }}>{s.value}</span>
-            <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{s.label}</span>
-          </div>
-        ))}
+      <div className="px-6 py-3 border-b flex gap-3 shrink-0 flex-wrap" style={{ borderColor: 'var(--border)' }}>
+        {/* Notes stat with progress ring */}
+        <VaultStatRing
+          label="Notes"
+          value={notes.length}
+          max={Math.max(notes.length, 20)}
+          color="#7bb8ff"
+          sub={notes.length > 0
+            ? `last mod ${new Date(Math.max(...notes.map(n => n.mtime))).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+            : 'empty vault'}
+        />
+        {/* Folders stat with progress ring */}
+        <VaultStatRing
+          label="Folders"
+          value={folders.length}
+          max={Math.max(folders.length, 10)}
+          color="#a8d4ff"
+          sub={`${folders.length > 0 ? folders.slice(0, 2).join(', ') + (folders.length > 2 ? '…' : '') : 'none'}`}
+        />
+        {/* Total word count sparkline */}
+        {notes.length > 0 && (
+          <VaultWordSpark notes={notes} />
+        )}
       </div>
 
       {/* New note form */}
@@ -441,35 +455,54 @@ export default function VaultView({ onOpenNote }: Props) {
           <>
             <div className="fixed inset-0 z-40" onClick={() => setCtxMenu(null)} />
             <motion.div
-              className="fixed z-50 rounded-lg border py-1 shadow-xl"
+              className="fixed z-50 rounded-xl border py-1.5 shadow-2xl"
               style={{
-                left: Math.min(ctxMenu.x, window.innerWidth - 176),
+                left: Math.min(ctxMenu.x, window.innerWidth - 200),
                 top: Math.min(ctxMenu.y, window.innerHeight - 160),
-                width: 168,
-                background: 'var(--bg3)', borderColor: 'var(--border)',
+                width: 196,
+                background: 'rgba(13,14,24,0.97)',
+                borderColor: 'rgba(42,51,71,0.7)',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                boxShadow: '0 16px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(123,184,255,0.06)',
               }}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.95, y: -4 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -4 }}
+              transition={{ duration: 0.12, ease: [0.2, 0.8, 0.2, 1] }}
               onClick={e => e.stopPropagation()}
             >
+              {/* Context label */}
+              <div className="px-3 pb-1 pt-0.5 text-[9px] uppercase tracking-widest font-semibold"
+                style={{ color: 'rgba(72,79,88,0.6)' }}>
+                {ctxMenu.node.isDir ? 'Folder' : 'Note'}
+              </div>
+              <div className="border-t mb-1" style={{ borderColor: 'rgba(42,51,71,0.4)' }} />
               <button onClick={startRename}
-                className="w-full text-left px-4 py-2 text-sm transition-colors hover:bg-white/10"
-                style={{ color: 'var(--text-muted)' }}>
-                Rename
+                className="w-full flex items-center justify-between px-3 py-1.5 text-xs transition-colors hover:bg-white/[0.07] rounded mx-1"
+                style={{ color: 'var(--text-muted)', width: 'calc(100% - 8px)' }}>
+                <span>Rename</span>
+                <kbd className="text-[9px] px-1.5 py-0.5 rounded font-mono"
+                  style={{ background: 'rgba(42,51,71,0.5)', color: 'rgba(107,122,153,0.8)', border: '1px solid rgba(42,51,71,0.6)' }}>
+                  F2
+                </kbd>
               </button>
               <button onClick={handleReveal}
-                className="w-full text-left px-4 py-2 text-sm transition-colors hover:bg-white/10"
-                style={{ color: 'var(--text-muted)' }}>
+                className="w-full flex items-center px-3 py-1.5 text-xs transition-colors hover:bg-white/[0.07] rounded mx-1"
+                style={{ color: 'var(--text-muted)', width: 'calc(100% - 8px)' }}>
                 Reveal in Finder
               </button>
               {!ctxMenu.node.isDir && (
                 <>
-                  <div className="border-t my-1" style={{ borderColor: 'var(--border)' }} />
+                  <div className="border-t mx-2 my-1" style={{ borderColor: 'rgba(42,51,71,0.4)' }} />
                   <button onClick={handleDelete}
-                    className="w-full text-left px-4 py-2 text-sm transition-colors hover:bg-white/10"
-                    style={{ color: '#f85149' }}>
-                    Delete
+                    className="w-full flex items-center justify-between px-3 py-1.5 text-xs transition-colors hover:bg-red-500/10 rounded mx-1"
+                    style={{ color: '#f85149', width: 'calc(100% - 8px)' }}>
+                    <span>Delete</span>
+                    <kbd className="text-[9px] px-1.5 py-0.5 rounded font-mono"
+                      style={{ background: 'rgba(248,81,73,0.1)', color: 'rgba(248,81,73,0.7)', border: '1px solid rgba(248,81,73,0.2)' }}>
+                      Del
+                    </kbd>
                   </button>
                 </>
               )}

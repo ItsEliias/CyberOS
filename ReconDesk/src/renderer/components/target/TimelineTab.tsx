@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+
 import { useRecondeskStore } from '../../stores/useRecondeskStore'
 import type { TimelineEntryType } from '../../types/recondesk'
 
@@ -31,14 +32,25 @@ const FILTER_GROUPS: { label: string; types: TimelineEntryType[] }[] = [
   { label: 'CVE Alerts',  types: ['cve_alert'] },
 ]
 
-function formatTimestamp(iso: string): string {
+function formatTimestamp(iso: string): { date: string; time: string; relative: string } {
   try {
-    const d = new Date(iso)
+    const d   = new Date(iso)
+    const now = Date.now()
+    const diff = now - d.getTime()
+
     const date = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
     const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
-    return `${date}  ${time}`
+
+    let relative = ''
+    if (diff < 60_000)                       relative = 'just now'
+    else if (diff < 3_600_000)               relative = `${Math.floor(diff / 60_000)}m ago`
+    else if (diff < 86_400_000)              relative = `${Math.floor(diff / 3_600_000)}h ago`
+    else if (diff < 7 * 86_400_000)          relative = `${Math.floor(diff / 86_400_000)}d ago`
+    else                                     relative = date
+
+    return { date, time, relative }
   } catch {
-    return iso
+    return { date: iso, time: '', relative: '' }
   }
 }
 
@@ -48,6 +60,7 @@ export default function TimelineTab({ targetId }: { targetId: string }) {
 
   const [activeTypes, setActiveTypes] = useState<Set<TimelineEntryType>>(new Set(ALL_TYPES))
   const [showFilter, setShowFilter]   = useState(false)
+  const [expandedId, setExpandedId]   = useState<string | null>(null)
 
   if (!target) return null
 
@@ -73,10 +86,10 @@ export default function TimelineTab({ targetId }: { targetId: string }) {
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#2a3347] flex-shrink-0">
-        <span className="text-sm font-medium text-[#e2e8f0]">
+      <div className="flex items-center justify-between px-4 py-2.5 flex-shrink-0" style={{ borderBottom: '1px solid rgba(42,51,71,0.5)', background: 'rgba(7,8,15,0.3)' }}>
+        <span className="heading-sm" style={{ color: '#e6edf3' }}>
           Timeline
-          <span className="text-[#4a5568] text-xs font-normal ml-1.5">
+          <span className="text-[10px] font-normal ml-1.5" style={{ color: '#484f58' }}>
             ({filtered.length}{filtered.length !== timeline.length ? ` of ${timeline.length}` : ''})
           </span>
         </span>
@@ -129,54 +142,148 @@ export default function TimelineTab({ targetId }: { targetId: string }) {
       {/* Timeline list */}
       <div className="flex-1 overflow-y-auto px-4 py-3">
         {filtered.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
+          <motion.div
+            className="flex items-center justify-center h-full"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
+          >
             <div className="text-center">
-              <p className="text-sm text-[#4a5568]">No timeline entries</p>
-              <p className="text-xs text-[#4a5568]/60 mt-1">Activity is logged automatically as you work</p>
+              <div className="relative inline-flex items-center justify-center mb-4">
+                <div className="absolute w-16 h-16 rounded-full" style={{ background: 'radial-gradient(circle, rgba(139,148,158,0.07) 0%, transparent 70%)' }} />
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" style={{ color: '#8b949e', opacity: 0.4 }}>
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M5 3l1.5 1.5M19 3l-1.5 1.5M5 21l1.5-1.5M19 21l-1.5-1.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity="0.4" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium" style={{ color: '#8b949e' }}>No timeline entries</p>
+              <p className="text-xs mt-1" style={{ color: '#484f58' }}>Activity is logged automatically as you work</p>
             </div>
-          </div>
+          </motion.div>
         ) : (
           <div className="relative">
-            {/* Vertical line */}
-            <div className="absolute left-[5px] top-2 bottom-2 w-px bg-[#2a3347]" />
+            {/* Vertical line — gradient from accent top to muted bottom */}
+            <div
+              className="absolute left-[5px] top-2 bottom-2 w-px"
+              style={{ background: 'linear-gradient(to bottom, rgba(210,153,34,0.35) 0%, rgba(42,51,71,0.5) 40%, rgba(42,51,71,0.2) 100%)' }}
+            />
 
             <div className="flex flex-col gap-0">
               <AnimatePresence initial>
                 {filtered.map((entry, i) => {
                   const cfg = TYPE_CONFIG[entry.type] ?? { color: '#4a5568', label: '?' }
+                  const isExpanded = expandedId === entry.id
+                  const ts = formatTimestamp(entry.timestamp)
                   return (
                     <motion.div
                       key={entry.id}
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.025, duration: 0.18 }}
-                      className="flex items-start gap-3 py-2.5 pl-5 relative group"
+                      transition={{ delay: i * 0.06, duration: 0.18 }}
+                      className="pl-5 relative"
                     >
-                      {/* Dot */}
-                      <span
-                        className="absolute left-0 top-4 w-2.5 h-2.5 rounded-full border-2 border-[#0a0a0f] flex-shrink-0"
-                        style={{ backgroundColor: cfg.color }}
-                      />
+                      {/* Row — clickable */}
+                      <div
+                        className="flex items-start gap-3 py-2.5 group cursor-pointer"
+                        onClick={() => setExpandedId(isExpanded ? null : entry.id)}
+                      >
+                        {/* Dot — pulses for the most recent entry (i === 0) */}
+                        <span
+                          className={`absolute left-[1px] top-[14px] w-2 h-2 rounded-full border-2 flex-shrink-0${i === 0 ? ' status-dot-pulse' : ''}`}
+                          style={{
+                            backgroundColor: cfg.color,
+                            borderColor: '#07080f',
+                            boxShadow: `0 0 6px ${cfg.color}50`,
+                            '--pulse-rgb': cfg.color.replace(/^#/, '').match(/.{2}/g)?.map(h => parseInt(h, 16)).join(',') ?? '210,153,34',
+                          } as React.CSSProperties}
+                        />
 
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span
-                            className="text-[9px] px-1 py-0.5 rounded font-semibold uppercase tracking-wider flex-shrink-0"
-                            style={{
-                              color:           cfg.color,
-                              backgroundColor: `${cfg.color}15`,
-                              border:          `1px solid ${cfg.color}25`,
-                            }}
-                          >
-                            {cfg.label}
-                          </span>
-                          <span className="text-[10px] font-mono text-[#4a5568] flex-shrink-0">
-                            {formatTimestamp(entry.timestamp)}
-                          </span>
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              className="text-[9px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider flex-shrink-0"
+                              style={{
+                                color:           cfg.color,
+                                backgroundColor: `${cfg.color}15`,
+                                border:          `1px solid ${cfg.color}28`,
+                              }}
+                            >
+                              {cfg.label}
+                            </span>
+                            {/* Relative time (primary) with full date as tooltip */}
+                            <span
+                              className="text-[10px] font-mono flex-shrink-0 tabular-nums cursor-default"
+                              style={{ color: '#484f58' }}
+                              title={`${ts.date} ${ts.time}`}
+                            >
+                              <span style={{ color: '#6b7585' }}>{ts.relative}</span>
+                              <span
+                                className="ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-[9px]"
+                                style={{ color: '#484f58' }}
+                              >
+                                · {ts.date}
+                              </span>
+                            </span>
+                            {/* Expand chevron */}
+                            <span
+                              className="ml-auto opacity-0 group-hover:opacity-60 transition-all text-[8px]"
+                              style={{ color: cfg.color, transform: isExpanded ? 'rotate(90deg)' : 'none', display: 'inline-block', transition: 'opacity 150ms, transform 150ms' }}
+                            >
+                              ▶
+                            </span>
+                          </div>
+                          <p className="text-xs mt-0.5 leading-relaxed" style={{ color: '#e2e8f0' }}>{entry.description}</p>
                         </div>
-                        <p className="text-xs text-[#e2e8f0] mt-0.5 leading-relaxed">{entry.description}</p>
                       </div>
+
+                      {/* Slide-out detail card */}
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
+                            className="overflow-hidden"
+                          >
+                            <div
+                              className="mb-2 rounded-lg p-3 ml-3 text-[10px] font-mono"
+                              style={{
+                                background: 'rgba(7,8,15,0.7)',
+                                border: `1px solid ${cfg.color}25`,
+                                borderLeft: `2px solid ${cfg.color}60`,
+                              }}
+                            >
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                <div className="flex gap-2">
+                                  <span style={{ color: '#484f58' }}>type</span>
+                                  <span style={{ color: cfg.color }}>{entry.type}</span>
+                                </div>
+                                <div className="flex gap-2">
+                                  <span style={{ color: '#484f58' }}>date</span>
+                                  <span style={{ color: '#8b949e' }}>{ts.date}</span>
+                                </div>
+                                <div className="flex gap-2">
+                                  <span style={{ color: '#484f58' }}>time</span>
+                                  <span style={{ color: '#8b949e' }}>{ts.time}</span>
+                                </div>
+                                <div className="flex gap-2">
+                                  <span style={{ color: '#484f58' }}>id</span>
+                                  <span className="truncate" style={{ color: '#484f58' }}>{entry.id.slice(0, 12)}</span>
+                                </div>
+                              </div>
+                              {entry.description && (
+                                <div className="mt-2 pt-2" style={{ borderTop: '1px solid rgba(42,51,71,0.4)' }}>
+                                  <span style={{ color: '#484f58' }}>description </span>
+                                  <span style={{ color: '#e2e8f0' }}>{entry.description}</span>
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </motion.div>
                   )
                 })}

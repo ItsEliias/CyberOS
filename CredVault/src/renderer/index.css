@@ -1,3 +1,11 @@
+@import '@fontsource/geist-sans/400.css';
+@import '@fontsource/geist-sans/500.css';
+@import '@fontsource/geist-sans/600.css';
+@import '@fontsource/geist-sans/700.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+@import '@fontsource/jetbrains-mono/600.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,20 +13,34 @@
 /* ─── CyberOS Design Bible — CSS Custom Properties ───────────────────────── */
 
 :root {
+  --surface-0: #07080f; --surface-1: #0d0e18; --surface-2: #131525; --surface-3: #191c32;
+  --surface-glass: rgba(13,14,24,0.72);
+  --elevation-1: 0 1px 3px rgba(0,0,0,.5), 0 1px 2px rgba(0,0,0,.35);
+  --elevation-2: 0 4px 16px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.4);
+  --elevation-3: 0 12px 40px rgba(0,0,0,.6), 0 4px 12px rgba(0,0,0,.45);
+  --border-subtle: rgba(42,51,71,0.35); --border-default: rgba(42,51,71,0.75);
+  --border-glass: rgba(255,255,255,0.055);
+  --text-primary: #e6edf3; --text-secondary: #8b949e; --text-muted: #484f58;
+  --sev-critical: #f85149; --sev-high: #ff8c42; --sev-medium: #d29922; --sev-low: #4a9eff; --sev-info: #8b949e;
+  --state-online: #3fb950; --state-offline: #484f58; --state-blocked: #f85149;
+  --accent: #f78166; --accent-rgb: 247,129,102;
+  --accent-tint: rgba(247,129,102,0.08); --accent-tint2: rgba(247,129,102,0.15);
+  --accent-glow: rgba(247,129,102,0.28); --accent-border: rgba(247,129,102,0.30);
+  --font-display: 'Geist Sans', 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --radius-xs: 4px; --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px;
+  --motion-fast: 150ms; --motion-base: 250ms; --motion-slow: 400ms;
+  --ease: cubic-bezier(0.2,0.8,0.2,1);
+
+  /* Legacy aliases */
   --bg:           #0a0a0f;
   --bg-elevated:  #12131a;
   --panel:        #161b22;
   --border:       #2a3347;
-  --border-subtle:#1e2030;
-
+  --border-subtle-legacy: #1e2030;
   --text:         #e2e8f0;
   --text-dim:     #8b949e;
-  --text-muted:   #4a5568;
-
-  --accent:       #f78166;
   --accent-dim:   rgba(247, 129, 102, 0.08);
-  --accent-border:rgba(247, 129, 102, 0.3);
-
   --success:      #3fb950;
   --warning:      #d29922;
   --error:        #f85149;
@@ -33,10 +55,10 @@ html, body, #root {
   height: 100%;
   min-height: 100vh;
   overflow: hidden;
-  background-color: #0a0a0f !important;
-  background: radial-gradient(ellipse at 20% 0%, rgba(247, 129, 102, 0.04) 0%, #0a0a0f 50%) !important;
-  color: #e2e8f0;
-  font-family: 'Inter', 'SF Pro Display', system-ui, sans-serif;
+  background-color: #07080f !important;
+  background: radial-gradient(ellipse at 18% 0%, rgba(247,129,102,0.04) 0%, transparent 55%), #07080f !important;
+  color: var(--text-primary);
+  font-family: var(--font-display);
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -302,4 +324,232 @@ select option {
   height: 100%;
   border-radius: 2px;
   transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+/* ─── Skeleton loader ─────────────────────────────────────────────────────── */
+
+@keyframes shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position:  600px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(42,51,71,0.25) 25%,
+    rgba(42,51,71,0.45) 50%,
+    rgba(42,51,71,0.25) 75%
+  );
+  background-size: 600px 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+/* ─── Row lift micro-animation ────────────────────────────────────────────── */
+
+.cred-row {
+  transition: background 0.18s var(--ease), transform 0.18s var(--ease), box-shadow 0.18s var(--ease);
+  will-change: transform;
+}
+
+.cred-row:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.35);
+}
+
+.cred-row:active {
+  transform: translateY(0);
+}
+
+/* ─── Accent button glow pulse ────────────────────────────────────────────── */
+
+.btn-accent {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-accent::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(255,255,255,0.12);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.btn-accent:hover:not(:disabled)::after {
+  opacity: 1;
+}
+
+/* ─── Search input glow focus ─────────────────────────────────────────────── */
+
+.search-input-wrap {
+  position: relative;
+  transition: filter 0.2s var(--ease);
+}
+
+.search-input-wrap:focus-within {
+  filter: drop-shadow(0 0 6px rgba(247,129,102,0.35));
+}
+
+.search-input-wrap input:focus {
+  border-color: rgba(247,129,102,0.65) !important;
+}
+
+/* ─── Sidebar nav item glow ───────────────────────────────────────────────── */
+
+.sidebar-nav-item {
+  transition: background 0.18s var(--ease), color 0.18s var(--ease), box-shadow 0.18s var(--ease);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  margin-right: 8px;
+}
+
+.sidebar-nav-item.active {
+  box-shadow: inset 3px 0 0 var(--accent), 2px 0 12px rgba(247,129,102,0.1);
+}
+
+.sidebar-nav-item:not(.active):hover {
+  background: rgba(247,129,102,0.05) !important;
+  color: #c9d1d9 !important;
+}
+
+/* ─── Table header peach gradient ─────────────────────────────────────────── */
+
+.table-sticky-head {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(180deg, rgba(15,16,22,1) 70%, rgba(15,16,22,0)) !important;
+  z-index: 2;
+  border-bottom: 1px solid rgba(247,129,102,0.1) !important;
+}
+
+/* ─── HIBP check spinner ──────────────────────────────────────────────────── */
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.hibp-spinner {
+  width: 10px; height: 10px;
+  border: 1.5px solid rgba(139,148,158,0.35);
+  border-top-color: #8b949e;
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+/* ─── Copy toast micro-notification ──────────────────────────────────────── */
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.copy-toast {
+  animation: fadeSlideUp 0.2s var(--ease) both;
+}
+
+/* ─── Metric card count-up glow ───────────────────────────────────────────── */
+
+.stat-metric {
+  transition: text-shadow 0.4s var(--ease);
+}
+
+.stat-metric:hover {
+  text-shadow: 0 0 24px rgba(247,129,102,0.6) !important;
+}
+
+/* ─── Password strength gradient bar (pass 3) ────────────────────────────── */
+
+@keyframes pw-strength-grow {
+  from { width: 0; }
+}
+
+.pw-strength-gradient {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+  position: relative;
+}
+
+.pw-strength-gradient-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.35s cubic-bezier(0.2,0.8,0.2,1), background 0.35s ease;
+  background-size: 200% 100%;
+}
+
+/* ─── Expiry chip pulse (pass 3) ─────────────────────────────────────────── */
+
+@keyframes expiry-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(248,81,73,0.5); }
+  50%       { opacity: 0.85; box-shadow: 0 0 0 3px rgba(248,81,73,0); }
+}
+
+.expiry-chip-critical {
+  animation: expiry-pulse 2s ease-in-out infinite;
+}
+
+/* ─── Lock screen animated background gradient (pass 3) ──────────────────── */
+
+@keyframes lockBgShift {
+  0%   { background-position: 0%   40%; }
+  50%  { background-position: 100% 60%; }
+  100% { background-position: 0%   40%; }
+}
+
+.lock-bg-gradient {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 30% 25%, rgba(247,129,102,0.06) 0%, transparent 50%),
+              radial-gradient(ellipse at 70% 75%, rgba(74,158,255,0.04) 0%, transparent 50%),
+              radial-gradient(ellipse at 50% 50%, rgba(167,139,250,0.03) 0%, transparent 60%);
+  background-size: 200% 200%;
+  animation: lockBgShift 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ─── Table sort indicator arrows (pass 3) ──────────────────────────────── */
+
+.sortable-th {
+  cursor: default;
+  position: relative;
+  white-space: nowrap;
+}
+
+.sortable-th .sort-arrow {
+  display: inline-block;
+  margin-left: 4px;
+  font-style: normal;
+  font-size: 8px;
+  color: rgba(139,148,158,0.45);
+  vertical-align: middle;
+  line-height: 1;
+}
+
+/* ─── Sidebar category icon (pass 3) ─────────────────────────────────────── */
+
+.cat-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+/* ─── Staggered row fade-in (pass 3) ─────────────────────────────────────── */
+
+@keyframes rowFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.cred-row-stagger {
+  animation: rowFadeIn 0.22s var(--ease) both;
 }

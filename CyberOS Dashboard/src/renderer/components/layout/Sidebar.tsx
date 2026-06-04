@@ -81,20 +81,36 @@ export default function Sidebar() {
               <button
                 key={item.id}
                 onClick={() => setActiveView(item.id)}
-                className={`w-full h-9 flex items-center gap-3 px-3 rounded-md text-sm font-medium transition-colors relative ${
-                  isActive
-                    ? 'text-text-primary bg-bg-interactive'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-interactive/50'
-                }`}
+                className={`w-full h-9 flex items-center gap-3 px-3 rounded-lg text-sm font-medium relative overflow-hidden`}
+                style={{
+                  color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  background: isActive ? 'rgba(74,158,255,0.1)' : 'transparent',
+                  border: `1px solid ${isActive ? 'rgba(74,158,255,0.2)' : 'transparent'}`,
+                  transition: 'background 180ms, color 180ms, border-color 180ms, box-shadow 180ms',
+                  boxShadow: isActive ? '0 0 12px rgba(74,158,255,0.1)' : 'none',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+                    e.currentTarget.style.color = 'var(--text-primary)'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.background = 'transparent'
+                    e.currentTarget.style.color = 'var(--text-secondary)'
+                  }
+                }}
               >
                 {isActive && (
                   <motion.div
-                    layoutId="sidebar-active"
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-accent rounded-r-full shadow-[0_0_8px_rgba(74,158,255,0.2)]"
-                    transition={{ type: 'tween', duration: 0.15 }}
+                    layoutId="sidebar-pill"
+                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
+                    style={{ background: 'var(--accent)', boxShadow: '0 0 10px rgba(74,158,255,0.5)' }}
+                    transition={{ type: 'spring', stiffness: 380, damping: 28, mass: 0.8 }}
                   />
                 )}
-                <span className={isActive ? 'text-accent' : ''}>{item.icon}</span>
+                <span style={{ color: isActive ? 'var(--accent)' : 'inherit', transition: 'color 180ms' }}>{item.icon}</span>
                 <span>{item.label}</span>
               </button>
             )
@@ -104,21 +120,62 @@ export default function Sidebar() {
         {/* Divider */}
         <div className="my-3 border-t border-border-subtle" />
 
+        {/* Design System (Phase A sign-off) */}
+        {(() => {
+          const isDS = activeView === 'design-system'
+          return (
+            <button
+              onClick={() => setActiveView('design-system')}
+              className="w-full h-9 flex items-center gap-3 px-3 rounded-lg text-sm font-medium relative overflow-hidden"
+              style={{
+                color: isDS ? 'var(--text-primary)' : 'var(--text-secondary)',
+                background: isDS ? 'rgba(74,158,255,0.1)' : 'transparent',
+                border: `1px solid ${isDS ? 'rgba(74,158,255,0.2)' : 'transparent'}`,
+                transition: 'background 180ms, color 180ms, border-color 180ms',
+              }}
+              onMouseEnter={(e) => { if (!isDS) { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = 'var(--text-primary)' } }}
+              onMouseLeave={(e) => { if (!isDS) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' } }}
+            >
+              {isDS && (
+                <motion.div layoutId="sidebar-pill" className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
+                  style={{ background: 'var(--accent)', boxShadow: '0 0 10px rgba(74,158,255,0.5)' }}
+                  transition={{ type: 'spring', stiffness: 380, damping: 28, mass: 0.8 }}
+                />
+              )}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                style={{ color: isDS ? 'var(--accent)' : 'inherit', transition: 'color 180ms' }}>
+                <circle cx="12" cy="12" r="2" /><circle cx="12" cy="5" r="2" /><circle cx="12" cy="19" r="2" />
+              </svg>
+              <span>Design System</span>
+            </button>
+          )
+        })()}
+
         {/* Settings */}
-        <button
-          onClick={() => setActiveView('settings')}
-          className={`w-full h-9 flex items-center gap-3 px-3 rounded-md text-sm font-medium transition-colors ${
-            activeView === 'settings'
-              ? 'text-text-primary bg-bg-interactive'
-              : 'text-text-secondary hover:text-text-primary hover:bg-bg-interactive/50'
-          }`}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68 1.65 1.65 0 0 0 9 3V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
-          <span>Settings</span>
-        </button>
+        {(() => {
+          const isSett = activeView === 'settings'
+          return (
+            <button
+              onClick={() => setActiveView('settings')}
+              className="w-full h-9 flex items-center gap-3 px-3 rounded-lg text-sm font-medium relative"
+              style={{
+                color: isSett ? 'var(--text-primary)' : 'var(--text-secondary)',
+                background: isSett ? 'rgba(74,158,255,0.1)' : 'transparent',
+                border: `1px solid ${isSett ? 'rgba(74,158,255,0.2)' : 'transparent'}`,
+                transition: 'background 180ms, color 180ms, border-color 180ms',
+              }}
+              onMouseEnter={(e) => { if (!isSett) { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = 'var(--text-primary)' } }}
+              onMouseLeave={(e) => { if (!isSett) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' } }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                style={{ color: isSett ? 'var(--accent)' : 'inherit', transition: 'color 180ms' }}>
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68 1.65 1.65 0 0 0 9 3V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+              <span>Settings</span>
+            </button>
+          )
+        })()}
       </nav>
 
       {/* Active session context strip — slim panel above status bar */}

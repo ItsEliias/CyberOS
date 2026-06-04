@@ -1,3 +1,5 @@
+// GhostVault — EditorView (redesigned: glass panel aesthetic, soft blue accent)
+
 import { useRef, useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
@@ -6,26 +8,26 @@ import WikilinkAutocomplete from './WikilinkAutocomplete';
 import InlineAICommands from './InlineAICommands';
 import VersionHistoryPanel from './VersionHistoryPanel';
 import PresentationMode from './PresentationMode';
+import EditorStatusBar from './notes/EditorStatusBar';
+import LineNumberGutter from './notes/LineNumberGutter';
+import EditorEmptyState from './notes/EditorEmptyState';
+import EditorTopBar from './notes/EditorTopBar';
+import { TABLE_TEMPLATE } from './notes/EditorToolbar';
 import type { EditorMode, NoteFile } from '@shared/types';
 
 interface Props {
-  onSave     : () => void;
-  onAiMenu   : () => void;
-  onTemplate : () => void;
-  onTogglePin: () => void;
-  onToggleAot: () => void;
-  onCapture  : () => void;
-  onOpenNote?: (note: NoteFile) => void;
+  onSave          : () => void;
+  onAiMenu        : () => void;
+  onTemplate      : () => void;
+  onTogglePin     : () => void;
+  onToggleAot     : () => void;
+  onCapture       : () => void;
+  onOpenNote?     : (note: NoteFile) => void;
+  onFocusModeChange?: (focused: boolean) => void;
 }
-
-function modeLabel(m: EditorMode): string {
-  return m === 'edit' ? 'Edit' : m === 'split' ? 'Split' : 'Preview';
-}
-
-const TABLE_TEMPLATE = '\n| Col 1 | Col 2 | Col 3 |\n|-------|-------|-------|\n|       |       |       |\n|       |       |       |\n|       |       |       |\n';
 
 export default function EditorView({
-  onSave, onAiMenu, onTemplate, onTogglePin, onToggleAot, onCapture, onOpenNote
+  onSave, onAiMenu, onTemplate, onTogglePin, onToggleAot, onCapture, onOpenNote, onFocusModeChange
 }: Props) {
   const {
     activeNote, editorContent, editorMode, dirty, alwaysOnTop, pinnedPaths,
@@ -38,17 +40,14 @@ export default function EditorView({
   const previewDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [previewHtml, setPreviewHtml] = useState('');
   const [exportToast, setExportToast] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
 
-  // Wikilink autocomplete state
   const [wikiAc, setWikiAc] = useState<{ query: string; pos: { top: number; left: number } } | null>(null);
-
-  // Inline AI commands
   const [aiCmd, setAiCmd] = useState<{ pos: { top: number; left: number } } | null>(null);
 
   const isPinned = activeNote ? pinnedPaths.has(activeNote.path) : false;
   const isLocked = activeNote ? lockedNotes.has(activeNote.path) : false;
 
-  // Debounced preview update (150ms)
   useEffect(() => {
     if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current);
     previewDebounceRef.current = setTimeout(() => {
@@ -57,7 +56,6 @@ export default function EditorView({
     return () => { if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current); };
   }, [editorContent]);
 
-  // Set wiki link opener for preview pane
   useEffect(() => {
     if (onOpenNote) {
       setWikiLinkOpener((name: string) => {
@@ -67,14 +65,21 @@ export default function EditorView({
     }
   }, [onOpenNote, notes]);
 
-  // F5 toggles presentation mode
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'F5') { e.preventDefault(); setPresentMode(!presentMode); }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'F') {
+        e.preventDefault();
+        setFocusMode(f => {
+          const next = !f;
+          onFocusModeChange?.(next);
+          return next;
+        });
+      }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [presentMode, setPresentMode]);
+  }, [presentMode, setPresentMode, onFocusModeChange]);
 
   async function handleExportToReport() {
     if (!activeNote || !editorContent.trim()) return;
@@ -107,7 +112,6 @@ export default function EditorView({
     const before = val.slice(0, pos);
     const lastLine = before.split('\n').pop() || '';
 
-    // Wikilink autocomplete: detect [[
     const wikiMatch = lastLine.match(/\[\[([^\]]*?)$/);
     if (wikiMatch) {
       setWikiAc({ query: wikiMatch[1], pos: getCursorPixelPos(ta) });
@@ -117,7 +121,6 @@ export default function EditorView({
       setWikiAc(null);
     }
 
-    // Inline AI commands: detect / at start of line
     if (lastLine === '/') {
       setAiCmd({ pos: getCursorPixelPos(ta) });
     } else {
@@ -189,7 +192,6 @@ export default function EditorView({
     const pos = ta.selectionStart;
     const before = ta.value.slice(0, pos).replace(/\/$/, '');
     const remaining = ta.value.slice(pos);
-    // Replace the / with the command invocation marker
     setEditorContent(before + remaining);
     setAiCmd(null);
     onAiMenu();
@@ -204,145 +206,194 @@ export default function EditorView({
     markDirty();
   }
 
+  function wrapSelection(before: string, after: string) {
+    const ta = editorRef.current;
+    if (!ta) return;
+    const s = ta.selectionStart, e = ta.selectionEnd;
+    const selected = ta.value.slice(s, e);
+    const newVal = ta.value.slice(0, s) + before + selected + after + ta.value.slice(e);
+    setEditorContent(newVal);
+    markDirty();
+    setTimeout(() => {
+      ta.selectionStart = s + before.length;
+      ta.selectionEnd = s + before.length + selected.length;
+      ta.focus();
+    }, 0);
+  }
+
+  function insertLink() {
+    const ta = editorRef.current;
+    if (!ta) return;
+    const s = ta.selectionStart, e = ta.selectionEnd;
+    const selected = ta.value.slice(s, e);
+    const ins = `[${selected || 'link text'}](url)`;
+    const newVal = ta.value.slice(0, s) + ins + ta.value.slice(e);
+    setEditorContent(newVal);
+    markDirty();
+    setTimeout(() => {
+      const urlStart = s + ins.length - 4;
+      ta.selectionStart = urlStart;
+      ta.selectionEnd = urlStart + 3;
+      ta.focus();
+    }, 0);
+  }
+
   const wordCount = useMemo(() => {
     const t = editorContent.trim();
     return t ? t.split(/\s+/).length : 0;
   }, [editorContent]);
 
-  const modes: EditorMode[] = ['edit', 'split', 'preview'];
+  const WORD_GOAL = 500;
+  const goalProgress = Math.min(wordCount / WORD_GOAL, 1);
+  const goalReached  = wordCount >= WORD_GOAL;
+
   const hasOllama = useStore.getState().ollamaStatus?.running || false;
 
+  function toggleFocusMode() {
+    setFocusMode(f => { const next = !f; onFocusModeChange?.(next); return next; });
+  }
+
   return (
-    <div className="flex flex-col h-full" style={{ position: 'relative' }}>
-      {/* Toolbar */}
-      <div className="flex items-center gap-2 px-4 py-2 border-b flex-shrink-0"
-        style={{ borderColor: 'var(--border)', background: 'var(--bg2)' }}>
+    <div className={`flex flex-col h-full relative${focusMode ? ' focused' : ''}`} style={{ background: '#07080f' }}>
+      <EditorTopBar
+        activeNote={activeNote}
+        editorContent={editorContent}
+        editorMode={editorMode}
+        dirty={dirty}
+        isPinned={isPinned}
+        isLocked={isLocked}
+        alwaysOnTop={alwaysOnTop}
+        showHistory={showHistory}
+        focusMode={focusMode}
+        onSave={onSave}
+        onAiMenu={onAiMenu}
+        onTemplate={onTemplate}
+        onTogglePin={onTogglePin}
+        onToggleAot={onToggleAot}
+        onCapture={onCapture}
+        onInsertLink={insertLink}
+        onInsertTable={insertTable}
+        onWrapSelection={wrapSelection}
+        onSetMode={(m) => { setEditorMode(m); window.ghostvault.saveConfig({ editorMode: m }); }}
+        onToggleHistory={() => setShowHistory(!showHistory)}
+        onToggleFocus={toggleFocusMode}
+        onPresentMode={() => activeNote && setPresentMode(true)}
+        onExportReport={handleExportToReport}
+      />
 
-        <div className="flex-1 min-w-0">
-          {activeNote ? (
-            <div className="flex items-baseline gap-1.5 min-w-0">
-              <span className="text-[10px]" style={{ color: 'var(--text-dim)' }}>{activeNote.folder}/</span>
-              <span className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>{activeNote.name}</span>
-              {isLocked && <span className="text-[10px]" style={{ color: '#d29922' }}>🔒</span>}
-            </div>
-          ) : (
-            <span className="text-sm font-semibold" style={{ color: 'var(--text-dim)' }}>GhostVault</span>
-          )}
+      {/* Focus mode hint */}
+      {focusMode && (
+        <div
+          key="focus-hint"
+          className="focus-mode-hint absolute top-14 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-lg text-[10px] font-medium z-50 pointer-events-none"
+          style={{
+            background: 'rgba(19,21,37,0.9)',
+            border: '1px solid rgba(123,184,255,0.2)',
+            color: 'rgba(123,184,255,0.7)',
+            fontFamily: 'var(--font-display)',
+          }}
+        >
+          Focus mode · ⌘⇧F to exit
         </div>
+      )}
 
-        {/* Mode pill */}
-        <div className="flex rounded border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
-          {modes.map(m => (
-            <button key={m}
-              onClick={() => { setEditorMode(m); window.ghostvault.saveConfig({ editorMode: m }); }}
-              className="px-2 py-0.5 text-[10px] transition-colors"
-              style={{
-                background: editorMode === m ? 'var(--accent)' : 'var(--bg3)',
-                color     : editorMode === m ? '#fff' : 'var(--text-dim)'
-              }}>
-              {modeLabel(m)}
-            </button>
-          ))}
-        </div>
-
-        {/* Action buttons */}
-        <div className="flex items-center gap-1">
-          <button onClick={insertTable}
-            title="Insert Table" className="w-7 h-7 rounded flex items-center justify-center text-sm hover:bg-white/10 transition-colors"
-            style={{ color: 'var(--text-dim)' }}>⊞</button>
-          <button onClick={onTemplate}
-            title="Templates" className="w-7 h-7 rounded flex items-center justify-center text-sm hover:bg-white/10 transition-colors"
-            style={{ color: 'var(--text-dim)' }}>🗂</button>
-          <button onClick={onAiMenu}
-            title="AI" className="w-7 h-7 rounded flex items-center justify-center text-sm hover:bg-white/10 transition-colors"
-            style={{ color: 'var(--text-dim)' }}>✨</button>
-          <button onClick={onCapture}
-            title="Capture window" className="w-7 h-7 rounded flex items-center justify-center text-sm hover:bg-white/10 transition-colors"
-            style={{ color: 'var(--text-dim)' }}>⚡</button>
-          <button onClick={onTogglePin}
-            title={isPinned ? 'Unpin' : 'Pin'}
-            className="w-7 h-7 rounded flex items-center justify-center text-sm hover:bg-white/10 transition-colors"
-            style={{ color: isPinned ? 'var(--accent)' : 'var(--text-dim)' }}>📌</button>
-          <button onClick={onToggleAot}
-            title="Always on top"
-            className="w-7 h-7 rounded flex items-center justify-center text-sm hover:bg-white/10 transition-colors"
-            style={{ color: alwaysOnTop ? 'var(--accent)' : 'var(--text-dim)' }}>⬆</button>
-          {activeNote && (
-            <button onClick={() => setShowHistory(!showHistory)}
-              title="Version history"
-              className="w-7 h-7 rounded flex items-center justify-center text-sm hover:bg-white/10 transition-colors"
-              style={{ color: showHistory ? 'var(--accent)' : 'var(--text-dim)' }}>⏱</button>
-          )}
-          <button onClick={() => activeNote && setPresentMode(true)}
-            title="Presentation mode (F5)"
-            className="w-7 h-7 rounded flex items-center justify-center text-sm hover:bg-white/10 transition-colors"
-            disabled={!activeNote}
-            style={{ color: 'var(--text-dim)', opacity: activeNote ? 1 : 0.3 }}>▶</button>
-          <button onClick={onSave}
-            disabled={!dirty}
-            className="px-2.5 py-1 rounded text-[10px] font-medium transition-colors"
-            style={{
-              background: dirty ? 'var(--accent)' : 'var(--bg3)',
-              color: dirty ? '#fff' : 'var(--text-dim)',
-              border: '1px solid var(--border)'
-            }}>
-            {dirty ? 'Save' : 'Saved'}
-          </button>
-          {activeNote && editorContent.trim() && (
-            <button onClick={handleExportToReport}
-              title="Export notes to ReportForge"
-              className="px-2.5 py-1 rounded text-[10px] font-medium transition-colors"
-              style={{ border: '1px solid var(--accent-dim, rgba(88,166,255,0.3))', color: 'var(--accent)' }}>
-              → Report
-            </button>
-          )}
-        </div>
-      </div>
-
+      {/* Export toast */}
       {exportToast && (
-        <div className="absolute top-14 right-4 px-3 py-1.5 rounded text-[11px] font-medium z-50"
-          style={{ background: 'var(--bg3)', border: '1px solid var(--success)', color: 'var(--success)', boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }}>
+        <div
+          className="absolute top-14 right-4 px-3 py-1.5 rounded text-[11px] font-medium z-50"
+          style={{
+            background: 'rgba(19,21,37,0.95)',
+            border: '1px solid rgba(63,185,80,0.4)',
+            color: '#3fb950',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+            fontFamily: 'var(--font-display)',
+          }}
+        >
           Notes staged for ReportForge
         </div>
       )}
 
-      {/* Editor + Preview */}
+      {/* Editor + Preview panes */}
       <div className="flex flex-1 min-h-0 relative">
+        {!activeNote && <EditorEmptyState />}
+
         {editorMode !== 'preview' && (
-          <div className={`flex flex-col ${editorMode === 'split' ? 'w-1/2 border-r' : 'flex-1'}`}
-            style={{ borderColor: 'var(--border)' }}>
-            <textarea
-              ref={editorRef}
-              value={editorContent}
-              onChange={handleInput}
-              onKeyDown={handleKeyDown}
-              placeholder={activeNote ? '' : 'Select or create a note to start editing…'}
-              className="flex-1 w-full p-4 text-sm font-mono resize-none outline-none"
-              style={{
-                background: 'var(--bg)',
-                color     : 'var(--text)',
-                lineHeight : '1.7',
-                tabSize    : 2
-              }}
-            />
-            {/* Status bar */}
-            <div className="flex items-center gap-4 px-4 py-1.5 border-t text-[10px]"
-              style={{ borderColor: 'var(--border)', color: 'var(--text-dim)' }}>
-              <span>{wordCount} words · ~{Math.max(1, Math.ceil(wordCount / 200))} min read</span>
-              <span>{editorContent.length} chars</span>
-              <span>{editorContent.split('\n').length} lines</span>
+          <div
+            className={`flex flex-col ${editorMode === 'split' ? 'w-1/2' : 'flex-1'} ${!activeNote ? 'hidden' : ''}`}
+            style={{ borderRight: editorMode === 'split' ? '1px solid rgba(42,51,71,0.35)' : 'none' }}
+          >
+            {/* Gutter + textarea row */}
+            <div className="flex flex-1 min-h-0">
+              <LineNumberGutter
+                content={editorContent}
+                textareaRef={editorRef}
+                lineHeight={23}
+                paddingTop={20}
+              />
+              <textarea
+                ref={editorRef}
+                value={editorContent}
+                onChange={handleInput}
+                onKeyDown={handleKeyDown}
+                placeholder=""
+                className="flex-1 p-5 resize-none outline-none overflow-y-auto"
+                style={{
+                  background: 'transparent',
+                  color: '#c9d1d9',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '0.8125rem',
+                  lineHeight: '23px',
+                  tabSize: 2,
+                  caretColor: '#7bb8ff',
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'rgba(42,51,71,0.4) transparent',
+                }}
+              />
             </div>
+
+            {/* Word goal bar */}
+            {activeNote && (
+              <div
+                className="shrink-0"
+                style={{ height: 3, background: 'rgba(42,51,71,0.3)' }}
+                title={`${wordCount} / ${WORD_GOAL} words`}
+              >
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${goalProgress * 100}%`,
+                    background: goalReached ? '#3fb950' : '#e3a246',
+                    transition: 'width 0.4s ease, background 0.4s ease',
+                    borderRadius: '0 2px 2px 0',
+                  }}
+                />
+              </div>
+            )}
+
+            <EditorStatusBar
+              wordCount={wordCount}
+              charCount={editorContent.length}
+              lineCount={editorContent.split('\n').length}
+              wordGoal={WORD_GOAL}
+              goalReached={goalReached}
+            />
           </div>
         )}
 
         {editorMode !== 'edit' && (
           <div
             className="flex-1 overflow-y-auto p-6"
-            style={{ background: 'var(--bg)', scrollbarWidth: 'thin', scrollbarColor: 'var(--border) transparent' }}
+            style={{
+              background: 'transparent',
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'rgba(42,51,71,0.4) transparent',
+            }}
             data-wiki-root
           >
-            <div className="markdown-preview max-w-prose mx-auto"
-              dangerouslySetInnerHTML={{ __html: previewHtml }} />
+            <div
+              className="markdown-preview max-w-prose mx-auto"
+              dangerouslySetInnerHTML={{ __html: previewHtml }}
+            />
           </div>
         )}
 

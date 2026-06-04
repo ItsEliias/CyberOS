@@ -103,12 +103,13 @@ function HelpBubble({ text, anchorRef, onClose }: {
 
 // ─── Nav item ─────────────────────────────────────────────────────────────────
 
-function NavItem({ panel, isActive, onClick, openHelp, onHelpToggle }: {
+function NavItem({ panel, isActive, onClick, openHelp, onHelpToggle, showDot }: {
   panel: typeof PANELS[number];
   isActive: boolean;
   onClick: () => void;
   openHelp: PanelId | null;
   onHelpToggle: (id: PanelId, ref: React.RefObject<HTMLElement | null>) => void;
+  showDot?: boolean;
 }) {
   const rowRef   = useRef<HTMLDivElement>(null);
   const helpBtnRef = useRef<HTMLButtonElement>(null);
@@ -142,18 +143,42 @@ function NavItem({ panel, isActive, onClick, openHelp, onHelpToggle }: {
         style={{
           flex: 1,
           display: 'flex', alignItems: 'center', gap: '9px',
-          padding: '9px 10px 9px 14px',
-          background: isActive ? 'var(--accent-dim)' : hovered ? 'var(--bg3)' : 'transparent',
+          padding: '8px 10px 8px 14px',
+          margin: '1px 6px 1px 0',
+          background: isActive
+            ? 'rgba(180,79,255,0.12)'
+            : hovered
+            ? 'rgba(19,21,37,0.8)'
+            : 'transparent',
           color: isActive ? 'var(--accent)' : hovered ? 'var(--text)' : 'var(--text-muted)',
-          border: 'none', borderRadius: 0, textAlign: 'left',
-          transition: 'background 0.12s, color 0.12s',
+          border: isActive ? '1px solid rgba(180,79,255,0.2)' : '1px solid transparent',
+          borderRadius: '8px',
+          textAlign: 'left',
+          transition: 'background 0.18s cubic-bezier(0.2,0.8,0.2,1), color 0.18s, border-color 0.18s, box-shadow 0.18s',
+          boxShadow: isActive ? '0 0 10px rgba(180,79,255,0.12)' : 'none',
           minWidth: 0,
         }}
       >
-        <span style={{ fontSize: '14px', flexShrink: 0, lineHeight: 1 }}>{panel.icon}</span>
+        <span style={{
+          fontSize: '13px', flexShrink: 0, lineHeight: 1,
+          transform: isActive ? 'scale(1.1)' : 'scale(1)',
+          transition: 'transform 0.18s cubic-bezier(0.2,0.8,0.2,1)',
+          display: 'inline-block',
+        }}>{panel.icon}</span>
         <span style={{ fontSize: '12px', fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {panel.label}
         </span>
+        {showDot && !isActive && (
+          <span
+            className="badge-pulse"
+            style={{
+              width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
+              background: '#f85149',
+              boxShadow: '0 0 5px rgba(248,81,73,0.8)',
+              marginRight: '2px',
+            }}
+          />
+        )}
       </button>
 
       {/* ? help button — only visible on hover */}
@@ -187,6 +212,14 @@ export default function Sidebar() {
   const { tabs, activeTabId, setActivePanel, setBgTheme, setAccentTheme, bgTheme, accentTheme } = useStore();
   const activeTab   = tabs.find(t => t.id === activeTabId);
   const activePanel = activeTab?.activePanel || 'chat';
+  const session = activeTab?.session;
+  const findingsCount = session ? (
+    (session.findings?.ports?.length ?? 0) +
+    (session.findings?.credentials?.length ?? 0) +
+    (session.findings?.flags?.length ?? 0) +
+    (session.findings?.users?.length ?? 0) +
+    (session.findings?.cves?.length ?? 0)
+  ) : 0;
 
   const [openHelp, setOpenHelp]     = useState<PanelId | null>(null);
   const [helpAnchor, setHelpAnchor] = useState<React.RefObject<HTMLElement | null> | null>(null);
@@ -221,6 +254,7 @@ export default function Sidebar() {
             onClick={() => activeTabId && setActivePanel(activeTabId, p.id)}
             openHelp={openHelp}
             onHelpToggle={handleHelpToggle}
+            showDot={p.id === 'findings' && findingsCount > 0}
           />
         ))}
       </div>

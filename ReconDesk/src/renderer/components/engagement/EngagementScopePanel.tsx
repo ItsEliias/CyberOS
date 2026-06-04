@@ -7,8 +7,53 @@ interface Props {
   onClose: () => void
 }
 
+// Floating-label wrapper: label animates up when input has value or is focused
+function FloatField({
+  label,
+  children,
+  hasValue,
+}: {
+  label: string
+  children: React.ReactNode
+  hasValue: boolean
+}) {
+  const [focused, setFocused] = useState(false)
+  const floated = focused || hasValue
+
+  return (
+    <div
+      className="relative"
+      onFocusCapture={() => setFocused(true)}
+      onBlurCapture={() => setFocused(false)}
+    >
+      <span
+        className="pointer-events-none absolute left-3 transition-all duration-150 select-none"
+        style={{
+          top:      floated ? '4px'    : '50%',
+          transform: floated ? 'none'  : 'translateY(-50%)',
+          fontSize:  floated ? '9px'   : '11px',
+          color:     focused  ? '#d29922' : (floated ? 'rgba(210,153,34,0.55)' : '#484f58'),
+          letterSpacing: floated ? '0.08em' : '0',
+          textTransform: 'uppercase',
+          fontWeight: 600,
+          lineHeight: '1',
+          zIndex: 1,
+        }}
+      >
+        {label}
+      </span>
+      <div style={{ paddingTop: floated ? '18px' : undefined }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+const inputCls = 'field-premium w-full rounded-[8px] px-3 py-2 text-xs'
+const labelCls = 'label-caps mb-1.5 block'
+
 export default function EngagementScopePanel({ engagementId, onClose }: Props) {
-  const engagements    = useRecondeskStore(s => s.engagements)
+  const engagements      = useRecondeskStore(s => s.engagements)
   const updateEngagement = useRecondeskStore(s => s.updateEngagement)
 
   const eng = engagements.find(e => e.id === engagementId)
@@ -43,87 +88,114 @@ export default function EngagementScopePanel({ engagementId, onClose }: Props) {
     onClose()
   }
 
-  const inputCls    = 'w-full bg-[#0a0a0f] border border-[#2a3347] rounded px-2.5 py-1.5 text-xs text-[#e2e8f0] placeholder-[#4a5568] focus:outline-none focus:border-[#d29922] transition-colors'
-  const labelCls    = 'text-[10px] font-medium text-[#4a5568] uppercase tracking-widest mb-1 block'
-  const textareaCls = `${inputCls} resize-none`
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}
+      onClick={onClose}
+    >
       <motion.div
-        initial={{ opacity: 0, scale: 0.96 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.96 }}
-        transition={{ duration: 0.15 }}
-        className="bg-[#12131a] border border-[#d29922]/30 rounded-xl w-[600px] max-h-[85vh] overflow-hidden flex flex-col shadow-2xl"
+        initial={{ opacity: 0, scale: 0.95, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.97, y: 4 }}
+        transition={{ duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
+        className="w-[620px] max-h-[88vh] overflow-hidden flex flex-col"
+        style={{
+          background: 'rgba(13,14,24,0.96)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          border: '1px solid rgba(210,153,34,0.22)',
+          borderRadius: '16px',
+          boxShadow: '0 32px 80px rgba(0,0,0,0.72), 0 0 0 1px rgba(255,255,255,0.03), inset 0 1px 0 rgba(255,255,255,0.05)',
+        }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#2a3347]">
+        <div
+          className="flex items-center justify-between px-5 py-4"
+          style={{
+            borderBottom: '1px solid rgba(42,51,71,0.45)',
+            background: 'linear-gradient(180deg, rgba(210,153,34,0.04) 0%, transparent 100%)',
+          }}
+        >
           <div className="flex items-center gap-3">
-            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: eng.color }} />
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{
+                background: 'rgba(210,153,34,0.10)',
+                border: '1px solid rgba(210,153,34,0.20)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
+              }}
+            >
+              <span className="w-2.5 h-2.5 rounded-full block" style={{ backgroundColor: eng.color, boxShadow: `0 0 6px ${eng.color}80` }} />
+            </div>
             <div>
-              <h2 className="text-sm font-semibold text-[#e2e8f0]">Engagement / Scope</h2>
-              <p className="text-[10px] text-[#4a5568]">Rules of Engagement · {eng.name}</p>
+              <h2 className="heading-md" style={{ color: '#e6edf3' }}>Engagement / Scope</h2>
+              <p className="text-[10px] mt-0.5" style={{ color: '#484f58' }}>Rules of Engagement · {eng.name}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-[#4a5568] hover:text-[#e2e8f0] text-xl leading-none transition-colors">×</button>
+          <button
+            onClick={onClose}
+            className="w-7 h-7 flex items-center justify-center rounded-lg text-xl leading-none transition-all"
+            style={{ color: '#484f58' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#e6edf3'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(42,51,71,0.45)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#484f58'; (e.currentTarget as HTMLButtonElement).style.background = '' }}
+          >×</button>
         </div>
 
         {/* Form */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
+        <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4">
           {/* Engagement name */}
-          <div>
-            <label className={labelCls}>Engagement Name</label>
+          <FloatField label="Engagement Name" hasValue={!!form.name}>
             <input
               value={form.name}
               onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
               className={inputCls}
-              placeholder="Engagement name"
+              style={{ borderRadius: 8 }}
             />
-          </div>
+          </FloatField>
 
           {/* Auth */}
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Authorised By</label>
+            <FloatField label="Authorised By" hasValue={!!form.authorisedBy}>
               <input
                 value={form.authorisedBy}
                 onChange={e => setForm(f => ({ ...f, authorisedBy: e.target.value }))}
                 className={inputCls}
-                placeholder="Name or role"
+                style={{ borderRadius: 8 }}
               />
-            </div>
-            <div>
-              <label className={labelCls}>Authorised Date</label>
+            </FloatField>
+            <FloatField label="Authorised Date" hasValue={!!form.authorisedDate}>
               <input
                 type="date"
                 value={form.authorisedDate}
                 onChange={e => setForm(f => ({ ...f, authorisedDate: e.target.value }))}
                 className={inputCls}
+                style={{ borderRadius: 8 }}
               />
-            </div>
+            </FloatField>
           </div>
 
           {/* Testing window */}
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Window Start</label>
+            <FloatField label="Window Start" hasValue={!!form.windowStart}>
               <input
                 type="datetime-local"
                 value={form.windowStart}
                 onChange={e => setForm(f => ({ ...f, windowStart: e.target.value }))}
                 className={inputCls}
+                style={{ borderRadius: 8 }}
               />
-            </div>
-            <div>
-              <label className={labelCls}>Window End</label>
+            </FloatField>
+            <FloatField label="Window End" hasValue={!!form.windowEnd}>
               <input
                 type="datetime-local"
                 value={form.windowEnd}
                 onChange={e => setForm(f => ({ ...f, windowEnd: e.target.value }))}
                 className={inputCls}
+                style={{ borderRadius: 8 }}
               />
-            </div>
+            </FloatField>
           </div>
 
           {/* In scope */}
@@ -132,7 +204,8 @@ export default function EngagementScopePanel({ engagementId, onClose }: Props) {
             <textarea
               value={form.inScope}
               onChange={e => setForm(f => ({ ...f, inScope: e.target.value }))}
-              className={textareaCls}
+              className={`${inputCls} resize-none font-mono`}
+              style={{ borderRadius: 8 }}
               rows={3}
               placeholder="IPs, CIDR ranges, hostnames, services..."
             />
@@ -144,7 +217,8 @@ export default function EngagementScopePanel({ engagementId, onClose }: Props) {
             <textarea
               value={form.outOfScope}
               onChange={e => setForm(f => ({ ...f, outOfScope: e.target.value }))}
-              className={textareaCls}
+              className={`${inputCls} resize-none font-mono`}
+              style={{ borderRadius: 8 }}
               rows={2}
               placeholder="Explicitly excluded targets or actions..."
             />
@@ -156,46 +230,62 @@ export default function EngagementScopePanel({ engagementId, onClose }: Props) {
             <textarea
               value={form.allowedActivity}
               onChange={e => setForm(f => ({ ...f, allowedActivity: e.target.value }))}
-              className={textareaCls}
+              className={`${inputCls} resize-none`}
+              style={{ borderRadius: 8 }}
               rows={2}
               placeholder="e.g. port scanning, web app testing — no DoS..."
             />
           </div>
 
           {/* Emergency contact */}
-          <div>
-            <label className={labelCls}>Emergency Contact</label>
+          <FloatField label="Emergency Contact" hasValue={!!form.emergencyContact}>
             <input
               value={form.emergencyContact}
               onChange={e => setForm(f => ({ ...f, emergencyContact: e.target.value }))}
               className={inputCls}
-              placeholder="Name / phone / email for incident escalation"
+              style={{ borderRadius: 8 }}
             />
-          </div>
+          </FloatField>
 
           {/* Auth document */}
-          <div>
-            <label className={labelCls}>Authorisation Document Location</label>
+          <FloatField label="Authorisation Document Location" hasValue={!!form.authStorageLocation}>
             <input
               value={form.authStorageLocation}
               onChange={e => setForm(f => ({ ...f, authStorageLocation: e.target.value }))}
-              className={inputCls}
-              placeholder="e.g. /home/user/engagements/sow.pdf"
+              className={`${inputCls} font-mono`}
+              style={{ borderRadius: 8 }}
             />
-          </div>
+          </FloatField>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-[#2a3347]">
+        <div
+          className="flex items-center justify-end gap-2 px-5 py-3.5"
+          style={{
+            borderTop: '1px solid rgba(42,51,71,0.45)',
+            background: 'rgba(7,8,15,0.4)',
+          }}
+        >
           <button
             onClick={onClose}
-            className="px-4 py-1.5 text-xs text-[#8b949e] hover:text-[#e2e8f0] transition-colors"
+            className="px-4 py-2 text-xs rounded-md transition-all"
+            style={{ color: '#8b949e', background: 'transparent' }}
+            onMouseEnter={e => { const b = e.currentTarget; b.style.color = '#e6edf3'; b.style.background = 'rgba(42,51,71,0.4)' }}
+            onMouseLeave={e => { const b = e.currentTarget; b.style.color = '#8b949e'; b.style.background = 'transparent' }}
           >
             Cancel
           </button>
           <button
             onClick={save}
-            className="px-4 py-1.5 text-xs bg-[#d29922]/15 hover:bg-[#d29922]/25 border border-[#d29922]/30 text-[#d29922] rounded transition-colors"
+            className="px-4 py-2 text-xs rounded-md font-medium transition-all"
+            style={{
+              background: 'rgba(210,153,34,0.15)',
+              border: '1px solid rgba(210,153,34,0.32)',
+              color: '#d29922',
+              boxShadow: '0 1px 4px rgba(210,153,34,0.08)',
+            }}
+            onMouseEnter={e => { const b = e.currentTarget; b.style.background = 'rgba(210,153,34,0.26)'; b.style.boxShadow = '0 2px 8px rgba(210,153,34,0.18)' }}
+            onMouseLeave={e => { const b = e.currentTarget; b.style.background = 'rgba(210,153,34,0.15)'; b.style.boxShadow = '0 1px 4px rgba(210,153,34,0.08)' }}
           >
             Save Scope
           </button>

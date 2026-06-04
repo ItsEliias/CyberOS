@@ -15,6 +15,24 @@ const STEP_STATUS_COLOR: Record<StepStatus, string> = {
   skipped:    'var(--text-dim)',
 }
 
+const STEP_STATUS_BG: Record<StepStatus, string> = {
+  todo:       'transparent',
+  inprogress: 'rgba(210,153,34,0.05)',
+  done:       'rgba(63,185,80,0.05)',
+  skipped:    'transparent',
+}
+
+const STEP_STATUS_BORDER: Record<StepStatus, string> = {
+  todo:       'var(--border)',
+  inprogress: 'rgba(210,153,34,0.25)',
+  done:       'rgba(63,185,80,0.22)',
+  skipped:    'var(--border)',
+}
+
+const STEP_STATUS_ICON: Record<StepStatus, string> = {
+  todo: '○', inprogress: '▶', done: '✓', skipped: '↷',
+}
+
 function fmtDuration(ms: number): string {
   if (ms < 0) return '—'
   const s = Math.floor(ms / 1000)
@@ -56,15 +74,31 @@ function RunDetail({ run }: { run: PlaybookRun }) {
 
       <div className="flex flex-col gap-1.5">
         {run.steps.map(step => {
-          const sd = stepDuration(step)
+          const sd  = stepDuration(step)
+          const st  = step.status ?? 'todo'
           return (
-            <div key={step.id} className="rounded px-3 py-2" style={{ background: 'var(--panel)', border: '1px solid var(--border)', opacity: step.status === 'skipped' ? 0.55 : 1 }}>
+            <div
+              key={step.id}
+              className="rounded px-3 py-2"
+              style={{
+                background: STEP_STATUS_BG[st],
+                border: `1px solid ${STEP_STATUS_BORDER[st]}`,
+                borderLeft: `3px solid ${STEP_STATUS_COLOR[st]}`,
+                opacity: st === 'skipped' ? 0.55 : 1,
+              }}
+            >
               <div className="flex items-center gap-2">
-                <span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>{String(step.order).padStart(2, '0')}</span>
-                <span className="flex-1 text-sm" style={{ color: 'var(--text)' }}>{step.title}</span>
-                {sd > 0 && <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{fmtDuration(sd)}</span>}
-                <span className="text-xs font-medium flex-shrink-0" style={{ color: STEP_STATUS_COLOR[step.status ?? 'todo'] }}>
-                  {step.status ?? 'todo'}
+                <span className="text-xs font-mono flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{String(step.order).padStart(2, '0')}</span>
+                <span
+                  className="text-xs flex-shrink-0 w-4 text-center font-bold"
+                  style={{ color: STEP_STATUS_COLOR[st] }}
+                >
+                  {STEP_STATUS_ICON[st]}
+                </span>
+                <span className="flex-1 text-sm" style={{ color: 'var(--text)', textDecoration: st === 'skipped' ? 'line-through' : 'none' }}>{step.title}</span>
+                {sd > 0 && <span className="text-xs flex-shrink-0 font-mono" style={{ color: 'var(--text-muted)' }}>{fmtDuration(sd)}</span>}
+                <span className="text-xs font-medium flex-shrink-0" style={{ color: STEP_STATUS_COLOR[st] }}>
+                  {st}
                 </span>
                 {step.completedAt && <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{new Date(step.completedAt).toLocaleTimeString()}</span>}
               </div>
@@ -174,14 +208,27 @@ function InfoCell({ label, value, color }: { label: string; value: string; color
   )
 }
 
+type ResultFilter = 'all' | 'pass' | 'fail'
+
+function runResult(run: PlaybookRun): 'pass' | 'fail' | 'running' {
+  if (run.status === 'running') return 'running'
+  if (run.status === 'abandoned') return 'fail'
+  const anyRequired = run.steps.some(s => s.required && s.status !== 'done' && s.status !== 'skipped')
+  if (anyRequired) return 'fail'
+  return 'pass'
+}
+
 export default function HistoryView() {
   const runs         = useStore(s => s.runs)
   const setActiveRun = useStore(s => s.setActiveRun)
   const setView      = useStore(s => s.setView)
 
-  const [selected,    setSelected]    = useState<PlaybookRun | null>(null)
-  const [compareSet,  setCompareSet]  = useState<Set<string>>(new Set())
-  const [comparing,   setComparing]   = useState<[PlaybookRun, PlaybookRun] | null>(null)
+  const [selected,      setSelected]      = useState<PlaybookRun | null>(null)
+  const [compareSet,    setCompareSet]     = useState<Set<string>>(new Set())
+  const [comparing,     setComparing]      = useState<[PlaybookRun, PlaybookRun] | null>(null)
+  const [resultFilter,  setResultFilter]   = useState<ResultFilter>('all')
+  const [dateFrom,      setDateFrom]       = useState('')
+  const [dateTo,        setDateTo]         = useState('')
 
   function handleRowClick(run: PlaybookRun, e: React.MouseEvent) {
     if (e.shiftKey) {
@@ -207,9 +254,18 @@ export default function HistoryView() {
   if (runs.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <p className="text-sm mb-1" style={{ color: 'var(--text-dim)' }}>No runs yet.</p>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Run a playbook from the Library to get started.</p>
+        <div className="flex flex-col items-center gap-4 anim-fade-in-up">
+          <svg width="64" height="64" viewBox="0 0 64 64" fill="none" style={{ filter: 'drop-shadow(0 0 16px rgba(45,212,191,0.12))' }}>
+            <circle cx="32" cy="32" r="26" stroke="rgba(45,212,191,0.18)" strokeWidth="1.5" fill="rgba(45,212,191,0.03)" />
+            <path d="M32 18v14l8 8" stroke="rgba(45,212,191,0.45)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M20 44h24" stroke="rgba(42,51,71,0.6)" strokeWidth="1.5" strokeLinecap="round" />
+            <circle cx="20" cy="20" r="2" fill="rgba(45,212,191,0.25)" />
+            <circle cx="44" cy="20" r="2" fill="rgba(45,212,191,0.25)" />
+          </svg>
+          <div className="flex flex-col items-center gap-1">
+            <p className="text-sm font-medium" style={{ color: '#6b7280' }}>No runs yet</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Run a playbook from the Library to get started.</p>
+          </div>
         </div>
       </div>
     )
@@ -236,10 +292,77 @@ export default function HistoryView() {
     )
   }
 
+  const filteredRuns = runs.filter(run => {
+    if (resultFilter !== 'all') {
+      const r = runResult(run)
+      if (resultFilter === 'pass' && r !== 'pass') return false
+      if (resultFilter === 'fail' && r !== 'fail' && r !== 'running') return false
+    }
+    const startedMs = new Date(run.startedAt).getTime()
+    if (dateFrom) {
+      const fromMs = new Date(dateFrom).getTime()
+      if (startedMs < fromMs) return false
+    }
+    if (dateTo) {
+      const toMs = new Date(dateTo).getTime() + 86_400_000 // inclusive end of day
+      if (startedMs > toMs) return false
+    }
+    return true
+  })
+
   return (
     <div className="flex flex-col h-full">
-      <div className="px-4 py-3 flex-shrink-0 flex items-center gap-3" style={{ borderBottom: '1px solid var(--border)' }}>
+      <div className="px-4 py-3 flex-shrink-0 flex items-center gap-3 flex-wrap" style={{ borderBottom: '1px solid var(--border)' }}>
         <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>Run History ({runs.length})</span>
+        {/* Date range filter */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>From</span>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={e => setDateFrom(e.target.value)}
+            className="text-xs rounded px-2 py-0.5"
+            style={{ background: 'rgba(42,51,71,0.25)', border: '1px solid rgba(42,51,71,0.5)', color: 'var(--text-dim)', colorScheme: 'dark' }}
+          />
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>to</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={e => setDateTo(e.target.value)}
+            className="text-xs rounded px-2 py-0.5"
+            style={{ background: 'rgba(42,51,71,0.25)', border: '1px solid rgba(42,51,71,0.5)', color: 'var(--text-dim)', colorScheme: 'dark' }}
+          />
+          {(dateFrom || dateTo) && (
+            <button
+              onClick={() => { setDateFrom(''); setDateTo('') }}
+              className="text-xs px-1.5 py-0.5 rounded"
+              style={{ background: 'rgba(248,81,73,0.08)', color: '#f85149', border: '1px solid rgba(248,81,73,0.2)' }}
+            >
+              clear
+            </button>
+          )}
+        </div>
+        {/* Result filter toggle */}
+        <div className="flex items-center gap-1 p-0.5 rounded-full" style={{ background: 'rgba(42,51,71,0.25)', border: '1px solid rgba(42,51,71,0.4)' }}>
+          {(['all', 'pass', 'fail'] as ResultFilter[]).map(f => {
+            const active = resultFilter === f
+            const color = f === 'pass' ? 'var(--success)' : f === 'fail' ? 'var(--error)' : 'var(--text-dim)'
+            return (
+              <button
+                key={f}
+                onClick={() => setResultFilter(f)}
+                className="text-xs px-2.5 py-0.5 rounded-full capitalize transition-all"
+                style={{
+                  background: active ? (f === 'all' ? 'rgba(139,148,158,0.2)' : f === 'pass' ? 'rgba(63,185,80,0.18)' : 'rgba(248,81,73,0.18)') : 'transparent',
+                  color: active ? color : 'var(--text-muted)',
+                  border: `1px solid ${active ? (f === 'pass' ? 'rgba(63,185,80,0.3)' : f === 'fail' ? 'rgba(248,81,73,0.3)' : 'rgba(139,148,158,0.3)') : 'transparent'}`,
+                }}
+              >
+                {f}
+              </button>
+            )
+          })}
+        </div>
         {compareSet.size === 2 && (
           <button onClick={handleCompare} className="text-xs px-3 py-1 rounded font-medium ml-auto"
             style={{ background: 'var(--accent)', color: '#fff' }}>
@@ -254,7 +377,12 @@ export default function HistoryView() {
         )}
       </div>
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
-        {runs.map(run => {
+        {filteredRuns.length === 0 && runs.length > 0 && (
+          <div className="flex items-center justify-center h-24">
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>No {resultFilter} runs found</span>
+          </div>
+        )}
+        {filteredRuns.map(run => {
           const done  = run.steps.filter(s => s.status === 'done').length
           const total = run.steps.length
           const pct   = total > 0 ? Math.round((done / total) * 100) : 0
@@ -263,19 +391,35 @@ export default function HistoryView() {
 
           return (
             <button key={run.id} onClick={e => handleRowClick(run, e)}
-              className="w-full text-left rounded-lg px-4 py-3"
+              className="w-full text-left rounded-lg px-4 py-3 group"
               style={{
-                background: inCompare ? 'rgba(74,158,255,0.12)' : 'var(--panel)',
-                border: `1px solid ${inCompare ? 'var(--accent)' : 'var(--border)'}`,
-              }}>
-              <div className="flex items-center justify-between gap-3">
+                background: inCompare ? 'rgba(45,212,191,0.07)' : 'var(--panel)',
+                border: `1px solid ${inCompare ? 'rgba(45,212,191,0.35)' : 'var(--border)'}`,
+                transition: 'border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease',
+              }}
+              onMouseEnter={e => {
+                if (!inCompare) {
+                  const el = e.currentTarget as HTMLButtonElement
+                  el.style.borderColor = 'rgba(45,212,191,0.22)'
+                  el.style.boxShadow = '0 2px 12px rgba(45,212,191,0.05)'
+                }
+              }}
+              onMouseLeave={e => {
+                if (!inCompare) {
+                  const el = e.currentTarget as HTMLButtonElement
+                  el.style.borderColor = 'var(--border)'
+                  el.style.boxShadow = 'none'
+                }
+              }}
+            >
+              <div className="flex items-center justify-between gap-3 mb-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-sm font-medium truncate" style={{ color: 'var(--text)' }}>{run.playbookName}</span>
                     <span className="text-xs px-1.5 py-0.5 rounded flex-shrink-0 font-medium" style={{ color: STATUS_COLOR[run.status], background: `${STATUS_COLOR[run.status]}22` }}>
                       {run.status}
                     </span>
-                    {inCompare && <span className="text-xs px-1.5 py-0.5 rounded flex-shrink-0" style={{ background: 'var(--accent)', color: '#fff' }}>selected</span>}
+                    {inCompare && <span className="text-xs px-1.5 py-0.5 rounded flex-shrink-0" style={{ background: 'rgba(45,212,191,0.15)', color: 'var(--accent)', border: '1px solid rgba(45,212,191,0.3)' }}>selected</span>}
                   </div>
                   <div className="flex items-center gap-3 text-xs" style={{ color: 'var(--text-muted)' }}>
                     <span>{new Date(run.startedAt).toLocaleString()}</span>
@@ -285,9 +429,26 @@ export default function HistoryView() {
                   </div>
                 </div>
                 <div className="flex-shrink-0 text-right">
-                  <div className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>{done}/{total}</div>
-                  <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{pct}%</div>
+                  <div className="text-sm font-medium tabular-nums" style={{ color: 'var(--text-dim)' }}>{done}/{total}</div>
+                  <div className="text-xs tabular-nums" style={{ color: 'var(--text-muted)' }}>{pct}%</div>
                 </div>
+              </div>
+              {/* Mini step completion bar with label */}
+              <div className="flex items-center gap-2 mt-1">
+                <div className="flex-1 rounded-full overflow-hidden" style={{ height: 5, background: 'rgba(42,51,71,0.45)' }}>
+                  <div
+                    className="rounded-full"
+                    style={{
+                      height: 5,
+                      width: `${pct}%`,
+                      background: run.status === 'abandoned' ? 'var(--error)' : pct === 100 ? 'var(--success)' : 'var(--accent)',
+                      transition: 'width 600ms cubic-bezier(0.2,0.8,0.2,1)',
+                    }}
+                  />
+                </div>
+                <span className="flex-shrink-0 text-xs font-mono tabular-nums" style={{ color: pct === 100 ? 'var(--success)' : 'var(--text-muted)', minWidth: 54, textAlign: 'right' }}>
+                  {done}/{total} steps
+                </span>
               </div>
             </button>
           )

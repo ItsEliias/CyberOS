@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
 import { useStore } from '../store';
-import { SeveritySummary } from './SeverityBadge';
+import SeverityPill from './ui/SeverityPill';
 import type { Report } from '@shared/types';
+import { ReportCard, ReportListRow, EmptyState, SkeletonCard } from './ReportCards';
 
 interface Props {
   onNew: () => void;
@@ -12,11 +12,52 @@ interface Props {
 }
 
 type SortKey = 'recent' | 'title' | 'findings';
+type ViewMode = 'grid' | 'list';
+
+function GridIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+      <rect x="0.5" y="0.5" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
+      <rect x="7.5" y="0.5" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
+      <rect x="0.5" y="7.5" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
+      <rect x="7.5" y="7.5" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
+    </svg>
+  );
+}
+
+function ListIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+      <line x1="3" y1="3" x2="12" y2="3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+      <line x1="3" y1="6.5" x2="12" y2="6.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+      <line x1="3" y1="10" x2="12" y2="10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+      <circle cx="1" cy="3" r="0.7" fill="currentColor" />
+      <circle cx="1" cy="6.5" r="0.7" fill="currentColor" />
+      <circle cx="1" cy="10" r="0.7" fill="currentColor" />
+    </svg>
+  );
+}
 
 export default function ReportLibrary({ onNew, onOpen, onDelete, onDuplicate }: Props) {
   const reports = useStore(s => s.reports);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SortKey>('recent');
+  const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    try { return (localStorage.getItem('rf-view-mode') as ViewMode) ?? 'grid'; } catch { return 'grid'; }
+  });
+
+  function toggleViewMode() {
+    const next: ViewMode = viewMode === 'grid' ? 'list' : 'grid';
+    setViewMode(next);
+    try { localStorage.setItem('rf-view-mode', next); } catch { /* ignore */ }
+  }
+
+  // Brief skeleton loader on first mount — reports load async from disk
+  useEffect(() => {
+    const id = setTimeout(() => setLoading(false), 380);
+    return () => clearTimeout(id);
+  }, []);
 
   const filtered = reports
     .filter(r => {
@@ -25,153 +66,129 @@ export default function ReportLibrary({ onNew, onOpen, onDelete, onDuplicate }: 
       return (
         r.title.toLowerCase().includes(q) ||
         r.targetName.toLowerCase().includes(q) ||
-        r.platform.toLowerCase().includes(q)
+        r.platform.toLowerCase().includes(q) ||
+        (r.operator ?? '').toLowerCase().includes(q)
       );
     })
     .slice()
     .sort((a, b) => {
       if (sort === 'title')    return a.title.localeCompare(b.title);
       if (sort === 'findings') return b.findings.length - a.findings.length;
-      // recent: newest updatedAt first
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {/* Header bar */}
-      <div style={{
-        height: 52, flexShrink: 0,
-        background: 'var(--panel)',
-        borderBottom: '1px solid var(--border)',
-        display: 'flex', alignItems: 'center', gap: 12, padding: '0 20px',
-        WebkitAppRegion: 'drag' as never,
-      }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--surface-0)' }}>
+      {/* Search + sort bar */}
+      <div
+        className="shrink-0 flex items-center gap-3 px-5"
+        style={{
+          height: 52,
+          borderBottom: '1px solid rgba(255,255,255,0.04)',
+          background: 'rgba(13,14,24,0.85)',
+          WebkitAppRegion: 'drag' as never,
+        }}
+      >
         <div style={{ width: 72, flexShrink: 0 }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, WebkitAppRegion: 'no-drag' as never }}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--accent)', flexShrink: 0 }}>
-            <rect x="2" y="1" width="10" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.5" fill="none" />
-            <line x1="4.5" y1="5" x2="9.5" y2="5" stroke="currentColor" strokeWidth="1.2" />
-            <line x1="4.5" y1="7.5" x2="9.5" y2="7.5" stroke="currentColor" strokeWidth="1.2" />
-            <line x1="4.5" y1="10" x2="7.5" y2="10" stroke="currentColor" strokeWidth="1.2" />
-            <circle cx="12.5" cy="12.5" r="2.5" fill="currentColor" />
+
+        {/* Search input with clear button (no-drag) */}
+        <div className="flex items-center gap-2 flex-1 no-drag" style={{ maxWidth: 340, position: 'relative' }}>
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{ color: '#484f58', flexShrink: 0 }}>
+            <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" strokeWidth="1.5" />
+            <line x1="10.5" y1="10.5" x2="14" y2="14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
-          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
-            Report<span style={{ color: 'var(--accent)' }}>Forge</span>
-          </span>
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search by title, operator, or target…"
+            style={{ background: 'transparent', border: 'none', padding: 0, fontSize: 13, flex: 1, paddingRight: search ? 20 : 0 }}
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              title="Clear search"
+              style={{
+                position: 'absolute', right: 0,
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: '#484f58', fontSize: 14, lineHeight: 1, padding: '0 2px',
+                transition: 'color 0.15s',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#484f58'; }}
+            >
+              ×
+            </button>
+          )}
         </div>
-        <div style={{ flex: 1 }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, WebkitAppRegion: 'no-drag' as never }}>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+
+        <div className="flex-1" />
+
+        {/* Sort + count + new (no-drag) */}
+        <div className="flex items-center gap-3 no-drag">
+          <label className="flex items-center gap-1.5" style={{ fontSize: 11, color: '#484f58' }}>
+            Sort:
+            <select
+              value={sort}
+              onChange={e => setSort(e.target.value as SortKey)}
+              style={{ fontSize: 11, padding: '3px 6px', background: 'var(--surface-2)', border: '1px solid rgba(42,51,71,0.7)', borderRadius: 4 }}
+            >
+              <option value="recent">Recent</option>
+              <option value="title">Title</option>
+              <option value="findings">Findings</option>
+            </select>
+          </label>
+          <span style={{ fontSize: 11, color: '#484f58' }}>
             {reports.length} report{reports.length !== 1 ? 's' : ''}
           </span>
-          <button className="btn-primary" onClick={onNew} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 14px', fontSize: 12 }}>
-            <span style={{ fontSize: 15, lineHeight: 1 }}>+</span> New Report
+
+          {/* Grid / list toggle */}
+          <div style={{ display: 'flex', border: '1px solid rgba(42,51,71,0.7)', borderRadius: 4, overflow: 'hidden' }}>
+            {(['grid', 'list'] as ViewMode[]).map((mode) => (
+              <button
+                key={mode}
+                onClick={mode !== viewMode ? toggleViewMode : undefined}
+                title={mode === 'grid' ? 'Grid view' : 'List view'}
+                style={{
+                  height: 27, padding: '0 8px', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                  background: viewMode === mode ? 'rgba(74,158,255,0.12)' : 'transparent',
+                  color: viewMode === mode ? '#4a9eff' : '#484f58',
+                  border: 'none', transition: 'background 0.15s, color 0.15s',
+                }}
+              >
+                {mode === 'grid' ? <GridIcon /> : <ListIcon />}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={onNew}
+            className="flex items-center gap-1.5 h-7 px-3 rounded-sm text-xs font-semibold transition-all"
+            style={{ background: 'rgba(74,158,255,0.15)', color: '#4a9eff', border: '1px solid rgba(74,158,255,0.30)' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(74,158,255,0.25)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(74,158,255,0.15)'; }}
+          >
+            <span className="text-sm leading-none">+</span>
+            New Report
           </button>
         </div>
       </div>
 
-      {/* Search + sort bar */}
-      <div style={{
-        padding: '12px 20px', borderBottom: '1px solid var(--border)',
-        display: 'flex', alignItems: 'center', gap: 10, background: 'var(--panel)',
-        flexShrink: 0,
-      }}>
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search reports…"
-          style={{ flex: 1, maxWidth: 320 }}
-        />
-        <div style={{ flex: 1 }} />
-        <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-          Sort:
-          <select
-            value={sort}
-            onChange={e => setSort(e.target.value as SortKey)}
-            style={{ fontSize: 11, padding: '3px 8px' }}
-          >
-            <option value="recent">Recent</option>
-            <option value="title">Title</option>
-            <option value="findings">Findings</option>
-          </select>
-        </label>
-      </div>
-
-      {/* Grid */}
+      {/* Grid / empty state */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
-        {filtered.length === 0 && reports.length === 0 ? (
-          <div style={{
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center', height: '100%',
-            padding: '48px 24px',
-          }}>
-            {/* App icon */}
-            <div style={{
-              width: 56, height: 56, borderRadius: 14,
-              background: 'rgba(63,185,80,0.1)',
-              border: '1px solid rgba(63,185,80,0.2)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              marginBottom: 20,
-            }}>
-              <svg width="26" height="26" viewBox="0 0 16 16" fill="none" style={{ color: '#3fb950' }}>
-                <rect x="2" y="1" width="10" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.5" fill="none" />
-                <line x1="4.5" y1="5" x2="9.5" y2="5" stroke="currentColor" strokeWidth="1.2" />
-                <line x1="4.5" y1="7.5" x2="9.5" y2="7.5" stroke="currentColor" strokeWidth="1.2" />
-                <line x1="4.5" y1="10" x2="7.5" y2="10" stroke="currentColor" strokeWidth="1.2" />
-                <circle cx="12.5" cy="12.5" r="2.5" fill="currentColor" />
-              </svg>
-            </div>
-
-            {/* Heading */}
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', marginBottom: 8, textAlign: 'center' }}>
-              Professional Security Reports
-            </h2>
-
-            {/* Description */}
-            <p style={{
-              fontSize: 13, color: 'var(--text-muted)', maxWidth: 340,
-              textAlign: 'center', lineHeight: 1.6, marginBottom: 8,
-            }}>
-              Generate structured pentest reports, vulnerability assessments, and security audit documents. Export to Markdown or PDF.
-            </p>
-
-            {/* Feature pills */}
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 32 }}>
-              {['Pentest Reports', 'Vuln Assessments', 'Audit Docs', 'PDF Export'].map(label => (
-                <span key={label} style={{
-                  fontSize: 11, padding: '3px 10px', borderRadius: 99,
-                  background: 'rgba(63,185,80,0.08)',
-                  border: '1px solid rgba(63,185,80,0.2)',
-                  color: 'var(--text-muted)',
-                }}>
-                  {label}
-                </span>
-              ))}
-            </div>
-
-            {/* CTA */}
-            <button
-              className="btn-primary"
-              onClick={onNew}
-              style={{
-                padding: '12px 32px',
-                fontSize: 14,
-                fontWeight: 600,
-                minHeight: 48,
-                borderRadius: 8,
-              }}
-            >
-              Create New Report
-            </button>
+        {loading ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(288px, 1fr))', gap: 14 }}>
+            {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} index={i} />)}
           </div>
+        ) : filtered.length === 0 && reports.length === 0 ? (
+          <EmptyState onNew={onNew} />
         ) : filtered.length === 0 ? (
           <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
             No reports match "{search}"
           </div>
-        ) : (
+        ) : viewMode === 'grid' ? (
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(288px, 1fr))',
             gap: 14,
           }}>
             {filtered.map((r, i) => (
@@ -181,9 +198,20 @@ export default function ReportLibrary({ onNew, onOpen, onDelete, onDuplicate }: 
                 index={i}
                 onOpen={() => onOpen(r)}
                 onDuplicate={() => onDuplicate(r.id)}
-                onDelete={() => {
-                  if (confirm(`Delete "${r.title}"?`)) onDelete(r.id);
-                }}
+                onDelete={() => { if (confirm(`Delete "${r.title}"?`)) onDelete(r.id); }}
+              />
+            ))}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {filtered.map((r, i) => (
+              <ReportListRow
+                key={r.id}
+                report={r}
+                index={i}
+                onOpen={() => onOpen(r)}
+                onDuplicate={() => onDuplicate(r.id)}
+                onDelete={() => { if (confirm(`Delete "${r.title}"?`)) onDelete(r.id); }}
               />
             ))}
           </div>
@@ -193,124 +221,5 @@ export default function ReportLibrary({ onNew, onOpen, onDelete, onDuplicate }: 
   );
 }
 
-interface CardProps {
-  report: Report;
-  index: number;
-  onOpen: () => void;
-  onDuplicate: () => void;
-  onDelete: () => void;
-}
-
-function ReportCard({ report: r, index, onOpen, onDuplicate, onDelete }: CardProps) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.04, duration: 0.2 }}
-      onClick={onOpen}
-      style={{
-        background: 'var(--panel)',
-        border: '1px solid var(--border)',
-        borderRadius: 8,
-        padding: '16px 18px',
-        cursor: 'pointer',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 10,
-        transition: 'border-color 0.15s, box-shadow 0.15s',
-        userSelect: 'none',
-      }}
-      whileHover={{ scale: 1.005 }}
-      onMouseEnter={e => {
-        (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--accent-dim)';
-        (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.3)';
-      }}
-      onMouseLeave={e => {
-        (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)';
-        (e.currentTarget as HTMLDivElement).style.boxShadow = 'none';
-      }}
-    >
-      {/* Top row: title + status */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-        <div style={{
-          fontWeight: 600, fontSize: 13, color: 'var(--text)',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0,
-        }}>
-          {r.title}
-        </div>
-        <StatusBadge status={r.status} />
-      </div>
-
-      {/* Meta row */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: 11, color: 'var(--text-muted)' }}>
-        {r.platform && (
-          <span style={{
-            background: 'var(--bg)', border: '1px solid var(--border)',
-            borderRadius: 3, padding: '1px 6px', fontSize: 10, fontWeight: 600,
-            textTransform: 'uppercase', letterSpacing: '0.04em',
-          }}>
-            {r.platform}
-          </span>
-        )}
-        {r.targetName && <span style={{ color: 'var(--text-dim)' }}>{r.targetName}</span>}
-        {r.targetIP && <span style={{ color: 'var(--accent-dim)', fontFamily: 'monospace' }}>{r.targetIP}</span>}
-        <span>{r.assessmentDate}</span>
-      </div>
-
-      {/* Severity summary */}
-      <SeveritySummary findings={r.findings} />
-
-      {/* Finding count */}
-      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-        {r.findings.length === 0
-          ? 'No findings'
-          : `${r.findings.length} finding${r.findings.length !== 1 ? 's' : ''}`
-        }
-      </div>
-
-      {/* Action buttons */}
-      <div
-        style={{ display: 'flex', gap: 6, marginTop: 2 }}
-        onClick={e => e.stopPropagation()}
-      >
-        <button
-          className="btn-primary"
-          style={{ flex: 1, padding: '5px 0', fontSize: 11 }}
-          onClick={onOpen}
-        >
-          Open
-        </button>
-        <button
-          className="btn-ghost"
-          style={{ padding: '5px 12px', fontSize: 11 }}
-          onClick={onDuplicate}
-          title="Duplicate report"
-        >
-          Copy
-        </button>
-        <button
-          className="btn-danger"
-          style={{ padding: '5px 10px', fontSize: 11 }}
-          onClick={onDelete}
-          title="Delete report"
-        >
-          ✕
-        </button>
-      </div>
-    </motion.div>
-  );
-}
-
-function StatusBadge({ status }: { status: 'draft' | 'complete' }) {
-  return (
-    <span style={{
-      fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
-      padding: '2px 8px', borderRadius: 99, flexShrink: 0,
-      background: status === 'complete' ? 'rgba(63,185,80,0.15)' : 'rgba(240,165,0,0.15)',
-      color: status === 'complete' ? 'var(--success)' : 'var(--warning)',
-      border: `1px solid ${status === 'complete' ? 'rgba(63,185,80,0.3)' : 'rgba(240,165,0,0.3)'}`,
-    }}>
-      {status}
-    </span>
-  );
-}
+// Re-export SeverityPill so FindingsPanel import still resolves
+export { SeverityPill };

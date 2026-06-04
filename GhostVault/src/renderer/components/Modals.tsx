@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+export { useToast, ToastContainer } from './ui/Toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import type { AiCtx } from '@shared/types';
@@ -9,29 +10,85 @@ function Backdrop({ onClick }: { onClick: () => void }) {
     <motion.div
       className="fixed inset-0 z-40"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
       onClick={onClick}
-      style={{ background: 'rgba(0,0,0,.5)' }} />
+      style={{ background: 'rgba(0,0,0,.62)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }} />
   );
 }
 
+const FOCUSABLE_SELECTORS = 'input:not([disabled]), textarea:not([disabled]), select:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 function ModalBox({ children, wide }: { children: React.ReactNode; wide?: boolean }) {
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  // Focus trap: auto-focus the first focusable element on mount
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const first = el.querySelector<HTMLElement>(FOCUSABLE_SELECTORS);
+    if (first) first.focus();
+  }, []);
+
+  // Trap Tab inside the modal
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'Tab') return;
+    const el = boxRef.current;
+    if (!el) return;
+    const focusable = [...el.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS)].filter(
+      n => !n.closest('[aria-hidden="true"]')
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last  = focusable[focusable.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+    } else {
+      if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }, []);
+
   return (
     <motion.div
-      className="fixed z-50 rounded-xl border p-6"
+      ref={boxRef}
+      className="fixed z-50 rounded-2xl border p-6"
       style={{
         top: '50%', left: '50%', x: '-50%', y: '-50%',
-        width: wide ? 520 : 360,
-        background: 'var(--bg3)', borderColor: 'var(--border)',
-        boxShadow: '0 24px 60px rgba(0,0,0,.5)'
+        width: wide ? 520 : 380,
+        background: 'rgba(19,21,37,0.95)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderColor: 'rgba(42,51,71,0.7)',
+        boxShadow: '0 32px 80px rgba(0,0,0,.65), 0 0 0 1px rgba(123,184,255,0.06)',
       }}
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
+      initial={{ opacity: 0, scale: 0.92, y: '-48%' }}
+      animate={{ opacity: 1, scale: 1, y: '-50%' }}
+      exit={{ opacity: 0, scale: 0.92, y: '-48%' }}
+      transition={{ type: 'spring', stiffness: 420, damping: 32, mass: 0.8 }}
+      onKeyDown={handleKeyDown}
+      role="dialog"
+      aria-modal="true"
     >
       {children}
     </motion.div>
   );
 }
+
+const INPUT_STYLE = {
+  background: 'rgba(7,8,15,0.7)',
+  border: '1px solid rgba(42,51,71,0.6)',
+  color: 'var(--text)',
+} as const;
+
+const BTN_PRIMARY = {
+  background: 'var(--accent)',
+  color: '#07080f',
+  fontWeight: 600,
+} as const;
+
+const BTN_CANCEL = {
+  borderColor: 'rgba(42,51,71,0.6)',
+  color: 'var(--text-muted)',
+} as const;
 
 // ─── New Note Modal ────────────────────────────────────────────────────────────
 export function NewNoteModal({ open, onClose, onCreate }: {
@@ -52,25 +109,26 @@ export function NewNoteModal({ open, onClose, onCreate }: {
         <>
           <Backdrop onClick={onClose} />
           <ModalBox>
-            <div className="text-sm font-semibold mb-4" style={{ color: 'var(--text)' }}>New Note</div>
+            <div className="text-sm font-semibold mb-1" style={{ color: 'var(--text)' }}>New Note</div>
+            <div className="text-xs mb-4" style={{ color: 'var(--text-dim)' }}>Add a note to your vault</div>
             <div className="space-y-3">
               <select value={folder} onChange={e => setFolder(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}>
+                className="w-full px-3 py-2.5 rounded-xl text-sm input-glow"
+                style={{ ...INPUT_STYLE, outline: 'none' }}>
                 {folders.map(f => <option key={f} value={f}>{f}</option>)}
               </select>
               <input ref={inputRef} value={title} onChange={e => setTitle(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') onCreate(folder, title || 'Untitled'); if (e.key === 'Escape') onClose(); }}
                 placeholder="Note title"
-                className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }} />
+                className="w-full px-3 py-2.5 rounded-xl text-sm input-glow"
+                style={{ ...INPUT_STYLE, outline: 'none' }} />
             </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm border transition-colors hover:bg-white/5"
-                style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>Cancel</button>
+            <div className="flex justify-end gap-2 mt-5">
+              <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm border transition-all hover:bg-white/5 press-scale"
+                style={BTN_CANCEL}>Cancel</button>
               <button onClick={() => onCreate(folder, title || 'Untitled')}
-                className="px-4 py-2 rounded-lg text-sm font-medium"
-                style={{ background: 'var(--accent)', color: '#fff' }}>Create</button>
+                className="px-5 py-2 rounded-xl text-sm transition-all hover:opacity-90 press-scale"
+                style={BTN_PRIMARY}>Create</button>
             </div>
           </ModalBox>
         </>
@@ -96,18 +154,19 @@ export function NewFolderModal({ open, onClose, onCreate }: {
         <>
           <Backdrop onClick={onClose} />
           <ModalBox>
-            <div className="text-sm font-semibold mb-4" style={{ color: 'var(--text)' }}>New Folder</div>
+            <div className="text-sm font-semibold mb-1" style={{ color: 'var(--text)' }}>New Folder</div>
+            <div className="text-xs mb-4" style={{ color: 'var(--text-dim)' }}>Organise your notes</div>
             <input ref={inputRef} value={name} onChange={e => setName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && name.trim()) onCreate(name.trim()); if (e.key === 'Escape') onClose(); }}
               placeholder="Folder name"
-              className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-              style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }} />
-            <div className="flex justify-end gap-2 mt-4">
-              <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm border transition-colors hover:bg-white/5"
-                style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>Cancel</button>
+              className="w-full px-3 py-2.5 rounded-xl text-sm input-glow"
+              style={{ ...INPUT_STYLE, outline: 'none' }} />
+            <div className="flex justify-end gap-2 mt-5">
+              <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm border transition-all hover:bg-white/5 press-scale"
+                style={BTN_CANCEL}>Cancel</button>
               <button onClick={() => name.trim() && onCreate(name.trim())} disabled={!name.trim()}
-                className="px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-40"
-                style={{ background: 'var(--accent)', color: '#fff' }}>Create</button>
+                className="px-5 py-2 rounded-xl text-sm transition-all hover:opacity-90 press-scale disabled:opacity-40"
+                style={BTN_PRIMARY}>Create</button>
             </div>
           </ModalBox>
         </>
@@ -142,33 +201,34 @@ export function QuickCaptureModal({ open, onClose, onSaved }: {
         <>
           <Backdrop onClick={onClose} />
           <ModalBox wide>
-            <div className="text-sm font-semibold mb-3" style={{ color: 'var(--text)' }}>⚡ Quick Capture</div>
+            <div className="text-sm font-semibold mb-1" style={{ color: 'var(--text)' }}>⚡ Quick Capture</div>
+            <div className="text-xs mb-4" style={{ color: 'var(--text-dim)' }}>Capture a thought instantly</div>
             <div className="flex gap-2 mb-3">
               <select value={folder} onChange={e => setFolder(e.target.value)}
-                className="px-2 py-1.5 rounded-lg text-sm outline-none"
-                style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}>
+                className="px-2.5 py-2 rounded-xl text-sm input-glow"
+                style={{ ...INPUT_STYLE, outline: 'none' }}>
                 {folders.map(f => <option key={f} value={f}>{f}</option>)}
               </select>
               <input value={title} onChange={e => setTitle(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') textRef.current?.focus(); }}
                 placeholder="Title (optional)"
-                className="flex-1 px-3 py-1.5 rounded-lg text-sm outline-none"
-                style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }} />
+                className="flex-1 px-3 py-2 rounded-xl text-sm input-glow"
+                style={{ ...INPUT_STYLE, outline: 'none' }} />
             </div>
             <textarea ref={textRef} value={text} onChange={e => setText(e.target.value)}
               onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') handleSave(); if (e.key === 'Escape') onClose(); }}
               placeholder="Start typing…"
               rows={6}
-              className="w-full px-3 py-2.5 rounded-lg text-sm font-mono resize-none outline-none mb-3"
-              style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)', lineHeight: '1.7' }} />
+              className="w-full px-3 py-2.5 rounded-xl text-sm font-mono resize-none mb-3 input-glow"
+              style={{ ...INPUT_STYLE, outline: 'none', lineHeight: '1.7' }} />
             <div className="flex items-center justify-between">
-              <span className="text-[10px]" style={{ color: 'var(--text-dim)' }}>⌘↵ to save · Esc to close</span>
+              <span className="text-[10px] font-mono" style={{ color: 'var(--text-dim)' }}>⌘↵ save · Esc close</span>
               <div className="flex gap-2">
-                <button onClick={onClose} className="px-3 py-1.5 rounded-lg text-sm border transition-colors hover:bg-white/5"
-                  style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>Cancel</button>
+                <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm border transition-all hover:bg-white/5 press-scale"
+                  style={BTN_CANCEL}>Cancel</button>
                 <button onClick={handleSave} disabled={!text.trim()}
-                  className="px-4 py-1.5 rounded-lg text-sm font-medium disabled:opacity-40"
-                  style={{ background: 'var(--accent)', color: '#fff' }}>Capture</button>
+                  className="px-5 py-2 rounded-xl text-sm transition-all hover:opacity-90 press-scale disabled:opacity-40"
+                  style={BTN_PRIMARY}>Capture</button>
               </div>
             </div>
           </ModalBox>
@@ -391,49 +451,3 @@ export function NoteContextMenu({ x, y, path, onClose, onDelete, onRename, onRev
   );
 }
 
-// ─── Toast ────────────────────────────────────────────────────────────────────
-interface ToastMsg { id: number; text: string; type: 'success' | 'error' | 'warn' | 'info'; }
-
-export function useToast() {
-  const [toasts, setToasts] = useState<ToastMsg[]>([]);
-  const idRef = useRef(0);
-
-  function addToast(text: string, type: ToastMsg['type'] = 'info', duration = 2800) {
-    const id = ++idRef.current;
-    setToasts(t => [...t, { id, text, type }]);
-    setTimeout(() => removeToast(id), duration);
-  }
-
-  function removeToast(id: number) {
-    setToasts(t => t.filter(m => m.id !== id));
-  }
-
-  return { toasts, addToast, removeToast };
-}
-
-export function ToastContainer({ toasts, onRemove }: {
-  toasts: ToastMsg[];
-  onRemove: (id: number) => void;
-}) {
-  return (
-    <div className="fixed bottom-6 right-6 z-[60] flex flex-col gap-2 pointer-events-none">
-      <AnimatePresence>
-        {toasts.map(t => (
-          <motion.div key={t.id}
-            initial={{ opacity: 0, y: 8, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.96 }}
-            onClick={() => onRemove(t.id)}
-            className="px-4 py-2.5 rounded-lg text-sm font-medium shadow-lg pointer-events-auto cursor-pointer"
-            style={{
-              background: t.type === 'success' ? '#3fb950' : t.type === 'error' ? '#f85149' : t.type === 'warn' ? '#d29922' : 'var(--bg3)',
-              color     : t.type === 'info' ? 'var(--text)' : '#fff',
-              border    : t.type === 'info' ? '1px solid var(--border)' : 'none'
-            }}>
-            {t.text}
-          </motion.div>
-        ))}
-      </AnimatePresence>
-    </div>
-  );
-}

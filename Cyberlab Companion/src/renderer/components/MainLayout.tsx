@@ -52,7 +52,10 @@ export default function MainLayout({ onHelp }: MainLayoutProps) {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div
+      className="flex flex-col h-full overflow-hidden"
+      style={{ background: 'var(--surface-0)' }}
+    >
       <Header onHelp={onHelp} />
       <TabBar />
       <div className="flex flex-1 overflow-hidden">

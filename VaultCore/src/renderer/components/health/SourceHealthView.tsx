@@ -6,7 +6,48 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useVaultCoreStore } from '../../stores/useVaultCoreStore';
 import { useStore } from '../../store';
-import type { ScrapingSource } from '../../types/vaultcore';
+import type { ScrapingSource, ScrapeRun } from '../../types/vaultcore';
+
+/** Mini SVG bar sparkline of the last 7 run durations for a given source */
+function DurationSparkline({ sourceId, runs }: { sourceId: string; runs: ScrapeRun[] }) {
+  const completedRuns = runs
+    .filter((r) => r.sourceId === sourceId && r.status === 'completed' && r.completedAt)
+    .slice(-7);
+
+  if (completedRuns.length < 2) return null;
+
+  const durations = completedRuns.map((r) =>
+    r.duration != null
+      ? r.duration
+      : new Date(r.completedAt!).getTime() - new Date(r.startedAt).getTime()
+  );
+
+  const maxDur = Math.max(...durations, 1);
+  const W = 56;
+  const H = 18;
+  const barW = Math.floor((W - (durations.length - 1) * 2) / durations.length);
+
+  return (
+    <svg width={W} height={H} className="shrink-0" aria-label="Run duration history">
+      {durations.map((d, i) => {
+        const barH = Math.max(2, Math.round((d / maxDur) * (H - 2)));
+        const x = i * (barW + 2);
+        const isLatest = i === durations.length - 1;
+        return (
+          <rect
+            key={i}
+            x={x}
+            y={H - barH}
+            width={barW}
+            height={barH}
+            rx="1"
+            fill={isLatest ? '#3fb950' : 'rgba(139,148,158,0.35)'}
+          />
+        );
+      })}
+    </svg>
+  );
+}
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -26,12 +67,14 @@ function formatDateTime(iso: string): string {
   });
 }
 
-function ErrorCard({ source, onRetry, onDisable, retrying }: {
+function ErrorCard({ source, runs, onRetry, onDisable, retrying }: {
   source: ScrapingSource;
+  runs: ScrapeRun[];
   onRetry: () => void;
   onDisable: () => void;
   retrying: boolean;
 }) {
+  const score = healthScore(source);
   return (
     <motion.div
       initial={{ opacity: 0, y: 4 }}
@@ -44,10 +87,11 @@ function ErrorCard({ source, onRetry, onDisable, retrying }: {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-sm shrink-0" style={{ color: '#f85149' }}>✕</span>
+          <HealthRing score={score} size={30} />
           <span className="text-sm font-medium truncate" style={{ color: 'var(--text)' }}>{source.name}</span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <DurationSparkline sourceId={source.id} runs={runs} />
           <button
             onClick={onRetry}
             disabled={retrying}
@@ -78,11 +122,13 @@ function ErrorCard({ source, onRetry, onDisable, retrying }: {
   );
 }
 
-function WarningCard({ source, onRetry, retrying }: {
+function WarningCard({ source, runs, onRetry, retrying }: {
   source: ScrapingSource;
+  runs: ScrapeRun[];
   onRetry: () => void;
   retrying: boolean;
 }) {
+  const score = healthScore(source);
   return (
     <motion.div
       initial={{ opacity: 0, y: 4 }}
@@ -95,17 +141,20 @@ function WarningCard({ source, onRetry, retrying }: {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-sm shrink-0" style={{ color: '#d29922' }}>⚠</span>
+          <HealthRing score={score} size={30} />
           <span className="text-sm font-medium truncate" style={{ color: 'var(--text)' }}>{source.name}</span>
         </div>
-        <button
-          onClick={onRetry}
-          disabled={retrying}
-          className="px-3 py-1 rounded-lg text-xs border transition-all disabled:opacity-40 shrink-0"
-          style={{ borderColor: 'var(--accent)', color: 'var(--accent)' }}
-        >
-          {retrying ? '…' : 'Retry'}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <DurationSparkline sourceId={source.id} runs={runs} />
+          <button
+            onClick={onRetry}
+            disabled={retrying}
+            className="px-3 py-1 rounded-lg text-xs border transition-all disabled:opacity-40"
+            style={{ borderColor: 'var(--accent)', color: 'var(--accent)' }}
+          >
+            {retrying ? '…' : 'Retry'}
+          </button>
+        </div>
       </div>
       <div className="text-[11px]" style={{ color: '#d29922' }}>
         {source.consecutiveFailures} consecutive failure{source.consecutiveFailures !== 1 ? 's' : ''}
@@ -120,18 +169,57 @@ function WarningCard({ source, onRetry, retrying }: {
   );
 }
 
-function HealthyRow({ source }: { source: ScrapingSource }) {
+function healthScore(source: ScrapingSource): number {
+  if (source.health === 'error') return Math.max(0, 30 - source.consecutiveFailures * 10);
+  if (source.health === 'warning') return Math.max(40, 70 - source.consecutiveFailures * 8);
+  return 100;
+}
+
+function HealthRing({ score, size = 32 }: { score: number; size?: number }) {
+  const r = (size / 2) - 4;
+  const circ = 2 * Math.PI * r;
+  const dash = (score / 100) * circ;
+  const gap = circ - dash;
+  const color = score >= 80 ? '#3fb950' : score >= 50 ? '#d29922' : '#f85149';
+  return (
+    <svg width={size} height={size} className="shrink-0">
+      <circle
+        cx={size / 2} cy={size / 2} r={r}
+        className="health-ring-track"
+      />
+      <circle
+        cx={size / 2} cy={size / 2} r={r}
+        className="health-ring-fill"
+        stroke={color}
+        strokeDasharray={`${dash} ${gap}`}
+        strokeDashoffset={0}
+        style={{ transformOrigin: `${size / 2}px ${size / 2}px` }}
+      />
+      <text
+        x={size / 2} y={size / 2 + 3}
+        textAnchor="middle"
+        style={{ fontSize: 8, fontFamily: 'var(--font-mono)', fill: color, fontWeight: 600 }}
+      >
+        {score}
+      </text>
+    </svg>
+  );
+}
+
+function HealthyRow({ source, runs }: { source: ScrapingSource; runs: ScrapeRun[] }) {
+  const score = healthScore(source);
   return (
     <div
       className="flex items-center gap-4 px-4 py-2.5 rounded-lg border"
       style={{ background: 'var(--bg2)', borderColor: 'var(--border)' }}
     >
-      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: '#3fb950' }} />
+      <HealthRing score={score} />
       <span className="text-sm flex-1 truncate" style={{ color: 'var(--text)' }}>{source.name}</span>
+      <DurationSparkline sourceId={source.id} runs={runs} />
       <span className="text-[10px] font-mono shrink-0" style={{ color: 'var(--text-dim)' }}>
         {source.lastSuccessAt ? `Last: ${timeAgo(source.lastSuccessAt)}` : 'Never run'}
       </span>
-      <span className="text-[10px] font-mono w-16 text-right shrink-0" style={{ color: 'var(--text-dim)' }}>
+      <span className="text-[10px] font-mono tabular-nums w-16 text-right shrink-0" style={{ color: 'var(--text-dim)' }}>
         {source.totalNotesSaved} notes
       </span>
       <span className="text-[10px] shrink-0" style={{ color: '#3fb950' }}>✓</span>
@@ -139,15 +227,25 @@ function HealthyRow({ source }: { source: ScrapingSource }) {
   );
 }
 
+type SortMode = 'worst' | 'best' | 'alpha';
+
 export default function SourceHealthView() {
-  const { sources, updateSource, addRun, updateRun, removeActiveRunId } = useVaultCoreStore();
+  const { sources, runs, updateSource, addRun, updateRun, removeActiveRunId } = useVaultCoreStore();
   const { addLog } = useStore();
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [sortMode, setSortMode] = useState<SortMode>('worst');
 
-  const errorSources  = sources.filter((s) => s.health === 'error');
-  const warnSources   = sources.filter((s) => s.health === 'warning');
-  const healthySources = sources.filter((s) => s.health === 'healthy');
+  const sortedSources = [...sources].sort((a, b) => {
+    if (sortMode === 'alpha') return a.name.localeCompare(b.name);
+    const scoreA = healthScore(a);
+    const scoreB = healthScore(b);
+    return sortMode === 'worst' ? scoreA - scoreB : scoreB - scoreA;
+  });
+
+  const errorSources  = sortedSources.filter((s) => s.health === 'error');
+  const warnSources   = sortedSources.filter((s) => s.health === 'warning');
+  const healthySources = sortedSources.filter((s) => s.health === 'healthy');
 
   async function handleRetry(source: ScrapingSource) {
     setRetryingId(source.id);
@@ -217,7 +315,7 @@ export default function SourceHealthView() {
           <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
             Source Health Monitor
           </div>
-          <div className="text-[11px]" style={{ color: 'var(--text-dim)' }}>
+          <div className="text-[11px] tabular-nums" style={{ color: 'var(--text-dim)' }}>
             {sources.length} source{sources.length !== 1 ? 's' : ''} ·{' '}
             {errorSources.length > 0 && (
               <span style={{ color: '#f85149' }}>{errorSources.length} error · </span>
@@ -228,14 +326,31 @@ export default function SourceHealthView() {
             <span style={{ color: '#3fb950' }}>{healthySources.length} healthy</span>
           </div>
         </div>
-        <button
-          onClick={handleRefreshAll}
-          disabled={refreshing}
-          className="px-3 py-1.5 rounded-lg text-xs border transition-all hover:bg-white/5 disabled:opacity-40"
-          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-        >
-          {refreshing ? '↺ Refreshing…' : 'Refresh All ↺'}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Sort control */}
+          <div className="flex items-center gap-1 rounded-lg border px-1.5 py-1" style={{ borderColor: 'var(--border)', background: 'var(--surface-glass)' }}>
+            {([['worst', 'Worst first'], ['best', 'Best first'], ['alpha', 'A–Z']] as [SortMode, string][]).map(([mode, label]) => (
+              <button
+                key={mode}
+                onClick={() => setSortMode(mode)}
+                className="px-2 py-0.5 rounded text-[10px] font-medium transition-all"
+                style={sortMode === mode
+                  ? { background: 'rgba(63,185,80,0.15)', color: '#3fb950' }
+                  : { color: 'var(--text-muted)' }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={handleRefreshAll}
+            disabled={refreshing}
+            className="px-3 py-1.5 rounded-lg text-xs border transition-all hover:bg-white/5 disabled:opacity-40"
+            style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+          >
+            {refreshing ? '↺ Refreshing…' : 'Refresh All ↺'}
+          </button>
+        </div>
       </div>
 
       {/* Content */}
@@ -244,10 +359,22 @@ export default function SourceHealthView() {
         style={{ scrollbarWidth: 'thin', scrollbarColor: 'var(--border) transparent' }}
       >
         {sources.length === 0 && (
-          <div className="flex flex-col items-center py-20 text-center">
-            <div className="text-4xl mb-4">🏥</div>
-            <div className="text-sm" style={{ color: 'var(--text-muted)' }}>No sources configured</div>
-            <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>Add sources in the Sources view</div>
+          <div className="flex flex-col items-center py-16 text-center gap-4">
+            {/* Illustrated health/monitor SVG */}
+            <svg width="60" height="60" viewBox="0 0 60 60" fill="none" style={{ opacity: 0.45 }}>
+              <rect x="6" y="10" width="48" height="32" rx="4" stroke="#8b949e" strokeWidth="1.5" fill="rgba(13,14,24,0.8)"/>
+              <polyline points="10,30 18,20 24,28 32,16 40,26 48,22" stroke="#3fb950" strokeWidth="1.5" strokeLinejoin="round" fill="none"/>
+              <line x1="18" y1="42" x2="42" y2="42" stroke="#8b949e" strokeWidth="1.5"/>
+              <line x1="30" y1="42" x2="30" y2="50" stroke="#8b949e" strokeWidth="1.5"/>
+              <line x1="22" y1="50" x2="38" y2="50" stroke="#8b949e" strokeWidth="1.5"/>
+              <circle cx="32" cy="16" r="2" fill="rgba(63,185,80,0.3)" stroke="#3fb950" strokeWidth="1"/>
+            </svg>
+            <div>
+              <div className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>No sources configured</div>
+              <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
+                Add sources in the <span style={{ color: 'var(--accent)' }}>Sources</span> view to monitor their health
+              </div>
+            </div>
           </div>
         )}
 
@@ -255,7 +382,7 @@ export default function SourceHealthView() {
         {errorSources.length > 0 && (
           <section>
             <div
-              className="text-[10px] uppercase tracking-widest mb-3 flex items-center gap-2"
+              className="text-[10px] uppercase tracking-widest mb-3 flex items-center gap-2 tabular-nums"
               style={{ color: '#f85149' }}
             >
               <span>Errors ({errorSources.length})</span>
@@ -265,6 +392,7 @@ export default function SourceHealthView() {
                 <ErrorCard
                   key={src.id}
                   source={src}
+                  runs={runs}
                   onRetry={() => handleRetry(src)}
                   onDisable={() => handleDisable(src.id)}
                   retrying={retryingId === src.id}
@@ -278,7 +406,7 @@ export default function SourceHealthView() {
         {warnSources.length > 0 && (
           <section>
             <div
-              className="text-[10px] uppercase tracking-widest mb-3 flex items-center gap-2"
+              className="text-[10px] uppercase tracking-widest mb-3 flex items-center gap-2 tabular-nums"
               style={{ color: '#d29922' }}
             >
               <span>Warnings ({warnSources.length})</span>
@@ -288,6 +416,7 @@ export default function SourceHealthView() {
                 <WarningCard
                   key={src.id}
                   source={src}
+                  runs={runs}
                   onRetry={() => handleRetry(src)}
                   retrying={retryingId === src.id}
                 />
@@ -300,14 +429,14 @@ export default function SourceHealthView() {
         {healthySources.length > 0 && (
           <section>
             <div
-              className="text-[10px] uppercase tracking-widest mb-3"
+              className="text-[10px] uppercase tracking-widest mb-3 tabular-nums"
               style={{ color: '#3fb950' }}
             >
               Healthy ({healthySources.length})
             </div>
             <div className="space-y-1.5">
               {healthySources.map((src) => (
-                <HealthyRow key={src.id} source={src} />
+                <HealthyRow key={src.id} source={src} runs={runs} />
               ))}
             </div>
           </section>

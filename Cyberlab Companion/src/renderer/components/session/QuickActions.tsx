@@ -36,11 +36,34 @@ export default function QuickActions({ onFlagLogger, onNotes }: QuickActionsProp
       {ACTIONS.map(action => (
         <button
           key={action.label}
-          className="btn-ghost text-xs py-2 rounded flex items-center justify-center gap-1.5 transition-colors"
-          style={{ fontSize: '11px' }}
+          className="btn-ghost flex items-center justify-center gap-1.5"
+          style={{
+            fontSize: '11px',
+            padding: '7px 10px',
+            borderRadius: '10px',
+            transition: 'all 0.2s cubic-bezier(0.2,0.8,0.2,1)',
+          }}
+          onMouseEnter={e => {
+            const el = e.currentTarget;
+            el.style.transform = 'translateY(-1px) scale(1.03)';
+            el.style.borderColor = 'rgba(180,79,255,0.4)';
+            el.style.color = 'var(--accent)';
+            el.style.background = 'rgba(180,79,255,0.08)';
+            el.style.boxShadow = '0 4px 12px rgba(180,79,255,0.2), 0 0 0 1px rgba(180,79,255,0.15)';
+          }}
+          onMouseLeave={e => {
+            const el = e.currentTarget;
+            el.style.transform = '';
+            el.style.borderColor = '';
+            el.style.color = '';
+            el.style.background = '';
+            el.style.boxShadow = '';
+          }}
+          onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0) scale(0.97)'; }}
+          onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px) scale(1.03)'; }}
           onClick={() => handleClick(action)}
         >
-          <span>{action.icon}</span>
+          <span style={{ fontSize: '12px' }}>{action.icon}</span>
           <span>{action.label}</span>
         </button>
       ))}

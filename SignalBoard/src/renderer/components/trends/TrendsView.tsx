@@ -1,7 +1,118 @@
 // TrendsView — keyword frequency, source activity, score distribution, tag cloud
-import { useMemo } from 'react'
+import { useMemo, useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
 import type { FeedItem } from '../../../shared/types'
+
+// ── 24h Activity Histogram ────────────────────────────────────────────────────
+
+function build24hBuckets(items: FeedItem[]): number[] {
+  const now = Date.now()
+  const buckets = Array<number>(24).fill(0)
+  items.forEach(item => {
+    const msAgo = now - new Date(item.publishedAt).getTime()
+    const hoursAgo = Math.floor(msAgo / 3_600_000)
+    if (hoursAgo >= 0 && hoursAgo < 24) buckets[23 - hoursAgo]++
+  })
+  return buckets
+}
+
+function ActivityHistogram({ items }: { items: FeedItem[] }) {
+  const buckets = useMemo(() => build24hBuckets(items), [items])
+  const max = Math.max(...buckets, 1)
+  const [animated, setAnimated] = useState(false)
+
+  useEffect(() => {
+    const t = requestAnimationFrame(() => setAnimated(true))
+    return () => cancelAnimationFrame(t)
+  }, [])
+
+  const now = new Date()
+  const hourLabels = Array.from({ length: 24 }, (_, i) => {
+    const h = (now.getHours() - 23 + i + 24) % 24
+    return i % 6 === 0 ? `${h.toString().padStart(2, '0')}h` : ''
+  })
+
+  return (
+    <div className="col-span-2 p-5 border border-border/40 rounded bg-panel/20">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-xs font-semibold text-text">24h Article Volume</h3>
+        <span className="text-[9px] font-mono text-muted/40">{items.length} items indexed</span>
+      </div>
+      <div className="flex items-end gap-[2px]" style={{ height: 56 }}>
+        {buckets.map((count, i) => {
+          const pct = animated ? (count / max) * 100 : 0
+          const isRecent = i >= 20
+          return (
+            <div
+              key={i}
+              className="flex-1 rounded-sm"
+              title={`${hourLabels[i] || ''} — ${count} items`}
+              style={{
+                height: `${Math.max(pct, count > 0 ? 4 : 0)}%`,
+                minHeight: count > 0 ? 2 : 0,
+                background: isRecent
+                  ? 'linear-gradient(180deg, #ff6b6b, rgba(255,107,107,0.5))'
+                  : 'linear-gradient(180deg, rgba(74,158,255,0.7), rgba(74,158,255,0.3))',
+                transition: `height 0.5s cubic-bezier(0.2,0.8,0.2,1) ${i * 15}ms`,
+                alignSelf: 'flex-end',
+              }}
+            />
+          )
+        })}
+      </div>
+      <div className="flex items-center mt-1" style={{ height: 14 }}>
+        {hourLabels.map((label, i) => (
+          <div key={i} className="flex-1 text-[8px] font-mono" style={{ color: 'rgba(255,255,255,0.2)', textAlign: 'center' }}>
+            {label}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Sparkline ────────────────────────────────────────────────────────────────
+
+/** Build a 7-bucket daily sparkline from an item list for a given source */
+function buildSparkline(items: FeedItem[], sourceName: string): number[] {
+  const now = Date.now()
+  const buckets = Array<number>(7).fill(0)
+  items.forEach(item => {
+    if (item.sourceName !== sourceName) return
+    const daysAgo = Math.floor((now - new Date(item.publishedAt).getTime()) / 86400_000)
+    if (daysAgo >= 0 && daysAgo < 7) buckets[6 - daysAgo]++
+  })
+  return buckets
+}
+
+function Sparkline({ data, color }: { data: number[]; color: string }) {
+  const W = 52, H = 20
+  const max = Math.max(...data, 1)
+  const pts = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * W
+    const y = H - (v / max) * (H - 2) - 1
+    return `${x.toFixed(1)},${y.toFixed(1)}`
+  })
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ overflow: 'visible', flexShrink: 0 }}>
+      <polyline
+        points={pts.join(' ')}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        opacity={0.7}
+      />
+      {/* Area fill under sparkline */}
+      <polyline
+        points={`0,${H} ${pts.join(' ')} ${W},${H}`}
+        fill={`${color}18`}
+        stroke="none"
+      />
+    </svg>
+  )
+}
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -30,6 +141,82 @@ function within7Days(items: FeedItem[]): FeedItem[] {
 
 // ── components ──────────────────────────────────────────────────────────────
 
+function AnimatedBar({ pct, color, delay = 0 }: { pct: number; color: string; delay?: number }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const timer = setTimeout(() => {
+      el.style.width = `${pct}%`
+    }, delay)
+    return () => clearTimeout(timer)
+  }, [pct, delay])
+
+  return (
+    <div ref={ref} className="h-full rounded" style={{ width: '0%', background: color, transition: 'width 0.65s cubic-bezier(0.2,0.8,0.2,1)' }} />
+  )
+}
+
+// SVG mini bar chart for keyword frequency
+function SvgBarChart({ data, max, color }: { data: [string, number][]; max: number; color: string }) {
+  const BAR_H = 28
+  const GAP = 4
+  const LABEL_W = 96
+  const COUNT_W = 24
+  const TOTAL_H = data.length * (BAR_H + GAP)
+  const svgW = 320 // bar area width
+
+  return (
+    <svg
+      width="100%"
+      viewBox={`0 0 ${LABEL_W + svgW + COUNT_W + 16} ${TOTAL_H}`}
+      style={{ overflow: 'visible', display: 'block' }}
+    >
+      {data.map(([word, count], idx) => {
+        const y = idx * (BAR_H + GAP)
+        const barW = Math.max(2, (count / max) * svgW)
+        return (
+          <g key={word}>
+            {/* Label */}
+            <text
+              x={LABEL_W - 6}
+              y={y + BAR_H / 2 + 4}
+              textAnchor="end"
+              fontSize="10"
+              fill="rgba(139,148,158,0.75)"
+              fontFamily="ui-monospace, monospace"
+            >
+              {word.length > 14 ? word.slice(0, 13) + '…' : word}
+            </text>
+            {/* Bar bg */}
+            <rect x={LABEL_W} y={y + 4} width={svgW} height={BAR_H - 8} rx="4" fill="rgba(42,51,71,0.35)" />
+            {/* Bar fill */}
+            <rect
+              x={LABEL_W}
+              y={y + 4}
+              width={barW}
+              height={BAR_H - 8}
+              rx="4"
+              fill={color}
+              style={{ transition: 'width 0.65s cubic-bezier(0.2,0.8,0.2,1)' }}
+            />
+            {/* Count */}
+            <text
+              x={LABEL_W + svgW + 8}
+              y={y + BAR_H / 2 + 4}
+              fontSize="10"
+              fill="rgba(139,148,158,0.55)"
+              fontFamily="ui-monospace, monospace"
+            >
+              {count}
+            </text>
+          </g>
+        )
+      })}
+    </svg>
+  )
+}
+
 function KeywordFrequency({ items }: { items: FeedItem[] }) {
   const freqMap = useMemo(() => {
     const m = new Map<string, number>()
@@ -43,28 +230,48 @@ function KeywordFrequency({ items }: { items: FeedItem[] }) {
 
   const top10 = topN(freqMap, 10)
   const max   = top10[0]?.[1] ?? 1
+  const topTerm = top10[0]
 
   return (
     <div className="p-5 border border-border/40 rounded bg-panel/20">
-      <h3 className="text-xs font-semibold text-text mb-4">Keyword Frequency — Last 7 Days</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-xs font-semibold text-text">Keyword Frequency — Last 7 Days</h3>
+        <span className="text-[9px] font-mono text-muted/40">{top10.length} terms</span>
+      </div>
       {top10.length === 0 ? (
         <p className="text-xs text-muted/40">Not enough data yet.</p>
       ) : (
-        <div className="space-y-2">
-          {top10.map(([word, count]) => (
-            <div key={word} className="flex items-center gap-3">
-              <span className="text-[11px] font-mono text-muted/70 w-28 truncate">{word}</span>
-              <div className="flex-1 h-3 bg-border/30 rounded overflow-hidden">
-                <div
-                  className="h-full rounded transition-all"
-                  style={{ width: `${(count / max) * 100}%`, background: 'linear-gradient(90deg, #ff6b6b, #ff9b9b)' }}
-                />
-              </div>
-              <span className="text-[10px] font-mono text-muted/60 w-6 text-right">{count}</span>
+        <>
+          {/* #1 trending highlight */}
+          {topTerm && (
+            <div
+              className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg"
+              style={{
+                background: 'rgba(210,153,34,0.07)',
+                border: '1px solid rgba(210,153,34,0.3)',
+                boxShadow: '0 0 16px rgba(210,153,34,0.12)',
+              }}
+            >
+              <span style={{ fontSize: 14 }}>🔥</span>
+              <span className="text-[11px] font-semibold" style={{ color: '#d29922' }}>Trending</span>
+              <span className="font-mono text-[12px] font-bold" style={{ color: '#e6c46a' }}>{topTerm[0]}</span>
+              <span className="ml-auto text-[10px] font-mono tabular-nums" style={{ color: 'rgba(210,153,34,0.6)' }}>
+                {topTerm[1]}× this week
+              </span>
             </div>
-          ))}
-        </div>
+          )}
+          <SvgBarChart data={top10} max={max} color="url(#kw-grad)" />
+        </>
       )}
+      {/* Gradient def */}
+      <svg width="0" height="0" style={{ position: 'absolute' }}>
+        <defs>
+          <linearGradient id="kw-grad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#ff6b6b" />
+            <stop offset="100%" stopColor="#ff9b9b" />
+          </linearGradient>
+        </defs>
+      </svg>
     </div>
   )
 }
@@ -86,19 +293,20 @@ function SourceActivity({ items }: { items: FeedItem[] }) {
       {data.length === 0 ? (
         <p className="text-xs text-muted/40">No activity data.</p>
       ) : (
-        <div className="space-y-2">
-          {data.map(([name, count]) => (
-            <div key={name} className="flex items-center gap-3">
-              <span className="text-[11px] text-muted/70 w-32 truncate">{name}</span>
-              <div className="flex-1 h-3 bg-border/30 rounded overflow-hidden">
-                <div
-                  className="h-full rounded transition-all"
-                  style={{ width: `${(count / max) * 100}%`, background: '#4a9eff55', borderRight: '1px solid #4a9eff' }}
-                />
+        <div className="space-y-2.5">
+          {data.map(([name, count], idx) => {
+            const sparkData = buildSparkline(items, name)
+            return (
+              <div key={name} className="flex items-center gap-3">
+                <span className="text-[11px] text-muted/70 w-28 truncate flex-shrink-0">{name}</span>
+                <div className="flex-1 h-3 bg-border/30 rounded overflow-hidden">
+                  <AnimatedBar pct={(count / max) * 100} color="linear-gradient(90deg, rgba(74,158,255,0.5), rgba(74,158,255,0.8))" delay={idx * 60} />
+                </div>
+                <span className="text-[10px] font-mono text-muted/60 w-5 text-right tabular-nums flex-shrink-0">{count}</span>
+                <Sparkline data={sparkData} color="#4a9eff" />
               </div>
-              <span className="text-[10px] font-mono text-muted/60 w-6 text-right">{count}</span>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
@@ -227,10 +435,7 @@ function FeedHealth({ items }: { items: FeedItem[] }) {
             <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
             <span className="text-[11px] text-muted/80 w-36 truncate flex-shrink-0">{src.name}</span>
             <div className="flex-1 h-2 bg-border/30 rounded overflow-hidden">
-              <div
-                className="h-full rounded transition-all"
-                style={{ width: rate !== null ? `${rate}%` : '0%', background: color }}
-              />
+              <AnimatedBar pct={rate ?? 0} color={color} delay={0} />
             </div>
             <span className="text-[10px] font-mono text-muted/60 w-10 text-right flex-shrink-0">
               {rate !== null ? `${rate}%` : '—'}
@@ -261,6 +466,7 @@ export default function TrendsView() {
       <p className="text-xs text-muted/50 mb-6">Intelligence patterns across your feed.</p>
 
       <div className="grid grid-cols-2 gap-4">
+        <ActivityHistogram items={items} />
         <div className="col-span-2"><KeywordFrequency items={items} /></div>
         <SourceActivity items={items} />
         <ScoreDistribution items={items} />

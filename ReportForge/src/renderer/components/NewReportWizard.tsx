@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { makeReportFromTemplate, makeId, PLATFORMS } from '../lib/defaults';
-import TemplateCard from './TemplateCard';
+import { makeReportFromTemplate, makeId } from '../lib/defaults';
+import { StepTemplate, Step2Form, Step3Import, Step4Writeup, ReportCoverPreview } from './NewReportWizardParts';
 import type { Report, ReconDeskTarget, WriteupFile, ReportTemplate } from '@shared/types';
 
 interface Props {
@@ -134,24 +134,56 @@ export default function NewReportWizard({ onComplete, onCancel }: Props) {
         animate={{ opacity: 1, scale: 1 }}
         style={{
           background: 'var(--panel)', border: '1px solid var(--border)',
-          borderRadius: 10, width: 560, maxHeight: '85vh', overflow: 'hidden',
-          display: 'flex', flexDirection: 'column'
+          borderRadius: 10, width: step === 1 ? 780 : 560, maxHeight: '85vh', overflow: 'hidden',
+          display: 'flex', flexDirection: 'column',
+          transition: 'width 0.35s cubic-bezier(0.2,0.8,0.2,1)',
         }}
       >
         {/* Header */}
         <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)' }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>New Report</h2>
-          <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-            {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map(s => (
-              <div key={s} style={{
-                height: 3, flex: 1, borderRadius: 2,
-                background: s <= step ? 'var(--accent)' : 'var(--border)',
-                transition: 'background 0.2s'
-              }} />
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>New Report</h2>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+              {step} / {TOTAL_STEPS}
+            </span>
           </div>
-          <div style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 6 }}>
-            Step {step} of {TOTAL_STEPS} — {STEP_LABELS[step - 1]}
+
+          {/* Animated progress bar */}
+          <div style={{ height: 4, background: 'rgba(42,51,71,0.5)', borderRadius: 99, overflow: 'hidden', marginBottom: 12 }}>
+            <div style={{
+              height: '100%',
+              width: `${((step - 1) / (TOTAL_STEPS - 1)) * 100}%`,
+              background: 'linear-gradient(90deg, rgba(74,158,255,0.7) 0%, #4a9eff 100%)',
+              borderRadius: 99,
+              transition: 'width 0.4s cubic-bezier(0.2,0.8,0.2,1)',
+              boxShadow: '0 0 8px rgba(74,158,255,0.4)',
+            }} />
+          </div>
+
+          {/* Step dots */}
+          <div style={{ display: 'flex', gap: 0, position: 'relative' }}>
+            {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map(s => {
+              const done = s < step;
+              const active = s === step;
+              return (
+                <div key={s} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, gap: 4 }}>
+                  <div style={{
+                    width: active ? 20 : 8, height: 8, borderRadius: 99,
+                    background: done ? '#4a9eff' : active ? '#4a9eff' : 'rgba(42,51,71,0.6)',
+                    transition: 'all 0.3s cubic-bezier(0.2,0.8,0.2,1)',
+                    boxShadow: active ? '0 0 6px rgba(74,158,255,0.5)' : 'none',
+                  }} />
+                  <span style={{
+                    fontSize: 9, fontWeight: active ? 700 : 500, letterSpacing: '0.03em',
+                    color: active ? '#4a9eff' : done ? 'var(--text-secondary)' : 'var(--text-muted)',
+                    transition: 'color 0.2s',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {STEP_LABELS[s - 1].split(' ').slice(0, 2).join(' ')}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -159,8 +191,15 @@ export default function NewReportWizard({ onComplete, onCancel }: Props) {
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
           <AnimatePresence mode="wait">
             {step === 1 && (
-              <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                <StepTemplate selected={selectedTemplate} onSelect={handleTemplateSelect} />
+              <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+                style={{ display: 'flex', gap: 20 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <StepTemplate selected={selectedTemplate} onSelect={handleTemplateSelect} />
+                </div>
+                <div style={{ width: 200, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, margin: 0 }}>Preview</p>
+                  <ReportCoverPreview template={selectedTemplate} title={draft.title || 'Untitled Report'} />
+                </div>
               </motion.div>
             )}
             {step === 2 && (
@@ -234,225 +273,3 @@ export default function NewReportWizard({ onComplete, onCancel }: Props) {
   );
 }
 
-// ── Step 1: Template Selection ────────────────────────────────────────────────
-function StepTemplate({ selected, onSelect }: {
-  selected: ReportTemplate;
-  onSelect: (t: ReportTemplate) => void;
-}) {
-  const templates: ReportTemplate[] = [
-    'blank', 'ptes', 'owasp-web', 'htb-machine',
-    'network-pentest', 'active-directory', 'api-security',
-    'mobile-app', 'executive-summary',
-  ];
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <p style={{ color: 'var(--text-dim)', fontSize: 13, margin: 0 }}>
-        Choose a starting structure for your report. You can customise sections after creation.
-      </p>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        {templates.map(t => (
-          <TemplateCard key={t} id={t} selected={selected === t} onSelect={onSelect} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ── Step 2: Metadata ──────────────────────────────────────────────────────────
-function Step2Form({ draft, onChange }: { draft: Report; onChange: (p: Partial<Report>) => void }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <Field label="Report Title *">
-        <input value={draft.title} onChange={e => onChange({ title: e.target.value })} placeholder="e.g. TryHackMe — Blue" style={{ width: '100%' }} />
-      </Field>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Field label="Target Name *">
-          <input value={draft.targetName} onChange={e => onChange({ targetName: e.target.value })} placeholder="e.g. Blue" style={{ width: '100%' }} />
-        </Field>
-        <Field label="Target IP">
-          <input value={draft.targetIP} onChange={e => onChange({ targetIP: e.target.value })} placeholder="10.10.x.x" style={{ width: '100%' }} />
-        </Field>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Field label="Platform">
-          <select value={draft.platform} onChange={e => onChange({ platform: e.target.value })} style={{ width: '100%' }}>
-            {PLATFORMS.map(p => <option key={p}>{p}</option>)}
-          </select>
-        </Field>
-        <Field label="Assessment Date">
-          <input type="date" value={draft.assessmentDate} onChange={e => onChange({ assessmentDate: e.target.value })} style={{ width: '100%' }} />
-        </Field>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Field label="Operator *">
-          <input value={draft.operator} onChange={e => onChange({ operator: e.target.value })} placeholder="Your name" style={{ width: '100%' }} />
-        </Field>
-        <Field label="Difficulty">
-          <input value={draft.difficulty || ''} onChange={e => onChange({ difficulty: e.target.value })} placeholder="Easy / Medium / Hard" style={{ width: '100%' }} />
-        </Field>
-      </div>
-    </div>
-  );
-}
-
-// ── Step 3: ReconDesk Import ──────────────────────────────────────────────────
-function Step3Import({ targets, selected, onSelect, onImport, importing, draft }: {
-  targets: ReconDeskTarget[];
-  selected: string;
-  onSelect: (id: string) => void;
-  onImport: () => void;
-  importing: boolean;
-  draft: Report;
-}) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <p style={{ color: 'var(--text-dim)', fontSize: 13 }}>
-        Optionally pull target data from ReconDesk. This auto-populates target name, IP, and credentials.
-      </p>
-      {targets.length === 0 ? (
-        <div style={{ padding: '14px', background: 'var(--bg)', borderRadius: 6, color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>
-          No ReconDesk targets found in ecosystem config.
-        </div>
-      ) : (
-        <>
-          <select value={selected} onChange={e => onSelect(e.target.value)} style={{ width: '100%' }}>
-            <option value="">— Select a target —</option>
-            {targets.map(t => (
-              <option key={t.id} value={t.id}>{t.name} {t.ip ? `(${t.ip})` : ''}</option>
-            ))}
-          </select>
-          <button className="btn-primary" disabled={!selected || importing} onClick={onImport} style={{ alignSelf: 'flex-start' }}>
-            {importing ? 'Importing…' : 'Import from ReconDesk'}
-          </button>
-        </>
-      )}
-      {(draft.targetName || draft.targetIP) && (
-        <div style={{ padding: 10, background: 'var(--bg)', borderRadius: 6, fontSize: 12, color: 'var(--text-dim)' }}>
-          Target: <strong style={{ color: 'var(--text)' }}>{draft.targetName}</strong>
-          {draft.targetIP && <> · <span style={{ color: 'var(--accent)' }}>{draft.targetIP}</span></>}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Step 4: Writeup Import ────────────────────────────────────────────────────
-function Step4Writeup({ writeups, selected, onSelect, onImport, importing, pasteMarkdown, onPasteChange, onApplyPaste, ghostExport, onImportGhost, importingGhost }: {
-  writeups: WriteupFile[];
-  selected: string;
-  onSelect: (path: string) => void;
-  onImport: () => void;
-  importing: boolean;
-  pasteMarkdown: string;
-  onPasteChange: (v: string) => void;
-  onApplyPaste: () => void;
-  ghostExport: { sessionName: string; notes: string; exportedAt: string } | null;
-  onImportGhost: () => void;
-  importingGhost: boolean;
-}) {
-  function timeAgo(iso: string): string {
-    const diff = Date.now() - new Date(iso).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'just now';
-    if (mins < 60) return `${mins}m ago`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
-    return `${Math.floor(hrs / 24)}d ago`;
-  }
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {/* GhostVault import */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <p style={{ color: 'var(--text-dim)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
-          Import from GhostVault
-        </p>
-        {ghostExport ? (
-          <div style={{ padding: '12px 14px', background: 'var(--bg)', borderRadius: 6, border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>
-                GhostVault session: {ghostExport.sessionName}
-              </span>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                exported {timeAgo(ghostExport.exportedAt)}
-              </span>
-            </div>
-            <button className="btn-primary" disabled={importingGhost} onClick={onImportGhost}
-              style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
-              {importingGhost ? 'Importing…' : 'Import Notes'}
-            </button>
-          </div>
-        ) : (
-          <div style={{ padding: 12, background: 'var(--bg)', borderRadius: 6, color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>
-            No GhostVault export staged. Use the "Export to Report" button in GhostVault.
-          </div>
-        )}
-      </div>
-
-      <div style={{ height: 1, background: 'var(--border)' }} />
-
-      {/* CyberLab vault writeup */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <p style={{ color: 'var(--text-dim)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
-          Import from CyberLab Vault
-        </p>
-        <p style={{ color: 'var(--text-dim)', fontSize: 13, margin: 0 }}>
-          Optionally import a writeup from your CyberLab Obsidian vault as a starting point for the Executive Summary.
-        </p>
-        {writeups.length === 0 ? (
-          <div style={{ padding: 14, background: 'var(--bg)', borderRadius: 6, color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>
-            No writeup files found. Check your CyberLab Obsidian vault path in the ecosystem config.
-          </div>
-        ) : (
-          <>
-            <select value={selected} onChange={e => onSelect(e.target.value)} style={{ width: '100%' }}>
-              <option value="">— Select a writeup —</option>
-              {writeups.map(w => (
-                <option key={w.path} value={w.path}>{w.name}</option>
-              ))}
-            </select>
-            <button className="btn-primary" disabled={!selected || importing} onClick={onImport} style={{ alignSelf: 'flex-start' }}>
-              {importing ? 'Importing…' : 'Import Writeup'}
-            </button>
-          </>
-        )}
-      </div>
-
-      <div style={{ height: 1, background: 'var(--border)' }} />
-
-      {/* Paste markdown directly */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <p style={{ color: 'var(--text-dim)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
-          Or paste Markdown directly
-        </p>
-        <p style={{ color: 'var(--text-dim)', fontSize: 13, margin: 0 }}>
-          Paste a writeup or notes directly to populate the Executive Summary.
-        </p>
-        <textarea
-          value={pasteMarkdown}
-          onChange={e => onPasteChange(e.target.value)}
-          placeholder="Paste Markdown content here…"
-          rows={6}
-          style={{ width: '100%', fontFamily: '"SF Mono", "Fira Code", Consolas, monospace', fontSize: 12, lineHeight: 1.6 }}
-        />
-        <button
-          className="btn-primary"
-          disabled={!pasteMarkdown.trim()}
-          onClick={onApplyPaste}
-          style={{ alignSelf: 'flex-start' }}
-        >
-          Apply to Executive Summary
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-      <label style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</label>
-      {children}
-    </div>
-  );
-}

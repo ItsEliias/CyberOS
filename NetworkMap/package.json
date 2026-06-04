@@ -16,6 +16,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@fontsource/geist-sans": "^5.2.5",
+    "@fontsource/jetbrains-mono": "^5.2.8",
     "d3": "^7.9.0",
     "framer-motion": "^11.0.0",
     "zustand": "^4.5.0"

@@ -145,18 +145,35 @@ export default function SkillRadar({
         )
       })}
 
-      {/* Labels — text-xs font-mono text-secondary at each axis point */}
+      {/* Labels — quadrant-aware textAnchor so text doesn't clip at edges */}
       {showLabels &&
         SKILL_KEYS.map((key, i) => {
-          const [x, y] = getPoint(i, MAX_VALUE + 20)
+          const labelRadius = MAX_VALUE + 22
+          const [x, y] = getPoint(i, labelRadius)
           const val = skills[key] ?? 0
+
+          // Compute the angle for this spoke (same as getPoint)
+          const angle = angleStep * i - Math.PI / 2
+          // Normalise to [0, 2π)
+          const a = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)
+
+          // textAnchor: spokes pointing right → start, left → end, top/bottom → middle
+          let anchor: 'start' | 'middle' | 'end' = 'middle'
+          if (a > Math.PI * 0.15 && a < Math.PI * 0.85)       anchor = 'start'
+          else if (a > Math.PI * 1.15 && a < Math.PI * 1.85)  anchor = 'end'
+
+          // dominantBaseline: spokes pointing down → hanging, up → auto, sides → middle
+          let baseline: string = 'middle'
+          if (a > Math.PI * 0.35 && a < Math.PI * 0.65)       baseline = 'hanging'
+          else if (a > Math.PI * 1.35 && a < Math.PI * 1.65)  baseline = 'auto'
+
           return (
             <text
               key={i}
               x={x}
               y={y}
-              textAnchor="middle"
-              dominantBaseline="middle"
+              textAnchor={anchor}
+              dominantBaseline={baseline}
               style={{
                 fontSize: '10px',
                 fontFamily: "'JetBrains Mono', monospace",

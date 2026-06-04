@@ -117,6 +117,7 @@ export interface AttackCard {
   notes: string
   createdAt: string
   completedAt?: string
+  dueDate?: string
   cvss?: CvssMetrics
   subtasks?: Subtask[]
 }

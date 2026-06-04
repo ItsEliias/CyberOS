@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { ReportTemplate } from '@shared/types';
 import { REPORT_TEMPLATES } from '../lib/defaults';
 
@@ -10,9 +11,10 @@ interface Props {
 export default function TemplateCard({ id, selected, onSelect }: Props) {
   const def = REPORT_TEMPLATES.find(t => t.id === id)!;
   const count = def.sectionTitles.length;
+  const [hovered, setHovered] = useState(false);
 
   return (
-    <button
+    <div style={{ position: 'relative' }}><button
       onClick={() => onSelect(id)}
       style={{
         display       : 'flex',
@@ -27,14 +29,17 @@ export default function TemplateCard({ id, selected, onSelect }: Props) {
         transition    : 'border-color 0.15s, background 0.15s, box-shadow 0.15s',
         boxShadow     : selected ? '0 0 0 1px var(--accent)' : 'none',
         minHeight     : 110,
+        width         : '100%',
       }}
       onMouseEnter={e => {
+        setHovered(true);
         if (!selected) {
           (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 12px rgba(0,0,0,0.35)';
           (e.currentTarget as HTMLButtonElement).style.transform  = 'translateY(-2px)';
         }
       }}
       onMouseLeave={e => {
+        setHovered(false);
         if (!selected) {
           (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none';
           (e.currentTarget as HTMLButtonElement).style.transform  = '';
@@ -61,5 +66,35 @@ export default function TemplateCard({ id, selected, onSelect }: Props) {
         {def.description}
       </p>
     </button>
+    {/* Template preview popover — 200×280px */}
+    {hovered && (
+      <div style={{
+        position: 'absolute', left: '102%', top: 0, zIndex: 100,
+        width: 200, minHeight: 280,
+        background: 'rgba(13,14,24,0.97)',
+        border: '1px solid rgba(42,51,71,0.75)',
+        borderRadius: 8, padding: '12px 14px',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.55)',
+        pointerEvents: 'none',
+      }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: '#4a9eff', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+          Structure Preview
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {def.sectionTitles.map((title, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#4a9eff', opacity: 0.5, flexShrink: 0 }} />
+              <span style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {title}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(42,51,71,0.4)', fontSize: 10, color: 'var(--text-muted)' }}>
+          {count} sections
+        </div>
+      </div>
+    )}
+    </div>
   );
 }

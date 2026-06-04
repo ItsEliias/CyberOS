@@ -1,7 +1,33 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+
 import { useRecondeskStore } from '../../stores/useRecondeskStore'
 import type { HashType } from '../../types/recondesk'
+
+function credAgeDays(addedAt: string): number {
+  try {
+    return Math.floor((Date.now() - new Date(addedAt).getTime()) / 86_400_000)
+  } catch { return 0 }
+}
+
+function AgeBadge({ addedAt }: { addedAt: string }) {
+  const days = credAgeDays(addedAt)
+  if (days < 1) return null
+  const isOld    = days > 90
+  const isStale  = days > 30
+  const color    = isOld ? '#f85149' : isStale ? '#d29922' : '#484f58'
+  const bg       = isOld ? 'rgba(248,81,73,0.10)' : isStale ? 'rgba(210,153,34,0.10)' : 'rgba(42,51,71,0.25)'
+  const border   = isOld ? 'rgba(248,81,73,0.25)' : isStale ? 'rgba(210,153,34,0.25)' : 'rgba(42,51,71,0.4)'
+  return (
+    <span
+      className="text-[9px] px-1.5 py-0.5 rounded font-mono tabular-nums flex-shrink-0"
+      style={{ color, background: bg, border: `1px solid ${border}` }}
+      title={`Added ${days} day${days !== 1 ? 's' : ''} ago`}
+    >
+      {days}d old
+    </span>
+  )
+}
 
 const HASH_TYPE_BADGE: Record<HashType, string> = {
   NTLM:   'text-[#f85149] bg-[#f85149]/10 border-[#f85149]/20',
@@ -76,9 +102,9 @@ export default function CredentialsTab({ targetId }: { targetId: string }) {
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#2a3347] flex-shrink-0">
-        <span className="text-sm font-medium text-[#e2e8f0]">
-          Credentials <span className="text-[#4a5568] text-xs font-normal">({creds.length})</span>
+      <div className="flex items-center justify-between px-4 py-2.5 flex-shrink-0" style={{ borderBottom: '1px solid rgba(42,51,71,0.5)', background: 'rgba(7,8,15,0.3)' }}>
+        <span className="heading-sm" style={{ color: '#e6edf3' }}>
+          Credentials <span className="text-[10px] font-normal" style={{ color: '#484f58' }}>({creds.length})</span>
         </span>
         <div className="flex items-center gap-2">
           <button
@@ -171,22 +197,36 @@ export default function CredentialsTab({ targetId }: { targetId: string }) {
       {/* Table */}
       <div className="flex-1 overflow-y-auto">
         {creds.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
+          <motion.div
+            className="flex items-center justify-center h-full"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
+          >
             <div className="text-center">
-              <p className="text-sm text-[#4a5568]">No credentials captured</p>
-              <p className="text-xs text-[#4a5568]/60 mt-1">Add credentials found during enumeration</p>
+              <div className="relative inline-flex items-center justify-center mb-4">
+                <div className="absolute w-16 h-16 rounded-full" style={{ background: 'radial-gradient(circle, rgba(248,81,73,0.06) 0%, transparent 70%)' }} />
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" style={{ color: '#f85149', opacity: 0.35 }}>
+                  <circle cx="8" cy="10" r="4" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M14.5 10H21M17 7.5l3 2.5-3 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M4 21v-1a4 4 0 0 1 4-4h1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium" style={{ color: '#8b949e' }}>No credentials captured</p>
+              <p className="text-xs mt-1" style={{ color: '#484f58' }}>Add credentials found during enumeration</p>
             </div>
-          </div>
+          </motion.div>
         ) : (
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-[#2a3347]">
-                <th className="px-4 py-2 text-left text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest">Username</th>
-                <th className="px-2 py-2 text-left text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest">Password / Hash</th>
-                <th className="px-2 py-2 text-left text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest">Service</th>
-                <th className="px-2 py-2 text-left text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest w-16">Port</th>
-                <th className="px-2 py-2 text-left text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest w-20">Verified</th>
-                <th className="px-4 py-2 w-20" />
+              <tr style={{ borderBottom: '1px solid rgba(42,51,71,0.6)', background: 'rgba(7,8,15,0.5)' }}>
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Username</th>
+                <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Password / Hash</th>
+                <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Service</th>
+                <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest w-16" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Port</th>
+                <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest w-20" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Status</th>
+                <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest w-20" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Age</th>
+                <th className="px-4 py-2.5 w-8" />
               </tr>
             </thead>
             <tbody>
@@ -195,6 +235,7 @@ export default function CredentialsTab({ targetId }: { targetId: string }) {
                   const isRevealed = revealed.has(cred.id)
                   const secret     = cred.password ?? cred.hash ?? ''
                   const isCopied   = copied === cred.id
+                  const isUserCopied = copied === `user-${cred.id}`
 
                   return (
                     <motion.tr
@@ -202,68 +243,107 @@ export default function CredentialsTab({ targetId }: { targetId: string }) {
                       initial={{ opacity: 0, y: 4 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
-                      transition={{ delay: i * 0.02, duration: 0.15 }}
-                      className="group border-b border-[#2a3347]/50 hover:bg-[#2a3347]/20 transition-colors"
+                      transition={{ delay: i * 0.05, duration: 0.15 }}
+                      className="table-row-alt table-row-accent group"
+                      style={{
+                        borderBottom: '1px solid rgba(42,51,71,0.25)',
+                        transition: 'background 120ms ease',
+                      }}
                     >
+                      {/* Username cell — monospace, icon-only copy */}
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-[#e2e8f0]">{cred.username || <span className="text-[#4a5568]">—</span>}</span>
+                          <span className="font-mono text-[#e2e8f0] text-[11px] tracking-tight">{cred.username || <span className="text-[#4a5568]">—</span>}</span>
                           {cred.username && (
                             <button
                               onClick={() => copyToClipboard(cred.username, `user-${cred.id}`)}
-                              className="opacity-0 group-hover:opacity-100 text-[9px] px-1 py-0.5 rounded bg-[#2a3347] text-[#4a5568] hover:text-[#8b949e] transition-all"
+                              className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded transition-all flex-shrink-0"
+                              style={{
+                                background: isUserCopied ? 'rgba(63,185,80,0.15)' : 'rgba(42,51,71,0.45)',
+                                color: isUserCopied ? '#3fb950' : '#4a5568',
+                              }}
+                              title="Copy username"
                             >
-                              {copied === `user-${cred.id}` ? '✓' : 'copy'}
+                              {isUserCopied
+                                ? <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                : <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><rect x="1" y="3" width="7" height="8" rx="1" stroke="currentColor" strokeWidth="1.2"/><path d="M4 3V2a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-1" stroke="currentColor" strokeWidth="1.2"/></svg>
+                              }
                             </button>
                           )}
                         </div>
                       </td>
-                      <td className="px-2 py-2.5 max-w-[200px]">
+
+                      {/* Secret cell — monospace, show/hide/icon-only copy */}
+                      <td className="px-2 py-2.5 max-w-[220px]">
                         {secret ? (
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-mono text-[#d29922]/70 truncate">
+                          <div className="flex items-center gap-1">
+                            <span
+                              className="font-mono text-[11px] truncate flex-1 tracking-tight"
+                              style={{ color: isRevealed ? (cred.hash ? '#4a9eff' : '#d29922') : '#8b949e', opacity: isRevealed ? 1 : 0.7 }}
+                            >
                               {isRevealed
-                                ? cred.hash
-                                  ? (secret.length > 32 ? secret.slice(0, 32) + '…' : secret)
-                                  : secret
-                                : '••••••••'}
+                                ? (cred.hash
+                                    ? (secret.length > 32 ? secret.slice(0, 32) + '…' : secret)
+                                    : secret)
+                                : '••••••••••'}
                             </span>
                             {cred.hashType && (
-                              <span className={`text-[9px] px-1 py-0.5 rounded border flex-shrink-0 ${HASH_TYPE_BADGE[cred.hashType]}`}>
+                              <span className={`text-[9px] px-1 py-0.5 rounded border flex-shrink-0 font-mono ${HASH_TYPE_BADGE[cred.hashType]}`}>
                                 {cred.hashType}
                               </span>
                             )}
+                            {/* Reveal toggle — icon eye */}
                             <button
                               onClick={() => toggleReveal(cred.id)}
-                              className="opacity-0 group-hover:opacity-100 text-[9px] px-1 py-0.5 rounded bg-[#2a3347] text-[#4a5568] hover:text-[#8b949e] transition-all flex-shrink-0"
+                              className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded transition-all flex-shrink-0"
+                              style={{ background: 'rgba(42,51,71,0.45)', color: isRevealed ? '#d29922' : '#4a5568' }}
+                              title={isRevealed ? 'Hide' : 'Reveal'}
                             >
-                              {isRevealed ? 'hide' : 'show'}
+                              {isRevealed
+                                ? <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M1 6s2-4 5-4 5 4 5 4-2 4-5 4-5-4-5-4z" stroke="currentColor" strokeWidth="1.2"/><circle cx="6" cy="6" r="1.5" stroke="currentColor" strokeWidth="1.2"/><path d="M2 2l8 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                                : <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M1 6s2-4 5-4 5 4 5 4-2 4-5 4-5-4-5-4z" stroke="currentColor" strokeWidth="1.2"/><circle cx="6" cy="6" r="1.5" stroke="currentColor" strokeWidth="1.2"/></svg>
+                              }
                             </button>
-                            {isRevealed && (
-                              <button
-                                onClick={() => copyToClipboard(secret, cred.id)}
-                                className="opacity-0 group-hover:opacity-100 text-[9px] px-1 py-0.5 rounded bg-[#2a3347] text-[#4a5568] hover:text-[#8b949e] transition-all flex-shrink-0"
-                              >
-                                {isCopied ? '✓' : 'copy'}
-                              </button>
-                            )}
+                            {/* Copy — icon clipboard */}
+                            <button
+                              onClick={() => copyToClipboard(secret, cred.id)}
+                              className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded transition-all flex-shrink-0"
+                              style={{
+                                background: isCopied ? 'rgba(63,185,80,0.15)' : 'rgba(42,51,71,0.45)',
+                                color: isCopied ? '#3fb950' : '#4a5568',
+                              }}
+                              title="Copy secret"
+                            >
+                              {isCopied
+                                ? <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                : <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><rect x="1" y="3" width="7" height="8" rx="1" stroke="currentColor" strokeWidth="1.2"/><path d="M4 3V2a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-1" stroke="currentColor" strokeWidth="1.2"/></svg>
+                              }
+                            </button>
                           </div>
                         ) : (
                           <span className="text-[#4a5568]">—</span>
                         )}
                       </td>
-                      <td className="px-2 py-2.5 font-mono text-[#8b949e]">{cred.service || <span className="text-[#4a5568]">—</span>}</td>
-                      <td className="px-2 py-2.5 font-mono text-[#8b949e]">{cred.port ?? <span className="text-[#4a5568]">—</span>}</td>
+
+                      <td className="px-2 py-2.5 font-mono text-[11px]" style={{ color: '#8b949e' }}>{cred.service || <span className="text-[#4a5568]">—</span>}</td>
+                      <td className="px-2 py-2.5 font-mono text-[11px] tabular-nums" style={{ color: '#8b949e' }}>{cred.port ?? <span className="text-[#4a5568]">—</span>}</td>
                       <td className="px-2 py-2.5">
                         <button
                           onClick={() => updateCredential(targetId, cred.id, { verified: !cred.verified })}
-                          className={`text-sm transition-colors ${cred.verified ? 'text-[#3fb950]' : 'text-[#4a5568] hover:text-[#8b949e]'}`}
+                          className="flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded border transition-all"
+                          style={cred.verified
+                            ? { color: '#3fb950', background: 'rgba(63,185,80,0.10)', borderColor: 'rgba(63,185,80,0.25)' }
+                            : { color: '#484f58', background: 'transparent', borderColor: 'rgba(42,51,71,0.4)' }
+                          }
                           title={cred.verified ? 'Verified — click to unverify' : 'Click to mark verified'}
                         >
-                          {cred.verified ? '✓' : '○'}
+                          {cred.verified ? '✓ verified' : '○ unverified'}
                         </button>
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-2 py-2.5">
+                        <AgeBadge addedAt={cred.addedAt} />
+                      </td>
+                      <td className="px-2 py-2.5">
                         <button
                           onClick={() => deleteCredential(targetId, cred.id)}
                           className="opacity-0 group-hover:opacity-100 text-[#4a5568] hover:text-[#f85149] text-[10px] px-1 py-0.5 rounded hover:bg-[#f85149]/10 transition-all"

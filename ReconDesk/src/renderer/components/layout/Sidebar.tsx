@@ -1,49 +1,118 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRecondeskStore } from '../../stores/useRecondeskStore'
 import NewTargetModal from '../target/NewTargetModal'
 import CsvImportModal from '../target/CsvImportModal'
 import EngagementScopePanel from '../engagement/EngagementScopePanel'
-import type { TargetStatus, Platform } from '../../types/recondesk'
+import type { Target, TargetStatus, Platform } from '../../types/recondesk'
 
-const STATUS_DOT: Record<TargetStatus, string> = {
-  active:    'bg-[#3fb950]',
-  completed: 'bg-[#4a9eff]',
-  abandoned: 'bg-[#4a5568]',
-  paused:    'bg-[#d29922]',
+// ─── Live elapsed timer ───────────────────────────────────────────────────────
+
+function EngagementTimer({ createdAt }: { createdAt: string }) {
+  const [elapsed, setElapsed] = useState(0)
+  const startRef = useRef<number>(new Date(createdAt).getTime())
+
+  useEffect(() => {
+    startRef.current = new Date(createdAt).getTime()
+    setElapsed(Math.floor((Date.now() - startRef.current) / 1000))
+    const id = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startRef.current) / 1000))
+    }, 1000)
+    return () => clearInterval(id)
+  }, [createdAt])
+
+  const h = Math.floor(elapsed / 3600)
+  const m = Math.floor((elapsed % 3600) / 60)
+  const s = elapsed % 60
+  const fmt = h > 0
+    ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+    : `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+
+  return (
+    <span
+      className="text-[9px] font-mono tabular-nums flex-shrink-0 px-1 py-0.5 rounded"
+      style={{
+        color: '#d29922',
+        background: 'rgba(210,153,34,0.08)',
+        border: '1px solid rgba(210,153,34,0.20)',
+      }}
+      title="Time since engagement created"
+    >
+      {fmt}
+    </span>
+  )
 }
 
-const STATUS_DOT_PULSE: Record<TargetStatus, string> = {
-  active: 'status-dot-pulse', completed: '', abandoned: '', paused: '',
+const STATUS_COLOR: Record<TargetStatus, string> = {
+  active:    '#3fb950',
+  completed: '#4a9eff',
+  abandoned: '#484f58',
+  paused:    '#d29922',
 }
 
-const PLATFORM_COLORS: Record<Platform, string> = {
-  HTB:      'text-[#f85149] bg-[#f85149]/10 border-[#f85149]/20',
-  THM:      'text-[#3fb950] bg-[#3fb950]/10 border-[#3fb950]/20',
-  CTF:      'text-[#b44fff] bg-[#b44fff]/10 border-[#b44fff]/20',
-  Client:   'text-[#4a9eff] bg-[#4a9eff]/10 border-[#4a9eff]/20',
-  Internal: 'text-[#8b949e] bg-[#8b949e]/10 border-[#8b949e]/20',
+const STATUS_RGB: Record<TargetStatus, string> = {
+  active:    '63,185,80',
+  completed: '74,158,255',
+  abandoned: '72,79,88',
+  paused:    '210,153,34',
+}
+
+// ─── Status Dot with staleness + flagged logic ────────────────────────────────
+
+function targetStatusDotColor(target: Target): { color: string; rgb: string; label: string } {
+  // Red = flagged (high-risk open ports with no completed cards)
+  const hasHighRisk = target.ports.some(p =>
+    p.state === 'open' && [21, 23, 25, 445, 3389, 5900, 6379, 27017, 1433, 1521, 3306].includes(p.port)
+  )
+  const hasCompletedCards = target.attackCards.some(c => c.status === 'done')
+  if (target.status === 'active' && hasHighRisk && !hasCompletedCards) {
+    return { color: '#f85149', rgb: '248,81,73', label: 'flagged' }
+  }
+
+  // Amber = stale (active but last modified >7 days ago, no recent ports added)
+  if (target.status === 'active') {
+    const newestPort = target.ports.reduce((latest, p) => {
+      const t = new Date(p.addedAt).getTime()
+      return t > latest ? t : latest
+    }, new Date(target.createdAt).getTime())
+    const daysSince = (Date.now() - newestPort) / 86_400_000
+    if (daysSince > 7) {
+      return { color: '#d29922', rgb: '210,153,34', label: 'stale' }
+    }
+    return { color: '#3fb950', rgb: '63,185,80', label: 'active' }
+  }
+
+  const base = STATUS_COLOR[target.status]
+  const rgb  = STATUS_RGB[target.status]
+  return { color: base, rgb, label: target.status }
+}
+
+const PLATFORM_STYLE: Record<Platform, { color: string; bg: string; border: string }> = {
+  HTB:      { color: '#f85149', bg: 'rgba(248,81,73,0.10)',  border: 'rgba(248,81,73,0.20)'  },
+  THM:      { color: '#3fb950', bg: 'rgba(63,185,80,0.10)',  border: 'rgba(63,185,80,0.20)'  },
+  CTF:      { color: '#b44fff', bg: 'rgba(180,79,255,0.10)', border: 'rgba(180,79,255,0.20)' },
+  Client:   { color: '#4a9eff', bg: 'rgba(74,158,255,0.10)', border: 'rgba(74,158,255,0.20)' },
+  Internal: { color: '#8b949e', bg: 'rgba(139,148,158,0.10)',border: 'rgba(139,148,158,0.20)'},
 }
 
 export default function Sidebar() {
-  const targets            = useRecondeskStore(s => s.targets)
-  const engagements        = useRecondeskStore(s => s.engagements)
-  const activeTargetId     = useRecondeskStore(s => s.activeTargetId)
-  const activeEngagementId = useRecondeskStore(s => s.activeEngagementId)
-  const setActiveTarget    = useRecondeskStore(s => s.setActiveTarget)
+  const targets             = useRecondeskStore(s => s.targets)
+  const engagements         = useRecondeskStore(s => s.engagements)
+  const activeTargetId      = useRecondeskStore(s => s.activeTargetId)
+  const activeEngagementId  = useRecondeskStore(s => s.activeEngagementId)
+  const setActiveTarget     = useRecondeskStore(s => s.setActiveTarget)
   const setActiveEngagement = useRecondeskStore(s => s.setActiveEngagement)
-  const isNewTargetOpen    = useRecondeskStore(s => s.isNewTargetModalOpen)
-  const setNewTargetModal  = useRecondeskStore(s => s.setNewTargetModal)
-  const isCsvImportOpen    = useRecondeskStore(s => s.isCsvImportOpen)
-  const setCsvImportOpen   = useRecondeskStore(s => s.setCsvImportOpen)
-  const addEngagement      = useRecondeskStore(s => s.addEngagement)
+  const isNewTargetOpen     = useRecondeskStore(s => s.isNewTargetModalOpen)
+  const setNewTargetModal   = useRecondeskStore(s => s.setNewTargetModal)
+  const isCsvImportOpen     = useRecondeskStore(s => s.isCsvImportOpen)
+  const setCsvImportOpen    = useRecondeskStore(s => s.setCsvImportOpen)
+  const addEngagement       = useRecondeskStore(s => s.addEngagement)
 
   const activeTarget = targets.find(t => t.id === activeTargetId)
 
-  // Collapsible engagement sections
-  const [collapsed, setCollapsed]         = useState<Set<string>>(new Set())
-  const [showActions, setShowActions]     = useState(false)
-  const [scopeEngId, setScopeEngId]       = useState<string | null>(null)
+  const [collapsed, setCollapsed]     = useState<Set<string>>(new Set())
+  const [showActions, setShowActions] = useState(false)
+  const [scopeEngId, setScopeEngId]   = useState<string | null>(null)
 
   function toggleCollapse(id: string) {
     setCollapsed(prev => {
@@ -53,54 +122,77 @@ export default function Sidebar() {
     })
   }
 
-  // Filter targets by active engagement if set
   const filteredTargets = activeEngagementId
     ? targets.filter(t => t.engagementId === activeEngagementId)
     : targets
 
-  // Group targets by engagement
   const groups = engagements.map(eng => ({
     engagement: eng,
     targets: filteredTargets.filter(t => t.engagementId === eng.id),
   })).filter(g => g.targets.length > 0)
 
-  // Ungrouped targets (no matching engagement)
   const ungrouped = filteredTargets.filter(t => !engagements.find(e => e.id === t.engagementId))
 
+  // Find the engagement that contains the active target (for the timer)
+  const activeTargetEngagement = activeTarget
+    ? engagements.find(e => e.id === activeTarget.engagementId)
+    : null
+
   function TargetRow({ target, i }: { target: typeof targets[number]; i: number }) {
-    const isActive = target.id === activeTargetId
+    const isActive  = target.id === activeTargetId
+    const dotInfo   = targetStatusDotColor(target)
+    const pStyle    = PLATFORM_STYLE[target.platform]
+    const isPulsing = target.status === 'active'
+
     return (
       <motion.div
         key={target.id}
-        initial={{ opacity: 0, x: -8 }}
+        initial={{ opacity: 0, x: -6 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: i * 0.03, duration: 0.18 }}
       >
         <button
           onClick={() => setActiveTarget(target.id)}
-          className={`group w-full text-left px-3 py-2 transition-all relative ${
-            isActive
-              ? 'bg-[#d29922]/8 border-l-2 border-[#d29922]'
-              : 'border-l-2 border-transparent hover:bg-[#2a3347]/25 hover:border-[#d29922]/40'
-          }`}
+          className={`group w-full text-left px-3 py-2 relative sidebar-row ${isActive ? 'sidebar-row-active' : ''}`}
+          style={isActive ? {
+            background: 'rgba(210,153,34,0.07)',
+            borderLeft: '2px solid #d29922',
+          } : {
+            borderLeft: '2px solid transparent',
+          }}
+          onMouseEnter={e => {
+            if (!isActive) {
+              (e.currentTarget as HTMLButtonElement).style.background = 'rgba(42,51,71,0.18)'
+              ;(e.currentTarget as HTMLButtonElement).style.borderLeftColor = 'rgba(210,153,34,0.30)'
+            }
+          }}
+          onMouseLeave={e => {
+            if (!isActive) {
+              (e.currentTarget as HTMLButtonElement).style.background = ''
+              ;(e.currentTarget as HTMLButtonElement).style.borderLeftColor = 'transparent'
+            }
+          }}
         >
           <div className="flex items-center gap-2">
-            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[target.status]} ${isActive ? STATUS_DOT_PULSE[target.status] : ''}`} />
-            <span className={`text-xs flex-1 truncate ${isActive ? 'font-semibold text-[#e2e8f0]' : 'font-medium text-[#8b949e]'}`}>
+            <span
+              className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isPulsing ? 'status-dot-pulse' : ''}`}
+              style={{ backgroundColor: dotInfo.color, '--pulse-rgb': dotInfo.rgb } as React.CSSProperties}
+              title={dotInfo.label}
+            />
+            <span className="text-xs flex-1 truncate font-medium" style={{ color: isActive ? '#e6edf3' : '#8b949e', fontWeight: isActive ? 600 : 500 }}>
               {target.name}
             </span>
-            <span className={`text-[9px] px-1.5 py-0.5 rounded border font-medium flex-shrink-0 ${PLATFORM_COLORS[target.platform]}`}>
+            <span
+              className="text-[9px] px-1.5 py-0.5 rounded border font-semibold flex-shrink-0"
+              style={{ color: pStyle.color, background: pStyle.bg, borderColor: pStyle.border }}
+            >
               {target.platform}
             </span>
           </div>
           <div className="flex items-center gap-1.5 mt-0.5 pl-3.5">
-            <span className="text-[10px] font-mono text-[#4a5568]">{target.ip}</span>
-            <span className="text-[10px] text-[#4a5568]/50">·</span>
-            <span className={`text-[10px] capitalize ${
-              target.status === 'active'    ? 'text-[#3fb950]' :
-              target.status === 'completed' ? 'text-[#4a9eff]' :
-              target.status === 'paused'    ? 'text-[#d29922]' : 'text-[#4a5568]'
-            }`}>{target.status}</span>
+            <span className="text-[10px] font-mono" style={{ color: '#484f58' }}>{target.ip}</span>
+            <span className="text-[10px]" style={{ color: 'rgba(72,79,88,0.5)' }}>·</span>
+            <span className="text-[10px] capitalize" style={{ color: dotInfo.color }}>{dotInfo.label}</span>
           </div>
         </button>
       </motion.div>
@@ -108,24 +200,36 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-60 flex flex-col border-r border-[#2a3347] flex-shrink-0 bg-[#0d0d14]">
+    <aside
+      className="w-60 flex flex-col flex-shrink-0"
+      style={{ background: 'rgba(13,14,24,0.92)', borderRight: '1px solid rgba(255,255,255,0.04)' }}
+    >
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#2a3347]">
-        <span className="text-[11px] font-semibold text-[#4a5568] uppercase tracking-widest">
-          Targets <span className="text-[#8b949e]">({targets.length})</span>
+      <div
+        className="flex items-center justify-between px-3 py-2.5"
+        style={{ borderBottom: '1px solid rgba(42,51,71,0.4)' }}
+      >
+        <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: '#484f58' }}>
+          Targets <span style={{ color: '#8b949e' }}>({targets.length})</span>
         </span>
         <div className="flex items-center gap-1">
           <button
             onClick={() => setShowActions(s => !s)}
             title="More actions"
-            className="w-5 h-5 flex items-center justify-center text-[#8b949e] hover:text-[#e2e8f0] hover:bg-[#2a3347] rounded transition-colors text-xs"
+            className="w-6 h-6 flex items-center justify-center rounded-md transition-colors text-xs"
+            style={{ color: '#8b949e' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(42,51,71,0.4)'; (e.currentTarget as HTMLButtonElement).style.color = '#e6edf3' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ''; (e.currentTarget as HTMLButtonElement).style.color = '#8b949e' }}
           >
             ⋯
           </button>
           <button
             onClick={() => setNewTargetModal(true)}
             title="New target"
-            className="w-5 h-5 flex items-center justify-center text-[#8b949e] hover:text-[#e2e8f0] hover:bg-[#2a3347] rounded transition-colors text-sm"
+            className="w-6 h-6 flex items-center justify-center rounded-md transition-colors text-sm font-medium"
+            style={{ color: '#8b949e' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(210,153,34,0.10)'; (e.currentTarget as HTMLButtonElement).style.color = '#d29922' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ''; (e.currentTarget as HTMLButtonElement).style.color = '#8b949e' }}
           >
             +
           </button>
@@ -138,17 +242,24 @@ export default function Sidebar() {
           <motion.div
             initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.1 }}
-            className="mx-2 mt-1.5 bg-[#12131a] border border-[#2a3347] rounded-lg overflow-hidden"
+            className="mx-2 mt-1.5 rounded-lg overflow-hidden shadow-elevation-2"
+            style={{ background: '#0d0e18', border: '1px solid rgba(42,51,71,0.6)' }}
           >
             <button
               onClick={() => { setCsvImportOpen(true); setShowActions(false) }}
-              className="w-full text-left px-3 py-2 text-xs text-[#8b949e] hover:text-[#e2e8f0] hover:bg-[#2a3347]/40 transition-colors"
+              className="w-full text-left px-3 py-2 text-xs transition-colors"
+              style={{ color: '#8b949e' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(42,51,71,0.3)'; (e.currentTarget as HTMLButtonElement).style.color = '#e6edf3' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ''; (e.currentTarget as HTMLButtonElement).style.color = '#8b949e' }}
             >
               Import CSV
             </button>
             <button
               onClick={() => { addEngagement(`Engagement ${engagements.length + 1}`); setShowActions(false) }}
-              className="w-full text-left px-3 py-2 text-xs text-[#8b949e] hover:text-[#e2e8f0] hover:bg-[#2a3347]/40 transition-colors border-t border-[#2a3347]/50"
+              className="w-full text-left px-3 py-2 text-xs transition-colors"
+              style={{ color: '#8b949e', borderTop: '1px solid rgba(42,51,71,0.3)' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(42,51,71,0.3)'; (e.currentTarget as HTMLButtonElement).style.color = '#e6edf3' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ''; (e.currentTarget as HTMLButtonElement).style.color = '#8b949e' }}
             >
               New Engagement
             </button>
@@ -158,11 +269,23 @@ export default function Sidebar() {
 
       {/* Active lab context strip */}
       {activeTarget && (
-        <div className="mx-2 mt-2 px-2.5 py-2 rounded bg-[#d29922]/5 border border-[#d29922]/15">
-          <p className="text-[9px] text-[#d29922]/60 uppercase tracking-widest mb-0.5">Active Lab Context</p>
-          <p className="text-xs font-medium text-[#e2e8f0] truncate">{activeTarget.name}</p>
-          <p className="text-[10px] font-mono text-[#d29922]/70">{activeTarget.ip}</p>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
+          className="mx-2 mt-2 px-2.5 py-2 rounded-lg relative overflow-hidden"
+          style={{
+            background: 'rgba(210,153,34,0.05)',
+            border: '1px solid rgba(210,153,34,0.20)',
+            boxShadow: '0 0 12px rgba(210,153,34,0.06), inset 0 1px 0 rgba(210,153,34,0.08)',
+          }}
+        >
+          {/* Subtle animated glow sweep */}
+          <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(135deg, rgba(210,153,34,0.04) 0%, transparent 60%)' }} />
+          <p className="text-[9px] uppercase tracking-widest mb-0.5 relative z-10" style={{ color: 'rgba(210,153,34,0.6)' }}>Active Lab</p>
+          <p className="text-xs font-semibold truncate relative z-10" style={{ color: '#e6edf3' }}>{activeTarget.name}</p>
+          <p className="text-[10px] font-mono relative z-10" style={{ color: 'rgba(210,153,34,0.75)' }}>{activeTarget.ip}</p>
+        </motion.div>
       )}
 
       {/* Engagement filter pills */}
@@ -170,9 +293,11 @@ export default function Sidebar() {
         <div className="px-2 pt-2 pb-1 flex flex-wrap gap-1">
           <button
             onClick={() => setActiveEngagement(null)}
-            className={`text-[9px] px-1.5 py-0.5 rounded border transition-colors ${
-              !activeEngagementId ? 'bg-[#d29922]/15 border-[#d29922]/30 text-[#d29922]' : 'border-[#2a3347] text-[#4a5568] hover:text-[#8b949e]'
-            }`}
+            className="text-[9px] px-1.5 py-0.5 rounded border transition-colors"
+            style={!activeEngagementId
+              ? { background: 'rgba(210,153,34,0.15)', borderColor: 'rgba(210,153,34,0.30)', color: '#d29922' }
+              : { borderColor: 'rgba(42,51,71,0.5)', color: '#484f58' }
+            }
           >
             All
           </button>
@@ -180,12 +305,11 @@ export default function Sidebar() {
             <button
               key={e.id}
               onClick={() => setActiveEngagement(activeEngagementId === e.id ? null : e.id)}
-              className={`text-[9px] px-1.5 py-0.5 rounded border transition-colors ${
-                activeEngagementId === e.id
-                  ? 'border text-white'
-                  : 'border-[#2a3347] text-[#4a5568] hover:text-[#8b949e]'
-              }`}
-              style={activeEngagementId === e.id ? { backgroundColor: `${e.color}20`, borderColor: `${e.color}40`, color: e.color } : {}}
+              className="text-[9px] px-1.5 py-0.5 rounded border transition-colors"
+              style={activeEngagementId === e.id
+                ? { backgroundColor: `${e.color}20`, borderColor: `${e.color}40`, color: e.color }
+                : { borderColor: 'rgba(42,51,71,0.5)', color: '#484f58' }
+              }
             >
               {e.name}
             </button>
@@ -196,34 +320,52 @@ export default function Sidebar() {
       {/* Target list */}
       <div className="flex-1 overflow-y-auto py-1">
         {targets.length === 0 && (
-          <p className="text-[11px] text-[#4a5568] text-center mt-8 px-3 leading-relaxed">
+          <p className="text-[11px] text-center mt-8 px-3 leading-relaxed" style={{ color: '#484f58' }}>
             No targets yet.<br />Hit + to add one.
           </p>
         )}
 
-        {/* Grouped by engagement */}
         <AnimatePresence initial>
           {groups.map(({ engagement: eng, targets: engTargets }) => {
-            const isCollapsed = collapsed.has(eng.id)
+            const isCollapsed   = collapsed.has(eng.id)
+            // Active engagement = has the currently active target
+            const hasActiveTarget = engTargets.some(t => t.id === activeTargetId)
+
             return (
               <div key={eng.id}>
                 <div className="flex items-center group">
                   <button
                     onClick={() => toggleCollapse(eng.id)}
-                    className="flex-1 flex items-center gap-2 px-3 py-1.5 hover:bg-[#2a3347]/20 transition-colors min-w-0"
+                    className="flex-1 flex items-center gap-2 px-3 py-1.5 transition-colors min-w-0"
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(42,51,71,0.15)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '' }}
                   >
-                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: eng.color }} />
-                    <span className="text-[10px] font-semibold uppercase tracking-widest flex-1 truncate text-left" style={{ color: eng.color }}>
+                    <span className="relative flex-shrink-0 w-2 h-2 flex items-center justify-center">
+                      <span className="w-1.5 h-1.5 rounded-full block" style={{ backgroundColor: eng.color }} />
+                      {hasActiveTarget && (
+                        <>
+                          <span
+                            className="absolute inset-0 rounded-full animate-ping"
+                            style={{ backgroundColor: '#d29922', opacity: 0.5, animationDuration: '1.8s' }}
+                          />
+                          <span className="absolute inset-0 w-1.5 h-1.5 m-auto rounded-full" style={{ backgroundColor: '#d29922' }} />
+                        </>
+                      )}
+                    </span>
+                    <span className="text-[10px] font-semibold uppercase tracking-widest flex-1 truncate text-left" style={{ color: hasActiveTarget ? '#d29922' : eng.color }}>
                       {eng.name}
                     </span>
-                    <span className="text-[9px] text-[#4a5568]">{engTargets.length}</span>
-                    <span className="text-[9px] text-[#4a5568]">{isCollapsed ? '▸' : '▾'}</span>
+                    {hasActiveTarget && <EngagementTimer createdAt={eng.createdAt} />}
+                    <span className="text-[9px]" style={{ color: '#484f58' }}>{engTargets.length}</span>
+                    <span className="text-[9px]" style={{ color: '#484f58' }}>{isCollapsed ? '▸' : '▾'}</span>
                   </button>
                   <button
                     onClick={e => { e.stopPropagation(); setScopeEngId(eng.id) }}
                     title="Edit scope / RoE"
-                    className="opacity-0 group-hover:opacity-100 mr-2 px-1.5 py-0.5 text-[9px] rounded border border-[#d29922]/25 text-[#d29922]/60 hover:text-[#d29922] hover:bg-[#d29922]/10 transition-all flex-shrink-0"
-                    style={{ borderColor: !eng.inScope ? '#d29922aa' : undefined, color: !eng.inScope ? '#d2992299' : undefined }}
+                    className="opacity-0 group-hover:opacity-100 mr-2 px-1.5 py-0.5 text-[9px] rounded border transition-all flex-shrink-0"
+                    style={{ borderColor: !eng.inScope ? 'rgba(210,153,34,0.4)' : 'rgba(210,153,34,0.25)', color: !eng.inScope ? 'rgba(210,153,34,0.8)' : 'rgba(210,153,34,0.6)' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(210,153,34,0.10)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '' }}
                   >
                     {eng.inScope ? 'RoE' : '⚠ RoE'}
                   </button>
@@ -243,7 +385,6 @@ export default function Sidebar() {
           })}
         </AnimatePresence>
 
-        {/* Ungrouped */}
         {ungrouped.map((t, i) => <TargetRow key={t.id} target={t} i={i} />)}
       </div>
 

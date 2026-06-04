@@ -1,5 +1,4 @@
-// CyberOS Dashboard — Streak Calendar Component
-// GitHub contribution graph style heatmap (52 weeks × 7 days)
+// CyberOS Dashboard — Streak Calendar (GitHub-style heatmap)
 
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
@@ -9,7 +8,6 @@ export default function StreakCalendar() {
   const config = useDashboardStore((s) => s.config)
   const activityDates = config.operator_profile?.activityDates ?? []
 
-  // Build a map of date -> event count
   const dateCountMap = useMemo(() => {
     const map: Record<string, number> = {}
     for (const date of activityDates) {
@@ -19,32 +17,27 @@ export default function StreakCalendar() {
     return map
   }, [activityDates])
 
-  // Generate 52 weeks × 7 days grid
   const cells = useMemo(() => {
     const today = new Date()
-    const cells: { date: string; count: number; isToday: boolean }[] = []
-
-    // Start from 52 weeks ago, aligned to Sunday
+    const result: { date: string; count: number; isToday: boolean }[] = []
     const start = new Date(today)
     start.setDate(start.getDate() - 364 - start.getDay())
-
     for (let i = 0; i < 371; i++) {
       const d = new Date(start)
       d.setDate(d.getDate() + i)
       const key = d.toISOString().slice(0, 10)
-      const isToday = key === today.toISOString().slice(0, 10)
-      cells.push({ date: key, count: dateCountMap[key] ?? 0, isToday })
+      result.push({ date: key, count: dateCountMap[key] ?? 0, isToday: key === today.toISOString().slice(0, 10) })
     }
-
-    return cells
+    return result
   }, [dateCountMap])
 
-  // Color scale
+  const totalActive = Object.values(dateCountMap).filter((v) => v > 0).length
+
   const getColor = (count: number): string => {
-    if (count === 0) return 'rgba(42, 51, 71, 0.3)'
-    if (count <= 2) return 'rgba(74, 158, 255, 0.2)'
-    if (count <= 5) return 'rgba(74, 158, 255, 0.5)'
-    return 'rgba(74, 158, 255, 1)'
+    if (count === 0) return 'rgba(42, 51, 71, 0.28)'
+    if (count <= 2) return 'rgba(74, 158, 255, 0.22)'
+    if (count <= 5) return 'rgba(74, 158, 255, 0.55)'
+    return '#4a9eff'
   }
 
   const CELL_SIZE = 10
@@ -53,11 +46,27 @@ export default function StreakCalendar() {
   const ROWS = 7
 
   return (
-    <div className="glass-card p-4">
-      <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-widest mb-3">
-        Activity Calendar
-      </p>
+    <div
+      className="rounded-xl p-4"
+      style={{
+        background: 'var(--surface-glass)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        border: '1px solid var(--border-glass)',
+        boxShadow: 'var(--elevation-1)',
+      }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-[10px] font-semibold text-text-muted uppercase tracking-widest">
+          Activity Calendar
+        </span>
+        <span className="text-[10px] font-mono text-text-secondary">
+          <span className="text-accent">{totalActive}</span> active days
+        </span>
+      </div>
 
+      {/* Heatmap */}
       <div className="overflow-x-auto">
         <svg
           width={COLS * (CELL_SIZE + GAP)}
@@ -67,23 +76,21 @@ export default function StreakCalendar() {
           {cells.map((cell, i) => {
             const col = Math.floor(i / 7)
             const row = i % 7
-            const x = col * (CELL_SIZE + GAP)
-            const y = row * (CELL_SIZE + GAP)
-
             return (
               <motion.rect
                 key={cell.date}
-                x={x}
-                y={y}
+                x={col * (CELL_SIZE + GAP)}
+                y={row * (CELL_SIZE + GAP)}
                 width={CELL_SIZE}
                 height={CELL_SIZE}
                 rx={2}
                 fill={getColor(cell.count)}
                 stroke={cell.isToday ? '#4a9eff' : 'none'}
-                strokeWidth={cell.isToday ? 1 : 0}
+                strokeWidth={cell.isToday ? 1.5 : 0}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: row * 0.01, duration: 0.2 }}
+                transition={{ delay: row * 0.008, duration: 0.18 }}
+                style={{ filter: cell.count > 5 ? 'drop-shadow(0 0 3px rgba(74,158,255,0.5))' : 'none' }}
               >
                 <title>{`${cell.date}: ${cell.count} event${cell.count !== 1 ? 's' : ''}`}</title>
               </motion.rect>
@@ -93,16 +100,16 @@ export default function StreakCalendar() {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center justify-end gap-1 mt-3">
-        <span className="text-[10px] text-text-muted mr-1">Less</span>
+      <div className="flex items-center justify-end gap-1.5 mt-3">
+        <span className="text-[9px] text-text-muted mr-0.5">Less</span>
         {[0, 1, 3, 6].map((count) => (
           <span
             key={count}
-            className="w-[10px] h-[10px] rounded-sm"
+            className="w-[9px] h-[9px] rounded-sm"
             style={{ backgroundColor: getColor(count) }}
           />
         ))}
-        <span className="text-[10px] text-text-muted ml-1">More</span>
+        <span className="text-[9px] text-text-muted ml-0.5">More</span>
       </div>
     </div>
   )

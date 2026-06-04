@@ -15,20 +15,133 @@ interface Props {
 function HighlightedText({ text, query }: { text: string; query: string }) {
   const q = query.trim();
   if (!q) return <>{text}</>;
-  const idx = text.toLowerCase().indexOf(q.toLowerCase());
-  if (idx === -1) return <>{text}</>;
-  return (
-    <>
-      {text.slice(0, idx)}
-      <span style={{
-        background: 'rgba(245,158,11,0.2)',
-        color: 'var(--warning, #e3b341)',
+
+  // Find ALL occurrences (case-insensitive) and wrap each
+  const lower = text.toLowerCase();
+  const lq    = q.toLowerCase();
+  const nodes: React.ReactNode[] = [];
+  let cursor = 0;
+
+  while (cursor < text.length) {
+    const idx = lower.indexOf(lq, cursor);
+    if (idx === -1) {
+      nodes.push(text.slice(cursor));
+      break;
+    }
+    if (idx > cursor) nodes.push(text.slice(cursor, idx));
+    nodes.push(
+      <mark key={idx} style={{
+        background: 'rgba(0,255,65,0.22)',
+        color: '#00ff41',
         borderRadius: 2,
-        padding: '0 2px',
+        padding: '0 1px',
+        fontWeight: 600,
+        boxShadow: '0 0 4px rgba(0,255,65,0.3)',
       }}>
         {text.slice(idx, idx + q.length)}
-      </span>
-      {text.slice(idx + q.length)}
+      </mark>
+    );
+    cursor = idx + q.length;
+  }
+
+  return <>{nodes}</>;
+}
+
+/** Colorize output snippet line using ANSI-inspired rules */
+function ColoredOutputSnippet({ text }: { text: string }) {
+  const isError   = /error|fail|denied|not found|exception|fatal|refused/i.test(text);
+  const isSuccess = /ok|success|done|complete|connected|accepted|200/i.test(text);
+  const isPath    = /^(\/|\~\/|\.\/)/.test(text.trimStart());
+  const isWarn    = /warn|timeout|retry|skip|deprecated/i.test(text);
+
+  const color = isError   ? '#f85149'
+              : isSuccess ? '#00ff41'
+              : isPath    ? '#4a9eff'
+              : isWarn    ? '#d29922'
+              : 'rgba(0,255,65,0.35)';
+
+  return (
+    <span style={{ color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      {text}
+    </span>
+  );
+}
+
+/** Tokenize a command string for syntax coloring */
+export function SyntaxColoredCommand({ text }: { text: string }) {
+  // Split preserving whitespace tokens
+  const tokens = text.split(/(\s+)/);
+  return (
+    <>
+      {tokens.map((token, i) => {
+        if (/^\s+$/.test(token)) return <span key={i}>{token}</span>;
+        // Pipe character
+        if (token === '|' || token === '||' || token === '&&' || token === ';') {
+          return <span key={i} style={{ color: '#d29922' }}>{token}</span>;
+        }
+        // Flags starting with -
+        if (token.startsWith('-')) {
+          return <span key={i} style={{ color: '#00ff41' }}>{token}</span>;
+        }
+        // Paths starting with /
+        if (token.startsWith('/') || token.startsWith('~/') || token.startsWith('./')) {
+          return <span key={i} style={{ color: '#4a9eff' }}>{token}</span>;
+        }
+        // Redirects
+        if (token === '>' || token === '>>' || token === '<') {
+          return <span key={i} style={{ color: '#b44fff' }}>{token}</span>;
+        }
+        return <span key={i}>{token}</span>;
+      })}
+    </>
+  );
+}
+
+/**
+ * SyntaxColoredCommand with query match highlighting overlaid.
+ * Splits the text at match boundaries, then applies syntax coloring
+ * per segment but wraps matched segments in a highlight <mark>.
+ */
+export function SyntaxHighlightedCommandWithQuery({ text, query }: { text: string; query: string }) {
+  const q = query.trim().toLowerCase();
+  if (!q) return <SyntaxColoredCommand text={text} />;
+
+  // Build segments: {str, isMatch}[]
+  const segments: Array<{ str: string; isMatch: boolean }> = [];
+  const lower = text.toLowerCase();
+  let cursor = 0;
+  while (cursor < text.length) {
+    const idx = lower.indexOf(q, cursor);
+    if (idx === -1) {
+      segments.push({ str: text.slice(cursor), isMatch: false });
+      break;
+    }
+    if (idx > cursor) segments.push({ str: text.slice(cursor, idx), isMatch: false });
+    segments.push({ str: text.slice(idx, idx + q.length), isMatch: true });
+    cursor = idx + q.length;
+  }
+
+  return (
+    <>
+      {segments.map((seg, i) =>
+        seg.isMatch ? (
+          <mark
+            key={i}
+            style={{
+              background: 'rgba(0,255,65,0.22)',
+              color: '#00ff41',
+              borderRadius: 2,
+              padding: '0 1px',
+              fontWeight: 600,
+              boxShadow: '0 0 4px rgba(0,255,65,0.3)',
+            }}
+          >
+            <SyntaxColoredCommand text={seg.str} />
+          </mark>
+        ) : (
+          <SyntaxColoredCommand key={i} text={seg.str} />
+        )
+      )}
     </>
   );
 }
@@ -117,21 +230,25 @@ export default function CommandEntryRow({ entry, query }: Props) {
         fontFamily: 'inherit',
         lineHeight: 1.4,
       }}>
-        <HighlightedText text={entry.command} query={query} />
+        {query ? (
+          <SyntaxHighlightedCommandWithQuery text={entry.command} query={query} />
+        ) : (
+          <SyntaxColoredCommand text={entry.command} />
+        )}
       </span>
 
       {/* Output snippet */}
       {entry.outputSnippet && (
         <span style={{
           fontSize: 10,
-          color: 'var(--text-muted)',
-          whiteSpace: 'nowrap',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
           overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          borderLeft: '2px solid var(--border)',
+          borderLeft: '2px solid rgba(0,255,65,0.15)',
           paddingLeft: 6,
         }}>
-          {entry.outputSnippet}
+          <ColoredOutputSnippet text={entry.outputSnippet} />
         </span>
       )}
     </div>

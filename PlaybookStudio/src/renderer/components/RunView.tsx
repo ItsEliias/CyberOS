@@ -1,209 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useStore } from '../store'
-import type { PlaybookStep, StepStatus, StepType } from '@shared/types'
+import type { PlaybookStep } from '@shared/types'
 import StepDetail from './run/StepDetail'
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function elapsed(startedAt: string): string {
-  const ms = Date.now() - new Date(startedAt).getTime()
-  const h  = Math.floor(ms / 3_600_000)
-  const m  = Math.floor((ms % 3_600_000) / 60_000)
-  const s  = Math.floor((ms % 60_000) / 1_000)
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-}
-
-function fmtMs(ms: number): string {
-  const m = Math.floor(ms / 60000)
-  const s = Math.floor((ms % 60000) / 1000)
-  return m > 0 ? `${m}m ${s}s` : `${s}s`
-}
-
-const STEP_TYPE_BORDER: Record<StepType, string> = {
-  action: '#4a9eff', verification: '#3fb950', documentation: '#8b949e', command: '#d29922', decision: '#bc8cff',
-}
-
-// ─── Variables Prompt Modal ────────────────────────────────────────────────────
-
-function VariablesModal({ vars, onConfirm, onCancel }: {
-  vars: Record<string, string>
-  onConfirm: (filled: Record<string, string>) => void
-  onCancel: () => void
-}) {
-  const [values, setValues] = useState<Record<string, string>>(vars)
-  const empty = Object.entries(values).filter(([, v]) => !v.trim())
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.75)' }}>
-      <div className="rounded-xl p-5 flex flex-col gap-4" style={{ width: 420, background: 'var(--panel)', border: '1px solid var(--border)', boxShadow: '0 24px 64px rgba(0,0,0,0.6)' }}>
-        <div>
-          <h2 className="text-sm font-semibold mb-1" style={{ color: 'var(--text)' }}>Fill Variables</h2>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>These values will be substituted in commands during this run.</p>
-        </div>
-        <div className="flex flex-col gap-2">
-          {Object.entries(values).map(([k, v]) => (
-            <div key={k} className="flex items-center gap-2">
-              <span className="text-xs font-mono flex-shrink-0 w-28 px-1.5 py-0.5 rounded text-right" style={{ background: 'rgba(74,158,255,0.1)', color: '#4a9eff' }}>
-                {'{{'}{k}{'}}'}
-              </span>
-              <input className="flex-1 rounded px-2 py-1 text-xs font-mono"
-                style={{ background: 'var(--bg)', border: `1px solid ${v.trim() ? 'var(--border)' : 'rgba(248,81,73,0.4)'}`, color: 'var(--text)' }}
-                value={v} placeholder="required" autoFocus={!v}
-                onChange={e => setValues(prev => ({ ...prev, [k]: e.target.value }))} />
-            </div>
-          ))}
-        </div>
-        {empty.length > 0 && (
-          <p className="text-xs" style={{ color: 'var(--warning)' }}>
-            {empty.length} variable{empty.length !== 1 ? 's' : ''} unfilled. You can still proceed.
-          </p>
-        )}
-        <div className="flex gap-2">
-          <button onClick={onCancel} className="flex-1 text-xs py-2 rounded" style={{ background: 'var(--border)', color: 'var(--text-dim)' }}>Cancel</button>
-          <button onClick={() => onConfirm(values)} className="flex-1 text-xs py-2 rounded font-semibold" style={{ background: 'var(--accent)', color: '#fff' }}>
-            Start Run
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Session Context Bar ───────────────────────────────────────────────────────
-
-function SessionContextBar({ lab, target, targetIP, startedAt }: {
-  lab?: string; target?: string; targetIP?: string; startedAt: string
-}) {
-  const [elap, setElap] = useState(() => elapsed(startedAt))
-  useEffect(() => {
-    const t = setInterval(() => setElap(elapsed(startedAt)), 1000)
-    return () => clearInterval(t)
-  }, [startedAt])
-  if (!lab && !target && !targetIP) return null
-  return (
-    <div className="flex items-center gap-4 px-4 py-1.5 text-xs flex-shrink-0"
-      style={{ background: 'rgba(74,158,255,0.06)', borderBottom: '1px solid rgba(74,158,255,0.15)' }}>
-      {lab && <span style={{ color: 'var(--text-dim)' }}>Lab: <span className="font-medium" style={{ color: 'var(--accent)' }}>{lab}</span></span>}
-      {target && <span style={{ color: 'var(--text-dim)' }}>Target: <span style={{ color: 'var(--text)' }}>{target}</span></span>}
-      {targetIP && <span className="font-mono" style={{ color: 'var(--accent)' }}>{targetIP}</span>}
-      <span className="ml-auto font-mono" style={{ color: 'var(--text-muted)' }}>Elapsed: {elap}</span>
-    </div>
-  )
-}
-
-// ─── Progress Bar with ETA ────────────────────────────────────────────────────
-
-function ProgressBar({ done, total, runs, playbookId }: { done: number; total: number; runs: import('@shared/types').PlaybookRun[]; playbookId: string }) {
-  const pct = total > 0 ? Math.round((done / total) * 100) : 0
-
-  const eta = (() => {
-    const pastRuns = runs.filter(r => r.playbookId === playbookId && r.status === 'completed' && r.completedAt)
-    if (pastRuns.length === 0 || done === 0) return null
-    const avgStepMs = pastRuns.reduce((sum, r) => {
-      const dur = new Date(r.completedAt!).getTime() - new Date(r.startedAt).getTime()
-      return sum + dur / r.steps.length
-    }, 0) / pastRuns.length
-    const remaining = total - done
-    const etaMs = remaining * avgStepMs
-    return etaMs > 0 ? fmtMs(etaMs) : null
-  })()
-
-  return (
-    <div className="px-4 py-2 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
-      <div className="flex items-center justify-between text-xs mb-1.5">
-        <span style={{ color: 'var(--text-muted)' }}>Progress</span>
-        <div className="flex items-center gap-3">
-          {eta && <span style={{ color: 'var(--text-muted)' }}>ETA: ~{eta} remaining</span>}
-          <span style={{ color: pct === 100 ? 'var(--success)' : 'var(--text-dim)' }}>
-            {done} of {total} ({pct}%)
-          </span>
-        </div>
-      </div>
-      <div className="rounded-full h-1.5 w-full" style={{ background: 'var(--border)' }}>
-        <div className="rounded-full h-1.5 transition-all duration-500"
-          style={{ width: `${pct}%`, background: pct === 100 ? 'var(--success)' : 'var(--accent)' }} />
-      </div>
-    </div>
-  )
-}
-
-// ─── Step List Item ────────────────────────────────────────────────────────────
-
-function StepListItem({ step, isActive, isBlocked, onClick }: {
-  step: PlaybookStep; isActive: boolean; isBlocked: boolean; onClick: () => void
-}) {
-  const status = step.status ?? 'todo'
-  const typeColor = STEP_TYPE_BORDER[step.stepType ?? 'action']
-
-  function icon() {
-    if (status === 'done')       return <span style={{ color: 'var(--success)' }}>✓</span>
-    if (status === 'inprogress') return <span className="animate-pulse" style={{ color: 'var(--accent)' }}>▶</span>
-    if (status === 'skipped')    return <span style={{ color: 'var(--text-muted)' }}>↷</span>
-    if (isBlocked)               return <span style={{ color: 'var(--error)' }}>⊘</span>
-    return <span style={{ color: 'var(--text-muted)' }}>○</span>
-  }
-
-  return (
-    <button onClick={onClick} disabled={isBlocked}
-      className="w-full text-left flex items-center gap-2 px-3 py-2 text-xs"
-      style={{
-        background: isActive ? 'rgba(74,158,255,0.1)' : 'transparent',
-        borderLeft: `3px solid ${isActive ? typeColor : 'transparent'}`,
-        color: status === 'done' ? 'var(--success)' : status === 'skipped' ? 'var(--text-muted)' : isBlocked ? 'var(--text-muted)' : 'var(--text-dim)',
-        opacity: isBlocked ? 0.45 : 1,
-        textDecoration: status === 'skipped' ? 'line-through' : 'none',
-      }}>
-      <span className="w-4 flex-shrink-0 text-center">{icon()}</span>
-      <span className="flex-shrink-0 font-mono tabular-nums" style={{ color: 'var(--text-muted)' }}>{step.order}.</span>
-      <span className="flex-1 truncate">{step.title}</span>
-      {step.required && (status === 'todo' || status === 'inprogress') && (
-        <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full" style={{ background: 'var(--warning)' }} />
-      )}
-    </button>
-  )
-}
-
-// ─── Complete Run Modal ────────────────────────────────────────────────────────
-
-function CompleteRunModal({ playbookName, steps, startedAt, onConfirm, onAbandon, onCancel }: {
-  playbookName: string; steps: PlaybookStep[]; startedAt: string
-  onConfirm: () => void; onAbandon: () => void; onCancel: () => void
-}) {
-  const done     = steps.filter(s => s.status === 'done').length
-  const skipped  = steps.filter(s => s.status === 'skipped').length
-  const todo     = steps.filter(s => !s.status || s.status === 'todo' || s.status === 'inprogress').length
-  const required = steps.filter(s => s.required && s.status !== 'done' && s.status !== 'skipped')
-  const dur      = elapsed(startedAt)
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.75)' }}>
-      <div className="rounded-xl p-6 flex flex-col gap-5" style={{ width: 380, background: 'var(--panel)', border: '1px solid var(--border)', boxShadow: '0 24px 64px rgba(0,0,0,0.6)' }}>
-        <div>
-          <h2 className="text-sm font-semibold mb-1" style={{ color: 'var(--text)' }}>Complete Run</h2>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{playbookName}</p>
-        </div>
-        <div className="flex flex-col gap-2 rounded-lg p-3" style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
-          {[['Done', `${done} steps`, 'var(--success)'], ['Skipped', `${skipped} steps`, 'var(--text-dim)'], ['Remaining', `${todo} steps`, todo > 0 ? 'var(--warning)' : 'var(--text-muted)'], ['Duration', dur, 'var(--text-dim)']].map(([l, v, c]) => (
-            <div key={l as string} className="flex items-center justify-between">
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{l}</span>
-              <span className="text-xs font-medium" style={{ color: c as string }}>{v}</span>
-            </div>
-          ))}
-        </div>
-        {required.length > 0 && (
-          <div className="rounded px-3 py-2 text-xs" style={{ background: 'rgba(210,153,34,0.08)', border: '1px solid rgba(210,153,34,0.2)', color: 'var(--warning)' }}>
-            ⚠ {required.length} required step{required.length !== 1 ? 's' : ''} not completed: {required.map(s => s.title).join(', ')}
-          </div>
-        )}
-        <div className="flex items-center gap-2">
-          <button onClick={onAbandon} className="flex-1 text-xs py-2 rounded" style={{ background: 'rgba(248,81,73,0.1)', color: 'var(--error)', border: '1px solid rgba(248,81,73,0.2)' }}>Abandon</button>
-          <button onClick={onCancel}  className="flex-1 text-xs py-2 rounded" style={{ background: 'var(--border)', color: 'var(--text-dim)' }}>Cancel</button>
-          <button onClick={onConfirm} className="flex-1 text-xs py-2 rounded font-semibold" style={{ background: 'var(--success)', color: '#000' }}>Mark Complete</button>
-        </div>
-      </div>
-    </div>
-  )
-}
+import {
+  elapsed,
+  VariablesModal, SessionContextBar, ProgressBar,
+  StepDotTrack, StepListItem, CompleteRunModal,
+} from './run/RunHelpers'
 
 // ─── RunView ──────────────────────────────────────────────────────────────────
 
@@ -219,7 +22,26 @@ export default function RunView() {
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null)
   const [showModal, setShowModal]   = useState(false)
   const [exporting, setExporting]   = useState(false)
+  const [paused,    setPaused]      = useState(false)
+  const [runElapsed, setRunElapsed] = useState('0:00')
+  const [scrollLock, setScrollLock] = useState(true)
   const notesFocusRef = useRef<HTMLTextAreaElement>(null)
+  const stepListRef   = useRef<HTMLDivElement>(null)
+
+  // Real-time elapsed timer (improvement 4)
+  useEffect(() => {
+    if (!activeRun) return
+    function tick() {
+      if (!activeRun) return
+      const ms = Date.now() - new Date(activeRun.startedAt).getTime()
+      const m  = Math.floor(ms / 60_000)
+      const s  = Math.floor((ms % 60_000) / 1_000)
+      setRunElapsed(`${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`)
+    }
+    tick()
+    const t = setInterval(tick, 1000)
+    return () => clearInterval(t)
+  }, [activeRun?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Determine if a step is blocked by unmet dependencies
   const isBlocked = useCallback((step: PlaybookStep, steps: PlaybookStep[]) => {
@@ -251,6 +73,13 @@ export default function RunView() {
     const first = activeRun.steps.find(s => s.status !== 'done' && s.status !== 'skipped') ?? activeRun.steps[0]
     if (first) setSelectedStepId(first.id)
   }, [activeRun?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-scroll step list to active step when scroll lock is on
+  useEffect(() => {
+    if (!scrollLock || !stepListRef.current || !selectedStepId) return
+    const el = stepListRef.current.querySelector(`[data-step-id="${selectedStepId}"]`) as HTMLElement | null
+    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [selectedStepId, scrollLock])
 
   // Keyboard shortcuts (Feature 15)
   useEffect(() => {
@@ -304,6 +133,21 @@ export default function RunView() {
   const vars      = activeRun.variables ?? {}
   const done      = steps.filter(s => s.status === 'done' || s.status === 'skipped').length
   const total     = steps.length
+
+  // Estimated completion: avg ms per done step × remaining steps
+  const estDoneLabel = (() => {
+    const doneSteps = steps.filter(s => s.status === 'done' && (s as { completedAt?: string; startedAt?: string }).completedAt && (s as { startedAt?: string }).startedAt)
+    if (doneSteps.length === 0 || done >= total) return null
+    const avgMs = doneSteps.reduce((sum, s) => {
+      const st = s as { completedAt?: string; startedAt?: string }
+      return sum + (new Date(st.completedAt!).getTime() - new Date(st.startedAt!).getTime())
+    }, 0) / doneSteps.length
+    const remaining = total - done
+    const totalMs = avgMs * remaining
+    const m = Math.floor(totalMs / 60_000)
+    const sec = Math.floor((totalMs % 60_000) / 1_000)
+    return `Est. done in ${m}m ${sec}s`
+  })()
   const lab       = activeRun.labName    ?? context.activeLab
   const target    = activeRun.targetName ?? context.activeTarget
   const targetIP  = context.activeIP ?? ''
@@ -337,17 +181,45 @@ export default function RunView() {
     <div className="flex flex-col h-full">
       <SessionContextBar lab={lab} target={target} targetIP={targetIP} startedAt={activeRun.startedAt} />
       <ProgressBar done={done} total={total} runs={runs} playbookId={activeRun.playbookId} />
+      <StepDotTrack steps={steps} activeId={selectedStepId} />
 
       <div className="flex flex-1 min-h-0">
         {/* Step list */}
-        <div className="flex-shrink-0 overflow-y-auto flex flex-col py-1" style={{ width: 260, borderRight: '1px solid var(--border)', background: 'var(--panel)' }}>
-          {steps.map(step => {
-            const blocked = isBlocked(step, steps) || skipSet.has(step.id)
-            return (
-              <StepListItem key={step.id} step={step} isActive={step.id === selectedStep?.id}
-                isBlocked={blocked} onClick={() => setSelectedStepId(step.id)} />
-            )
-          })}
+        <div className="flex-shrink-0 flex flex-col" style={{ width: 260, borderRight: '1px solid var(--border)', background: 'var(--panel)' }}>
+          {/* Scroll lock toggle */}
+          <div
+            className="flex items-center justify-between px-2 py-1 flex-shrink-0"
+            style={{ borderBottom: '1px solid rgba(42,51,71,0.3)', background: 'rgba(7,8,15,0.4)' }}
+          >
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Steps</span>
+            <button
+              onClick={() => setScrollLock(l => !l)}
+              title={scrollLock ? 'Scroll lock on — click to disable' : 'Scroll lock off — click to enable'}
+              className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded transition-all"
+              style={{
+                background: scrollLock ? 'rgba(45,212,191,0.1)' : 'rgba(42,51,71,0.2)',
+                color: scrollLock ? '#2dd4bf' : '#484f58',
+                border: `1px solid ${scrollLock ? 'rgba(45,212,191,0.25)' : 'rgba(42,51,71,0.4)'}`,
+              }}
+            >
+              {/* Pin icon */}
+              <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                <path d="M6 1l3 3-4 4-1-1 1-1-2-2-1 1-1-1 4-4zM4 6L1 9" />
+              </svg>
+              {scrollLock ? 'lock' : 'free'}
+            </button>
+          </div>
+          <div ref={stepListRef} className="flex-1 overflow-y-auto py-1">
+            {steps.map(step => {
+              const blocked = isBlocked(step, steps) || skipSet.has(step.id)
+              return (
+                <div key={step.id} data-step-id={step.id}>
+                  <StepListItem step={step} isActive={step.id === selectedStep?.id}
+                    isBlocked={blocked} onClick={() => setSelectedStepId(step.id)} />
+                </div>
+              )
+            })}
+          </div>
         </div>
 
         {/* Step detail */}
@@ -366,9 +238,30 @@ export default function RunView() {
 
       {/* Bottom bar */}
       <div className="flex items-center gap-2 px-4 py-2 flex-shrink-0" style={{ borderTop: '1px solid var(--border)', background: 'var(--panel)' }}>
-        <span className="text-xs mr-auto" style={{ color: 'var(--text-muted)' }}>
+        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
           [{String.fromCharCode(8592)}/{String.fromCharCode(8594)}] nav  [P] pass  [F/S] skip  [N] notes
         </span>
+        {/* Elapsed timer */}
+        <span
+          className="text-xs font-mono px-2 py-0.5 rounded flex items-center gap-1.5 flex-shrink-0"
+          style={{ background: 'rgba(45,212,191,0.06)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.15)' }}
+        >
+          <span
+            className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+            style={{ background: paused ? '#484f58' : '#2dd4bf', animation: paused ? 'none' : 'pulse 2s ease-in-out infinite' }}
+          />
+          Running for {runElapsed}
+        </span>
+        {/* Estimated completion */}
+        {estDoneLabel && (
+          <span
+            className="text-xs font-mono px-2 py-0.5 rounded flex-shrink-0"
+            style={{ background: 'rgba(210,153,34,0.06)', color: '#d29922', border: '1px solid rgba(210,153,34,0.15)' }}
+          >
+            {estDoneLabel}
+          </span>
+        )}
+        <div className="flex-1" />
         {activeRun.status === 'completed' && (
           <button onClick={handleExportReport} disabled={exporting} className="text-xs px-3 py-1.5 rounded font-medium"
             style={{ background: 'rgba(63,185,80,0.15)', color: 'var(--success)', border: '1px solid rgba(63,185,80,0.3)' }}>
@@ -376,6 +269,18 @@ export default function RunView() {
           </button>
         )}
         <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{done}/{total} steps</span>
+        {/* Pause/Resume button (visual only) */}
+        <button
+          onClick={() => setPaused(p => !p)}
+          className="text-xs px-3 py-1.5 rounded font-medium flex-shrink-0"
+          style={{
+            background: 'transparent',
+            color: '#2dd4bf',
+            border: '1px solid rgba(45,212,191,0.35)',
+          }}
+        >
+          {paused ? '▶ Resume' : '⏸ Pause'}
+        </button>
         <button onClick={() => setShowModal(true)} className="text-xs px-4 py-1.5 rounded font-semibold"
           style={{ background: done === total ? 'var(--success)' : 'var(--accent)', color: done === total ? '#000' : '#fff' }}>
           {done === total ? '✓ Complete Run' : 'End Run'}

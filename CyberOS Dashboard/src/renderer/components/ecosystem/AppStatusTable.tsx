@@ -1,83 +1,149 @@
-// CyberOS Dashboard — App Status Table (Deep View)
-// Full table of all 12 apps with status, version, exec path, metrics
+// CyberOS Dashboard — App Status Table (full ecosystem table)
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useDashboardStore } from '../../stores/useDashboardStore'
 import { buildAppCards } from '../../utils/configParser'
+import { normalizeEvents, humanizeEventType } from '../../utils/eventParser'
 import { timeAgo } from '../../utils/timeAgo'
-import StatusBadge from '../shared/StatusBadge'
 
 export default function AppStatusTable() {
   const config = useDashboardStore((s) => s.config)
+  const events = useDashboardStore((s) => s.events)
   const cards = buildAppCards(config)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const getRegistration = (id: string) => {
     const key = id === 'vaultcore' ? 'vaultscraper' : id
-    return (config as any)[key] ?? {}
+    return (config as Record<string, unknown>)[key] ?? {}
+  }
+
+  // Build a map of appId -> most recent event type
+  const lastEventMap = useMemo(() => {
+    const normalized = normalizeEvents(events)
+    const map: Record<string, string> = {}
+    // Events are ordered newest-first or we take the last occurrence
+    for (const e of normalized) {
+      const appKey = e.app.toLowerCase().replace(/\s+/g, '')
+      if (!map[appKey]) map[appKey] = humanizeEventType(e.event)
+    }
+    return map
+  }, [events])
+
+  const getLastEvent = (id: string): string => {
+    // Try direct id, then strip spaces from card name
+    const card = cards.find((c) => c.id === id)
+    if (!card) return '—'
+    const key = card.name.toLowerCase().replace(/\s+/g, '')
+    return lastEventMap[key] ?? lastEventMap[id] ?? '—'
   }
 
   return (
-    <div className="glass-card overflow-hidden">
-      <div className="px-4 py-3 border-b border-border-subtle">
-        <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-widest">
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{
+        background: 'var(--surface-glass)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        border: '1px solid var(--border-glass)',
+        boxShadow: 'var(--elevation-1)',
+      }}
+    >
+      {/* Header */}
+      <div
+        className="px-4 py-3 flex items-center justify-between"
+        style={{ borderBottom: '1px solid rgba(42,51,71,0.35)' }}
+      >
+        <span className="text-[10px] font-semibold text-text-muted uppercase tracking-widest">
           App Status Table
-        </p>
+        </span>
+        <span
+          className="text-[10px] font-mono"
+          style={{ color: 'var(--text-secondary)' }}
+        >
+          <span style={{ color: 'var(--state-online)' }}>{cards.filter((c) => c.active).length}</span>
+          /{cards.length} online
+        </span>
       </div>
 
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
-            <tr className="border-b border-border-subtle">
-              <th className="text-left px-4 py-2 text-text-secondary font-medium">App</th>
-              <th className="text-left px-4 py-2 text-text-secondary font-medium">Status</th>
-              <th className="text-left px-4 py-2 text-text-secondary font-medium">Last Active</th>
-              <th className="text-left px-4 py-2 text-text-secondary font-medium">Version</th>
-              <th className="text-left px-4 py-2 text-text-secondary font-medium">Exec Path</th>
-              <th className="text-left px-4 py-2 text-text-secondary font-medium">Key Metric</th>
+            <tr style={{ borderBottom: '1px solid rgba(42,51,71,0.25)' }}>
+              {['App', 'Status', 'Last Active', 'Version', 'Exec Path', 'Key Metric', 'Last Event'].map((h) => (
+                <th key={h} className="text-left px-4 py-2 font-medium text-text-muted">{h}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {cards.map((card) => {
-              const reg = getRegistration(card.id)
+              const reg = getRegistration(card.id) as Record<string, string>
               const isExpanded = expandedId === card.id
               return (
                 <>
                   <tr
                     key={card.id}
-                    className="border-b border-border-subtle/50 hover:bg-bg-interactive/30 cursor-pointer"
+                    className="cursor-pointer transition-colors hover:bg-white/[0.025]"
+                    style={{ borderBottom: '1px solid rgba(42,51,71,0.2)' }}
                     onClick={() => setExpandedId(isExpanded ? null : card.id)}
                   >
                     <td className="px-4 py-2">
                       <div className="flex items-center gap-2">
                         <span
-                          className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: card.accentColor }}
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{
+                            backgroundColor: card.accentColor,
+                            opacity: card.active ? 1 : 0.35,
+                            boxShadow: card.active ? `0 0 5px ${card.accentColor}88` : 'none',
+                          }}
                         />
-                        <span className="text-text-primary font-medium">{card.name}</span>
+                        <span className="font-medium text-text-primary">{card.name}</span>
                       </div>
                     </td>
                     <td className="px-4 py-2">
-                      <StatusBadge status={card.active ? 'active' : 'inactive'} />
+                      <span
+                        className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded"
+                        style={{
+                          background: card.active ? 'rgba(63,185,80,0.12)' : 'rgba(72,79,88,0.25)',
+                          color: card.active ? 'var(--state-online)' : 'var(--text-muted)',
+                          border: `1px solid ${card.active ? 'rgba(63,185,80,0.25)' : 'rgba(72,79,88,0.3)'}`,
+                        }}
+                      >
+                        <span
+                          className="w-1.5 h-1.5 rounded-full"
+                          style={{ background: card.active ? 'var(--state-online)' : 'var(--text-muted)' }}
+                        />
+                        {card.active ? 'Online' : 'Offline'}
+                      </span>
                     </td>
-                    <td className="px-4 py-2 text-text-secondary font-mono">
-                      {timeAgo(card.lastActive)}
-                    </td>
-                    <td className="px-4 py-2 text-text-secondary font-mono">
-                      {reg.version ?? '—'}
-                    </td>
-                    <td className="px-4 py-2 text-text-muted font-mono max-w-[200px] truncate" title={card.execPath ?? '—'}>
+                    <td className="px-4 py-2 text-text-secondary font-mono">{timeAgo(card.lastActive)}</td>
+                    <td className="px-4 py-2 text-text-secondary font-mono">{reg.version ?? '—'}</td>
+                    <td
+                      className="px-4 py-2 text-text-muted font-mono max-w-[180px] truncate"
+                      title={card.execPath ?? '—'}
+                    >
                       {card.execPath ?? '—'}
                     </td>
-                    <td className="px-4 py-2 text-text-primary">
-                      {card.metrics[0]?.value ?? '—'}
+                    <td className="px-4 py-2">
+                      <span
+                        className="font-mono font-semibold"
+                        style={{ color: card.accentColor }}
+                      >
+                        {card.metrics[0]?.value ?? '—'}
+                      </span>
+                      {card.metrics[0]?.label && (
+                        <span className="text-text-muted ml-1">{card.metrics[0].label}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-text-muted max-w-[140px] truncate" title={getLastEvent(card.id)}>
+                      {getLastEvent(card.id)}
                     </td>
                   </tr>
+
                   <AnimatePresence>
                     {isExpanded && (
                       <tr key={`${card.id}-expanded`}>
-                        <td colSpan={6} className="px-4 py-0">
+                        <td colSpan={7} className="px-4 py-0">
                           <motion.div
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
@@ -85,7 +151,10 @@ export default function AppStatusTable() {
                             transition={{ duration: 0.15 }}
                             className="overflow-hidden"
                           >
-                            <div className="py-3 px-4 bg-bg-interactive/20 rounded-md my-1">
+                            <div
+                              className="my-1.5 rounded-lg p-3"
+                              style={{ background: 'rgba(42,51,71,0.2)', border: '1px solid rgba(42,51,71,0.3)' }}
+                            >
                               <pre className="text-[10px] text-text-secondary font-mono whitespace-pre-wrap">
                                 {JSON.stringify(reg, null, 2)}
                               </pre>

@@ -1,5 +1,6 @@
 import { useStore } from '../store';
 import type { CoreTheme, PersonalityTheme } from '@shared/types';
+import LiveDot from './ui/LiveDot';
 
 const CORES: CoreTheme[]            = ['stealth', 'graphite', 'frost', 'oled'];
 const PERSONALITIES: PersonalityTheme[] = ['neutral', 'cyberpunk', 'terminal', 'threat'];
@@ -31,25 +32,45 @@ export default function Header({ onHelp }: HeaderProps) {
   }
 
   return (
-    <header className="flex items-center gap-4 px-4 border-b shrink-0 h-11"
-      style={{ background: 'var(--bg2)', borderColor: 'var(--border)' }}>
+    <header
+      className="flex items-center gap-3 px-4 shrink-0 h-11 drag-region relative"
+      style={{
+        background: 'rgba(7, 8, 15, 0.98)',
+        borderBottom: '1px solid rgba(255,255,255,0.04)',
+      }}
+    >
+      {/* Accent underline */}
+      <div
+        className="absolute bottom-0 left-0 right-0 h-px pointer-events-none"
+        style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(63,185,80,0.18) 35%, rgba(63,185,80,0.18) 65%, transparent 100%)' }}
+      />
+
+      {/* Traffic light spacer */}
+      <div className="w-[70px] no-drag" />
 
       {/* Brand */}
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-2 shrink-0 no-drag">
+        <div style={{ filter: 'drop-shadow(0 0 5px rgba(63,185,80,0.45))' }}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ color: '#3fb950' }}>
+            <path d="M8 1L14.5 4.75V11.25L8 15L1.5 11.25V4.75L8 1Z" stroke="currentColor" strokeWidth="1.5" fill="none" />
+            <circle cx="8" cy="8" r="2" fill="currentColor" />
+          </svg>
+        </div>
         <span
-          className="flex items-center gap-1 text-[9px] font-semibold tracking-widest uppercase px-2 py-0.5 rounded-full"
-          style={{ background: 'rgba(74,158,255,0.08)', color: '#4a5568', border: '1px solid rgba(74,158,255,0.12)' }}
+          className="text-[10px] font-mono px-1.5 py-0.5 rounded"
+          style={{
+            background: 'rgba(63,185,80,0.08)',
+            border: '1px solid rgba(63,185,80,0.18)',
+            color: '#3fb950',
+            letterSpacing: '0.08em',
+          }}
         >
-          <span>⬡</span>
-          <span>CYBERTOOLS</span>
+          VAULTCORE
         </span>
-        <span style={{ color: 'var(--border)' }}>/</span>
-        <span className="text-sm font-bold" style={{ color: 'var(--text)' }}>VAULTCORE</span>
-        <span className="hidden sm:inline text-[10px]" style={{ color: 'var(--text-dim)' }}>// ItsEliias</span>
       </div>
 
       {/* Vault path */}
-      <div className="flex-1 min-w-0 hidden md:block">
+      <div className="flex-1 min-w-0 hidden md:block no-drag">
         <span className="text-[10px] font-mono truncate" style={{ color: 'var(--text-dim)' }}>
           {vaultPath ?? 'No vault configured'}
         </span>
@@ -57,9 +78,9 @@ export default function Header({ onHelp }: HeaderProps) {
 
       {/* Scraping status */}
       {isScraping && (
-        <div className="flex items-center gap-1.5 shrink-0">
-          <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#3fb950' }} />
-          <span className="text-[11px]" style={{ color: '#3fb950' }}>
+        <div className="flex items-center gap-1.5 shrink-0 no-drag">
+          <LiveDot status="online" size={6} />
+          <span className="text-[11px] font-mono" style={{ color: '#3fb950' }}>
             {progress ? `${progress.percent}%` : 'Scraping…'}
           </span>
         </div>
@@ -67,42 +88,41 @@ export default function Header({ onHelp }: HeaderProps) {
 
       {/* Update badge */}
       {updateInfo?.hasUpdate && (
-        <div className="text-[10px] px-2 py-0.5 rounded-full shrink-0"
-          style={{ background: 'color-mix(in srgb, var(--accent) 15%, transparent)', color: 'var(--accent)' }}>
-          Update v{updateInfo.version}
+        <div className="text-[10px] px-2 py-0.5 rounded shrink-0 no-drag"
+          style={{ background: 'rgba(63,185,80,0.12)', color: 'var(--accent)', border: '1px solid rgba(63,185,80,0.25)' }}>
+          v{updateInfo.version}
         </div>
       )}
 
-      {/* Core picker */}
-      <div className="flex items-center gap-1 shrink-0">
+      {/* Theme pickers */}
+      <div className="flex items-center gap-1 shrink-0 no-drag">
         {CORES.map(c => (
           <button key={c}
             onClick={() => changeCore(c)}
             title={c}
-            className="text-[9px] px-1.5 py-0.5 rounded capitalize transition-all border"
+            className="text-[9px] px-1.5 py-0.5 rounded capitalize border"
             style={{
-              background    : theme.core === c ? 'var(--accent)' : 'transparent',
-              borderColor   : theme.core === c ? 'var(--accent)' : 'var(--border)',
-              color         : theme.core === c ? '#fff' : 'var(--text-dim)',
+              background   : theme.core === c ? 'rgba(63,185,80,0.15)' : 'transparent',
+              borderColor  : theme.core === c ? 'rgba(63,185,80,0.4)' : 'rgba(42,51,71,0.6)',
+              color        : theme.core === c ? '#3fb950' : 'var(--text-dim)',
             }}>
             {c}
           </button>
         ))}
       </div>
 
-      <div className="w-px h-4 shrink-0" style={{ background: 'var(--border)' }} />
+      <div className="w-px h-4 shrink-0" style={{ background: 'rgba(42,51,71,0.6)' }} />
 
-      {/* Personality picker */}
-      <div className="flex items-center gap-1 shrink-0">
+      <div className="flex items-center gap-1 shrink-0 no-drag">
         {PERSONALITIES.map(p => (
           <button key={p}
             onClick={() => changePersonality(p)}
             title={p}
-            className="text-[9px] px-1.5 py-0.5 rounded capitalize transition-all border"
+            className="text-[9px] px-1.5 py-0.5 rounded capitalize border"
             style={{
-              background    : theme.personality === p ? 'var(--accent)' : 'transparent',
-              borderColor   : theme.personality === p ? 'var(--accent)' : 'var(--border)',
-              color         : theme.personality === p ? '#fff' : 'var(--text-dim)',
+              background   : theme.personality === p ? 'rgba(63,185,80,0.15)' : 'transparent',
+              borderColor  : theme.personality === p ? 'rgba(63,185,80,0.4)' : 'rgba(42,51,71,0.6)',
+              color        : theme.personality === p ? '#3fb950' : 'var(--text-dim)',
             }}>
             {p}
           </button>
@@ -114,21 +134,10 @@ export default function Header({ onHelp }: HeaderProps) {
         <button
           onClick={onHelp}
           title="Help & onboarding"
-          className="text-[9px] px-1.5 py-0.5 rounded capitalize transition-all border shrink-0"
-          style={{
-            background: 'transparent',
-            borderColor: 'var(--border)',
-            color: 'var(--text-dim)',
-            fontSize: 12,
-            fontWeight: 700,
-            width: 22,
-            height: 22,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-          onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = 'var(--accent)'; el.style.color = 'var(--accent)' }}
-          onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = 'var(--border)'; el.style.color = 'var(--text-dim)' }}
+          className="w-6 h-6 rounded border flex items-center justify-center text-xs font-bold shrink-0 no-drag"
+          style={{ borderColor: 'rgba(42,51,71,0.6)', color: 'var(--text-dim)' }}
+          onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = 'rgba(63,185,80,0.4)'; el.style.color = '#3fb950'; }}
+          onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = 'rgba(42,51,71,0.6)'; el.style.color = 'var(--text-dim)'; }}
         >
           ?
         </button>

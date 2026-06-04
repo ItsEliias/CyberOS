@@ -76,16 +76,17 @@ function Sidebar() {
                 <motion.div
                   layoutId="sidebar-active"
                   className="absolute inset-0 rounded"
-                  style={{ background: 'rgba(74,158,255,0.12)', borderLeft: '2px solid #4a9eff' }}
+                  style={{ background: 'rgba(45,212,191,0.10)', borderLeft: '2px solid #2dd4bf' }}
                   transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                 />
               )}
               <button
                 onClick={() => setView(item.id)}
-                className="relative w-full flex items-center gap-2.5 px-2.5 py-2 rounded text-xs font-medium transition-colors"
+                className="relative w-full flex items-center gap-2.5 px-2.5 py-2 rounded text-xs font-medium transition-all"
                 style={{
-                  color: isActive ? 'var(--accent)' : 'var(--text-dim)',
+                  color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
                   paddingLeft: isActive ? 14 : 10,
+                  textShadow: isActive ? '0 0 8px rgba(45,212,191,0.35)' : 'none',
                 }}
               >
                 {item.icon}

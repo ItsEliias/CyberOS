@@ -20,6 +20,34 @@ const STATUS_COLOR: Record<StepStatus, string> = {
   todo: '#4a9eff', inprogress: '#d29922', done: '#3fb950', skipped: '#8b949e',
 }
 
+// Highlight {{VAR}} tokens in teal — used for description and command preview
+function VarHighlight({ text }: { text: string }) {
+  const parts = text.split(/({{[^}]+}})/)
+  return (
+    <>
+      {parts.map((p, i) =>
+        /^{{.+}}$/.test(p)
+          ? (
+            <span
+              key={i}
+              style={{
+                color: '#2dd4bf',
+                background: 'rgba(45,212,191,0.10)',
+                borderRadius: 3,
+                padding: '0 3px',
+                fontFamily: 'var(--font-mono)',
+                fontSize: '0.85em',
+              }}
+            >
+              {p}
+            </span>
+          )
+          : <span key={i}>{p}</span>
+      )}
+    </>
+  )
+}
+
 function resolveCmd(cmd: string, vars: Record<string, string>, targetIP: string): string {
   let result = cmd
   Object.entries(vars).forEach(([k, v]) => {
@@ -64,7 +92,7 @@ function CommandBlock({ cmd, vars, targetIP, playbookTitle, stepTitle }: {
     <div className="rounded flex items-start gap-2 px-3 py-2" style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
       <code className="flex-1 text-xs font-mono break-all" style={{ color: 'var(--accent)' }}>
         {parts.map((p, i) => /^{{.+}}$/.test(p)
-          ? <span key={i} style={{ color: '#f0883e', background: 'rgba(240,136,62,0.12)', borderRadius: 3, padding: '0 2px' }}>{p}</span>
+          ? <span key={i} style={{ color: '#2dd4bf', background: 'rgba(45,212,191,0.12)', borderRadius: 3, padding: '0 2px' }}>{p}</span>
           : <span key={i}>{p}</span>
         )}
       </code>
@@ -237,7 +265,11 @@ export default function StepDetail({ step, runId, targetIP, playbookTitle, varia
           )}
         </div>
         <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{step.order}. {step.title}</h2>
-        {step.description && <p className="mt-2 text-xs leading-relaxed" style={{ color: 'var(--text-dim)' }}>{step.description}</p>}
+        {step.description && (
+          <p className="mt-2 text-xs leading-relaxed" style={{ color: 'var(--text-dim)' }}>
+            <VarHighlight text={step.description} />
+          </p>
+        )}
       </div>
 
       {/* Commands */}

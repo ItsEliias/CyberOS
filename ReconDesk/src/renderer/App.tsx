@@ -37,6 +37,8 @@ export default function App() {
   const toasts          = useRecondeskStore(s => s.toasts)
   const dismissToast    = useRecondeskStore(s => s.dismissToast)
 
+  const activeTarget    = targets.find(t => t.id === activeTargetId)
+
   useEffect(() => {
     loadTargets()
     window.electronAPI.onConfigUpdated?.((data) => {
@@ -53,7 +55,7 @@ export default function App() {
   }, [loadTargets])
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0a0f] text-[#e2e8f0]">
+    <div className="flex flex-col h-full" style={{ background: 'var(--surface-0)', color: 'var(--text-primary)' }}>
       <TitleBar onHelp={onboarding.open} />
 
       <div className="flex flex-1 min-h-0">
@@ -67,33 +69,66 @@ export default function App() {
           ) : (
             <>
               {/* Tab bar */}
-              <div className="flex items-center gap-0.5 px-4 border-b border-[#2a3347] flex-shrink-0 h-9">
+              <div
+                className="flex items-center gap-0.5 px-3 flex-shrink-0 h-10"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: 'rgba(7,8,15,0.4)' }}
+              >
                 {TABS.map(t => (
                   <button
                     key={t.id}
                     onClick={() => setActiveTab(t.id)}
-                    className="relative px-3 py-1.5 text-xs transition-colors"
-                    style={{ color: activeTab === t.id ? '#e2e8f0' : '#8b949e' }}
+                    className="relative px-3 py-1.5 text-[11px] font-medium rounded-md"
+                    style={{
+                      color: activeTab === t.id ? 'var(--text-primary)' : 'var(--text-muted)',
+                      transition: 'color 150ms ease',
+                    }}
+                    onMouseEnter={e => {
+                      if (activeTab !== t.id) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'
+                    }}
+                    onMouseLeave={e => {
+                      if (activeTab !== t.id) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'
+                    }}
                   >
-                    {t.label}
                     {activeTab === t.id && (
                       <motion.div
-                        layoutId="tab-underline"
-                        className="absolute bottom-0 left-0 right-0 h-px bg-[#d29922]"
-                        transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+                        layoutId="tab-pill"
+                        className="absolute inset-0 rounded-md"
+                        style={{
+                          background: 'rgba(210,153,34,0.10)',
+                          border: '1px solid rgba(210,153,34,0.22)',
+                          boxShadow: '0 1px 4px rgba(210,153,34,0.08)',
+                        }}
+                        transition={{ type: 'spring', stiffness: 480, damping: 40 }}
                       />
                     )}
+                    <span className="relative z-10">{t.label}</span>
                   </button>
                 ))}
+                {/* Target IP badge — shown when a target is active */}
+                {activeTarget?.ip && (
+                  <div className="ml-auto flex items-center">
+                    <span
+                      className="font-mono text-[10px] px-2 py-0.5 rounded border tabular-nums"
+                      style={{
+                        color: 'rgba(210,153,34,0.75)',
+                        background: 'rgba(210,153,34,0.06)',
+                        borderColor: 'rgba(210,153,34,0.18)',
+                        letterSpacing: '0.02em',
+                      }}
+                    >
+                      {activeTarget.ip}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeTab}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.12 }}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -2 }}
+                  transition={{ duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
                   className="flex-1 min-h-0 overflow-hidden flex flex-col"
                 >
                   {activeTab === 'overview'    && <OverviewTab targetId={activeTargetId} />}
@@ -147,11 +182,35 @@ export default function App() {
 function EmptyState() {
   return (
     <div className="flex-1 flex items-center justify-center">
-      <div className="text-center">
-        <div className="text-4xl mb-4 opacity-20">⬡</div>
-        <p className="text-sm text-[#8b949e]">Select a target to begin</p>
-        <p className="text-xs text-[#4a5568] mt-1">or click + to add a new target</p>
-      </div>
+      <motion.div
+        className="text-center"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
+      >
+        {/* Illustrated icon with layered glow rings */}
+        <div className="relative inline-flex items-center justify-center mb-6">
+          <div className="absolute w-24 h-24 rounded-full" style={{ background: 'radial-gradient(circle, rgba(210,153,34,0.08) 0%, transparent 70%)' }} />
+          <motion.div
+            animate={{ scale: [1, 1.05, 1] }}
+            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            style={{ filter: 'drop-shadow(0 0 16px rgba(210,153,34,0.35))' }}
+          >
+            <svg width="52" height="52" viewBox="0 0 24 24" fill="none" style={{ color: '#d29922', opacity: 0.55 }}>
+              <path d="M12 2L20.5 7V17L12 22L3.5 17V7L12 2Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+              <circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.6" />
+              <circle cx="12" cy="12" r="1.2" fill="currentColor" />
+              <path d="M12 9V7M12 17v-2M7 12H5M19 12h-2" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity="0.4" />
+            </svg>
+          </motion.div>
+        </div>
+
+        <p className="text-sm font-semibold mb-1.5" style={{ color: '#e6edf3' }}>No target selected</p>
+        <p className="text-xs mb-1" style={{ color: '#8b949e' }}>Select a target from the sidebar to begin</p>
+        <p className="text-xs" style={{ color: '#484f58' }}>
+          Press <kbd className="px-1 py-0.5 rounded text-[10px] font-mono" style={{ background: 'rgba(42,51,71,0.5)', border: '1px solid rgba(42,51,71,0.8)', color: '#8b949e' }}>+</kbd> to add your first target
+        </p>
+      </motion.div>
     </div>
   )
 }

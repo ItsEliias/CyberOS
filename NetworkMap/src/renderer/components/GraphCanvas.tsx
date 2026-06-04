@@ -13,6 +13,7 @@ import FilterPanel, { FilterState, EMPTY_FILTERS, applyFilters, activeFilterCoun
 import DiffPanel, { DiffResult, computeDiff } from './DiffPanel'
 import NodeContextMenu from './NodeContextMenu'
 import NodeDetail from './NodeDetail'
+import { GraphLegend, CanvasEmptyState } from './GraphCanvasExtras'
 
 interface Transform { x: number; y: number; scale: number }
 interface ContextMenu { nodeId: string; x: number; y: number }
@@ -64,6 +65,7 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
   const containerRef = useRef<HTMLDivElement>(null)
   const [transform, setTransform]   = useState<Transform>({ x: 0, y: 0, scale: 1 })
   const [canvasSize, setCanvasSize] = useState({ w: 900, h: 650 })
+  const zoomLevel = Math.round(transform.scale * 100)
 
   const dragState = useRef<{
     type: 'node' | 'pan'; nodeId?: string
@@ -307,26 +309,42 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
 
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {/* Sidebar */}
-        <div style={{ width: 180, minWidth: 180, borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', background: 'rgba(15,17,23,0.9)' }}>
-          <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)' }}>
-            <div style={secLabel}>LEGEND</div>
-            {[['#3fb950','1–2 ports'],['#d29922','3–5 ports'],['#f85149','6+ ports'],['#484f58','Down']].map(([c, l]) => (
-              <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: c, flexShrink: 0 }} />
-                <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{l}</span>
+        <div style={{ width: 180, minWidth: 180, borderRight: '1px solid rgba(42,51,71,0.5)', display: 'flex', flexDirection: 'column', background: 'rgba(10,11,18,0.95)' }}>
+          <div style={{ padding: '10px 12px', borderBottom: '1px solid rgba(42,51,71,0.4)' }}>
+            <div style={secLabel}>Legend</div>
+            {[
+              { color: '#3fb950', label: '1–2 ports' },
+              { color: '#d29922', label: '3–5 ports' },
+              { color: '#f85149', label: '6+ ports'  },
+              { color: '#484f58', label: 'Down'       },
+            ].map(({ color, label }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
+                <span style={{
+                  width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0,
+                  boxShadow: `0 0 5px ${color}60`,
+                }} />
+                <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{label}</span>
               </div>
             ))}
           </div>
-          <div style={{ padding: '8px 12px 4px' }}><div style={secLabel}>GRAPHS</div></div>
+          <div style={{ padding: '8px 12px 4px' }}><div style={secLabel}>Graphs</div></div>
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {savedGraphs.map(g => (
-              <div key={g.id} onClick={() => onSwitchGraph(g.id)}
-                style={{ padding: '5px 12px', cursor: 'pointer', fontSize: 11, color: g.id === graph.id ? 'var(--accent)' : 'var(--text-muted)', background: g.id === graph.id ? 'rgba(210,153,34,0.08)' : 'transparent', borderLeft: g.id === graph.id ? '2px solid var(--accent)' : '2px solid transparent' }}
-                onMouseEnter={e => { if (g.id !== graph.id) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)' }}
-                onMouseLeave={e => { if (g.id !== graph.id) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+              <div
+                key={g.id}
+                onClick={() => onSwitchGraph(g.id)}
+                style={{
+                  padding: '6px 12px', cursor: 'pointer', fontSize: 11,
+                  color: g.id === graph.id ? '#ff8c42' : 'var(--text-muted)',
+                  background: g.id === graph.id ? 'rgba(255,140,66,0.07)' : 'transparent',
+                  borderLeft: g.id === graph.id ? '2px solid #ff8c42' : '2px solid transparent',
+                  transition: 'all 150ms var(--ease)',
+                }}
+                onMouseEnter={e => { if (g.id !== graph.id) { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)' } }}
+                onMouseLeave={e => { if (g.id !== graph.id) { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' } }}
               >
-                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</div>
-                <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>{g.nodeCount}n</div>
+                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: g.id === graph.id ? 600 : 400 }}>{g.name}</div>
+                <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 1 }}>{g.nodeCount} nodes</div>
               </div>
             ))}
           </div>
@@ -335,10 +353,7 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
         {/* Canvas area */}
         <div ref={containerRef} style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
           {graph.nodes.length === 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 12, color: 'var(--text-muted)' }}>
-              <div style={{ fontSize: 40, opacity: 0.3 }}>⬡</div>
-              <p style={{ fontSize: 13 }}>Empty graph — go back and import nodes</p>
-            </div>
+            <CanvasEmptyState savedCount={savedGraphs.length} />
           ) : (
             <>
               <GraphSvg
@@ -360,11 +375,66 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
               />
 
               {/* Zoom controls */}
-              <div style={{ position: 'absolute', bottom: 16, left: 16, display: 'flex', gap: 4 }}>
-                {([{l:'+',f:zoomIn},{l:'−',f:zoomOut},{l:'↺',f:resetView},{l:'⊞',f:fitView}] as const).map(b => (
-                  <button key={b.l} onClick={b.f} style={zoomBtn}>{b.l}</button>
+              <div style={{ position: 'absolute', bottom: 16, left: 16, display: 'flex', gap: 3, alignItems: 'center' }}>
+                {([{l:'+', title:'Zoom in', f:zoomIn},{l:'−', title:'Zoom out', f:zoomOut},{l:'↺', title:'Reset view', f:resetView},{l:'⊞', title:'Fit all nodes', f:fitView}] as const).map(b => (
+                  <button
+                    key={b.l}
+                    onClick={b.f}
+                    title={b.title}
+                    style={zoomBtn}
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLElement).style.background = 'rgba(42,51,71,0.4)'
+                      ;(e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'
+                      ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,51,71,1)'
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLElement).style.background = 'rgba(13,14,24,0.92)'
+                      ;(e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'
+                      ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,51,71,0.75)'
+                    }}
+                  >{b.l}</button>
                 ))}
-                {pathStart && <span style={{ padding: '5px 10px', fontSize: 11, color: '#58a6ff', background: 'rgba(15,17,23,0.9)', border: '1px solid rgba(88,166,255,0.3)', borderRadius: 5 }}>Shift+click target</span>}
+                {pathStart && (
+                  <span style={{
+                    padding: '5px 10px', fontSize: 11, color: '#58a6ff',
+                    background: 'rgba(13,14,24,0.95)', border: '1px solid rgba(88,166,255,0.3)',
+                    borderRadius: 7, animation: 'badgePop 0.2s var(--ease)',
+                  }}>Shift+click target</span>
+                )}
+              </div>
+
+              <GraphLegend />
+
+              {/* Selection count badge */}
+              {selectedId && (
+                <div
+                  style={{
+                    position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
+                    zIndex: 22, pointerEvents: 'none',
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    padding: '4px 12px', borderRadius: 20,
+                    background: 'rgba(13,14,24,0.92)',
+                    border: '1px solid rgba(255,140,66,0.35)',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+                    fontSize: 11, color: '#ff8c42', fontWeight: 600,
+                    backdropFilter: 'blur(8px)',
+                    animation: 'badgePop 0.2s var(--ease)',
+                  }}
+                >
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ff8c42', boxShadow: '0 0 6px rgba(255,140,66,0.6)', flexShrink: 0 }} />
+                  1 node selected
+                </div>
+              )}
+
+              {/* Zoom controls overlay — bottom-right, above MiniMap */}
+              <div style={{ position: 'absolute', bottom: 220, right: 16, zIndex: 21, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                {([{icon:'+',title:'Zoom in',fn:zoomIn},{icon:'−',title:'Zoom out',fn:zoomOut},{icon:'⊞',title:'Fit all',fn:fitView}] as const).map(b => (
+                  <button key={b.title} onClick={b.fn} title={b.title} style={zoomOverlayBtn}
+                    onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background='rgba(42,51,71,0.5)'; el.style.borderColor='rgba(255,140,66,0.4)'; el.style.color='#ff8c42' }}
+                    onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background='rgba(13,14,24,0.88)'; el.style.borderColor='rgba(42,51,71,0.7)'; el.style.color='var(--text-muted)' }}
+                  >{b.icon}</button>
+                ))}
+                <div style={zoomLevelBadge}>{zoomLevel}%</div>
               </div>
 
               <MiniMap nodes={graph.nodes} transform={transform} canvasW={canvasSize.w} canvasH={canvasSize.h} onPan={(x, y) => setTransform(t => ({ ...t, x, y }))} />
@@ -377,7 +447,7 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
 
               {selectedNode && (
                 <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 320, background: 'var(--panel)', borderLeft: '1px solid var(--border)', overflowY: 'auto', zIndex: 30, animation: 'slideInRight 0.25s ease-out', display: 'flex', flexDirection: 'column' }}>
-                  <NodeDetail node={selectedNode} onClose={() => setSelectedId(null)} allScans={allScans} onAnnotate={text => handleAnnotate(selectedNode.id, text)} />
+                  <NodeDetail node={selectedNode} onClose={() => setSelectedId(null)} allScans={allScans} onAnnotate={text => handleAnnotate(selectedNode.id, text)} searchQuery={searchQuery} />
                 </div>
               )}
 
@@ -389,11 +459,24 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
         </div>
       </div>
 
-      <div style={{ padding: '3px 16px', borderTop: '1px solid var(--border)', fontSize: 10, color: 'var(--text-muted)', display: 'flex', gap: 10 }}>
-        <span>NetworkMap</span><span>·</span>
-        <span>{graphName}</span><span>·</span>
-        <span>{graph.nodes.length}n · {graph.edges.length}e</span>
-        {tracedPath && <><span>·</span><span style={{ color: 'var(--accent)' }}>{tracedPath.length - 1} hops</span></>}
+      <div style={{ padding: '4px 16px', borderTop: '1px solid rgba(42,51,71,0.4)', fontSize: 10, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(7,8,15,0.6)' }}>
+        <span style={{ color: 'rgba(255,140,66,0.5)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', fontSize: 9 }}>NetworkMap</span>
+        <span style={{ color: 'rgba(42,51,71,0.8)' }}>·</span>
+        <span style={{ color: 'var(--text-secondary)', fontWeight: 500, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{graphName}</span>
+        <span style={{ color: 'rgba(42,51,71,0.8)' }}>·</span>
+        <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ color: '#ff8c42' }}>{graph.nodes.length}</span>
+          <span style={{ color: 'rgba(42,51,71,0.9)', margin: '0 2px' }}>n</span>
+          <span style={{ color: 'rgba(42,51,71,0.8)', margin: '0 2px' }}>·</span>
+          <span>{graph.edges.length}</span>
+          <span style={{ color: 'rgba(42,51,71,0.9)', margin: '0 2px' }}>e</span>
+        </span>
+        {tracedPath && (
+          <>
+            <span style={{ color: 'rgba(42,51,71,0.8)' }}>·</span>
+            <span className="badge-animate" style={{ color: '#ff8c42', fontWeight: 600 }}>{tracedPath.length - 1} hops</span>
+          </>
+        )}
       </div>
     </div>
   )
@@ -402,6 +485,16 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
 const secLabel: React.CSSProperties = {
   fontSize: 9, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.07em', marginBottom: 6, textTransform: 'uppercase',
 }
-const zoomBtn: React.CSSProperties = {
-  padding: '5px 9px', background: 'rgba(22,27,34,0.9)', border: '1px solid var(--border)', borderRadius: 5, color: 'var(--text-dim)', fontSize: 12,
+const zoomBtn: React.CSSProperties = { padding: '5px 9px', background: 'rgba(13,14,24,0.92)', border: '1px solid rgba(42,51,71,0.75)', borderRadius: 7, color: 'var(--text-muted)', fontSize: 12, transition: 'all 150ms var(--ease)' }
+const zoomOverlayBtn: React.CSSProperties = {
+  width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+  background: 'rgba(13,14,24,0.88)', border: '1px solid rgba(42,51,71,0.7)', borderRadius: 7,
+  color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', backdropFilter: 'blur(8px)',
+  transition: 'all 150ms var(--ease)',
+}
+const zoomLevelBadge: React.CSSProperties = {
+  marginTop: 2, padding: '3px 5px', minWidth: 28, textAlign: 'center',
+  background: 'rgba(13,14,24,0.88)', border: '1px solid rgba(42,51,71,0.5)',
+  borderRadius: 6, fontSize: 9, fontFamily: 'var(--font-mono)', backdropFilter: 'blur(8px)',
+  color: 'rgba(255,140,66,0.7)', fontWeight: 600, letterSpacing: '0.04em',
 }

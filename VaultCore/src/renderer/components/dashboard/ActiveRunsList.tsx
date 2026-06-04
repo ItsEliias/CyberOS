@@ -1,5 +1,43 @@
+import { useEffect, useState, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { ScrapeRun } from '../../types/vaultcore';
+
+/** Formats seconds into "Xm Ys" or "Ys" */
+function formatEta(seconds: number): string {
+  if (seconds <= 0) return '0s';
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
+/** ETA display below progress bar */
+function EtaLabel({ startedAt, itemsDone, total }: { startedAt: string; itemsDone: number; total: number }) {
+  const [eta, setEta] = useState<string | null>(null);
+
+  useEffect(() => {
+    const tick = () => {
+      const elapsed = (Date.now() - new Date(startedAt).getTime()) / 1000;
+      if (itemsDone < 5) {
+        setEta('Calculating…');
+        return;
+      }
+      const rate = itemsDone / elapsed;
+      if (rate <= 0) { setEta('Calculating…'); return; }
+      const remaining = (total - itemsDone) / rate;
+      setEta(`Est. ${formatEta(remaining)} remaining`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [startedAt, itemsDone, total]);
+
+  if (!eta) return null;
+  return (
+    <div className="text-[9px] font-mono mt-1" style={{ color: 'var(--text-dim)' }}>
+      {eta}
+    </div>
+  );
+}
 
 interface Props {
   runs: ScrapeRun[];
@@ -13,6 +51,104 @@ function timeAgo(iso: string): string {
   const m = Math.floor(s / 60);
   if (m < 60) return `${m}m`;
   return `${Math.floor(m / 60)}h ${m % 60}m`;
+}
+
+/** Live throughput counter — ticks every second showing items/sec */
+function ThroughputCounter({ startedAt, itemsSaved }: { startedAt: string; itemsSaved: number }) {
+  const [rate, setRate] = useState<number>(0);
+
+  useEffect(() => {
+    const tick = () => {
+      const elapsedSec = Math.max(1, (Date.now() - new Date(startedAt).getTime()) / 1000);
+      setRate(itemsSaved / elapsedSec);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [startedAt, itemsSaved]);
+
+  return (
+    <motion.span
+      key={Math.round(rate * 10)}
+      initial={{ opacity: 0.5, y: -2 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      className="font-mono tabular-nums text-[10px] shrink-0 px-1.5 py-0.5 rounded"
+      style={{
+        background: 'rgba(63,185,80,0.08)',
+        border: '1px solid rgba(63,185,80,0.2)',
+        color: '#3fb950',
+      }}
+    >
+      {rate.toFixed(1)}/s
+    </motion.span>
+  );
+}
+
+/** Two-step Stop confirmation — shows "Stop / Cancel" inline before confirming */
+function CancelConfirm({ runId, onCancel }: { runId: string; onCancel: (id: string) => void }) {
+  const [confirming, setConfirming] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleStop(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!confirming) {
+      setConfirming(true);
+      // Auto-reset if not confirmed within 3s
+      timerRef.current = setTimeout(() => setConfirming(false), 3000);
+    } else {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      onCancel(runId);
+    }
+  }
+
+  function handleDismiss(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setConfirming(false);
+  }
+
+  return (
+    <AnimatePresence mode="wait">
+      {confirming ? (
+        <motion.div
+          key="confirm"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          transition={{ duration: 0.12 }}
+          className="flex items-center gap-1"
+        >
+          <button
+            onClick={handleStop}
+            className="text-[10px] px-2 py-0.5 rounded-md border transition-all"
+            style={{ borderColor: '#f85149', color: '#fff', background: 'rgba(248,81,73,0.85)' }}
+          >
+            Stop
+          </button>
+          <button
+            onClick={handleDismiss}
+            className="text-[10px] px-2 py-0.5 rounded-md border transition-all hover:bg-white/10"
+            style={{ borderColor: 'var(--border)', color: 'var(--text-dim)' }}
+          >
+            Keep
+          </button>
+        </motion.div>
+      ) : (
+        <motion.button
+          key="cancel"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={handleStop}
+          className="text-[10px] px-2 py-0.5 rounded-md border transition-all hover:bg-red-500/10"
+          style={{ borderColor: '#f85149', color: '#f85149' }}
+        >
+          Cancel
+        </motion.button>
+      )}
+    </AnimatePresence>
+  );
 }
 
 export default function ActiveRunsList({ runs, onCancel }: Props) {
@@ -34,11 +170,20 @@ export default function ActiveRunsList({ runs, onCancel }: Props) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, height: 0, marginBottom: 0 }}
               transition={{ duration: 0.2 }}
-              className="rounded-lg p-3 border"
-              style={{ background: 'var(--bg2)', borderColor: 'var(--border)' }}
+              className="rounded-xl p-3 border relative overflow-hidden run-card-active"
+              style={{
+                background: 'linear-gradient(135deg, rgba(63,185,80,0.06) 0%, var(--bg2) 60%)',
+                borderColor: 'rgba(63,185,80,0.22)',
+                boxShadow: '0 0 16px rgba(63,185,80,0.06)',
+              }}
             >
+              {/* Subtle top glow line */}
+              <div
+                className="absolute top-0 left-0 right-0 h-px pointer-events-none"
+                style={{ background: 'linear-gradient(90deg, transparent, rgba(63,185,80,0.4), transparent)' }}
+              />
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                   <span
                     className="w-2 h-2 rounded-full status-dot-pulse shrink-0"
                     style={{ background: '#3fb950', ['--pulse-color' as string]: 'rgba(63,185,80,0.4)' }}
@@ -47,31 +192,38 @@ export default function ActiveRunsList({ runs, onCancel }: Props) {
                     {run.sourceName}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px]" style={{ color: 'var(--text-dim)' }}>
+                <div className="flex items-center gap-2 shrink-0">
+                  <ThroughputCounter
+                    startedAt={run.startedAt}
+                    itemsSaved={run.result?.newNotes ?? 0}
+                  />
+                  <span className="text-[10px] font-mono tabular-nums" style={{ color: 'var(--text-dim)' }}>
                     {timeAgo(run.startedAt)} ago
                   </span>
-                  <button
-                    onClick={() => onCancel(run.id)}
-                    className="text-[10px] px-2 py-0.5 rounded border transition-all hover:bg-red-500/10"
-                    style={{ borderColor: '#f85149', color: '#f85149' }}
-                  >
-                    Cancel
-                  </button>
+                  <CancelConfirm runId={run.id} onCancel={onCancel} />
                 </div>
               </div>
-              {/* Indeterminate progress bar */}
+              {/* Indeterminate shimmer progress bar */}
               <div
                 className="h-1.5 rounded-full overflow-hidden"
-                style={{ background: 'var(--border)' }}
+                style={{ background: 'rgba(42,51,71,0.5)' }}
               >
                 <motion.div
                   className="h-full rounded-full"
-                  style={{ background: '#3fb950', width: '40%' }}
-                  animate={{ x: ['0%', '160%', '0%'] }}
-                  transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                  style={{
+                    background: 'linear-gradient(90deg, #1a7a30, #3fb950, #70d48a, #3fb950, #1a7a30)',
+                    backgroundSize: '200% 100%',
+                    width: '45%',
+                  }}
+                  animate={{ x: ['-10%', '180%'] }}
+                  transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
                 />
               </div>
+              <EtaLabel
+                startedAt={run.startedAt}
+                itemsDone={run.result?.newNotes ?? 0}
+                total={run.result?.totalNotes ?? 0}
+              />
             </motion.div>
           ))}
         </AnimatePresence>

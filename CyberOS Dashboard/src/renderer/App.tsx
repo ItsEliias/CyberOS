@@ -3,6 +3,7 @@
 // ItsEliias // v2.0
 
 import { AnimatePresence, motion } from 'framer-motion'
+import { useState, useEffect } from 'react'
 import { useDashboardStore } from './stores/useDashboardStore'
 import { useConfigWatcher } from './hooks/useConfigWatcher'
 import { useEventFeed } from './hooks/useEventFeed'
@@ -37,6 +38,41 @@ import SettingsView from './views/SettingsView'
 
 // Apps screen
 import AppTabsView from './views/AppTabsView'
+
+// Design system reference (Phase A sign-off)
+import StyleReferenceView from './views/StyleReferenceView'
+
+// ─── Last Updated Chip ───────────────────────────────────────────────────────
+
+function LastUpdatedChip() {
+  const [elapsed, setElapsed] = useState(0)
+  const [mountTime] = useState(() => Date.now())
+
+  useEffect(() => {
+    const id = setInterval(() => setElapsed(Math.floor((Date.now() - mountTime) / 1000)), 1000)
+    return () => clearInterval(id)
+  }, [mountTime])
+
+  const fmt = (s: number) => {
+    if (s < 60) return `${s}s ago`
+    if (s < 3600) return `${Math.floor(s / 60)}m ago`
+    return `${Math.floor(s / 3600)}h ago`
+  }
+
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 text-[9px] font-mono px-2 py-0.5 rounded-full"
+      style={{
+        background: 'rgba(74,158,255,0.07)',
+        border: '1px solid rgba(74,158,255,0.18)',
+        color: 'var(--text-muted)',
+      }}
+    >
+      <span className="w-1 h-1 rounded-full bg-accent animate-pulse" style={{ background: 'var(--accent)' }} />
+      Updated {fmt(elapsed)}
+    </span>
+  )
+}
 
 // ─── Transition variants ─────────────────────────────────────────────────────
 
@@ -103,6 +139,11 @@ export default function App() {
               {/* Center pane */}
               <div className="flex-1 p-4 overflow-y-auto">
                 <ActiveSessionBanner />
+
+                {/* Last-updated chip */}
+                <div className="flex justify-end mb-2">
+                  <LastUpdatedChip />
+                </div>
 
                 <div className="grid grid-cols-[1fr_2fr] gap-4 mb-4">
                   <OperatorProfileCard />
@@ -173,6 +214,20 @@ export default function App() {
               <AppTabsView />
             </motion.div>
           )}
+
+          {activeView === 'design-system' && (
+            <motion.div
+              key="design-system"
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+              className="flex-1 flex min-h-0"
+            >
+              <StyleReferenceView />
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
 
@@ -183,25 +238,96 @@ export default function App() {
 
 // ─── Profile View ────────────────────────────────────────────────────────────
 
+function getRank(flags: number): { label: string; color: string } {
+  if (flags >= 200) return { label: 'Elite', color: '#f85149' }
+  if (flags >= 100) return { label: 'Expert', color: '#3fb950' }
+  if (flags >= 50)  return { label: 'Advanced', color: '#4a9eff' }
+  if (flags >= 20)  return { label: 'Intermediate', color: '#d29922' }
+  return { label: 'Beginner', color: '#8b949e' }
+}
+
 function ProfileView() {
   const config = useDashboardStore((s) => s.config)
   const profile = config.operator_profile
+  const rank = getRank(profile?.totalFlags ?? 0)
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Profile header */}
-      <div className="flex items-center gap-4">
-        <div className="w-14 h-14 rounded-full bg-accent/20 border-2 border-accent/40 flex items-center justify-center">
-          <span className="text-lg font-bold text-accent">
-            {(profile?.operatorName ?? 'OP').slice(0, 2).toUpperCase()}
-          </span>
-        </div>
-        <div>
-          <h1 className="text-xl font-bold text-text-primary">{profile?.operatorName ?? 'Operator'}</h1>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="w-2 h-2 rounded-full bg-success animate-[statusPulse_2s_ease-out_infinite]" />
-            <span className="text-xs text-text-secondary">Active</span>
+      <div
+        className="rounded-2xl px-6 py-5 flex items-center gap-5"
+        style={{
+          background: 'var(--surface-glass)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          border: '1px solid var(--border-glass)',
+          boxShadow: 'var(--elevation-2)',
+        }}
+      >
+        {/* Avatar with gradient ring */}
+        <div
+          className="shrink-0 p-[2px] rounded-full"
+          style={{
+            background: `conic-gradient(${rank.color}, rgba(74,158,255,0.5), ${rank.color})`,
+            boxShadow: `0 0 20px ${rank.color}44`,
+          }}
+        >
+          <div
+            className="w-14 h-14 rounded-full flex items-center justify-center"
+            style={{ background: 'var(--surface-1)' }}
+          >
+            <span className="text-lg font-bold" style={{ color: rank.color }}>
+              {(profile?.operatorName ?? 'OP').slice(0, 2).toUpperCase()}
+            </span>
           </div>
+        </div>
+
+        {/* Identity */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-xl font-bold text-text-primary leading-none">
+              {profile?.operatorName ?? 'Operator'}
+            </h1>
+            <span
+              className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest"
+              style={{
+                color: rank.color,
+                background: `${rank.color}18`,
+                border: `1px solid ${rank.color}35`,
+                boxShadow: `0 0 8px ${rank.color}22`,
+              }}
+            >
+              {rank.label}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 mt-1.5">
+            <span
+              className="w-1.5 h-1.5 rounded-full status-dot-pulse"
+              style={{ background: 'var(--state-online)', '--pulse-rgb': '63,185,80' } as React.CSSProperties}
+            />
+            <span className="text-xs text-text-secondary">Active Operator</span>
+            {(profile?.currentStreak ?? 0) > 0 && (
+              <span className="text-[10px] text-text-muted font-mono">
+                · <span className="text-[#d29922]">{profile?.currentStreak}d streak</span>
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Quick stats */}
+        <div className="flex items-center gap-4 shrink-0">
+          {[
+            { label: 'Labs', value: profile?.totalLabsCompleted ?? 0, color: 'var(--accent)' },
+            { label: 'Flags', value: profile?.totalFlags ?? 0, color: '#3fb950' },
+            { label: 'Creds', value: profile?.totalCredentials ?? 0, color: '#f78166' },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="text-center">
+              <div className="text-lg font-bold tabular-nums leading-none" style={{ color, textShadow: `0 0 10px ${color}44` }}>
+                {value}
+              </div>
+              <div className="text-[9px] text-text-muted uppercase tracking-wider mt-0.5">{label}</div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -219,9 +345,39 @@ function ProfileView() {
 // ─── Ecosystem View ──────────────────────────────────────────────────────────
 
 function EcosystemView() {
+  const config = useDashboardStore((s) => s.config)
+  const events = useDashboardStore((s) => s.events)
+
+  // Compute live stats inline (UI-only, display purpose)
+  const appKeys = Object.keys(config).filter(
+    (k) => k !== 'operator_profile' && k !== 'shared_context' && typeof (config as Record<string, unknown>)[k] === 'object'
+  )
+  const totalApps = appKeys.length
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <h1 className="text-xl font-bold text-text-primary">Ecosystem Status</h1>
+      {/* Header with stats chips */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold text-text-primary">Ecosystem Status</h1>
+        <div className="flex items-center gap-2">
+          {[
+            { label: 'Apps', value: totalApps, color: 'var(--accent)' },
+            { label: 'Events', value: events.length, color: 'var(--state-online)' },
+          ].map(({ label, value, color }) => (
+            <div
+              key={label}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px]"
+              style={{
+                background: `${color === 'var(--accent)' ? 'rgba(74,158,255,0.08)' : 'rgba(63,185,80,0.08)'}`,
+                border: `1px solid ${color === 'var(--accent)' ? 'rgba(74,158,255,0.2)' : 'rgba(63,185,80,0.2)'}`,
+              }}
+            >
+              <span className="font-bold font-mono tabular-nums" style={{ color }}>{value}</span>
+              <span className="text-text-muted">{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div className="grid grid-cols-2 gap-6">
         <ConfigInspector />

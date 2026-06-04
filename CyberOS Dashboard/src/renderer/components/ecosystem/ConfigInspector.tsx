@@ -1,7 +1,55 @@
 // CyberOS Dashboard — Config Inspector
-// Shows config file health, path, and validity
 
+import { useMemo } from 'react'
 import { useDashboardStore } from '../../stores/useDashboardStore'
+
+/** Tokenize a JSON string for syntax highlighting */
+function tokenizeJson(json: string): Array<{ text: string; type: 'key' | 'string' | 'number' | 'boolean' | 'null' | 'punct' | 'plain' }> {
+  const tokens: Array<{ text: string; type: 'key' | 'string' | 'number' | 'boolean' | 'null' | 'punct' | 'plain' }> = []
+  // Regex that matches: keys, strings, numbers, booleans, null, punctuation
+  const re = /("(?:[^"\\]|\\.)*"\s*:)|("(?:[^"\\]|\\.)*")|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|(\btrue\b|\bfalse\b)|(\bnull\b)|([{}\[\],:])|(\s+|[^\s{}\[\],:]+)/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(json)) !== null) {
+    if (m[1]) tokens.push({ text: m[1], type: 'key' })
+    else if (m[2]) tokens.push({ text: m[2], type: 'string' })
+    else if (m[3]) tokens.push({ text: m[3], type: 'number' })
+    else if (m[4]) tokens.push({ text: m[4], type: 'boolean' })
+    else if (m[5]) tokens.push({ text: m[5], type: 'null' })
+    else if (m[6]) tokens.push({ text: m[6], type: 'punct' })
+    else tokens.push({ text: m[0], type: 'plain' })
+  }
+  return tokens
+}
+
+const TOKEN_COLORS: Record<string, string> = {
+  key:     '#8b949e', // muted white — keys
+  string:  '#3fb950', // green
+  number:  '#d29922', // amber
+  boolean: '#4a9eff', // blue
+  null:    '#f85149', // red
+  punct:   '#586069', // dim
+  plain:   'var(--text-secondary)',
+}
+
+function JsonHighlight({ value }: { value: string }) {
+  const tokens = useMemo(() => tokenizeJson(value), [value])
+  return (
+    <pre
+      className="text-[10px] font-mono leading-relaxed overflow-auto rounded-lg p-3"
+      style={{
+        background: 'rgba(0,0,0,0.25)',
+        border: '1px solid rgba(42,51,71,0.35)',
+        maxHeight: '180px',
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-all',
+      }}
+    >
+      {tokens.map((tok, i) => (
+        <span key={i} style={{ color: TOKEN_COLORS[tok.type] }}>{tok.text}</span>
+      ))}
+    </pre>
+  )
+}
 
 export default function ConfigInspector() {
   const config = useDashboardStore((s) => s.config)
@@ -10,26 +58,40 @@ export default function ConfigInspector() {
   const configPath = '~/cybertools-config.json'
   const isValid = !error && Object.keys(config).length > 0
 
-  const handleCopyPath = () => {
-    navigator.clipboard.writeText(configPath)
-  }
+  // Build a compact JSON snippet of top-level keys for preview
+  const previewJson = useMemo(() => {
+    const preview: Record<string, unknown> = {}
+    const keys = Object.keys(config).slice(0, 6)
+    for (const k of keys) preview[k] = (config as Record<string, unknown>)[k]
+    return JSON.stringify(preview, null, 2)
+  }, [config])
 
-  const handleOpenInEditor = () => {
-    window.electronAPI.openUrl(`file://${configPath.replace('~', '')}`)
-  }
+  const handleCopyPath = () => { navigator.clipboard.writeText(configPath) }
+  const handleOpenInEditor = () => { window.electronAPI.openUrl(`file://${configPath.replace('~', '')}`) }
 
   return (
-    <div className="glass-card p-4">
-      <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-widest mb-3">
+    <div
+      className="rounded-xl p-4"
+      style={{
+        background: 'var(--surface-glass)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        border: '1px solid var(--border-glass)',
+        boxShadow: 'var(--elevation-1), inset 0 1px 0 rgba(255,255,255,0.06)',
+      }}
+    >
+      <span className="text-[10px] font-semibold text-text-muted uppercase tracking-widest block mb-4">
         Config File Health
-      </p>
+      </span>
 
       <div className="space-y-3">
         {/* Path */}
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-text-secondary">Path</span>
-          <div className="flex items-center gap-2">
-            <code className="text-xs text-text-primary font-mono bg-bg-interactive px-2 py-0.5 rounded">
+        <Row label="Path">
+          <div className="flex items-center gap-1.5">
+            <code
+              className="text-[11px] font-mono text-text-primary px-2 py-0.5 rounded"
+              style={{ background: 'rgba(42,51,71,0.4)' }}
+            >
               {configPath}
             </code>
             <button
@@ -43,40 +105,83 @@ export default function ConfigInspector() {
               </svg>
             </button>
           </div>
-        </div>
+        </Row>
 
-        {/* Valid JSON */}
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-text-secondary">Valid JSON</span>
-          <span className={`flex items-center gap-1.5 text-xs font-medium ${isValid ? 'text-success' : 'text-danger'}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${isValid ? 'bg-success' : 'bg-danger'}`} />
+        {/* Validity */}
+        <Row label="Valid JSON">
+          <div
+            className="flex items-center gap-1.5 text-[11px] font-semibold"
+            style={{ color: isValid ? 'var(--state-online)' : 'var(--sev-critical)' }}
+          >
+            <span
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ background: isValid ? 'var(--state-online)' : 'var(--sev-critical)' }}
+            />
             {isValid ? 'Valid' : 'Invalid / Missing'}
-          </span>
-        </div>
+          </div>
+        </Row>
 
         {/* Key count */}
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-text-secondary">Top-level keys</span>
-          <span className="text-xs text-text-primary font-mono">{Object.keys(config).length}</span>
-        </div>
+        <Row label="Top-level keys">
+          <span className="text-[11px] text-text-primary font-mono tabular-nums">{Object.keys(config).length}</span>
+        </Row>
 
-        {/* Error message */}
+        {/* Error */}
         {error && (
-          <div className="bg-danger/10 border border-danger/20 rounded-md p-3 mt-2">
-            <p className="text-xs text-danger">{error}</p>
+          <div
+            className="rounded-lg p-3 mt-1"
+            style={{ background: 'rgba(248,81,73,0.08)', border: '1px solid rgba(248,81,73,0.2)' }}
+          >
+            <p className="text-[11px] text-danger">{error}</p>
+          </div>
+        )}
+
+        {/* JSON Preview with syntax highlighting */}
+        {isValid && (
+          <div className="pt-1">
+            <span className="text-[9px] font-semibold text-text-muted uppercase tracking-widest block mb-1.5">
+              Preview
+            </span>
+            <JsonHighlight value={previewJson} />
           </div>
         )}
 
         {/* Actions */}
-        <div className="flex gap-2 pt-2">
+        <div className="pt-2">
           <button
             onClick={handleOpenInEditor}
-            className="text-xs text-accent hover:text-accent-emphasis px-3 py-1.5 rounded bg-accent/10 hover:bg-accent/20 transition-colors"
+            className="flex items-center gap-2 text-[11px] font-medium px-3 py-1.5 rounded transition-colors"
+            style={{
+              color: 'var(--accent)',
+              background: 'rgba(74,158,255,0.1)',
+              border: '1px solid rgba(74,158,255,0.2)',
+            }}
+            title="Open config file in default editor (⌘E)"
           >
             Open in editor
+            <kbd
+              className="text-[9px] font-mono px-1 py-0.5 rounded"
+              style={{
+                background: 'rgba(74,158,255,0.12)',
+                border: '1px solid rgba(74,158,255,0.22)',
+                color: 'rgba(74,158,255,0.7)',
+                lineHeight: 1,
+              }}
+            >
+              ⌘E
+            </kbd>
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <span className="text-[11px] text-text-secondary shrink-0">{label}</span>
+      {children}
     </div>
   )
 }

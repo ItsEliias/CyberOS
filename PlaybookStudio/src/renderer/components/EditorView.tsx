@@ -2,169 +2,90 @@ import { useState, useCallback } from 'react'
 import { useStore } from '../store'
 import type { Playbook, PlaybookStep, PlaybookCategory } from '@shared/types'
 import StepEditorRow from './editor/StepEditor'
+import { AiGenerateModal, VariablesPanel } from './editor/EditorHelpers'
 
 const PB_CATS: PlaybookCategory[] = ['web-app', 'network', 'active-directory', 'linux', 'windows', 'ctf', 'custom', 'ccna']
-const API_KEY_STORAGE = 'playbookstudio_anthropic_key'
 
 function uid() { return `step-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }
 
-// ─── AI Generate Modal ────────────────────────────────────────────────────────
-
-function AiGenerateModal({
-  onInsert, onClose,
-}: {
-  onInsert: (steps: Partial<PlaybookStep>[]) => void
-  onClose: () => void
-}) {
-  const [objective, setObjective] = useState('')
-  const [loading,   setLoading]   = useState(false)
-  const [error,     setError]     = useState('')
-  const [preview,   setPreview]   = useState<Partial<PlaybookStep>[] | null>(null)
-  const apiKey = localStorage.getItem(API_KEY_STORAGE) ?? ''
-
-  async function generate() {
-    if (!objective.trim()) { setError('Enter an objective.'); return }
-    if (!apiKey) { setError('Configure your Anthropic API key in Settings first.'); return }
-    setLoading(true); setError('')
-    const res = await window.electronAPI.generateSteps(objective.trim(), apiKey)
-    setLoading(false)
-    if (!res.ok || !res.steps) { setError(res.error ?? 'Generation failed'); return }
-    setPreview(res.steps)
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.75)' }}>
-      <div style={{ width: 500, maxHeight: '80vh', background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: '0 24px 64px rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column', padding: 20, gap: 16, overflow: 'hidden' }}>
-        <div>
-          <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Generate Steps with AI</h2>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Uses Claude Haiku to generate playbook steps from an objective.</p>
-        </div>
-
-        {!apiKey && (
-          <div className="rounded px-3 py-2 text-xs" style={{ background: 'rgba(210,153,34,0.08)', border: '1px solid rgba(210,153,34,0.2)', color: 'var(--warning)' }}>
-            No API key. Go to Settings and add your Anthropic API key.
-          </div>
-        )}
-
-        <div className="flex flex-col gap-1">
-          <label className="text-xs" style={{ color: 'var(--text-muted)' }}>Objective</label>
-          <input
-            className="w-full rounded px-2.5 py-2 text-sm"
-            style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
-            placeholder="e.g. Enumerate an Active Directory environment with BloodHound"
-            value={objective}
-            onChange={e => setObjective(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && !loading && generate()}
-            disabled={loading || !apiKey}
-            autoFocus
-          />
-        </div>
-
-        {error && <p className="text-xs" style={{ color: 'var(--error)' }}>{error}</p>}
-
-        {preview && (
-          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, minHeight: 0 }}>
-            <div className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Preview — {preview.length} steps</div>
-            {preview.map((s, i) => (
-              <div key={i} className="rounded px-3 py-2" style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
-                <div className="text-xs font-medium" style={{ color: 'var(--text)' }}>{i + 1}. {s.title}</div>
-                {s.description && <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{s.description}</div>}
-                {s.commands && s.commands.length > 0 && (
-                  <div className="text-xs font-mono mt-1" style={{ color: 'var(--accent)' }}>{s.commands[0]}</div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="flex items-center gap-2">
-          <button onClick={onClose} className="flex-1 text-xs py-2 rounded" style={{ background: 'var(--border)', color: 'var(--text-dim)' }}>Cancel</button>
-          {!preview ? (
-            <button onClick={generate} disabled={loading || !apiKey} className="flex-1 text-xs py-2 rounded font-semibold"
-              style={{ background: (loading || !apiKey) ? 'var(--border)' : 'var(--accent)', color: (loading || !apiKey) ? 'var(--text-muted)' : '#fff' }}>
-              {loading ? 'Generating…' : 'Generate'}
-            </button>
-          ) : (
-            <>
-              <button onClick={() => setPreview(null)} className="text-xs py-2 px-3 rounded" style={{ background: 'var(--border)', color: 'var(--text-dim)' }}>Retry</button>
-              <button onClick={() => onInsert(preview)} className="flex-1 text-xs py-2 rounded font-semibold" style={{ background: 'var(--success)', color: '#000' }}>
-                Insert {preview.length} Steps
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Variables Panel ──────────────────────────────────────────────────────────
-
-function VariablesPanel({ vars, disabled, onChange }: {
-  vars: Record<string, string>; disabled: boolean; onChange: (v: Record<string, string>) => void
-}) {
-  const [newKey, setNewKey] = useState('')
-
-  function addVar() {
-    if (!newKey.trim() || vars[newKey] !== undefined) return
-    onChange({ ...vars, [newKey.trim()]: '' })
-    setNewKey('')
-  }
-
-  return (
-    <div className="rounded-lg p-3 flex flex-col gap-2" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--accent)' }}>Variables</span>
-        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Use {'{{key}}'} in descriptions &amp; commands</span>
-      </div>
-      {Object.entries(vars).map(([k, v]) => (
-        <div key={k} className="flex items-center gap-2">
-          <span className="text-xs font-mono px-1.5 py-0.5 rounded flex-shrink-0" style={{ background: 'rgba(74,158,255,0.12)', color: '#4a9eff', minWidth: 80 }}>
-            {'{{'}{k}{'}}'}
-          </span>
-          <input className="flex-1 rounded px-2 py-1 text-xs font-mono" style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
-            value={v} disabled={disabled} placeholder="default value"
-            onChange={e => onChange({ ...vars, [k]: e.target.value })} />
-          {!disabled && (
-            <button onClick={() => { const n = { ...vars }; delete n[k]; onChange(n) }}
-              className="text-xs px-1.5 py-1 rounded flex-shrink-0" style={{ background: 'rgba(248,81,73,0.12)', color: 'var(--error)' }}>
-              ✕
-            </button>
-          )}
-        </div>
-      ))}
-      {!disabled && (
-        <div className="flex gap-2 pt-1" style={{ borderTop: '1px solid var(--border)' }}>
-          <input className="flex-1 rounded px-2 py-1 text-xs font-mono" style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
-            placeholder="new variable name" value={newKey} onChange={e => setNewKey(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && addVar()} />
-          <button onClick={addVar} className="text-xs px-3 py-1 rounded" style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}>Add</button>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ─── Dependency Graph ─────────────────────────────────────────────────────────
+// ─── Dependency Graph (SVG arrows) ───────────────────────────────────────────
 
 function DependencyGraph({ steps }: { steps: PlaybookStep[] }) {
   const hasDeps = steps.some(s => s.dependsOn && s.dependsOn.length > 0)
   if (!hasDeps) return null
+
+  const ROW_H = 28
+  const COL_W = 160
+  const PAD   = 12
+  const stepsWithDeps = steps.filter(s => s.dependsOn && s.dependsOn.length > 0)
+  // Build unique node list: all steps that appear as source or target of a dep
+  const nodeIds = new Set<string>()
+  stepsWithDeps.forEach(s => {
+    nodeIds.add(s.id)
+    ;(s.dependsOn ?? []).forEach(d => nodeIds.add(d))
+  })
+  const nodes = [...nodeIds].map(id => steps.find(s => s.id === id)).filter(Boolean) as PlaybookStep[]
+  nodes.sort((a, b) => a.order - b.order)
+
+  const nodeIndex = new Map(nodes.map((n, i) => [n.id, i]))
+  const svgH = nodes.length * ROW_H + PAD * 2
+  const svgW = COL_W * 2 + 80
+
   return (
-    <div className="rounded-lg p-3" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
-      <span className="text-xs font-semibold uppercase tracking-wide block mb-2" style={{ color: 'var(--text-muted)' }}>Dependency Graph</span>
-      <div className="flex flex-col gap-1">
-        {steps.map(step => {
-          const deps = (step.dependsOn ?? []).map(id => steps.find(s => s.id === id)).filter(Boolean) as PlaybookStep[]
-          if (deps.length === 0) return null
-          return (
-            <div key={step.id} className="flex items-center gap-2 text-xs">
-              <span style={{ color: 'var(--text-muted)' }}>{step.order}. {step.title.slice(0, 20)}</span>
-              <span style={{ color: 'var(--border)' }}>← needs</span>
-              <span style={{ color: 'var(--accent)' }}>{deps.map(d => `${d.order}. ${d.title.slice(0, 16)}`).join(', ')}</span>
-            </div>
-          )
-        })}
+    <div className="rounded-lg p-3" style={{ background: '#0d0e18', border: '1px solid rgba(42,51,71,0.6)' }}>
+      <span
+        className="text-xs font-semibold uppercase tracking-widest block mb-2 flex items-center gap-2"
+        style={{ color: '#8b949e' }}
+      >
+        <div className="w-px h-3 rounded-full" style={{ background: '#8b949e' }} />
+        Dependency Graph
+      </span>
+      <div style={{ overflowX: 'auto' }}>
+        <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} style={{ display: 'block' }}>
+          <defs>
+            <marker id="dep-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+              <path d="M0,0 L0,7 L7,3.5 z" fill="rgba(45,212,191,0.6)" />
+            </marker>
+          </defs>
+          {/* Node labels */}
+          {nodes.map((node, i) => {
+            const y = PAD + i * ROW_H + ROW_H / 2
+            const hasDep = stepsWithDeps.some(s => s.id === node.id)
+            return (
+              <g key={node.id}>
+                <rect x={PAD} y={PAD + i * ROW_H + 2} width={COL_W - 8} height={ROW_H - 6}
+                  rx={4} fill={hasDep ? 'rgba(45,212,191,0.06)' : 'rgba(42,51,71,0.15)'}
+                  stroke={hasDep ? 'rgba(45,212,191,0.22)' : 'rgba(42,51,71,0.4)'} strokeWidth={1} />
+                <text x={PAD + 6} y={y + 1} fontSize={10} fill={hasDep ? '#2dd4bf' : '#8b949e'} dominantBaseline="central">
+                  {node.order}. {(node.title || 'Untitled').slice(0, 18)}
+                </text>
+              </g>
+            )
+          })}
+          {/* Arrows */}
+          {stepsWithDeps.map(step => {
+            const targetIdx = nodeIndex.get(step.id)
+            if (targetIdx === undefined) return null
+            return (step.dependsOn ?? []).map(depId => {
+              const srcIdx = nodeIndex.get(depId)
+              if (srcIdx === undefined) return null
+              const x1 = PAD + COL_W - 8
+              const y1 = PAD + srcIdx * ROW_H + ROW_H / 2
+              const x2 = PAD + 1
+              const y2 = PAD + targetIdx * ROW_H + ROW_H / 2
+              const cx1 = x1 + 30
+              const cx2 = x2 - 30
+              return (
+                <path key={`${step.id}-${depId}`}
+                  d={`M${x1},${y1} C${cx1},${y1} ${cx2},${y2} ${x2},${y2}`}
+                  fill="none" stroke="rgba(45,212,191,0.45)" strokeWidth={1.5}
+                  strokeDasharray="4 2"
+                  markerEnd="url(#dep-arrow)"
+                />
+              )
+            })
+          })}
+        </svg>
       </div>
     </div>
   )
@@ -178,28 +99,36 @@ function VersionsDropdown({ pb, onRestore }: { pb: Playbook; onRestore: (idx: nu
   if (versions.length === 0) return null
   return (
     <div className="relative">
-      <button onClick={() => setOpen(o => !o)} className="text-xs px-2.5 py-1.5 rounded"
-        style={{ background: 'var(--border)', color: 'var(--text-dim)' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="text-xs px-2.5 py-1.5 rounded"
+        style={{ background: 'rgba(42,51,71,0.3)', color: '#8b949e', border: '1px solid rgba(42,51,71,0.5)' }}
+      >
         Versions ({versions.length})
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-20 rounded-lg overflow-hidden"
-          style={{ width: 280, background: 'var(--panel)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
-          <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
-            <span className="text-xs font-semibold" style={{ color: 'var(--text)' }}>Version History</span>
-            <button onClick={() => setOpen(false)} className="text-xs" style={{ color: 'var(--text-muted)' }}>✕</button>
+        <div
+          className="absolute right-0 top-full mt-1 z-20 rounded-lg overflow-hidden"
+          style={{ width: 280, background: '#0d0e18', border: '1px solid rgba(42,51,71,0.75)', boxShadow: '0 12px 40px rgba(0,0,0,0.6)' }}
+        >
+          <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(42,51,71,0.5)' }}>
+            <span className="text-xs font-semibold" style={{ color: '#e6edf3' }}>Version History</span>
+            <button onClick={() => setOpen(false)} className="text-xs" style={{ color: '#484f58' }}>✕</button>
           </div>
           <div className="overflow-y-auto" style={{ maxHeight: 220 }}>
             {versions.map((v, i) => (
-              <div key={i} className="flex items-center gap-2 px-3 py-2" style={{ borderBottom: '1px solid var(--border)' }}>
+              <div key={i} className="flex items-center gap-2 px-3 py-2" style={{ borderBottom: '1px solid rgba(42,51,71,0.35)' }}>
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium" style={{ color: 'var(--text)' }}>v{v.version}</div>
-                  <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  <div className="text-xs font-medium" style={{ color: '#e6edf3' }}>v{v.version}</div>
+                  <div className="text-xs font-mono" style={{ color: '#484f58' }}>
                     {new Date(v.savedAt).toLocaleString()} · {v.snapshot.steps.length} steps
                   </div>
                 </div>
-                <button onClick={() => { onRestore(i); setOpen(false) }} className="text-xs px-2 py-0.5 rounded"
-                  style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}>
+                <button
+                  onClick={() => { onRestore(i); setOpen(false) }}
+                  className="text-xs px-2 py-0.5 rounded"
+                  style={{ background: 'rgba(45,212,191,0.08)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.20)' }}
+                >
                   Restore
                 </button>
               </div>
@@ -298,60 +227,129 @@ export default function EditorView() {
     setShowAi(false)
   }
 
+  const inputStyle: React.CSSProperties = {
+    background: '#07080f',
+    border: '1px solid rgba(42,51,71,0.6)',
+    color: '#e6edf3',
+    borderRadius: 6,
+    padding: '6px 10px',
+    fontSize: '13px',
+    width: '100%',
+  }
+
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-3 px-4 py-2.5 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)', background: 'var(--panel)' }}>
-        <button onClick={() => setView('library')} className="text-xs px-2 py-1 rounded" style={{ background: 'var(--border)', color: 'var(--text-dim)' }}>
-          ← Library
+      {/* Editor header */}
+      <div
+        className="flex items-center gap-3 px-4 py-2.5 flex-shrink-0"
+        style={{ borderBottom: '1px solid rgba(42,51,71,0.5)', background: 'rgba(13,14,24,0.8)' }}
+      >
+        <button
+          onClick={() => setView('library')}
+          className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded transition-colors"
+          style={{ background: 'rgba(42,51,71,0.3)', color: '#8b949e', border: '1px solid rgba(42,51,71,0.5)' }}
+        >
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M8 2L3 6l5 4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Library
         </button>
-        <span className="flex-1 text-sm font-medium" style={{ color: 'var(--text)' }}>
-          {disabled ? `${pb.name} (view only)` : (pb.name || 'Untitled Playbook')}
-        </span>
-        {error && <span className="text-xs" style={{ color: 'var(--error)' }}>{error}</span>}
+
+        <div
+          className="w-px h-4 flex-shrink-0"
+          style={{ background: 'rgba(42,51,71,0.6)' }}
+        />
+
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div
+            className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+            style={{ background: disabled ? '#484f58' : '#2dd4bf' }}
+          />
+          <span className="text-sm font-medium truncate" style={{ color: '#e6edf3' }}>
+            {disabled ? `${pb.name} (view only)` : (pb.name || 'Untitled Playbook')}
+          </span>
+        </div>
+
+        {error && <span className="text-xs flex-shrink-0" style={{ color: '#f85149' }}>{error}</span>}
         {!disabled && <VersionsDropdown pb={pb} onRestore={handleRestoreVersion} />}
         {!disabled && (
-          <button onClick={() => setShowAi(true)} className="text-xs px-2.5 py-1.5 rounded font-medium"
-            style={{ background: 'rgba(74,158,255,0.1)', color: 'var(--accent)', border: '1px solid rgba(74,158,255,0.2)' }}>
-            ✨ AI Steps
+          <button
+            onClick={() => setShowAi(true)}
+            className="text-xs px-2.5 py-1.5 rounded font-medium flex items-center gap-1"
+            style={{
+              background: 'rgba(45,212,191,0.08)',
+              color: '#2dd4bf',
+              border: '1px solid rgba(45,212,191,0.20)',
+            }}
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M5 1l1.2 2.5L9 5 6.2 6.5 5 9 3.8 6.5 1 5l2.8-1.5z" />
+            </svg>
+            AI Steps
           </button>
         )}
         {!disabled && (
-          <button onClick={handleSave} disabled={saving} className="text-xs px-3 py-1.5 rounded font-medium"
-            style={{ background: 'var(--accent)', color: '#fff', opacity: saving ? 0.6 : 1 }}>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="text-xs px-3 py-1.5 rounded font-semibold"
+            style={{
+              background: saving ? 'rgba(42,51,71,0.35)' : 'rgba(45,212,191,0.14)',
+              color: saving ? '#484f58' : '#2dd4bf',
+              border: `1px solid ${saving ? 'rgba(42,51,71,0.5)' : 'rgba(45,212,191,0.28)'}`,
+              opacity: saving ? 0.7 : 1,
+            }}
+          >
             {saving ? 'Saving…' : 'Save'}
           </button>
         )}
       </div>
 
+      {/* Scrollable body */}
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
-        <div className="rounded-lg p-4 flex flex-col gap-3" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
+        {/* Metadata panel */}
+        <div className="rounded-lg p-4 flex flex-col gap-3" style={{ background: '#0d0e18', border: '1px solid rgba(42,51,71,0.6)' }}>
+          <div
+            className="flex items-center gap-2 mb-1"
+            style={{ borderBottom: '1px solid rgba(42,51,71,0.35)', paddingBottom: 10 }}
+          >
+            <div className="w-px h-4 rounded-full" style={{ background: '#2dd4bf' }} />
+            <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#2dd4bf' }}>Playbook Details</span>
+          </div>
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="text-xs block mb-1" style={{ color: 'var(--text-muted)' }}>Name</label>
-              <input className="w-full rounded px-2 py-1.5 text-sm" style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
+              <label className="text-xs block mb-1" style={{ color: '#8b949e' }}>Name</label>
+              <input style={inputStyle}
                 value={pb.name} disabled={disabled} onChange={e => setPb(p => ({ ...p, name: e.target.value }))} />
             </div>
             <div>
-              <label className="text-xs block mb-1" style={{ color: 'var(--text-muted)' }}>Category</label>
-              <select className="rounded px-2 py-1.5 text-sm" style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
-                value={pb.category} disabled={disabled} onChange={e => setPb(p => ({ ...p, category: e.target.value as PlaybookCategory }))}>
+              <label className="text-xs block mb-1" style={{ color: '#8b949e' }}>Category</label>
+              <select
+                style={{ ...inputStyle, width: 'auto' }}
+                value={pb.category} disabled={disabled}
+                onChange={e => setPb(p => ({ ...p, category: e.target.value as PlaybookCategory }))}
+              >
                 {PB_CATS.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs block mb-1" style={{ color: 'var(--text-muted)' }}>Version</label>
-              <input className="w-20 rounded px-2 py-1.5 text-sm" style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
-                value={pb.version} disabled={disabled} onChange={e => setPb(p => ({ ...p, version: e.target.value }))} />
+              <label className="text-xs block mb-1" style={{ color: '#8b949e' }}>Version</label>
+              <input
+                style={{ ...inputStyle, width: 80 }}
+                value={pb.version} disabled={disabled}
+                onChange={e => setPb(p => ({ ...p, version: e.target.value }))}
+              />
             </div>
           </div>
           <div>
-            <label className="text-xs block mb-1" style={{ color: 'var(--text-muted)' }}>Description</label>
-            <textarea rows={2} className="w-full rounded px-2 py-1.5 text-sm" style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
-              value={pb.description} disabled={disabled} onChange={e => setPb(p => ({ ...p, description: e.target.value }))} />
+            <label className="text-xs block mb-1" style={{ color: '#8b949e' }}>Description</label>
+            <textarea rows={2} style={inputStyle}
+              value={pb.description} disabled={disabled}
+              onChange={e => setPb(p => ({ ...p, description: e.target.value }))} />
           </div>
           <div>
-            <label className="text-xs block mb-1" style={{ color: 'var(--text-muted)' }}>Tags (comma-separated)</label>
-            <input className="w-full rounded px-2 py-1.5 text-sm" style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
+            <label className="text-xs block mb-1" style={{ color: '#8b949e' }}>Tags (comma-separated)</label>
+            <input style={inputStyle}
               value={pb.tags.join(', ')} disabled={disabled}
               onChange={e => setPb(p => ({ ...p, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) }))} />
           </div>
@@ -360,15 +358,37 @@ export default function EditorView() {
         <VariablesPanel vars={pb.variables ?? {}} disabled={disabled} onChange={v => setPb(p => ({ ...p, variables: v }))} />
         <DependencyGraph steps={pb.steps} />
 
+        {/* Steps section header */}
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>Steps ({pb.steps.length})</span>
+          <div className="flex items-center gap-2">
+            <div className="w-px h-4 rounded-full" style={{ background: '#2dd4bf' }} />
+            <span className="text-sm font-semibold" style={{ color: '#e6edf3' }}>
+              Steps
+            </span>
+            <span
+              className="text-xs px-1.5 py-0.5 rounded font-mono tabular-nums"
+              style={{ background: 'rgba(45,212,191,0.08)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.18)' }}
+            >
+              {pb.steps.length}
+            </span>
+          </div>
           {!disabled && (
             <div className="flex items-center gap-1.5">
-              <button onClick={() => setShowAi(true)} className="text-xs px-2.5 py-1 rounded font-medium"
-                style={{ background: 'rgba(74,158,255,0.08)', color: 'var(--accent)', border: '1px solid rgba(74,158,255,0.2)' }}>
-                ✨ Generate
+              <button
+                onClick={() => setShowAi(true)}
+                className="text-xs px-2.5 py-1 rounded font-medium flex items-center gap-1"
+                style={{ background: 'rgba(45,212,191,0.06)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.18)' }}
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M5 1l1.2 2.5L9 5 6.2 6.5 5 9 3.8 6.5 1 5l2.8-1.5z" />
+                </svg>
+                Generate
               </button>
-              <button onClick={addStep} className="text-xs px-2.5 py-1 rounded font-medium" style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}>
+              <button
+                onClick={addStep}
+                className="text-xs px-2.5 py-1 rounded font-medium"
+                style={{ background: 'rgba(45,212,191,0.10)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.22)' }}
+              >
                 + Add Step
               </button>
             </div>
@@ -376,7 +396,13 @@ export default function EditorView() {
         </div>
 
         {pb.steps.length === 0 && (
-          <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}><p className="text-sm">No steps yet.</p></div>
+          <div className="flex flex-col items-center justify-center py-10 gap-3 rounded-lg" style={{ border: '1px dashed rgba(42,51,71,0.4)' }}>
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style={{ color: '#2d3548' }}>
+              <rect x="3" y="5" width="22" height="18" rx="3" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M14 10v8M10 14h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            <p className="text-sm" style={{ color: '#484f58' }}>No steps yet. Add your first step above.</p>
+          </div>
         )}
 
         <div className="flex flex-col gap-2">
@@ -384,6 +410,7 @@ export default function EditorView() {
             <StepEditorRow
               key={step.id} step={step} index={idx} total={pb.steps.length}
               allSteps={pb.steps} disabled={disabled}
+              knownVars={Object.keys(pb.variables ?? {})}
               onChange={s => updateStep(idx, s)}
               onDelete={() => deleteStep(idx)}
               onDuplicate={() => duplicateStep(idx)}

@@ -1,14 +1,85 @@
-// FeedItem card — alert highlights, CVE badges, bookmark, dedup
-import { useRef, useEffect } from 'react'
-import { motion } from 'framer-motion'
+// FeedItem card — alert highlights, CVE badges, bookmark, dedup, inline expand
+import { useRef, useEffect, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../../store'
 import type { FeedItem as FeedItemType } from '../../../shared/types'
+
+// ── Source Trust Badge ────────────────────────────────────────────────────────
+
+type TrustLevel = 'verified' | 'community' | 'unknown'
+
+const VERIFIED_DOMAINS = [
+  'cve.org','nvd.nist.gov','cisa.gov','cert.org','us-cert.gov','github.com',
+  'microsoft.com','google.com','apple.com','mozilla.org','ubuntu.com','debian.org',
+  'redhat.com','exploit-db.com','vulhub.org.cn','kb.cert.org','securityfocus.com',
+  'krebs','bleepingcomputer','thehackernews','threatpost','darkreading','securityweek',
+]
+const COMMUNITY_DOMAINS = [
+  'reddit.com','medium.com','hackernews','news.ycombinator','twitter','x.com',
+  'infosec.exchange','mastodon','discord','telegram','substack',
+]
+
+function getSourceTrust(name: string): TrustLevel {
+  const lower = name.toLowerCase()
+  if (VERIFIED_DOMAINS.some(d => lower.includes(d))) return 'verified'
+  if (COMMUNITY_DOMAINS.some(d => lower.includes(d))) return 'community'
+  return 'unknown'
+}
+
+function TrustBadge({ sourceName }: { sourceName: string }) {
+  const trust = getSourceTrust(sourceName)
+  const config = {
+    verified:  { color: '#3fb950', title: 'Verified source', path: 'M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7L12 2z M9 12l2 2 4-4' },
+    community: { color: '#d29922', title: 'Community source', path: 'M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7L12 2z' },
+    unknown:   { color: '#484f58', title: 'Unknown source',   path: 'M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7L12 2z' },
+  }[trust]
+  return (
+    <svg
+      width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={config.color}
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      style={{ flexShrink: 0, opacity: trust === 'unknown' ? 0.4 : 1 }}
+      title={config.title}
+    >
+      <path d={config.path} />
+      {trust === 'verified' && (
+        <>
+          <polyline points="9 12 11 14 15 10" strokeWidth="2.2" />
+        </>
+      )}
+    </svg>
+  )
+}
+
+// Stagger delay cap: first 10 items stagger, rest appear instantly
+const MAX_STAGGER_IDX = 10
 
 const TIER_CONFIG = {
   critical: { label: 'CRITICAL', color: '#ff6b6b', bgAlpha: '22' },
   high:     { label: 'HIGH',     color: '#f85149', bgAlpha: '22' },
   medium:   { label: 'MEDIUM',   color: '#d29922', bgAlpha: '22' },
   low:      { label: 'LOW',      color: '#4a5568', bgAlpha: '22' },
+}
+
+// Generate a deterministic color from a source name for the favicon avatar
+function sourceInitialColor(name: string): string {
+  const PALETTE = ['#ff6b6b','#f85149','#d29922','#4a9eff','#3fb950','#a78bfa','#f472b6','#34d399','#fbbf24','#60a5fa']
+  let hash = 0
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) & 0xffffffff
+  return PALETTE[Math.abs(hash) % PALETTE.length]
+}
+
+function SourceAvatar({ name, color }: { name: string; color: string }) {
+  const initial = name.trim()[0]?.toUpperCase() ?? '?'
+  const avatarColor = sourceInitialColor(name)
+  return (
+    <span
+      className="inline-flex items-center justify-center w-5 h-5 rounded flex-shrink-0 text-[9px] font-bold leading-none select-none"
+      style={{ background: `${avatarColor}20`, color: avatarColor, border: `1px solid ${avatarColor}35` }}
+      title={name}
+    >
+      {initial}
+    </span>
+  )
 }
 
 function timeAgo(iso: string): string {
@@ -18,7 +89,7 @@ function timeAgo(iso: string): string {
   return `${Math.floor(diff / 86400_000)}d ago`
 }
 
-export default function FeedItemCard({ item }: { item: FeedItemType }) {
+export default function FeedItemCard({ item, index = 0 }: { item: FeedItemType; index?: number }) {
   const setSelectedId  = useStore(s => s.setSelectedId)
   const patchItem      = useStore(s => s.patchItem)
   const selectedId     = useStore(s => s.selectedId)
@@ -31,6 +102,7 @@ export default function FeedItemCard({ item }: { item: FeedItemType }) {
   const cardRef        = useRef<HTMLDivElement>(null)
   const isBookmarked   = bookmarks.includes(item.id)
   const topAlert       = item.alertMatches?.[0]
+  const [expanded, setExpanded] = useState(false)
 
   const sourceColor = sources.find(s => s.id === item.sourceId)?.color ?? '#8b949e'
 
@@ -42,8 +114,15 @@ export default function FeedItemCard({ item }: { item: FeedItemType }) {
     }
   }, [item.relevanceScore])
 
+  // Short items (no full content) expand inline; others open reading pane
+  const isShortItem = !item.content && (item.summary?.length ?? 0) < 400
+
   async function handleClick() {
-    setSelectedId(item.id)
+    if (isShortItem) {
+      setExpanded(e => !e)
+    } else {
+      setSelectedId(item.id)
+    }
     if (!item.read) {
       await window.electronAPI.markRead(item.id)
       patchItem(item.id, { read: true })
@@ -84,26 +163,30 @@ export default function FeedItemCard({ item }: { item: FeedItemType }) {
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.15 }}
+      transition={{ duration: 0.15, delay: Math.min(index, MAX_STAGGER_IDX) * 0.04 }}
+      whileHover={{ y: -1, boxShadow: `0 4px 16px rgba(0,0,0,0.35), 0 0 0 1px ${alertColor ? `${alertColor}30` : selected ? 'rgba(255,107,107,0.2)' : 'rgba(42,51,71,0.6)'}` }}
       onClick={handleClick}
-      className="group cursor-pointer mx-3 my-1.5 rounded-lg transition-all"
+      className="group cursor-pointer mx-3 my-1.5 rounded-lg"
       style={{
         background: bgColor,
         border: `1px solid ${alertColor ? `${alertColor}40` : selected ? 'rgba(255,107,107,0.3)' : 'rgba(42, 51, 71, 0.5)'}`,
         opacity: item.read ? 0.65 : 1,
         borderLeft: `3px solid ${borderLeftColor}`,
+        transition: 'background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease',
       }}
     >
       <div className="px-3 py-2.5">
-        {/* Row 1: source badge + badges + timestamp */}
+        {/* Row 1: source avatar + badge + badges + timestamp */}
         <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
           {!item.read && (
             <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#ff6b6b' }} />
           )}
+          <SourceAvatar name={item.sourceName} color={sourceColor} />
           <span
-            className="text-[9px] font-bold uppercase px-1.5 py-[2px] rounded flex-shrink-0"
+            className="text-[9px] font-bold uppercase px-1.5 py-[2px] rounded flex-shrink-0 inline-flex items-center gap-1"
             style={{ background: `${sourceColor}18`, color: sourceColor, border: `1px solid ${sourceColor}33` }}
           >
+            <TrustBadge sourceName={item.sourceName} />
             {item.sourceName}
           </span>
           <span
@@ -151,36 +234,106 @@ export default function FeedItemCard({ item }: { item: FeedItemType }) {
           <p className="text-[11px] leading-relaxed line-clamp-2 text-white/45">{item.summary}</p>
         )}
 
+        {/* Inline expand indicator for short items */}
+        {isShortItem && (
+          <div className="flex items-center gap-1 mt-1.5 text-[10px]" style={{ color: 'rgba(255,255,255,0.2)' }}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+            {expanded ? 'collapse' : 'expand'}
+          </div>
+        )}
+
         {/* Hover actions */}
-        <div className="flex items-center gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1.5 mt-2 opacity-0 group-hover:opacity-100 transition-all duration-150">
           <button
             onClick={handleBookmark}
-            className="text-[10px] px-2 py-0.5 rounded border transition-colors"
+            className="text-[10px] px-2.5 py-1 border transition-all duration-150"
             style={{
               color: isBookmarked ? '#d29922' : '#8b949e',
-              borderColor: isBookmarked ? 'rgba(210,153,34,0.3)' : 'rgba(42,51,71,0.6)',
-              background: isBookmarked ? 'rgba(210,153,34,0.1)' : 'transparent',
+              borderColor: isBookmarked ? 'rgba(210,153,34,0.35)' : 'rgba(42,51,71,0.5)',
+              background: isBookmarked ? 'rgba(210,153,34,0.12)' : 'rgba(42,51,71,0.2)',
+              borderRadius: '8px',
             }}
+            onMouseEnter={e => { if (!isBookmarked) { e.currentTarget.style.color = '#e2e8f0'; e.currentTarget.style.borderColor = 'rgba(42,51,71,0.8)' } }}
+            onMouseLeave={e => { if (!isBookmarked) { e.currentTarget.style.color = '#8b949e'; e.currentTarget.style.borderColor = 'rgba(42,51,71,0.5)' } }}
           >
             {isBookmarked ? '★' : '☆'}
           </button>
           <button
             onClick={handleOpen}
-            className="text-[10px] px-2 py-0.5 rounded border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 transition-colors"
+            className="text-[10px] px-2.5 py-1 border border-white/10 text-white/40 transition-all duration-150"
+            style={{ borderRadius: '8px', background: 'rgba(42,51,71,0.2)' }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
           >
-            Open
+            Open ↗
+          </button>
+          <button
+            onClick={e => { e.stopPropagation(); navigator.clipboard.writeText(item.url) }}
+            className="text-[10px] px-2.5 py-1 border border-white/10 text-white/40 transition-all duration-150"
+            style={{ borderRadius: '8px', background: 'rgba(42,51,71,0.2)' }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
+            title="Copy link"
+          >
+            ⎘ Copy
           </button>
           <button
             onClick={handleVault}
-            className="text-[10px] px-2 py-0.5 rounded border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 transition-colors"
+            className="text-[10px] px-2.5 py-1 border border-white/10 text-white/40 transition-all duration-150"
+            style={{ borderRadius: '8px', background: 'rgba(42,51,71,0.2)' }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
           >
             Vault
           </button>
-          <span className="ml-auto text-[10px] font-mono font-bold" style={{ color: tier.color }}>
-            [{item.relevanceScore}]
+          <span className="ml-auto text-[10px] font-mono font-bold tabular-nums px-1.5 py-0.5 rounded-md" style={{ color: tier.color, background: `${tier.color}12`, border: `1px solid ${tier.color}25` }}>
+            {item.relevanceScore}
           </span>
         </div>
       </div>
+
+      {/* Inline expanded summary */}
+      <AnimatePresence>
+        {expanded && isShortItem && (
+          <motion.div
+            key="inline-expand"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
+            className="feed-item-expanded-body"
+          >
+            <div
+              className="px-3 py-3 text-[12px] leading-relaxed"
+              style={{
+                borderTop: `1px solid ${alertColor ? `${alertColor}25` : 'rgba(42,51,71,0.35)'}`,
+                color: 'rgba(226,232,240,0.75)',
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              {item.summary || 'No summary available.'}
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={() => { setSelectedId(item.id) }}
+                  className="text-[10px] px-2.5 py-1 border transition-colors"
+                  style={{ borderRadius: '8px', background: 'rgba(255,107,107,0.1)', borderColor: 'rgba(255,107,107,0.25)', color: '#ff6b6b' }}
+                >
+                  Full article →
+                </button>
+                <button
+                  onClick={() => window.electronAPI.openUrl(item.url)}
+                  className="text-[10px] px-2.5 py-1 border transition-colors"
+                  style={{ borderRadius: '8px', background: 'rgba(42,51,71,0.2)', borderColor: 'rgba(42,51,71,0.5)', color: '#8b949e' }}
+                >
+                  Open ↗
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }

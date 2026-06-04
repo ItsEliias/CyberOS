@@ -1,13 +1,58 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+
 import { useRecondeskStore } from '../../stores/useRecondeskStore'
 import ImportNmapModal from './ImportNmapModal'
 import type { PortState } from '../../types/recondesk'
+
+// ─── Service Banner Tooltip ───────────────────────────────────────────────────
+
+function BannerTooltip({ banner, visible }: { banner: string; visible: boolean }) {
+  if (!banner || !visible) return null
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -4 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -4 }}
+      transition={{ duration: 0.12 }}
+      className="absolute left-0 right-0 z-20 pointer-events-none"
+      style={{ top: '100%', marginTop: 2 }}
+    >
+      <div
+        className="mx-4 px-2.5 py-1.5 rounded text-[10px] font-mono truncate"
+        style={{
+          background: 'rgba(13,14,24,0.97)',
+          border: '1px solid rgba(210,153,34,0.25)',
+          color: '#d29922',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+        }}
+      >
+        <span className="text-[#484f58] mr-1.5">banner:</span>{banner}
+      </div>
+    </motion.div>
+  )
+}
 
 const STATE_BADGE: Record<PortState, string> = {
   open:     'text-[#3fb950] bg-[#3fb950]/10 border-[#3fb950]/25',
   filtered: 'text-[#d29922] bg-[#d29922]/10 border-[#d29922]/25',
   closed:   'text-[#4a5568] bg-[#4a5568]/10 border-[#4a5568]/25',
+}
+
+// Risk-score mock: high-risk ports get 'high', safe/common get 'low', rest 'med'
+const HIGH_RISK_PORTS = new Set([21, 23, 25, 110, 135, 137, 139, 445, 512, 513, 514, 1433, 1521, 3306, 3389, 5432, 5900, 6379, 27017])
+const LOW_RISK_PORTS  = new Set([22, 80, 443, 8080, 8443])
+
+function portRisk(port: number): 'low' | 'med' | 'high' {
+  if (HIGH_RISK_PORTS.has(port)) return 'high'
+  if (LOW_RISK_PORTS.has(port))  return 'low'
+  return 'med'
+}
+
+const RISK_PILL: Record<'low' | 'med' | 'high', { label: string; cls: string }> = {
+  low:  { label: 'low',  cls: 'text-[#3fb950] bg-[#3fb950]/08 border-[#3fb950]/20' },
+  med:  { label: 'med',  cls: 'text-[#d29922] bg-[#d29922]/08 border-[#d29922]/20' },
+  high: { label: 'high', cls: 'text-[#f85149] bg-[#f85149]/08 border-[#f85149]/20' },
 }
 
 const SORT_OPTIONS = ['port', 'service', 'state'] as const
@@ -26,6 +71,7 @@ export default function PortsTab({ targetId }: { targetId: string }) {
   const [showAdd,     setShowAdd]     = useState(false)
   const [expandedId,  setExpandedId]  = useState<string | null>(null)
   const [sortBy,      setSortBy]      = useState<SortKey>('port')
+  const [hoveredId,   setHoveredId]   = useState<string | null>(null)
 
   const [addForm, setAddForm] = useState({
     port: '', protocol: 'tcp' as 'tcp' | 'udp',
@@ -62,10 +108,10 @@ export default function PortsTab({ targetId }: { targetId: string }) {
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Header bar */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#2a3347] flex-shrink-0">
+      <div className="flex items-center justify-between px-4 py-2.5 flex-shrink-0" style={{ borderBottom: '1px solid rgba(42,51,71,0.5)', background: 'rgba(7,8,15,0.3)' }}>
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-[#e2e8f0]">
-            Ports <span className="text-[#4a5568] text-xs font-normal">({openCount} open)</span>
+          <span className="heading-sm" style={{ color: '#e6edf3' }}>
+            Ports <span className="text-[10px] font-normal" style={{ color: '#484f58' }}>({openCount} open)</span>
           </span>
           <div className="flex items-center gap-1 ml-2">
             {SORT_OPTIONS.map(s => (
@@ -151,22 +197,37 @@ export default function PortsTab({ targetId }: { targetId: string }) {
       {/* Table */}
       <div className="flex-1 overflow-y-auto">
         {ports.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
+          <motion.div
+            className="flex items-center justify-center h-full"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
+          >
             <div className="text-center">
-              <p className="text-sm text-[#4a5568]">No ports recorded</p>
-              <p className="text-xs text-[#4a5568]/60 mt-1">Import nmap XML or add manually</p>
+              <div className="relative inline-flex items-center justify-center mb-4">
+                <div className="absolute w-16 h-16 rounded-full" style={{ background: 'radial-gradient(circle, rgba(74,158,255,0.07) 0%, transparent 70%)' }} />
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" style={{ color: '#4a9eff', opacity: 0.35 }}>
+                  <rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M8 21h8M12 17v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <circle cx="12" cy="10" r="2" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M7 10h2M15 10h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium" style={{ color: '#8b949e' }}>No ports recorded</p>
+              <p className="text-xs mt-1" style={{ color: '#484f58' }}>Import nmap XML or add manually above</p>
             </div>
-          </div>
+          </motion.div>
         ) : (
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-[#2a3347]">
-                <th className="px-4 py-2 text-left text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest w-20">Port</th>
-                <th className="px-2 py-2 text-left text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest w-16">Proto</th>
-                <th className="px-2 py-2 text-left text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest">Service</th>
-                <th className="px-2 py-2 text-left text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest">Version</th>
-                <th className="px-2 py-2 text-left text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest w-20">State</th>
-                <th className="px-4 py-2 w-16" />
+              <tr style={{ borderBottom: '1px solid rgba(42,51,71,0.6)', background: 'rgba(7,8,15,0.5)' }}>
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest w-20" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Port</th>
+                <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest w-16" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Proto</th>
+                <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Service</th>
+                <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Version</th>
+                <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest w-20" style={{ color: '#484f58', letterSpacing: '0.07em' }}>State</th>
+                <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest w-16" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Risk</th>
+                <th className="px-4 py-2.5 w-16" />
               </tr>
             </thead>
             <tbody>
@@ -178,20 +239,45 @@ export default function PortsTab({ targetId }: { targetId: string }) {
                       initial={{ opacity: 0, y: 4 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
-                      transition={{ delay: i * 0.02, duration: 0.15 }}
-                      className="group border-b border-[#2a3347]/50 hover:bg-[#2a3347]/20 cursor-pointer transition-colors"
+                      transition={{ delay: i * 0.05, duration: 0.15 }}
+                      className="table-row-alt table-row-accent group cursor-pointer relative"
+                      style={{
+                        borderBottom: '1px solid rgba(42,51,71,0.25)',
+                        background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)',
+                        transition: 'background 120ms ease, border-color 120ms ease',
+                      }}
                       onClick={() => setExpandedId(expandedId === port.id ? null : port.id)}
+                      onMouseEnter={() => setHoveredId(port.id)}
+                      onMouseLeave={() => setHoveredId(null)}
                     >
-                      <td className="px-4 py-2.5 font-mono font-bold text-[#e2e8f0]">{port.port}</td>
+                      <td className="px-4 py-2.5 font-mono font-bold tabular-nums text-[#e2e8f0]">{port.port}</td>
                       <td className="px-2 py-2.5 font-mono text-[#8b949e]">{port.protocol}</td>
                       <td className="px-2 py-2.5 text-[#e2e8f0]">{port.service || <span className="text-[#4a5568]">—</span>}</td>
-                      <td className="px-2 py-2.5 text-[#8b949e] max-w-[200px] truncate">{port.version || <span className="text-[#4a5568]">—</span>}</td>
+                      <td className="px-2 py-2.5 max-w-[200px]">
+                        <span
+                          className="block truncate text-[#8b949e]"
+                          title={port.version || undefined}
+                        >
+                          {port.version || <span className="text-[#4a5568]">—</span>}
+                        </span>
+                      </td>
                       <td className="px-2 py-2.5">
                         <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${STATE_BADGE[port.state]}`}>
                           {port.state}
                         </span>
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-2 py-2.5">
+                        {port.state === 'open' && (() => {
+                          const risk = portRisk(port.port)
+                          const rp   = RISK_PILL[risk]
+                          return (
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded border font-semibold uppercase tracking-wide ${rp.cls}`}>
+                              {rp.label}
+                            </span>
+                          )
+                        })()}
+                      </td>
+                      <td className="px-4 py-2.5 relative">
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={e => { e.stopPropagation(); setExpandedId(port.id) }}
@@ -208,11 +294,16 @@ export default function PortsTab({ targetId }: { targetId: string }) {
                             ✕
                           </button>
                         </div>
+                        <AnimatePresence>
+                          {hoveredId === port.id && port.version && (
+                            <BannerTooltip banner={port.version} visible={true} />
+                          )}
+                        </AnimatePresence>
                       </td>
                     </motion.tr>
                     {expandedId === port.id && (
                       <tr key={`${port.id}-notes`} className="bg-[#0d0d14]">
-                        <td colSpan={6} className="px-4 py-3">
+                        <td colSpan={7} className="px-4 py-3">
                           <textarea
                             value={port.notes}
                             onChange={e => updatePort(targetId, port.id, { notes: e.target.value })}
