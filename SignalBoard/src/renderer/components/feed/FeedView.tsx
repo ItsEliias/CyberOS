@@ -1,5 +1,5 @@
 // FeedView — main feed screen with filter bar, item list, reading pane, digest banner
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useStore } from '../../store'
 import FeedFilterBar from './FeedFilterBar'
@@ -38,6 +38,9 @@ export default function FeedView() {
   const refreshing   = useStore(s => s.refreshing)
   const [digestItems, setDigestItems] = useState<FeedItem[]>([])
   const [showDigest, setShowDigest]   = useState(false)
+  const [newCount, setNewCount]       = useState(0)
+  const prevItemCount = useRef(items.length)
+  const feedListRef   = useRef<HTMLDivElement>(null)
 
   // Inject refresh glow keyframes once
   useEffect(() => {
@@ -48,6 +51,19 @@ export default function FeedView() {
       s.textContent = REFRESH_GLOW_STYLE
       document.head.appendChild(s)
     }
+  }, [])
+
+  // Track new items arriving
+  useEffect(() => {
+    if (items.length > prevItemCount.current && prevItemCount.current > 0) {
+      setNewCount(c => c + (items.length - prevItemCount.current))
+    }
+    prevItemCount.current = items.length
+  }, [items.length])
+
+  const scrollToTopAndClear = useCallback(() => {
+    setNewCount(0)
+    feedListRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
   }, [])
 
   useEffect(() => {
@@ -85,7 +101,31 @@ export default function FeedView() {
         </div>
         <FeedFilterBar />
 
-        <div className="flex-1 overflow-y-auto py-1">
+        {/* New items banner */}
+        <AnimatePresence>
+          {newCount > 0 && (
+            <motion.button
+              className="new-items-banner w-full text-[11px] font-semibold py-2 px-3 flex items-center justify-center gap-2 cursor-pointer flex-shrink-0"
+              style={{
+                background: 'rgba(74,158,255,0.12)',
+                borderBottom: '1px solid rgba(74,158,255,0.25)',
+                color: '#4a9eff',
+              }}
+              onClick={scrollToTopAndClear}
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.18 }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+              </svg>
+              {newCount} new item{newCount !== 1 ? 's' : ''} — click to view
+            </motion.button>
+          )}
+        </AnimatePresence>
+
+        <div ref={feedListRef} className="flex-1 overflow-y-auto py-1">
           {/* Daily Digest Banner */}
           <AnimatePresence>
             {showDigest && digestItems.length > 0 && (

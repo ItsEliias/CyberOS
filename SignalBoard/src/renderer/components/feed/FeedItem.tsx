@@ -1,6 +1,6 @@
-// FeedItem card — alert highlights, CVE badges, bookmark, dedup
-import { useRef, useEffect } from 'react'
-import { motion } from 'framer-motion'
+// FeedItem card — alert highlights, CVE badges, bookmark, dedup, inline expand
+import { useRef, useEffect, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../../store'
 import type { FeedItem as FeedItemType } from '../../../shared/types'
 
@@ -56,6 +56,7 @@ export default function FeedItemCard({ item, index = 0 }: { item: FeedItemType; 
   const cardRef        = useRef<HTMLDivElement>(null)
   const isBookmarked   = bookmarks.includes(item.id)
   const topAlert       = item.alertMatches?.[0]
+  const [expanded, setExpanded] = useState(false)
 
   const sourceColor = sources.find(s => s.id === item.sourceId)?.color ?? '#8b949e'
 
@@ -67,8 +68,15 @@ export default function FeedItemCard({ item, index = 0 }: { item: FeedItemType; 
     }
   }, [item.relevanceScore])
 
+  // Short items (no full content) expand inline; others open reading pane
+  const isShortItem = !item.content && (item.summary?.length ?? 0) < 400
+
   async function handleClick() {
-    setSelectedId(item.id)
+    if (isShortItem) {
+      setExpanded(e => !e)
+    } else {
+      setSelectedId(item.id)
+    }
     if (!item.read) {
       await window.electronAPI.markRead(item.id)
       patchItem(item.id, { read: true })
@@ -179,6 +187,16 @@ export default function FeedItemCard({ item, index = 0 }: { item: FeedItemType; 
           <p className="text-[11px] leading-relaxed line-clamp-2 text-white/45">{item.summary}</p>
         )}
 
+        {/* Inline expand indicator for short items */}
+        {isShortItem && (
+          <div className="flex items-center gap-1 mt-1.5 text-[10px]" style={{ color: 'rgba(255,255,255,0.2)' }}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+            {expanded ? 'collapse' : 'expand'}
+          </div>
+        )}
+
         {/* Hover actions */}
         <div className="flex items-center gap-1.5 mt-2 opacity-0 group-hover:opacity-100 transition-all duration-150">
           <button
@@ -228,6 +246,47 @@ export default function FeedItemCard({ item, index = 0 }: { item: FeedItemType; 
           </span>
         </div>
       </div>
+
+      {/* Inline expanded summary */}
+      <AnimatePresence>
+        {expanded && isShortItem && (
+          <motion.div
+            key="inline-expand"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
+            className="feed-item-expanded-body"
+          >
+            <div
+              className="px-3 py-3 text-[12px] leading-relaxed"
+              style={{
+                borderTop: `1px solid ${alertColor ? `${alertColor}25` : 'rgba(42,51,71,0.35)'}`,
+                color: 'rgba(226,232,240,0.75)',
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              {item.summary || 'No summary available.'}
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={() => { setSelectedId(item.id) }}
+                  className="text-[10px] px-2.5 py-1 border transition-colors"
+                  style={{ borderRadius: '8px', background: 'rgba(255,107,107,0.1)', borderColor: 'rgba(255,107,107,0.25)', color: '#ff6b6b' }}
+                >
+                  Full article →
+                </button>
+                <button
+                  onClick={() => window.electronAPI.openUrl(item.url)}
+                  className="text-[10px] px-2.5 py-1 border transition-colors"
+                  style={{ borderRadius: '8px', background: 'rgba(42,51,71,0.2)', borderColor: 'rgba(42,51,71,0.5)', color: '#8b949e' }}
+                >
+                  Open ↗
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }

@@ -162,6 +162,7 @@ function KeywordFrequency({ items }: { items: FeedItem[] }) {
 
   const top10 = topN(freqMap, 10)
   const max   = top10[0]?.[1] ?? 1
+  const topTerm = top10[0]
 
   return (
     <div className="p-5 border border-border/40 rounded bg-panel/20">
@@ -172,7 +173,27 @@ function KeywordFrequency({ items }: { items: FeedItem[] }) {
       {top10.length === 0 ? (
         <p className="text-xs text-muted/40">Not enough data yet.</p>
       ) : (
-        <SvgBarChart data={top10} max={max} color="url(#kw-grad)" />
+        <>
+          {/* #1 trending highlight */}
+          {topTerm && (
+            <div
+              className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg"
+              style={{
+                background: 'rgba(210,153,34,0.07)',
+                border: '1px solid rgba(210,153,34,0.3)',
+                boxShadow: '0 0 16px rgba(210,153,34,0.12)',
+              }}
+            >
+              <span style={{ fontSize: 14 }}>🔥</span>
+              <span className="text-[11px] font-semibold" style={{ color: '#d29922' }}>Trending</span>
+              <span className="font-mono text-[12px] font-bold" style={{ color: '#e6c46a' }}>{topTerm[0]}</span>
+              <span className="ml-auto text-[10px] font-mono tabular-nums" style={{ color: 'rgba(210,153,34,0.6)' }}>
+                {topTerm[1]}× this week
+              </span>
+            </div>
+          )}
+          <SvgBarChart data={top10} max={max} color="url(#kw-grad)" />
+        </>
       )}
       {/* Gradient def */}
       <svg width="0" height="0" style={{ position: 'absolute' }}>

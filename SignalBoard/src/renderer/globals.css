@@ -219,3 +219,19 @@ button, a, input, select {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
+
+/* ─── ReadingPane teal text selection ────────────────────────────────────── */
+.reading-pane-content ::selection {
+  background: rgba(0,255,224,0.22);
+  color: inherit;
+}
+
+/* ─── Feed item inline expand ────────────────────────────────────────────── */
+.feed-item-expanded-body { overflow: hidden; }
+
+/* ─── New items banner slide-down ────────────────────────────────────────── */
+@keyframes bannerSlideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+.new-items-banner { animation: bannerSlideDown 0.22s cubic-bezier(0.2,0.8,0.2,1) both; }

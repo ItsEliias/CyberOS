@@ -64,11 +64,16 @@ export default function SearchOverlay({ onClose }: { onClose: () => void }) {
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState(0)
   const [recentSearches, setRecentSearches] = useState<string[]>(loadRecent)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef    = useRef<HTMLInputElement>(null)
+  const selectedRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
+
+  useEffect(() => {
+    selectedRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [selected])
 
   useEffect(() => {
     setSelected(0)
@@ -212,9 +217,14 @@ export default function SearchOverlay({ onClose }: { onClose: () => void }) {
                   return (
                     <button
                       key={r.item.id}
+                      ref={isSelected ? selectedRef : undefined}
                       onClick={() => selectItem(r.item)}
                       className="w-full text-left px-4 py-2.5 border-b border-border/20 last:border-0 transition-all duration-100"
-                      style={{ background: isSelected ? 'rgba(255,107,107,0.06)' : undefined }}
+                      style={{
+                        background: isSelected ? 'rgba(255,107,107,0.1)' : undefined,
+                        borderLeft: isSelected ? '3px solid #ff6b6b' : '3px solid transparent',
+                        paddingLeft: isSelected ? '13px' : undefined,
+                      }}
                       onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.025)' }}
                       onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = '' }}
                     >

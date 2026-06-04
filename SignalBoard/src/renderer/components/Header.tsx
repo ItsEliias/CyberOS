@@ -1,3 +1,4 @@
+import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../store'
 
 export default function Header() {
@@ -13,6 +14,26 @@ export default function Header() {
       <div className="flex items-center gap-3">
         <div className="w-[72px]" />
         <span className="text-sm font-semibold tracking-wide text-text">SIGNALBOARD</span>
+        {/* Total unread badge */}
+        <AnimatePresence>
+          {unread > 0 && (
+            <motion.span
+              key={unread}
+              initial={{ scale: 0.7, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.7, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+              className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[9px] font-bold tabular-nums leading-none no-drag"
+              style={{
+                background: 'rgba(255,107,107,0.18)',
+                color: '#ff6b6b',
+                border: '1px solid rgba(255,107,107,0.3)',
+              }}
+            >
+              {unread > 99 ? '99+' : unread}
+            </motion.span>
+          )}
+        </AnimatePresence>
         <span className="text-xs text-muted font-light">// ItsEliias</span>
         <span className="text-[10px] text-muted/50 ml-1">v{version}</span>
       </div>
@@ -27,11 +48,6 @@ export default function Header() {
         {context.target && (
           <span className="text-[10px] px-2 py-0.5 bg-warning/10 border border-warning/20 text-warning rounded font-mono">
             target: {context.target}
-          </span>
-        )}
-        {unread > 0 && (
-          <span className="text-[11px] text-muted">
-            <span className="text-accent font-medium">{unread}</span> unread
           </span>
         )}
         {refreshing && (
