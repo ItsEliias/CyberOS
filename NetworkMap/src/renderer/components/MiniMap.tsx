@@ -1,6 +1,9 @@
 // NetworkMap — MiniMap.tsx — Feature 7: 160x120 mini-map with viewport rect + node type legend
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import type { NetworkNode } from '@shared/types'
+
+const STORAGE_KEY = 'minimap-collapsed'
 
 interface Transform { x: number; y: number; scale: number }
 
@@ -35,6 +38,18 @@ const LEGEND_ENTRIES = [
 ]
 
 export default function MiniMap({ nodes, transform, canvasW, canvasH, onPan }: Props) {
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try { return localStorage.getItem(STORAGE_KEY) === 'true' } catch { return false }
+  })
+
+  function toggleCollapse() {
+    setCollapsed(prev => {
+      const next = !prev
+      try { localStorage.setItem(STORAGE_KEY, String(next)) } catch { /* noop */ }
+      return next
+    })
+  }
+
   if (nodes.length === 0) return null
 
   const xs = nodes.map(n => n.x)
@@ -87,84 +102,75 @@ export default function MiniMap({ nodes, transform, canvasW, canvasH, onPan }: P
       <div style={{
         display: 'flex', alignItems: 'center', gap: 4,
         padding: '3px 7px 2px',
-        borderBottom: '1px solid rgba(255,255,255,0.04)',
+        borderBottom: collapsed ? 'none' : '1px solid rgba(255,255,255,0.04)',
         background: 'rgba(255,255,255,0.02)',
+        cursor: 'default',
       }}>
         <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255,140,66,0.5)' }} />
         <span style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: 'rgba(139,148,158,0.55)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
           overview
         </span>
-        <span style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: 'rgba(139,148,158,0.3)', marginLeft: 'auto' }}>
+        <span style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: 'rgba(139,148,158,0.3)', marginLeft: 'auto', marginRight: 4 }}>
           {nodes.length}n
         </span>
+        {/* Collapse chevron */}
+        <button
+          onClick={toggleCollapse}
+          title={collapsed ? 'Expand minimap' : 'Collapse minimap'}
+          style={{
+            background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer',
+            color: 'rgba(139,148,158,0.4)', fontSize: 9, lineHeight: 1,
+            transition: 'color 150ms var(--ease)',
+            display: 'flex', alignItems: 'center',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,140,66,0.7)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(139,148,158,0.4)' }}
+        >
+          {collapsed ? '▲' : '▼'}
+        </button>
       </div>
 
-      {/* SVG minimap */}
-      <svg
-        width={W} height={H}
-        onClick={handleClick}
-        style={{ cursor: 'crosshair', display: 'block' }}
-      >
-        {nodes.map(n => {
-          const [nx, ny] = toMM(n.x, n.y)
-          return (
-            <circle
-              key={n.id}
-              cx={nx} cy={ny} r={2.5}
-              fill={nodeColor(n)}
-            />
-          )
-        })}
-        <rect
-          x={r1x} y={r1y}
-          width={rectW} height={rectH}
-          fill="rgba(255,140,66,0.05)"
-          stroke="rgba(255,140,66,0.5)"
-          strokeWidth={1.5}
-          rx={2}
-        />
-      </svg>
+      {/* Collapsible body */}
+      <AnimatePresence initial={false}>
+        {!collapsed && (
+          <motion.div
+            key="minimap-body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+            style={{ overflow: 'hidden' }}
+          >
+            {/* SVG minimap */}
+            <svg width={W} height={H} onClick={handleClick} style={{ cursor: 'crosshair', display: 'block' }}>
+              {nodes.map(n => {
+                const [nx, ny] = toMM(n.x, n.y)
+                return <circle key={n.id} cx={nx} cy={ny} r={2.5} fill={nodeColor(n)} />
+              })}
+              <rect x={r1x} y={r1y} width={rectW} height={rectH}
+                fill="rgba(255,140,66,0.05)" stroke="rgba(255,140,66,0.5)" strokeWidth={1.5} rx={2} />
+            </svg>
 
-      {/* Node type legend + zoom */}
-      <div style={{
-        borderTop: '1px solid rgba(255,255,255,0.04)',
-        padding: '5px 8px 6px',
-        background: 'rgba(7,8,15,0.6)',
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '3px 8px',
-      }}>
-        {LEGEND_ENTRIES.map(entry => (
-          <div key={entry.label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{
-              width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
-              background: entry.color,
-              boxShadow: entry.color !== '#484f58' ? `0 0 4px ${entry.color}80` : 'none',
-            }} />
-            <span style={{ fontSize: 8, color: 'rgba(139,148,158,0.55)', lineHeight: 1 }}>
-              {entry.label}
-            </span>
-          </div>
-        ))}
-      </div>
-      {/* Zoom level footer */}
-      <div style={{
-        borderTop: '1px solid rgba(255,255,255,0.03)',
-        padding: '3px 7px',
-        background: 'rgba(7,8,15,0.5)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <span style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: 'rgba(139,148,158,0.4)', letterSpacing: '0.04em' }}>
-          zoom
-        </span>
-        <span style={{
-          fontSize: 9, fontFamily: 'var(--font-mono)',
-          color: transform.scale !== 1 ? 'rgba(255,140,66,0.7)' : 'rgba(139,148,158,0.55)',
-          fontWeight: 600, letterSpacing: '0.04em',
-        }}>
-          {Math.round(transform.scale * 100)}%
-        </span>
-      </div>
+            {/* Node type legend */}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)', padding: '5px 8px 6px', background: 'rgba(7,8,15,0.6)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 8px' }}>
+              {LEGEND_ENTRIES.map(entry => (
+                <div key={entry.label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, background: entry.color, boxShadow: entry.color !== '#484f58' ? `0 0 4px ${entry.color}80` : 'none' }} />
+                  <span style={{ fontSize: 8, color: 'rgba(139,148,158,0.55)', lineHeight: 1 }}>{entry.label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Zoom level footer */}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.03)', padding: '3px 7px', background: 'rgba(7,8,15,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: 'rgba(139,148,158,0.4)', letterSpacing: '0.04em' }}>zoom</span>
+              <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: transform.scale !== 1 ? 'rgba(255,140,66,0.7)' : 'rgba(139,148,158,0.55)', fontWeight: 600, letterSpacing: '0.04em' }}>
+                {Math.round(transform.scale * 100)}%
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

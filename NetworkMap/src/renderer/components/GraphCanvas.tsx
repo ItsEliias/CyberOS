@@ -65,6 +65,7 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
   const containerRef = useRef<HTMLDivElement>(null)
   const [transform, setTransform]   = useState<Transform>({ x: 0, y: 0, scale: 1 })
   const [canvasSize, setCanvasSize] = useState({ w: 900, h: 650 })
+  const zoomLevel = Math.round(transform.scale * 100)
 
   const dragState = useRef<{
     type: 'node' | 'pan'; nodeId?: string
@@ -425,6 +426,17 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
                 </div>
               )}
 
+              {/* Zoom controls overlay — bottom-right, above MiniMap */}
+              <div style={{ position: 'absolute', bottom: 220, right: 16, zIndex: 21, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                {([{icon:'+',title:'Zoom in',fn:zoomIn},{icon:'−',title:'Zoom out',fn:zoomOut},{icon:'⊞',title:'Fit all',fn:fitView}] as const).map(b => (
+                  <button key={b.title} onClick={b.fn} title={b.title} style={zoomOverlayBtn}
+                    onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background='rgba(42,51,71,0.5)'; el.style.borderColor='rgba(255,140,66,0.4)'; el.style.color='#ff8c42' }}
+                    onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background='rgba(13,14,24,0.88)'; el.style.borderColor='rgba(42,51,71,0.7)'; el.style.color='var(--text-muted)' }}
+                  >{b.icon}</button>
+                ))}
+                <div style={zoomLevelBadge}>{zoomLevel}%</div>
+              </div>
+
               <MiniMap nodes={graph.nodes} transform={transform} canvasW={canvasSize.w} canvasH={canvasSize.h} onPan={(x, y) => setTransform(t => ({ ...t, x, y }))} />
 
               {filterOpen && <FilterPanel nodes={graph.nodes} filters={filters} onChange={setFilters} onClose={() => setFilterOpen(false)} />}
@@ -447,12 +459,7 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
         </div>
       </div>
 
-      <div style={{
-        padding: '4px 16px', borderTop: '1px solid rgba(42,51,71,0.4)',
-        fontSize: 10, color: 'var(--text-muted)',
-        display: 'flex', alignItems: 'center', gap: 8,
-        background: 'rgba(7,8,15,0.6)',
-      }}>
+      <div style={{ padding: '4px 16px', borderTop: '1px solid rgba(42,51,71,0.4)', fontSize: 10, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(7,8,15,0.6)' }}>
         <span style={{ color: 'rgba(255,140,66,0.5)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', fontSize: 9 }}>NetworkMap</span>
         <span style={{ color: 'rgba(42,51,71,0.8)' }}>·</span>
         <span style={{ color: 'var(--text-secondary)', fontWeight: 500, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{graphName}</span>
@@ -478,7 +485,16 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
 const secLabel: React.CSSProperties = {
   fontSize: 9, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.07em', marginBottom: 6, textTransform: 'uppercase',
 }
-const zoomBtn: React.CSSProperties = {
-  padding: '5px 9px', background: 'rgba(13,14,24,0.92)', border: '1px solid rgba(42,51,71,0.75)', borderRadius: 7, color: 'var(--text-muted)', fontSize: 12,
+const zoomBtn: React.CSSProperties = { padding: '5px 9px', background: 'rgba(13,14,24,0.92)', border: '1px solid rgba(42,51,71,0.75)', borderRadius: 7, color: 'var(--text-muted)', fontSize: 12, transition: 'all 150ms var(--ease)' }
+const zoomOverlayBtn: React.CSSProperties = {
+  width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+  background: 'rgba(13,14,24,0.88)', border: '1px solid rgba(42,51,71,0.7)', borderRadius: 7,
+  color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', backdropFilter: 'blur(8px)',
   transition: 'all 150ms var(--ease)',
+}
+const zoomLevelBadge: React.CSSProperties = {
+  marginTop: 2, padding: '3px 5px', minWidth: 28, textAlign: 'center',
+  background: 'rgba(13,14,24,0.88)', border: '1px solid rgba(42,51,71,0.5)',
+  borderRadius: 6, fontSize: 9, fontFamily: 'var(--font-mono)', backdropFilter: 'blur(8px)',
+  color: 'rgba(255,140,66,0.7)', fontWeight: 600, letterSpacing: '0.04em',
 }
