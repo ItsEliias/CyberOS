@@ -41,22 +41,33 @@ export default function EditorHeader({ dirty, onSave, onBack, onExportMd, onExpo
   }, [versionLabel, snapshotVersion]);
 
   const versions = activeReport.versions ?? [];
+  const isDraft = activeReport.status !== 'complete';
 
   return (
     <>
-      <div style={{
-        height: 52, flexShrink: 0,
-        background: 'var(--panel)', borderBottom: '1px solid var(--border)',
-        display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px',
-        WebkitAppRegion: 'drag' as never,
-      }}>
-        {/* Drag spacer for traffic lights */}
+      <div
+        style={{
+          height: 52, flexShrink: 0,
+          background: 'rgba(7,8,15,0.95)',
+          borderBottom: '1px solid rgba(255,255,255,0.04)',
+          display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px',
+          WebkitAppRegion: 'drag' as never,
+        }}
+      >
+        {/* Traffic-light spacer */}
         <div style={{ width: 72, flexShrink: 0 }} />
 
         <button
-          className="btn-ghost"
           onClick={onBack}
-          style={{ padding: '4px 10px', fontSize: 12, WebkitAppRegion: 'no-drag' as never, flexShrink: 0 }}
+          style={{
+            height: 28, padding: '0 10px', fontSize: 12, fontWeight: 500,
+            borderRadius: 4, cursor: 'pointer', flexShrink: 0,
+            background: 'transparent', color: 'var(--text-secondary)',
+            border: '1px solid rgba(42,51,71,0.7)',
+            WebkitAppRegion: 'no-drag' as never, transition: 'all 0.15s',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; }}
         >
           ← Library
         </button>
@@ -69,20 +80,30 @@ export default function EditorHeader({ dirty, onSave, onBack, onExportMd, onExpo
               value={titleVal}
               onChange={e => setTitleVal(e.target.value)}
               onBlur={commitTitle}
-              onKeyDown={e => { if (e.key === 'Enter') commitTitle(); if (e.key === 'Escape') { setEditingTitle(false); setTitleVal(activeReport.title); } }}
-              style={{ background: 'var(--bg)', border: '1px solid var(--accent)', borderRadius: 4, padding: '3px 8px', fontSize: 14, fontWeight: 600, width: '100%', maxWidth: 340 }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') commitTitle();
+                if (e.key === 'Escape') { setEditingTitle(false); setTitleVal(activeReport.title); }
+              }}
+              style={{
+                background: 'var(--surface-2)', border: '1px solid var(--accent)',
+                borderRadius: 4, padding: '3px 8px', fontSize: 14, fontWeight: 600,
+                width: '100%', maxWidth: 340, color: 'var(--text-primary)',
+              }}
             />
           ) : (
             <div
               onClick={() => { setEditingTitle(true); setTitleVal(activeReport.title); }}
-              style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', cursor: 'text', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+              style={{
+                fontSize: 14, fontWeight: 600, color: 'var(--text-primary)',
+                cursor: 'text', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}
               title="Click to rename"
             >
               {activeReport.title}
-              {dirty && <span style={{ color: 'var(--text-muted)', marginLeft: 6, fontSize: 12, fontWeight: 400 }}>•</span>}
+              {dirty && <span style={{ color: 'var(--accent)', marginLeft: 6, fontSize: 12, fontWeight: 400 }}>•</span>}
             </div>
           )}
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1, fontFamily: 'var(--font-mono)' }}>
             {activeReport.targetName}{activeReport.targetIP ? ` · ${activeReport.targetIP}` : ''} · {activeReport.platform} · {activeReport.assessmentDate}
           </div>
         </div>
@@ -99,55 +120,47 @@ export default function EditorHeader({ dirty, onSave, onBack, onExportMd, onExpo
           style={{
             padding: '3px 10px', fontSize: 10, fontWeight: 700,
             borderRadius: 99, flexShrink: 0,
-            textTransform: 'uppercase', letterSpacing: '0.05em',
-            cursor: 'pointer',
-            background: activeReport.status === 'complete' ? 'rgba(63,185,80,0.15)' : 'rgba(240,165,0,0.15)',
-            color: activeReport.status === 'complete' ? 'var(--success)' : 'var(--warning)',
-            border: `1px solid ${activeReport.status === 'complete' ? 'rgba(63,185,80,0.3)' : 'rgba(240,165,0,0.3)'}`,
-            WebkitAppRegion: 'no-drag' as never,
-            transition: 'background 0.15s, color 0.15s',
+            textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer',
+            background: isDraft ? 'rgba(210,153,34,0.12)' : 'rgba(63,185,80,0.12)',
+            color: isDraft ? '#d29922' : '#3fb950',
+            border: `1px solid ${isDraft ? 'rgba(210,153,34,0.3)' : 'rgba(63,185,80,0.3)'}`,
+            WebkitAppRegion: 'no-drag' as never, transition: 'all 0.15s',
           }}
         >
           {activeReport.status}
         </button>
 
-        {/* Actions */}
+        {/* Action buttons */}
         <div style={{ display: 'flex', gap: 6, flexShrink: 0, WebkitAppRegion: 'no-drag' as never }}>
-          {/* Variables */}
-          <button
-            className="btn-ghost"
-            style={{ padding: '4px 10px', fontSize: 11 }}
-            onClick={() => setShowVariables(true)}
-            title="Edit report variables ({{client_name}}, etc.)"
-          >
+          <GhostBtn onClick={() => setShowVariables(true)}>
             {'{}'} Vars
-          </button>
+          </GhostBtn>
 
-          {/* Settings (watermark) */}
+          {/* Settings dropdown */}
           <div style={{ position: 'relative' }}>
-            <button
-              className="btn-ghost"
-              style={{ padding: '4px 10px', fontSize: 11 }}
-              onClick={() => setShowSettings(v => !v)}
-              title="Report settings"
-            >
-              Settings
-            </button>
+            <GhostBtn onClick={() => setShowSettings(v => !v)}>Settings</GhostBtn>
             {showSettings && (
               <>
                 <div style={{ position: 'fixed', inset: 0, zIndex: 199 }} onClick={() => setShowSettings(false)} />
-                <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 6, zIndex: 200, minWidth: 200, padding: '10px 14px' }}>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Watermark</div>
+                <div style={{
+                  position: 'absolute', top: '100%', right: 0, marginTop: 4,
+                  background: 'var(--surface-1)', border: '1px solid rgba(42,51,71,0.75)',
+                  borderRadius: 6, zIndex: 200, minWidth: 200, padding: '10px 14px',
+                  boxShadow: 'var(--elevation-3)',
+                }}>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Watermark</div>
                   {WATERMARKS.map(w => (
                     <label key={w} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer', fontSize: 12 }}>
                       <input
                         type="radio"
                         name="watermark"
                         checked={(activeReport.watermark ?? 'none') === w}
-                        onChange={() => { patchReportMeta({ watermark: w }); }}
+                        onChange={() => patchReportMeta({ watermark: w })}
                         style={{ accentColor: 'var(--accent)' }}
                       />
-                      <span style={{ color: w === 'none' ? 'var(--text-muted)' : 'var(--text)' }}>{w === 'none' ? 'None' : w}</span>
+                      <span style={{ color: w === 'none' ? 'var(--text-muted)' : 'var(--text-primary)' }}>
+                        {w === 'none' ? 'None' : w}
+                      </span>
                     </label>
                   ))}
                 </div>
@@ -155,22 +168,22 @@ export default function EditorHeader({ dirty, onSave, onBack, onExportMd, onExpo
             )}
           </div>
 
-          {/* Version history */}
+          {/* Version history dropdown */}
           <div style={{ position: 'relative' }}>
-            <button
-              className="btn-ghost"
-              style={{ padding: '4px 10px', fontSize: 11 }}
-              onClick={() => setShowVersions(v => !v)}
-              title="Version history"
-            >
-              History {versions.length > 0 ? `(${versions.length})` : ''}
-            </button>
+            <GhostBtn onClick={() => setShowVersions(v => !v)}>
+              History{versions.length > 0 ? ` (${versions.length})` : ''}
+            </GhostBtn>
             {showVersions && (
               <>
                 <div style={{ position: 'fixed', inset: 0, zIndex: 199 }} onClick={() => setShowVersions(false)} />
-                <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 6, zIndex: 200, width: 280, maxHeight: 360, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                  {/* Snapshot input */}
-                  <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 6 }}>
+                <div style={{
+                  position: 'absolute', top: '100%', right: 0, marginTop: 4,
+                  background: 'var(--surface-1)', border: '1px solid rgba(42,51,71,0.75)',
+                  borderRadius: 6, zIndex: 200, width: 280, maxHeight: 360,
+                  overflow: 'hidden', display: 'flex', flexDirection: 'column',
+                  boxShadow: 'var(--elevation-3)',
+                }}>
+                  <div style={{ padding: '10px 12px', borderBottom: '1px solid rgba(42,51,71,0.6)', display: 'flex', gap: 6 }}>
                     <input
                       value={versionLabel}
                       onChange={e => setVersionLabel(e.target.value)}
@@ -178,19 +191,22 @@ export default function EditorHeader({ dirty, onSave, onBack, onExportMd, onExpo
                       style={{ flex: 1, fontSize: 11 }}
                       onKeyDown={e => e.key === 'Enter' && handleSnapshot()}
                     />
-                    <button className="btn-primary" style={{ padding: '3px 10px', fontSize: 11 }} onClick={handleSnapshot}>
-                      Save
-                    </button>
+                    <button
+                      onClick={handleSnapshot}
+                      style={{
+                        padding: '3px 10px', fontSize: 11, borderRadius: 4, cursor: 'pointer',
+                        background: 'rgba(74,158,255,0.15)', color: '#4a9eff',
+                        border: '1px solid rgba(74,158,255,0.30)',
+                      }}
+                    >Save</button>
                   </div>
-
-                  {/* History list */}
                   <div style={{ flex: 1, overflowY: 'auto' }}>
                     {versions.length === 0 ? (
                       <div style={{ padding: 12, color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>No saved versions</div>
                     ) : versions.map(v => (
-                      <div key={v.id} style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
-                        <div style={{ fontWeight: 600, color: 'var(--text)' }}>{v.label}</div>
-                        <div style={{ color: 'var(--text-muted)', fontSize: 10, marginTop: 2 }}>
+                      <div key={v.id} style={{ padding: '8px 12px', borderBottom: '1px solid rgba(42,51,71,0.5)', fontSize: 12 }}>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{v.label}</div>
+                        <div style={{ color: 'var(--text-muted)', fontSize: 10, marginTop: 2, fontFamily: 'var(--font-mono)' }}>
                           {new Date(v.createdAt).toLocaleString()} · {v.sectionCount} sections
                         </div>
                       </div>
@@ -202,20 +218,29 @@ export default function EditorHeader({ dirty, onSave, onBack, onExportMd, onExpo
           </div>
 
           <button
-            className="btn-ghost"
-            style={{ padding: '4px 12px', fontSize: 12, color: dirty ? 'var(--accent)' : undefined }}
             onClick={onSave}
             disabled={!dirty}
+            style={{
+              height: 28, padding: '0 12px', fontSize: 12, fontWeight: 500, borderRadius: 4, cursor: 'pointer',
+              background: 'transparent', transition: 'all 0.15s',
+              color: dirty ? '#4a9eff' : 'var(--text-muted)',
+              border: `1px solid ${dirty ? 'rgba(74,158,255,0.35)' : 'rgba(42,51,71,0.5)'}`,
+            }}
           >
             {dirty ? 'Save*' : 'Saved'}
           </button>
 
           <div style={{ position: 'relative' }}>
             <button
-              className="btn-primary"
-              style={{ padding: '4px 12px', fontSize: 12 }}
               disabled={exporting}
               onClick={() => setShowExportMenu(v => !v)}
+              style={{
+                height: 28, padding: '0 12px', fontSize: 12, fontWeight: 600, borderRadius: 4, cursor: 'pointer',
+                background: 'rgba(74,158,255,0.15)', color: '#4a9eff',
+                border: '1px solid rgba(74,158,255,0.30)', transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(74,158,255,0.25)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(74,158,255,0.15)'; }}
             >
               {exporting ? 'Exporting…' : 'Export ▾'}
             </button>
@@ -224,8 +249,9 @@ export default function EditorHeader({ dirty, onSave, onBack, onExportMd, onExpo
                 <div style={{ position: 'fixed', inset: 0, zIndex: 199 }} onClick={() => setShowExportMenu(false)} />
                 <div style={{
                   position: 'absolute', top: '100%', right: 0, marginTop: 4,
-                  background: 'var(--panel)', border: '1px solid var(--border)',
-                  borderRadius: 6, overflow: 'hidden', zIndex: 200, minWidth: 160
+                  background: 'var(--surface-1)', border: '1px solid rgba(42,51,71,0.75)',
+                  borderRadius: 6, overflow: 'hidden', zIndex: 200, minWidth: 160,
+                  boxShadow: 'var(--elevation-3)',
                 }}>
                   <MenuItem onClick={() => { setShowExportMenu(false); onExportMd(); }}>Export Markdown</MenuItem>
                   <MenuItem onClick={() => { setShowExportMenu(false); onExportPdf(); }}>Export PDF</MenuItem>
@@ -236,9 +262,25 @@ export default function EditorHeader({ dirty, onSave, onBack, onExportMd, onExpo
         </div>
       </div>
 
-      {/* Variables panel */}
       {showVariables && <VariablesPanel onClose={() => setShowVariables(false)} />}
     </>
+  );
+}
+
+function GhostBtn({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        height: 28, padding: '0 10px', fontSize: 11, fontWeight: 500, borderRadius: 4, cursor: 'pointer',
+        background: 'transparent', color: 'var(--text-secondary)',
+        border: '1px solid rgba(42,51,71,0.7)', transition: 'all 0.15s',
+      }}
+      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'; (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-2)'; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -248,10 +290,11 @@ function MenuItem({ children, onClick }: { children: React.ReactNode; onClick: (
       onClick={onClick}
       style={{
         display: 'block', width: '100%', padding: '9px 16px', textAlign: 'left',
-        background: 'none', border: 'none', color: 'var(--text)', fontSize: 13, cursor: 'pointer'
+        background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer',
+        transition: 'all 0.1s',
       }}
-      onMouseEnter={e => (e.currentTarget.style.background = 'var(--border)')}
-      onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(74,158,255,0.06)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'none'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; }}
     >
       {children}
     </button>
