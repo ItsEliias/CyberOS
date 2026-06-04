@@ -1,10 +1,26 @@
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useStore } from '../../store';
 import NoteListItem from './NoteListItem';
 import BulkActionBar from '../BulkActionBar';
 import { parseMarkdown } from '../../lib/markdown';
 import type { NoteFile } from '@shared/types';
+
+function NoteSkeletonRow({ delay }: { delay: number }) {
+  return (
+    <div className="px-4 py-3 border-b" style={{ borderColor: 'rgba(42,51,71,0.4)', borderLeft: '3px solid transparent', opacity: 0.7 - delay * 0.1 }}>
+      <div className="flex items-center justify-between mb-2">
+        <div className="skeleton h-3 rounded" style={{ width: `${55 + delay * 10}%` }} />
+        <div className="skeleton h-2 rounded w-8" />
+      </div>
+      <div className="skeleton h-2 rounded mb-2" style={{ width: '75%' }} />
+      <div className="flex gap-1">
+        <div className="skeleton h-4 rounded-full w-12" />
+        {delay < 2 && <div className="skeleton h-4 rounded-full w-10" />}
+      </div>
+    </div>
+  );
+}
 
 type SortMode = 'recent' | 'alpha' | 'tag';
 
@@ -35,7 +51,14 @@ export default function NoteList({ onOpenNote, onDeleteNote, onRenameNote }: Pro
   const [sort, setSort]       = useState<SortMode>('recent');
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [localOrder, setLocalOrder]   = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
   const dragIdxRef = useRef<number | null>(null);
+
+  // Show skeleton briefly on first mount for a polished feel
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 600);
+    return () => clearTimeout(t);
+  }, []);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -150,11 +173,30 @@ export default function NoteList({ onOpenNote, onDeleteNote, onRenameNote }: Pro
 
       {/* Search bar */}
       <div className="px-3 pt-3 pb-2 shrink-0">
-        <input value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Filter notes…"
-          className="w-full px-3 py-1.5 rounded-lg text-xs outline-none"
-          style={{ background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)' }}
-        />
+        <div className="relative">
+          <svg
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+            width="12" height="12" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-dim)' }}
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Filter notes…"
+            className="w-full pl-8 pr-7 py-1.5 rounded-lg text-xs input-glow"
+            style={{ background: 'var(--bg3)', border: '1px solid rgba(42,51,71,0.6)', color: 'var(--text)', outline: 'none' }}
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center rounded-full text-[10px] transition-colors hover:bg-white/10"
+              style={{ color: 'var(--text-dim)' }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Sort row */}
@@ -187,8 +229,22 @@ export default function NoteList({ onOpenNote, onDeleteNote, onRenameNote }: Pro
       <div className="flex-1 overflow-y-auto"
         style={{ scrollbarWidth: 'thin', scrollbarColor: 'var(--border) transparent' }}>
 
+        {/* Skeleton loaders on initial mount */}
+        <AnimatePresence>
+          {loading && (
+            <motion.div
+              key="skeletons"
+              initial={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              {[0, 1, 2, 3, 4].map(i => <NoteSkeletonRow key={i} delay={i} />)}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Pinned section */}
-        {pinned.length > 0 && (
+        {!loading && pinned.length > 0 && (
           <>
             <div className="px-4 pt-2 pb-1 text-[9px] uppercase tracking-widest font-semibold"
               style={{ color: 'var(--text-dim)' }}>Pinned</div>
@@ -217,14 +273,40 @@ export default function NoteList({ onOpenNote, onDeleteNote, onRenameNote }: Pro
         )}
 
         {/* All notes */}
-        {unpinned.length === 0 && pinned.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3 py-8 text-center px-4">
-            <div className="text-3xl opacity-30">📄</div>
-            <div className="text-xs" style={{ color: 'var(--text-dim)' }}>
-              {search ? 'No notes match your search' : 'No notes yet'}
+        {!loading && unpinned.length === 0 && pinned.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, ease: [0.2, 0.8, 0.2, 1] }}
+            className="flex flex-col items-center justify-center h-full gap-4 py-8 text-center px-6"
+          >
+            <div style={{ opacity: 0.35 }}>
+              {search ? (
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" style={{ color: '#7bb8ff' }}>
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  <line x1="8" y1="11" x2="14" y2="11" />
+                </svg>
+              ) : (
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" style={{ color: '#7bb8ff' }}>
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <line x1="10" y1="9" x2="8" y2="9" />
+                </svg>
+              )}
             </div>
-          </div>
-        ) : (
+            <div>
+              <div className="text-xs font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>
+                {search ? 'No results' : 'No notes yet'}
+              </div>
+              <div className="text-[10px] leading-relaxed" style={{ color: 'var(--text-dim)', maxWidth: '18ch', margin: '0 auto' }}>
+                {search ? `Nothing matched "${search}"` : 'Create your first note to get started'}
+              </div>
+            </div>
+          </motion.div>
+        ) : !loading && (
           unpinned.map((note, i) => (
             <NoteListItem key={note.path} note={note} index={i}
               isActive={activeNote?.path === note.path}

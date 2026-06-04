@@ -11,6 +11,7 @@ interface MetricCardProps {
   className?: string
   icon?: React.ReactNode
   sublabel?: string
+  maxValue?: number
 }
 
 export default function MetricCard({
@@ -23,6 +24,7 @@ export default function MetricCard({
   className = '',
   icon,
   sublabel,
+  maxValue,
 }: MetricCardProps) {
   const count   = useMotionValue(0)
   const rounded = useTransform(count, v => Math.round(v))
@@ -31,11 +33,11 @@ export default function MetricCard({
 
   useEffect(() => {
     if (!once.current) {
-      const ctrl = animate(count, value, { duration: 0.7, ease: [0.2, 0.8, 0.2, 1] })
+      const ctrl = animate(count, value, { duration: 0.9, ease: [0.2, 0.8, 0.2, 1] })
       once.current = true
       return ctrl.stop
     } else {
-      count.set(value)
+      animate(count, value, { duration: 0.5, ease: [0.2, 0.8, 0.2, 1] })
     }
   }, [value, count])
 
@@ -47,10 +49,18 @@ export default function MetricCard({
     ? deltaUp === false ? 'text-[#f85149]' : 'text-[#3fb950]'
     : ''
 
+  const progressPct = maxValue && maxValue > 0 ? Math.min(100, (value / maxValue) * 100) : null
+
   return (
     <div
-      className={`bg-surface-1 border border-border-default/75 rounded-md p-4 shadow-elevation-2 flex flex-col gap-1 ${className}`}
+      className={`relative bg-surface-1 border border-border-default/75 rounded-lg p-4 shadow-elevation-2 flex flex-col gap-1 overflow-hidden card-hover ${className}`}
     >
+      {/* Accent top strip */}
+      <div
+        className="absolute top-0 left-0 right-0 h-[2px] rounded-t-lg"
+        style={{ background: `linear-gradient(90deg, ${accentColor}00 0%, ${accentColor}60 50%, ${accentColor}00 100%)` }}
+      />
+
       <div className="flex items-center justify-between">
         <span className="text-2xs font-medium uppercase tracking-widest text-text-muted">
           {label}
@@ -85,6 +95,19 @@ export default function MetricCard({
         <p className={`text-2xs font-mono mt-0.5 ${deltaColor}`}>
           {deltaUp !== false ? '↑' : '↓'} {delta}
         </p>
+      )}
+
+      {/* Optional progress bar at bottom */}
+      {progressPct !== null && (
+        <div className="mt-2 h-1 rounded-full overflow-hidden" style={{ background: 'rgba(42,51,71,0.4)' }}>
+          <motion.div
+            className="h-full rounded-full"
+            style={{ background: accentColor, opacity: 0.7 }}
+            initial={{ width: '0%' }}
+            animate={{ width: `${progressPct}%` }}
+            transition={{ duration: 0.9, ease: [0.2, 0.8, 0.2, 1], delay: 0.1 }}
+          />
+        </div>
       )}
     </div>
   )

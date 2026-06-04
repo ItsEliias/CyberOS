@@ -282,15 +282,15 @@ export default function VaultView({ onOpenNote }: Props) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => window.ghostvault.revealInFinder(vaultPath)}
-            className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-white/5"
-            style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+            className="text-xs px-3 py-1.5 rounded-xl border transition-all hover:bg-white/5 press-scale"
+            style={{ borderColor: 'rgba(42,51,71,0.6)', color: 'var(--text-muted)' }}
           >
             Reveal in Finder
           </button>
           <button
             onClick={() => setNewNoteFolder(folders[0] || 'Notes')}
-            className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all hover:opacity-80"
-            style={{ background: '#7bb8ff', color: '#0a0a0f' }}
+            className="text-xs px-4 py-1.5 rounded-xl font-semibold transition-all hover:opacity-90 press-scale"
+            style={{ background: '#7bb8ff', color: '#07080f' }}
           >
             + New Note
           </button>
@@ -298,13 +298,28 @@ export default function VaultView({ onOpenNote }: Props) {
       </div>
 
       {/* Stats row */}
-      <div className="px-6 py-3 border-b flex gap-6 shrink-0" style={{ borderColor: 'var(--border)' }}>
+      <div className="px-6 py-3 border-b flex gap-3 shrink-0" style={{ borderColor: 'var(--border)' }}>
         {[
-          { label: 'Notes', value: notes.length },
-          { label: 'Folders', value: folders.length },
+          { label: 'Notes', value: notes.length, icon: (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          )},
+          { label: 'Folders', value: folders.length, icon: (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          )},
         ].map(s => (
-          <div key={s.label} className="glass-card px-4 py-2 flex items-center gap-3">
-            <span className="text-lg font-bold font-mono" style={{ color: '#7bb8ff' }}>{s.value}</span>
+          <div key={s.label}
+            className="relative overflow-hidden px-4 py-2.5 rounded-xl flex items-center gap-3 card-hover"
+            style={{
+              background: 'rgba(123,184,255,0.05)',
+              border: '1px solid rgba(123,184,255,0.14)',
+              flex: '0 0 auto',
+            }}
+          >
+            <div className="absolute top-0 left-0 right-0 h-[2px] rounded-t-xl"
+              style={{ background: 'linear-gradient(90deg, transparent, rgba(123,184,255,0.45), transparent)' }}
+            />
+            <span style={{ color: '#7bb8ff', opacity: 0.7 }}>{s.icon}</span>
+            <span className="text-base font-bold font-mono tabular-nums" style={{ color: '#7bb8ff', textShadow: '0 0 12px rgba(123,184,255,0.35)' }}>{s.value}</span>
             <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{s.label}</span>
           </div>
         ))}

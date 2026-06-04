@@ -1,7 +1,7 @@
 // GhostVault — EditorView (redesigned: glass panel aesthetic, soft blue accent)
 
 import { useRef, useCallback, useEffect, useMemo, useState } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useStore } from '../store';
 import { parseMarkdown, setWikiLinkOpener } from '../lib/markdown';
 import WikilinkAutocomplete from './WikilinkAutocomplete';
@@ -368,9 +368,42 @@ export default function EditorView({
 
       {/* Editor + Preview panes */}
       <div className="flex flex-1 min-h-0 relative">
+        {!activeNote && (
+          <motion.div
+            key="editor-empty"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
+            className="flex-1 flex flex-col items-center justify-center gap-5 text-center px-8"
+            style={{ pointerEvents: 'none' }}
+          >
+            <div style={{ opacity: 0.22 }}>
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" style={{ color: '#7bb8ff' }}>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+                <line x1="10" y1="9" x2="8" y2="9" />
+              </svg>
+            </div>
+            <div>
+              <div className="text-sm font-semibold mb-1.5" style={{ color: 'rgba(139,148,158,0.55)' }}>
+                No note open
+              </div>
+              <div className="text-xs leading-relaxed" style={{ color: 'rgba(72,79,88,0.7)', maxWidth: '24ch', margin: '0 auto' }}>
+                Select a note from the list or press{' '}
+                <kbd className="px-1 py-0.5 rounded text-[10px] font-mono" style={{ background: 'rgba(42,51,71,0.4)', color: 'rgba(139,148,158,0.6)', border: '1px solid rgba(42,51,71,0.5)' }}>
+                  ⌘N
+                </kbd>
+                {' '}to create one
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {editorMode !== 'preview' && (
           <div
-            className={`flex flex-col ${editorMode === 'split' ? 'w-1/2' : 'flex-1'}`}
+            className={`flex flex-col ${editorMode === 'split' ? 'w-1/2' : 'flex-1'} ${!activeNote ? 'hidden' : ''}`}
             style={{ borderRight: editorMode === 'split' ? '1px solid rgba(42,51,71,0.35)' : 'none' }}
           >
             <textarea
@@ -378,7 +411,7 @@ export default function EditorView({
               value={editorContent}
               onChange={handleInput}
               onKeyDown={handleKeyDown}
-              placeholder={activeNote ? '' : 'Select or create a note to start editing...'}
+              placeholder=""
               className="flex-1 w-full p-5 resize-none outline-none"
               style={{
                 background: 'transparent',

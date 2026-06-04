@@ -220,29 +220,34 @@ export default function Sidebar({ onNewNote, onNewFolder, onOpenNote, onContextM
       }}
     >
       {/* Nav items */}
-      <div className="py-2" style={{ borderBottom: '1px solid rgba(42,51,71,0.3)' }}>
+      <div className="py-2 px-1.5" style={{ borderBottom: '1px solid rgba(42,51,71,0.3)' }}>
         {NAV_ITEMS.map(item => {
           const isActive = activeView === item.id;
           return (
             <button
               key={item.id}
               onClick={() => setActiveView(item.id)}
-              className="w-full flex items-center gap-3 px-3 py-1.5 text-left transition-colors relative"
-              style={{ fontFamily: 'var(--font-display)' }}
-              onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+              className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-left relative"
+              style={{
+                fontFamily: 'var(--font-display)',
+                background: isActive ? 'rgba(123,184,255,0.1)' : 'transparent',
+                transition: 'background 150ms ease',
+                marginBottom: 1,
+              }}
+              onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
               onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
             >
               {isActive && (
                 <motion.div
                   layoutId="sidebar-active"
-                  className="absolute left-0 top-0.5 bottom-0.5 rounded-r-full"
-                  style={{ width: 2.5, background: '#7bb8ff', boxShadow: '0 0 6px rgba(123,184,255,0.5)' }}
+                  className="absolute inset-0 rounded-lg"
+                  style={{ background: 'rgba(123,184,255,0.1)', border: '1px solid rgba(123,184,255,0.15)' }}
                   transition={{ type: 'spring', stiffness: 400, damping: 35 }}
                 />
               )}
               <span
                 className="relative z-10 flex-shrink-0"
-                style={{ color: isActive ? '#7bb8ff' : 'rgba(72,79,88,0.75)' }}
+                style={{ color: isActive ? '#7bb8ff' : 'rgba(72,79,88,0.75)', filter: isActive ? 'drop-shadow(0 0 4px rgba(123,184,255,0.4))' : 'none' }}
               >
                 {item.icon}
               </span>
