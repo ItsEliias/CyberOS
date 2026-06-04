@@ -1,132 +1,158 @@
+/* ── Fonts (offline-safe via @fontsource) ──────────────────────────────── */
+@import '@fontsource/geist-sans/400.css';
+@import '@fontsource/geist-sans/500.css';
+@import '@fontsource/geist-sans/600.css';
+@import '@fontsource/geist-sans/700.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+@import '@fontsource/jetbrains-mono/600.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ─── CyberOS Design Bible — Global Styles ────────────────────────────────── */
+/* ── CyberOS Design System Tokens v2 ──────────────────────────────────── */
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  /* SURFACES — layered depth */
+  --surface-0:     #07080f;
+  --surface-1:     #0d0e18;
+  --surface-2:     #131525;
+  --surface-3:     #191c32;
+  --surface-glass: rgba(13, 14, 24, 0.72);
+  --surface-glass-strong: rgba(10, 11, 20, 0.88);
+
+  /* ELEVATION */
+  --elevation-1: 0 1px 3px rgba(0,0,0,.5),  0 1px 2px rgba(0,0,0,.35);
+  --elevation-2: 0 4px 16px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.4);
+  --elevation-3: 0 12px 40px rgba(0,0,0,.6), 0 4px 12px rgba(0,0,0,.45);
+  --elevation-4: 0 24px 64px rgba(0,0,0,.65),0 8px 24px rgba(0,0,0,.5);
+
+  /* BORDERS */
+  --border-subtle:  rgba(42, 51, 71, 0.35);
+  --border-default: rgba(42, 51, 71, 0.75);
+  --border-strong:  rgba(61, 79, 107, 0.9);
+  --border-glass:   rgba(255, 255, 255, 0.055);
+
+  /* TEXT */
+  --text-primary:   #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted:     #484f58;
+
+  /* SEVERITY */
+  --sev-critical: #f85149; --sev-high: #ff8c42;
+  --sev-medium:   #d29922; --sev-low:  #4a9eff; --sev-info: #8b949e;
+
+  /* STATES */
+  --state-online: #3fb950; --state-offline: #484f58;
+  --state-blocked:#f85149; --state-pending: #d29922;
+
+  /* ACCENT — Dashboard blue (override per-app) */
+  --accent:       #4a9eff;
+  --accent-rgb:   74, 158, 255;
+  --accent-tint:  rgba(74, 158, 255, 0.08);
+  --accent-tint2: rgba(74, 158, 255, 0.15);
+  --accent-glow:  rgba(74, 158, 255, 0.28);
+  --accent-border:rgba(74, 158, 255, 0.30);
+
+  /* TYPOGRAPHY */
+  --font-display: 'Geist Sans', 'Inter', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Fira Code', monospace;
+
+  /* RADIUS */
+  --radius-xs: 4px; --radius-sm: 6px; --radius-md: 10px;
+  --radius-lg: 14px;--radius-xl: 20px;--radius-full: 9999px;
+
+  /* MOTION */
+  --motion-fast:   150ms;
+  --motion-base:   250ms;
+  --motion-slow:   400ms;
+  --ease:          cubic-bezier(0.2, 0.8, 0.2, 1);
+  --spring:        cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── Global reset + canvas ─────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body, #root {
   height: 100%;
-  min-height: 100vh;
   overflow: hidden;
-  background-color: #0a0a0f !important;
-  background: radial-gradient(ellipse at 20% 0%, rgba(74, 158, 255, 0.04) 0%, #0a0a0f 50%) !important;
-  color: #e2e8f0;
-  font-family: 'Inter', 'SF Pro Display', system-ui, sans-serif;
+  background:
+    radial-gradient(ellipse at 18% 0%, rgba(74, 158, 255, 0.04) 0%, transparent 55%),
+    #07080f;
+  color: var(--text-primary);
+  font-family: var(--font-display);
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ─── Selection ───────────────────────────────────────────────────────────── */
+/* ── Scrollbars ─────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(42, 51, 71, 0.45); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(42, 51, 71, 0.75); }
 
-::selection {
-  background: rgba(74, 158, 255, 0.25);
-  color: inherit;
-}
-
-*:not(input):not(textarea):not(select) {
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-input, textarea, select, button {
-  user-select: text;
-  -webkit-user-select: text;
-}
-
-/* ─── Drag Regions (macOS frameless) ──────────────────────────────────────── */
-
-.drag-region {
-  -webkit-app-region: drag;
-}
-
-.no-drag {
-  -webkit-app-region: no-drag;
-}
-
-/* ─── Scrollbars ──────────────────────────────────────────────────────────── */
-
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(42, 51, 71, 0.5);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(42, 51, 71, 0.8);
-}
-
-/* ─── Focus Styles ────────────────────────────────────────────────────────── */
-
+/* ── Focus ──────────────────────────────────────────────────────────────── */
 *:focus-visible {
   outline: 1px solid rgba(74, 158, 255, 0.5);
   outline-offset: 1px;
   border-radius: 4px;
 }
 
-/* ─── Tabular Nums ────────────────────────────────────────────────────────── */
+/* ── Selection ──────────────────────────────────────────────────────────── */
+::selection { background: rgba(74, 158, 255, 0.2); color: inherit; }
 
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
-}
+/* ── User-select ────────────────────────────────────────────────────────── */
+*:not(input):not(textarea):not(select) { user-select: none; -webkit-user-select: none; }
+input, textarea, select, button { user-select: text; -webkit-user-select: text; }
 
-/* ─── Transitions ─────────────────────────────────────────────────────────── */
+/* ── Drag regions ───────────────────────────────────────────────────────── */
+.drag-region { -webkit-app-region: drag; }
+.no-drag     { -webkit-app-region: no-drag; }
 
-button, a, input, select {
-  transition: all 0.15s ease-out;
-}
+/* ── Utilities ──────────────────────────────────────────────────────────── */
+.tabular-nums { font-variant-numeric: tabular-nums; }
+.font-display { font-family: var(--font-display); }
+.font-mono    { font-family: var(--font-mono); }
 
-/* ─── Glassmorphism Card ──────────────────────────────────────────────────── */
-
+/* ── Glass card ─────────────────────────────────────────────────────────── */
 .glass-card {
-  background: rgba(22, 27, 39, 0.75);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(42, 51, 71, 0.6);
-  border-radius: 8px;
+  background: var(--surface-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  box-shadow: var(--elevation-2);
 }
 
-/* ─── Status Pulse Glow Animation ─────────────────────────────────────────── */
-
+/* ── Animations ─────────────────────────────────────────────────────────── */
 @keyframes statusPulse {
-  0% {
-    box-shadow: 0 0 0 0 var(--pulse-color, rgba(63, 185, 80, 0.4));
+  0%   { box-shadow: 0 0 0 0   rgba(var(--pulse-rgb, 63,185,80), 0.5); }
+  70%  { box-shadow: 0 0 0 5px rgba(var(--pulse-rgb, 63,185,80), 0); }
+  100% { box-shadow: 0 0 0 0   rgba(var(--pulse-rgb, 63,185,80), 0); }
+}
+.status-dot-pulse { animation: statusPulse 2s ease-out infinite; }
+
+@keyframes glowPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+.glow-pulse { animation: glowPulse 2.4s ease-in-out infinite; }
+
+/* ── Accent left border ─────────────────────────────────────────────────── */
+.accent-border-left { border-left: 2px solid var(--accent); }
+
+/* ── Metric glow ────────────────────────────────────────────────────────── */
+.metric-glow { filter: drop-shadow(0 0 8px var(--glow-color, rgba(74, 158, 255, 0.5))); }
+
+/* ── Reduced motion ─────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
-  70% {
-    box-shadow: 0 0 0 6px var(--pulse-color-fade, rgba(63, 185, 80, 0));
-  }
-  100% {
-    box-shadow: 0 0 0 0 var(--pulse-color-fade, rgba(63, 185, 80, 0));
-  }
-}
-
-.status-dot-pulse {
-  animation: statusPulse 2s ease-out infinite;
-}
-
-/* ─── Metric Glow ─────────────────────────────────────────────────────────── */
-
-.metric-glow {
-  filter: drop-shadow(0 0 8px var(--glow-color, rgba(74, 158, 255, 0.5)));
-}
-
-.radar-glow {
-  filter: drop-shadow(0 0 4px rgba(74, 158, 255, 0.6));
-}
-
-/* ─── Accent Left Border Utility ──────────────────────────────────────────── */
-
-.accent-border-left {
-  border-left: 3px solid var(--accent-color, #4a9eff);
 }

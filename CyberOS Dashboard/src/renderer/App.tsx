@@ -38,6 +38,9 @@ import SettingsView from './views/SettingsView'
 // Apps screen
 import AppTabsView from './views/AppTabsView'
 
+// Design system reference (Phase A sign-off)
+import StyleReferenceView from './views/StyleReferenceView'
+
 // ─── Transition variants ─────────────────────────────────────────────────────
 
 const pageVariants = {
@@ -171,6 +174,20 @@ export default function App() {
               className="flex-1 overflow-y-auto"
             >
               <AppTabsView />
+            </motion.div>
+          )}
+
+          {activeView === 'design-system' && (
+            <motion.div
+              key="design-system"
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+              className="flex-1 flex min-h-0"
+            >
+              <StyleReferenceView />
             </motion.div>
           )}
         </AnimatePresence>

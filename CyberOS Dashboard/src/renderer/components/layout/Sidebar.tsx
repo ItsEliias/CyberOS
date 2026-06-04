@@ -104,6 +104,29 @@ export default function Sidebar() {
         {/* Divider */}
         <div className="my-3 border-t border-border-subtle" />
 
+        {/* Design System (Phase A sign-off) */}
+        <button
+          onClick={() => setActiveView('design-system')}
+          className={`w-full h-9 flex items-center gap-3 px-3 rounded-md text-sm font-medium transition-colors relative ${
+            activeView === 'design-system'
+              ? 'text-text-primary bg-bg-interactive'
+              : 'text-text-secondary hover:text-text-primary hover:bg-bg-interactive/50'
+          }`}
+        >
+          {activeView === 'design-system' && (
+            <motion.div
+              layoutId="sidebar-active"
+              className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-accent rounded-r-full"
+              transition={{ type: 'tween', duration: 0.15 }}
+            />
+          )}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+            className={activeView === 'design-system' ? 'text-accent' : ''}>
+            <circle cx="12" cy="12" r="2" /><circle cx="12" cy="5" r="2" /><circle cx="12" cy="19" r="2" />
+          </svg>
+          <span>Design System</span>
+        </button>
+
         {/* Settings */}
         <button
           onClick={() => setActiveView('settings')}
