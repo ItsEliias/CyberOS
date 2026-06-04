@@ -225,6 +225,7 @@ interface SectionItemProps {
 function SectionItem({ section, isActive, onClick, onToggleVisible }: SectionItemProps) {
   const controls = useDragControls();
   const [hovered, setHovered] = useState(false);
+  const [dragging, setDragging] = useState(false);
 
   return (
     <Reorder.Item
@@ -243,15 +244,22 @@ function SectionItem({ section, isActive, onClick, onToggleVisible }: SectionIte
           display: 'flex',
           alignItems: 'center',
           gap: 4,
-          background: isActive ? 'rgba(74,158,255,0.07)' : hovered ? 'rgba(255,255,255,0.025)' : 'transparent',
+          background: dragging
+            ? 'rgba(74,158,255,0.12)'
+            : isActive ? 'rgba(74,158,255,0.07)' : hovered ? 'rgba(255,255,255,0.025)' : 'transparent',
           borderLeft: isActive ? '2px solid #4a9eff' : '2px solid transparent',
           opacity: section.visible ? 1 : 0.4,
-          transition: 'background 0.15s, border-color 0.15s, opacity 0.15s',
+          boxShadow: dragging ? '0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(74,158,255,0.3)' : undefined,
+          transform: dragging ? 'scale(1.02)' : undefined,
+          transition: 'background 0.15s, border-color 0.15s, opacity 0.15s, box-shadow 0.15s, transform 0.15s',
+          zIndex: dragging ? 10 : undefined,
+          position: 'relative',
         }}
       >
         {/* Drag handle — visible on row hover */}
         <span
-          onPointerDown={e => { e.stopPropagation(); controls.start(e); }}
+          onPointerDown={e => { e.stopPropagation(); setDragging(true); controls.start(e); }}
+          onPointerUp={() => setDragging(false)}
           title="Drag to reorder"
           style={{
             cursor: 'grab', fontSize: 11,

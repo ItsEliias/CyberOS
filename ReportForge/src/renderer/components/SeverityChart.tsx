@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Finding, Severity } from '@shared/types';
 import { SEV_COLORS, SEVERITIES } from '../lib/defaults';
 
@@ -16,6 +16,8 @@ const SEV_LABELS: Record<Severity, string> = {
 
 export default function SeverityChart({ findings }: Props) {
   const barsRef = useRef<SVGGElement | null>(null);
+  const [hoveredSev, setHoveredSev] = useState<Severity | null>(null);
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; sev: Severity } | null>(null);
 
   const counts = SEVERITIES.reduce((acc, s) => {
     acc[s] = findings.filter(f => f.severity === s).length;
@@ -61,12 +63,13 @@ export default function SeverityChart({ findings }: Props) {
   }
 
   return (
-    <div style={{ padding: '12px 0' }}>
+    <div style={{ padding: '12px 0', position: 'relative' }}>
       <svg
         width={chartWidth}
         height={svgHeight}
         style={{ display: 'block', overflow: 'visible' }}
         aria-label="Severity distribution chart"
+        onMouseLeave={() => { setHoveredSev(null); setTooltip(null); }}
       >
         <g ref={barsRef}>
           {SEVERITIES.map((sev, i) => {
@@ -74,9 +77,22 @@ export default function SeverityChart({ findings }: Props) {
             const barWidth = count === 0 ? 0 : Math.max(4, (count / max) * barMaxWidth);
             const y = i * (barHeight + gap);
             const color = SEV_COLORS[sev];
+            const isHovered = hoveredSev === sev;
+            const isDimmed  = hoveredSev !== null && !isHovered;
 
             return (
-              <g key={sev} transform={`translate(0, ${y})`}>
+              <g
+                key={sev}
+                transform={`translate(0, ${y})`}
+                style={{ cursor: count > 0 ? 'pointer' : 'default' }}
+                onMouseEnter={(e) => {
+                  if (count > 0) {
+                    setHoveredSev(sev);
+                    const svgRect = (e.currentTarget.closest('svg') as SVGSVGElement).getBoundingClientRect();
+                    setTooltip({ x: labelWidth + barWidth + 8, y: y + barHeight / 2, sev });
+                  }
+                }}
+              >
                 <text
                   x={labelWidth - 6}
                   y={barHeight / 2 + 1}
@@ -85,7 +101,7 @@ export default function SeverityChart({ findings }: Props) {
                   fontSize="10"
                   fontWeight="500"
                   fill={count > 0 ? color : 'var(--text-muted)'}
-                  style={{ fontFamily: 'inherit' }}
+                  style={{ fontFamily: 'inherit', opacity: isDimmed ? 0.35 : 1, transition: 'opacity 0.15s' }}
                 >
                   {SEV_LABELS[sev]}
                 </text>
@@ -109,7 +125,8 @@ export default function SeverityChart({ findings }: Props) {
                     height={barHeight}
                     rx={3}
                     fill={color}
-                    opacity={0.85}
+                    opacity={isDimmed ? 0.18 : isHovered ? 1 : 0.85}
+                    style={{ transition: 'opacity 0.15s' }}
                   />
                 )}
                 {/* Count */}
@@ -120,7 +137,7 @@ export default function SeverityChart({ findings }: Props) {
                   fontSize="10"
                   fontWeight={count > 0 ? '700' : '400'}
                   fill={count > 0 ? color : 'var(--text-muted)'}
-                  style={{ fontFamily: 'inherit' }}
+                  style={{ fontFamily: 'inherit', opacity: isDimmed ? 0.35 : 1, transition: 'opacity 0.15s' }}
                 >
                   {count}
                 </text>
@@ -129,6 +146,26 @@ export default function SeverityChart({ findings }: Props) {
           })}
         </g>
       </svg>
+
+      {/* SVG tooltip */}
+      {tooltip && hoveredSev && (
+        <div style={{
+          position: 'absolute',
+          left: tooltip.x + 16,
+          top: tooltip.y - 20,
+          background: 'var(--surface-1)',
+          border: `1px solid ${SEV_COLORS[hoveredSev]}55`,
+          borderRadius: 6, padding: '6px 10px',
+          fontSize: 11, pointerEvents: 'none',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+          zIndex: 10,
+        }}>
+          <span style={{ fontWeight: 700, color: SEV_COLORS[hoveredSev] }}>{SEV_LABELS[hoveredSev]}</span>
+          <span style={{ color: 'var(--text-secondary)', marginLeft: 6 }}>
+            {counts[hoveredSev]} ({Math.round((counts[hoveredSev] / total) * 100)}%)
+          </span>
+        </div>
+      )}
       {/* Mini data table */}
       <div style={{ marginTop: 10, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 8 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>

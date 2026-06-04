@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useStore } from '../store';
 import { makeBlankFinding, SEVERITIES, SEV_COLORS } from '../lib/defaults';
 import { SeveritySummary } from './SeverityBadge';
@@ -116,6 +117,18 @@ export default function FindingsPanel() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
   const [showChart, setShowChart] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
   if (!activeReport) return null;
 
@@ -232,7 +245,18 @@ export default function FindingsPanel() {
                 borderBottom: '1px solid rgba(255,255,255,0.04)',
                 textTransform: 'uppercase', letterSpacing: '0.06em',
               }}>
-                <th style={{ padding: '7px 16px', textAlign: 'left', fontWeight: 600 }}>Title</th>
+                <th style={{ padding: '7px 12px', width: 32 }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.size > 0 && selectedIds.size === sorted.length}
+                    onChange={e => {
+                      if (e.target.checked) setSelectedIds(new Set(sorted.map(f => f.id)));
+                      else clearSelection();
+                    }}
+                    style={{ accentColor: '#4a9eff', cursor: 'pointer' }}
+                  />
+                </th>
+                <th style={{ padding: '7px 8px', textAlign: 'left', fontWeight: 600 }}>Title</th>
                 <th style={{ padding: '7px 8px', textAlign: 'left', fontWeight: 600, width: 100 }}>Severity</th>
                 <th style={{ padding: '7px 8px', textAlign: 'left', fontWeight: 600, width: 80 }}>CVSS</th>
                 <th style={{ width: 40 }} />
@@ -241,6 +265,7 @@ export default function FindingsPanel() {
             <tbody>
               {sorted.map(f => {
                 const isActive = activeFindingId === f.id;
+                const isChecked = selectedIds.has(f.id);
                 const sevColor = SEV_COLORS[f.severity as Severity];
                 return (
                   <tr
@@ -249,14 +274,22 @@ export default function FindingsPanel() {
                     style={{
                       borderBottom: '1px solid rgba(255,255,255,0.03)',
                       cursor: 'pointer',
-                      background: isActive ? `${sevColor}0d` : 'transparent',
+                      background: isChecked ? 'rgba(74,158,255,0.07)' : isActive ? `${sevColor}0d` : 'transparent',
                       transition: 'background 0.15s',
                       position: 'relative',
                     }}
-                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = isActive ? `${sevColor}0d` : 'transparent'; }}
+                    onMouseEnter={e => { if (!isActive && !isChecked) e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = isChecked ? 'rgba(74,158,255,0.07)' : isActive ? `${sevColor}0d` : 'transparent'; }}
                   >
-                    <td style={{ padding: '9px 16px', fontSize: 13, color: 'var(--text-primary)' }}>
+                    <td style={{ padding: '9px 12px' }} onClick={e => { e.stopPropagation(); toggleSelect(f.id); }}>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleSelect(f.id)}
+                        style={{ accentColor: '#4a9eff', cursor: 'pointer' }}
+                      />
+                    </td>
+                    <td style={{ padding: '9px 8px', fontSize: 13, color: 'var(--text-primary)' }}>
                       <div className="flex items-center gap-2">
                         <span style={{
                           width: 3, height: 20, borderRadius: 99,
@@ -296,6 +329,52 @@ export default function FindingsPanel() {
               })}
             </tbody>
           </table>
+
+          {/* Bulk action bar — slides up when items selected */}
+          <AnimatePresence>
+            {selectedIds.size > 0 && (
+              <motion.div
+                initial={{ y: 56, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 56, opacity: 0 }}
+                transition={{ type: 'spring', damping: 24, stiffness: 320 }}
+                style={{
+                  position: 'sticky', bottom: 0,
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '10px 16px',
+                  background: 'rgba(13,14,24,0.96)',
+                  borderTop: '1px solid rgba(74,158,255,0.25)',
+                  backdropFilter: 'blur(8px)',
+                }}
+              >
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#4a9eff', flex: 1 }}>
+                  {selectedIds.size} selected
+                </span>
+                <button
+                  style={{
+                    padding: '4px 12px', fontSize: 11, fontWeight: 600, borderRadius: 4, cursor: 'pointer',
+                    background: 'rgba(210,153,34,0.12)', color: '#d29922', border: '1px solid rgba(210,153,34,0.3)',
+                  }}
+                >
+                  Change Severity
+                </button>
+                <button
+                  style={{
+                    padding: '4px 12px', fontSize: 11, fontWeight: 600, borderRadius: 4, cursor: 'pointer',
+                    background: 'rgba(248,81,73,0.12)', color: '#f85149', border: '1px solid rgba(248,81,73,0.3)',
+                  }}
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={clearSelection}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 13 }}
+                >
+                  ✕
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         )}
       </div>
 

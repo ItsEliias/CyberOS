@@ -59,11 +59,45 @@ const TYPE_CONFIG: Record<ToastType, { color: string; icon: React.ReactNode; bg:
   },
 };
 
+const TOAST_STACK_LIMIT = 3;
+
 export function ToastContainer({ toasts, onRemove }: { toasts: ToastItem[]; onRemove: (id: string) => void }) {
+  const visible = toasts.slice(-TOAST_STACK_LIMIT);
+  const overflowCount = Math.max(0, toasts.length - TOAST_STACK_LIMIT);
+
   return (
     <div style={{ position: 'fixed', top: 60, right: 16, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 8, pointerEvents: 'none' }}>
+      {/* Overflow chip */}
       <AnimatePresence>
-        {toasts.map(t => {
+        {overflowCount > 0 && (
+          <motion.div
+            key="overflow-chip"
+            initial={{ opacity: 0, y: -8, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.9 }}
+            transition={{ type: 'spring', damping: 22, stiffness: 320 }}
+            style={{
+              alignSelf: 'flex-end',
+              pointerEvents: 'all',
+              cursor: 'default',
+              background: 'rgba(42,51,71,0.85)',
+              border: '1px solid rgba(74,158,255,0.3)',
+              borderRadius: 99,
+              padding: '4px 12px',
+              fontSize: 11,
+              color: '#4a9eff',
+              fontWeight: 600,
+              backdropFilter: 'blur(6px)',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.4)',
+            }}
+          >
+            + {overflowCount} more
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {visible.map(t => {
           const cfg = TYPE_CONFIG[t.type];
           return (
             <motion.div

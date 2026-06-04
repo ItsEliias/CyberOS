@@ -102,6 +102,20 @@ export default function EditorHeader({ dirty, onSave, onBack, onExportMd, onExpo
                 }}
                 title="Click to rename"
               >
+                {dirty && (
+                  <span
+                    style={{
+                      color: '#d29922',
+                      marginRight: 4,
+                      fontSize: 16,
+                      lineHeight: 1,
+                      verticalAlign: 'middle',
+                    }}
+                    title="Unsaved changes"
+                  >
+                    •
+                  </span>
+                )}
                 {activeReport.title}
               </div>
               {dirty && (
