@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../../store';
 import type { Finding, SessionFindings } from '@shared/types';
@@ -6,6 +6,26 @@ import Badge from '../ui/Badge';
 import SectionHeader from '../ui/SectionHeader';
 
 type FindingCategory = 'all' | 'ports' | 'credentials' | 'flags' | 'users' | 'cves' | 'hashes' | 'files' | 'services';
+type SeverityFilter = 'all' | 'critical' | 'high' | 'medium' | 'low' | 'info';
+
+const SEVERITY_CONFIG: Array<{ id: SeverityFilter; label: string; color: string }> = [
+  { id: 'all',      label: 'All',      color: '#8b949e' },
+  { id: 'critical', label: 'Critical', color: '#f85149' },
+  { id: 'high',     label: 'High',     color: '#ff7a00' },
+  { id: 'medium',   label: 'Medium',   color: '#d29922' },
+  { id: 'low',      label: 'Low',      color: '#3fb950' },
+  { id: 'info',     label: 'Info',     color: '#4a9eff' },
+];
+
+function getSeverityBucket(category: string, value: string): SeverityFilter {
+  const cvss = getMockCvss(category, value);
+  if (cvss === null) return 'info';
+  if (cvss > 9) return 'critical';
+  if (cvss > 7) return 'high';
+  if (cvss > 4) return 'medium';
+  if (cvss > 0) return 'low';
+  return 'info';
+}
 
 const CATEGORY_COLORS: Record<string, string> = {
   ports:       '#4a9eff',
@@ -86,6 +106,7 @@ export default function FindingsTable() {
   const session = tab?.session;
 
   const [filter, setFilter] = useState<FindingCategory>('all');
+  const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [pushing, setPushing] = useState<string | null>(null);
   const [pushed, setPushed] = useState<Set<string>>(new Set());
@@ -115,7 +136,13 @@ export default function FindingsTable() {
   }
 
   const all = flattenFindings(session.findings);
-  const filtered = filter === 'all' ? all : all.filter(f => f.category === filter);
+  const filtered = useMemo(() => {
+    let result = filter === 'all' ? all : all.filter(f => f.category === filter);
+    if (severityFilter !== 'all') {
+      result = result.filter(f => getSeverityBucket(f.category, f.value) === severityFilter);
+    }
+    return result;
+  }, [all, filter, severityFilter]);
 
   const counts: Record<string, number> = {};
   for (const key of ['ports','credentials','flags','users','cves','hashes','files','services']) {
@@ -209,6 +236,31 @@ export default function FindingsTable() {
             >
               <span style={{ fontSize: 10 }}>{CATEGORY_ICONS[cat]}</span>
               {getCategoryLabel(cat)} ({count})
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Severity filter pills */}
+      <div
+        className="flex items-center gap-1.5 px-4 py-2 flex-shrink-0 overflow-x-auto"
+        style={{ borderBottom: '1px solid var(--border-default)', background: 'rgba(7,8,15,0.3)' }}
+      >
+        <span className="text-[10px] uppercase tracking-widest flex-shrink-0" style={{ color: '#484f58', letterSpacing: '0.06em' }}>Sev</span>
+        {SEVERITY_CONFIG.map(sev => {
+          const isActive = severityFilter === sev.id;
+          return (
+            <button
+              key={sev.id}
+              className="text-[11px] px-2.5 py-0.5 rounded-full flex-shrink-0 transition-all font-medium"
+              style={{
+                background: isActive ? `${sev.color}18` : 'transparent',
+                color: isActive ? sev.color : '#484f58',
+                border: isActive ? `1px solid ${sev.color}40` : '1px solid transparent',
+              }}
+              onClick={() => setSeverityFilter(sev.id)}
+            >
+              {sev.label}
             </button>
           );
         })}

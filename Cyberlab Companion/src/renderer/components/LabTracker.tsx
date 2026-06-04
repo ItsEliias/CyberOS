@@ -207,16 +207,23 @@ export default function LabTracker() {
                     {col.label}
                   </span>
                 </div>
-                <span
-                  className="text-[10px] font-mono px-1.5 py-0.5 rounded"
-                  style={{
-                    background: `rgba(${col.rgb},0.08)`,
-                    color: col.color,
-                    border: `1px solid rgba(${col.rgb},0.2)`,
-                  }}
-                >
-                  {cards.length}
-                </span>
+                {(() => {
+                  const isOverloaded = col.id === 'inprogress' && cards.length > 3;
+                  return (
+                    <span
+                      className="text-[10px] font-mono px-1.5 py-0.5 rounded transition-all"
+                      style={{
+                        background: isOverloaded ? 'rgba(210,153,34,0.12)' : `rgba(${col.rgb},0.08)`,
+                        color: isOverloaded ? '#d29922' : col.color,
+                        border: `1px solid ${isOverloaded ? 'rgba(210,153,34,0.35)' : `rgba(${col.rgb},0.2)`}`,
+                        boxShadow: isOverloaded ? '0 0 6px rgba(210,153,34,0.2)' : 'none',
+                      }}
+                      title={isOverloaded ? 'Too many in progress — consider focusing' : undefined}
+                    >
+                      {isOverloaded ? '⚠ ' : ''}{cards.length}
+                    </span>
+                  );
+                })()}
               </div>
 
               {/* Cards */}

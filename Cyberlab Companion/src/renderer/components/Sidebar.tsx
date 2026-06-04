@@ -170,10 +170,11 @@ function NavItem({ panel, isActive, onClick, openHelp, onHelpToggle, showDot }: 
         </span>
         {showDot && !isActive && (
           <span
+            className="badge-pulse"
             style={{
-              width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0,
-              background: '#b44fff',
-              boxShadow: '0 0 4px rgba(180,79,255,0.7)',
+              width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
+              background: '#f85149',
+              boxShadow: '0 0 5px rgba(248,81,73,0.8)',
               marginRight: '2px',
             }}
           />

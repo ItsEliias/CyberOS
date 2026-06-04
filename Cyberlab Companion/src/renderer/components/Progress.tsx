@@ -381,7 +381,11 @@ export default function Progress() {
                 {xpBarWidth}%
               </span>
             </div>
-            <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(42,51,71,0.4)' }}>
+            <div
+              className="h-2.5 rounded-full overflow-hidden relative group/xpbar cursor-help"
+              style={{ background: 'rgba(42,51,71,0.4)' }}
+              title={`${levelInfo.currentXp.toLocaleString()} / ${levelInfo.nextXp.toLocaleString()} XP to next level`}
+            >
               <div
                 className="h-full rounded-full"
                 style={{
@@ -391,6 +395,31 @@ export default function Progress() {
                   transition: 'width 1s cubic-bezier(0.2,0.8,0.2,1)',
                 }}
               />
+              {/* Tooltip */}
+              <div
+                className="absolute bottom-full left-1/2 mb-2 pointer-events-none opacity-0 group-hover/xpbar:opacity-100 transition-opacity duration-150 whitespace-nowrap z-10"
+                style={{ transform: 'translateX(-50%)' }}
+              >
+                <div
+                  className="text-[11px] font-mono px-2 py-1 rounded"
+                  style={{
+                    background: 'rgba(7,8,15,0.96)',
+                    border: '1px solid rgba(180,79,255,0.35)',
+                    color: '#cb80ff',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
+                  }}
+                >
+                  {levelInfo.currentXp.toLocaleString()} / {levelInfo.nextXp.toLocaleString()} XP to next level
+                </div>
+                <div
+                  style={{
+                    position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
+                    width: 0, height: 0,
+                    borderLeft: '5px solid transparent', borderRight: '5px solid transparent',
+                    borderTop: '5px solid rgba(180,79,255,0.35)',
+                  }}
+                />
+              </div>
             </div>
             <div className="text-[10px] mt-1.5 text-right" style={{ color: 'var(--text-muted)' }}>
               {levelInfo.level < XP_THRESHOLDS.length

@@ -129,6 +129,22 @@ button, a, input, select { transition: all 0.15s ease-out; }
   from { opacity: 0; transform: translateY(3px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+@keyframes typingBounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+  40%            { transform: translateY(-4px); opacity: 1; }
+}
+@keyframes timerFlash {
+  0%, 100% { background: rgba(248,81,73,0); }
+  50%       { background: rgba(248,81,73,0.22); }
+}
+@keyframes badgePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(248,81,73,0.7); }
+  70%       { box-shadow: 0 0 0 5px rgba(248,81,73,0); }
+}
+.timer-flash { animation: timerFlash 0.4s ease-in-out 3; animation-fill-mode: forwards; }
+.timer-flash-stay { background: rgba(248,81,73,0.12) !important; }
+.typing-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #b44fff; animation: typingBounce 1.2s ease-in-out infinite; }
+.badge-pulse { animation: badgePulse 1.8s ease-out infinite; }
 
 .animate-fade-in { animation: fadeIn 0.2s ease-out; }
 .animate-pulse-dot { animation: pulse-dot 1.5s ease-in-out infinite; }

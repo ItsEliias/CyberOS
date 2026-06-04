@@ -476,14 +476,19 @@ export default function ChatPanel() {
 
         {streaming && (
           <div className="flex justify-start">
-            <div className="chat-msg-ai">
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-1.5 h-1.5 rounded-full animate-pulse-dot"
-                  style={{ background: '#b44fff' }}
-                />
-                <span className="text-xs" style={{ color: '#484f58' }}>Thinking...</span>
-              </div>
+            <div
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl"
+              style={{
+                background: 'rgba(13,14,24,0.72)',
+                border: '1px solid rgba(255,255,255,0.055)',
+                borderRadius: '4px 12px 12px 12px',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+              }}
+            >
+              <span className="typing-dot" style={{ animationDelay: '0ms' }} />
+              <span className="typing-dot" style={{ animationDelay: '160ms' }} />
+              <span className="typing-dot" style={{ animationDelay: '320ms' }} />
             </div>
           </div>
         )}

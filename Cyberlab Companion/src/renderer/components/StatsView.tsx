@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useStore } from '../store';
 import type { Session } from '@shared/types';
 
@@ -24,6 +24,93 @@ function inferCategory(session: Session): string {
   if (lt.includes('ctf')) return 'Misc';
   if (lt.includes('osint') || ln.includes('osint')) return 'OSINT';
   return 'Misc';
+}
+
+// ── Radar Chart ───────────────────────────────────────────────────────────────
+
+const RADAR_CATS = ['Web', 'Pwn', 'Forensics', 'Rev', 'OSINT'] as const;
+
+function RadarChart({ catStats }: { catStats: Record<string, CategoryStats> }) {
+  const [animated, setAnimated] = useState(false);
+  const pathRef = useRef<SVGPathElement>(null);
+
+  const SIZE = 180;
+  const CX = SIZE / 2;
+  const CY = SIZE / 2;
+  const R = 72;
+  const N = RADAR_CATS.length;
+  const maxVal = Math.max(...RADAR_CATS.map(c => catStats[c]?.flags ?? 0), 1);
+
+  const axes = RADAR_CATS.map((cat, i) => {
+    const angle = (Math.PI * 2 * i) / N - Math.PI / 2;
+    return { cat, angle, x: CX + R * Math.cos(angle), y: CY + R * Math.sin(angle) };
+  });
+
+  const dataPoints = useMemo(() => RADAR_CATS.map((cat, i) => {
+    const angle = (Math.PI * 2 * i) / N - Math.PI / 2;
+    const val = catStats[cat]?.flags ?? 0;
+    const r = (val / maxVal) * R;
+    return { x: CX + r * Math.cos(angle), y: CY + r * Math.sin(angle) };
+  }), [catStats, maxVal]);
+
+  const polyPoints = dataPoints.map(p => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ');
+  const pathD = dataPoints.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ') + ' Z';
+  const ringLevels = [0.25, 0.5, 0.75, 1.0];
+
+  useEffect(() => {
+    const t = setTimeout(() => setAnimated(true), 80);
+    return () => clearTimeout(t);
+  }, []);
+
+  const pathLen = pathRef.current?.getTotalLength() ?? 360;
+
+  return (
+    <div className="card">
+      <div className="text-xs font-semibold mb-3" style={{ color: 'var(--text-dim)' }}>Skill Radar</div>
+      <div className="flex items-center justify-center">
+        <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} style={{ overflow: 'visible' }}>
+          {ringLevels.map(lvl => {
+            const pts = RADAR_CATS.map((_, i) => {
+              const angle = (Math.PI * 2 * i) / N - Math.PI / 2;
+              const r = R * lvl;
+              return `${(CX + r * Math.cos(angle)).toFixed(2)},${(CY + r * Math.sin(angle)).toFixed(2)}`;
+            }).join(' ');
+            return <polygon key={lvl} points={pts} fill="none" stroke="rgba(42,51,71,0.5)" strokeWidth="1" />;
+          })}
+          {axes.map(ax => (
+            <line key={ax.cat} x1={CX} y1={CY} x2={ax.x.toFixed(2)} y2={ax.y.toFixed(2)} stroke="rgba(42,51,71,0.4)" strokeWidth="1" />
+          ))}
+          <polygon points={polyPoints} fill="rgba(180,79,255,0.12)" stroke="none" />
+          <path
+            ref={pathRef}
+            d={pathD}
+            fill="none"
+            stroke="#b44fff"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+            strokeDasharray={pathLen}
+            strokeDashoffset={animated ? 0 : pathLen}
+            style={{ transition: 'stroke-dashoffset 1.1s cubic-bezier(0.2,0.8,0.2,1)' }}
+          />
+          {dataPoints.map((p, i) => {
+            const cat = RADAR_CATS[i];
+            return <circle key={cat} cx={p.x.toFixed(2)} cy={p.y.toFixed(2)} r="3" fill={CAT_COLORS[cat] || '#b44fff'} stroke="rgba(7,8,15,0.8)" strokeWidth="1.5" />;
+          })}
+          {axes.map(ax => {
+            const lr = R + 14;
+            const lx = CX + lr * Math.cos(ax.angle);
+            const ly = CY + lr * Math.sin(ax.angle);
+            const anchor = ax.x > CX + 4 ? 'start' : ax.x < CX - 4 ? 'end' : 'middle';
+            return (
+              <text key={ax.cat} x={lx.toFixed(2)} y={ly.toFixed(2)} textAnchor={anchor} dominantBaseline="middle" fontSize="9" fontFamily="var(--font-display)" fill={CAT_COLORS[ax.cat] || '#8b949e'} style={{ fontWeight: 600 }}>
+                {ax.cat}
+              </text>
+            );
+          })}
+        </svg>
+      </div>
+    </div>
+  );
 }
 
 export default function StatsView() {
@@ -250,6 +337,9 @@ export default function StatsView() {
           </div>
         </div>
       )}
+
+      {/* Radar chart */}
+      <RadarChart catStats={catStats} />
 
       {sessions.length === 0 && (
         <div className="flex-1 flex items-center justify-center text-sm" style={{ color: 'var(--text-muted)' }}>

@@ -25,6 +25,8 @@ export default function TimerCard({ onStop }: TimerCardProps) {
   const [running, setRunning] = useState(session?.timer?.running ?? false);
   const [mode] = useState<'countup' | 'countdown'>('countup');
   const [recentSessions, setRecentSessions] = useState<Array<{ name: string; elapsed: number }>>([]);
+  const [flashState, setFlashState] = useState<'idle' | 'flashing' | 'stayed'>('idle');
+  const flashedRef = useRef(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -94,6 +96,18 @@ export default function TimerCard({ onStop }: TimerCardProps) {
   const displaySeconds = mode === 'countup' ? elapsed : Math.max(0, countdownTarget - elapsed);
   const isWarning = mode === 'countdown' && displaySeconds < 600 && displaySeconds > 0;
   const isCritical = mode === 'countdown' && displaySeconds < 300 && displaySeconds > 0;
+  const isExpired = mode === 'countdown' && elapsed >= countdownTarget && countdownTarget > 0;
+
+  // Flash card red 3× when countdown reaches 0, then stay red-tinted
+  useEffect(() => {
+    if (isExpired && !flashedRef.current) {
+      flashedRef.current = true;
+      setFlashState('flashing');
+      // Each flash cycle is 400ms × 3 = 1200ms total
+      setTimeout(() => setFlashState('stayed'), 1250);
+    }
+    if (!isExpired) { flashedRef.current = false; setFlashState('idle'); }
+  }, [isExpired]);
 
   const timerColor = isCritical
     ? 'var(--error)'
@@ -121,10 +135,12 @@ export default function TimerCard({ onStop }: TimerCardProps) {
 
   return (
     <motion.div
-      className={`p-3 rounded-xl relative overflow-hidden ${running && !isCritical && !isWarning ? 'timer-border-running' : ''}`}
+      className={`p-3 rounded-xl relative overflow-hidden ${running && !isCritical && !isWarning && !isExpired ? 'timer-border-running' : ''} ${flashState === 'flashing' ? 'timer-flash' : ''} ${flashState === 'stayed' ? 'timer-flash-stay' : ''}`}
       style={{
-        background: 'linear-gradient(135deg, var(--surface-2) 0%, var(--surface-1) 100%)',
-        border: `1px solid ${isCritical ? 'rgba(248,81,73,0.4)' : isWarning ? 'rgba(210,153,34,0.3)' : running ? 'rgba(63,185,80,0.55)' : 'rgba(180,79,255,0.2)'}`,
+        background: flashState === 'stayed'
+          ? 'linear-gradient(135deg, rgba(248,81,73,0.08) 0%, var(--surface-1) 100%)'
+          : 'linear-gradient(135deg, var(--surface-2) 0%, var(--surface-1) 100%)',
+        border: `1px solid ${isExpired ? 'rgba(248,81,73,0.5)' : isCritical ? 'rgba(248,81,73,0.4)' : isWarning ? 'rgba(210,153,34,0.3)' : running ? 'rgba(63,185,80,0.55)' : 'rgba(180,79,255,0.2)'}`,
         boxShadow: `0 0 20px ${glowColor}`,
       }}
       animate={isCritical ? {
