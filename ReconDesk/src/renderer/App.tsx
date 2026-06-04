@@ -53,7 +53,7 @@ export default function App() {
   }, [loadTargets])
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0a0f] text-[#e2e8f0]">
+    <div className="flex flex-col h-full" style={{ background: 'var(--surface-0)', color: 'var(--text-primary)' }}>
       <TitleBar onHelp={onboarding.open} />
 
       <div className="flex flex-1 min-h-0">
@@ -67,19 +67,23 @@ export default function App() {
           ) : (
             <>
               {/* Tab bar */}
-              <div className="flex items-center gap-0.5 px-4 border-b border-[#2a3347] flex-shrink-0 h-9">
+              <div
+                className="flex items-center gap-0.5 px-4 flex-shrink-0 h-9"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+              >
                 {TABS.map(t => (
                   <button
                     key={t.id}
                     onClick={() => setActiveTab(t.id)}
-                    className="relative px-3 py-1.5 text-xs transition-colors"
-                    style={{ color: activeTab === t.id ? '#e2e8f0' : '#8b949e' }}
+                    className="relative px-3 py-1.5 text-xs transition-colors font-medium"
+                    style={{ color: activeTab === t.id ? 'var(--text-primary)' : 'var(--text-muted)' }}
                   >
                     {t.label}
                     {activeTab === t.id && (
                       <motion.div
                         layoutId="tab-underline"
-                        className="absolute bottom-0 left-0 right-0 h-px bg-[#d29922]"
+                        className="absolute bottom-0 left-0 right-0 h-px"
+                        style={{ background: 'var(--accent)' }}
                         transition={{ type: 'spring', stiffness: 400, damping: 35 }}
                       />
                     )}
@@ -148,9 +152,14 @@ function EmptyState() {
   return (
     <div className="flex-1 flex items-center justify-center">
       <div className="text-center">
-        <div className="text-4xl mb-4 opacity-20">⬡</div>
-        <p className="text-sm text-[#8b949e]">Select a target to begin</p>
-        <p className="text-xs text-[#4a5568] mt-1">or click + to add a new target</p>
+        <div className="mb-5" style={{ filter: 'drop-shadow(0 0 12px rgba(210,153,34,0.25))' }}>
+          <svg width="40" height="40" viewBox="0 0 16 16" fill="none" style={{ color: '#d29922', opacity: 0.25, display: 'inline-block' }}>
+            <path d="M8 1L14.5 4.75V11.25L8 15L1.5 11.25V4.75L8 1Z" stroke="currentColor" strokeWidth="1.2" fill="none" />
+            <circle cx="8" cy="8" r="2" fill="currentColor" />
+          </svg>
+        </div>
+        <p className="text-sm font-medium" style={{ color: '#8b949e' }}>Select a target to begin</p>
+        <p className="text-xs mt-1" style={{ color: '#484f58' }}>or click + to add a new target</p>
       </div>
     </div>
   )
