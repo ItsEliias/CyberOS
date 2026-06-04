@@ -13,6 +13,13 @@ export default function AlertToast({ message, onDismiss }: Props) {
     return () => clearTimeout(t);
   }, [message, onDismiss]);
 
+  useEffect(() => {
+    if (!message) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onDismiss(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [message, onDismiss]);
+
   return (
     <AnimatePresence>
       {message && (
@@ -53,7 +60,17 @@ export default function AlertToast({ message, onDismiss }: Props) {
             width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0,
             boxShadow: '0 0 6px rgba(0,255,65,0.8)',
           }} className="status-dot-pulse" />
-          {message}
+          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {message}
+          </span>
+          <kbd style={{
+            fontSize: 8, padding: '1px 5px', borderRadius: 3, flexShrink: 0,
+            background: 'rgba(0,255,65,0.06)', border: '1px solid rgba(0,255,65,0.2)',
+            color: 'rgba(0,255,65,0.45)', fontFamily: 'var(--font-mono)',
+            letterSpacing: '0.05em',
+          }}>
+            ESC
+          </kbd>
         </motion.div>
       )}
     </AnimatePresence>

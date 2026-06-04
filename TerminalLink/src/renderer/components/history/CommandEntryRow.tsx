@@ -33,6 +33,36 @@ function HighlightedText({ text, query }: { text: string; query: string }) {
   );
 }
 
+/** Tokenize a command string for syntax coloring */
+function SyntaxColoredCommand({ text }: { text: string }) {
+  // Split preserving whitespace tokens
+  const tokens = text.split(/(\s+)/);
+  return (
+    <>
+      {tokens.map((token, i) => {
+        if (/^\s+$/.test(token)) return <span key={i}>{token}</span>;
+        // Pipe character
+        if (token === '|' || token === '||' || token === '&&' || token === ';') {
+          return <span key={i} style={{ color: '#d29922' }}>{token}</span>;
+        }
+        // Flags starting with -
+        if (token.startsWith('-')) {
+          return <span key={i} style={{ color: '#00ff41' }}>{token}</span>;
+        }
+        // Paths starting with /
+        if (token.startsWith('/') || token.startsWith('~/') || token.startsWith('./')) {
+          return <span key={i} style={{ color: '#4a9eff' }}>{token}</span>;
+        }
+        // Redirects
+        if (token === '>' || token === '>>' || token === '<') {
+          return <span key={i} style={{ color: '#b44fff' }}>{token}</span>;
+        }
+        return <span key={i}>{token}</span>;
+      })}
+    </>
+  );
+}
+
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const s = Math.floor(diff / 1000);
@@ -117,7 +147,11 @@ export default function CommandEntryRow({ entry, query }: Props) {
         fontFamily: 'inherit',
         lineHeight: 1.4,
       }}>
-        <HighlightedText text={entry.command} query={query} />
+        {query ? (
+          <HighlightedText text={entry.command} query={query} />
+        ) : (
+          <SyntaxColoredCommand text={entry.command} />
+        )}
       </span>
 
       {/* Output snippet */}

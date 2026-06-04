@@ -76,6 +76,12 @@ export default function StatusBar({ sessionCtx, commandCount, sessionName, cwd, 
 
       <div style={{ flex: 1 }} />
 
+      {/* Line/column counter (mock values) */}
+      <span style={{ color: 'rgba(0,255,65,0.35)', fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.04em' }}>
+        Ln 24 Col 7
+      </span>
+      <Sep />
+
       {/* Target indicator */}
       <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 9, letterSpacing: '0.08em' }}>
         <span

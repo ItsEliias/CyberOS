@@ -115,6 +115,88 @@ const SESSION_TYPE_COLORS: Record<string, string> = {
   Local:  '#00ff41',
 }
 
+function SessionRow({ session, isActive, lastCmd, onSelect }: {
+  session: TerminalSession;
+  isActive: boolean;
+  lastCmd?: string;
+  onSelect: (id: string) => void;
+}) {
+  const color = session.color ?? '#00ff41';
+  const sessionType = detectSessionType(session.name);
+  const typeColor = SESSION_TYPE_COLORS[sessionType];
+  const MOCK_CMDS: Record<string, string> = {
+    SSH: 'ls -la /home', Telnet: 'show version', Serial: 'AT+CGMI', Local: 'pwd',
+  };
+  const previewCmd = lastCmd || MOCK_CMDS[sessionType] || 'ls -la';
+  return (
+    <div
+      onClick={() => onSelect(session.id)}
+      style={{
+        padding: '10px 16px',
+        borderBottom: '1px solid rgba(0,255,65,0.06)',
+        borderLeft: `2px solid ${isActive ? color : 'transparent'}`,
+        cursor: 'pointer',
+        background: isActive ? `rgba(0,255,65,0.06)` : 'transparent',
+        transition: 'background 0.15s cubic-bezier(0.2,0.8,0.2,1), border-left-color 0.15s ease',
+        boxShadow: isActive ? `inset 2px 0 8px rgba(0,255,65,0.08)` : 'none',
+      }}
+      onMouseEnter={e => {
+        if (!isActive) {
+          e.currentTarget.style.background = 'rgba(0,255,65,0.03)';
+          e.currentTarget.style.borderLeftColor = `rgba(0,255,65,0.3)`;
+        }
+      }}
+      onMouseLeave={e => {
+        if (!isActive) {
+          e.currentTarget.style.background = 'transparent';
+          e.currentTarget.style.borderLeftColor = 'transparent';
+        }
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <span style={{
+            width: 6, height: 6, borderRadius: '50%',
+            background: color, flexShrink: 0,
+            boxShadow: isActive ? `0 0 8px ${color}, 0 0 3px ${color}` : 'none',
+            transition: 'box-shadow 0.2s ease',
+          }} />
+          <span style={{ fontSize: 11, color: isActive ? color : '#7abf7a', fontWeight: isActive ? 600 : 400, letterSpacing: '0.03em' }}>
+            {session.name}
+          </span>
+          <span style={{
+            fontSize: 8, padding: '1px 5px', borderRadius: 3,
+            background: `${typeColor}18`, color: typeColor,
+            border: `1px solid ${typeColor}40`,
+            textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, flexShrink: 0,
+          }}>
+            {sessionType}
+          </span>
+        </div>
+        {isActive && (
+          <span style={{
+            fontSize: 8, padding: '1px 6px', borderRadius: 4,
+            background: 'rgba(0,255,65,0.12)', color: '#00ff41',
+            border: '1px solid rgba(0,255,65,0.3)',
+            textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700,
+          }}>
+            active
+          </span>
+        )}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 9, color: 'rgba(0,255,65,0.3)' }}>
+        <span>{formatTime(session.startedAt)}</span>
+        <span>·</span>
+        <span>{session.commandCount} cmd{session.commandCount !== 1 ? 's' : ''}</span>
+        <span>·</span>
+        <span style={{ color: 'rgba(0,255,65,0.2)', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 120 }}>
+          $ {previewCmd}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function formatDuration(start: string, end?: string): string {
   const ms = (end ? new Date(end) : new Date()).getTime() - new Date(start).getTime();
   const s  = Math.floor(ms / 1000);
@@ -240,77 +322,28 @@ export default function SessionsView({
             </button>
           </div>
           <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
-          {loading ? (
-            <>
-              <SkeletonRow />
-              <SkeletonRow />
-              <SkeletonRow />
-            </>
-          ) : sorted.length === 0 ? (
-            <EmptyState onNew={onNewSession} />
-          ) : sorted.map(session => {
-            const isActive = session.id === activeSessionId;
-            const color = session.color ?? '#00ff41';
-            return (
-              <div
-                key={session.id}
-                onClick={() => onSelectSession(session.id)}
-                style={{
-                  padding: '10px 16px',
-                  borderBottom: '1px solid rgba(0,255,65,0.06)',
-                  borderLeft: `2px solid ${isActive ? color : 'transparent'}`,
-                  cursor: 'pointer',
-                  background: isActive ? `rgba(0,255,65,0.06)` : 'transparent',
-                  transition: 'background 0.15s cubic-bezier(0.2,0.8,0.2,1), border-left-color 0.15s ease',
-                  boxShadow: isActive ? `inset 2px 0 8px rgba(0,255,65,0.08)` : 'none',
-                }}
-                onMouseEnter={e => {
-                  if (!isActive) {
-                    e.currentTarget.style.background = 'rgba(0,255,65,0.03)';
-                    e.currentTarget.style.borderLeftColor = `rgba(0,255,65,0.3)`;
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!isActive) {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.borderLeftColor = 'transparent';
-                  }
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <span style={{
-                      width: 6, height: 6, borderRadius: '50%',
-                      background: color, flexShrink: 0,
-                      boxShadow: isActive ? `0 0 8px ${color}, 0 0 3px ${color}` : 'none',
-                      transition: 'box-shadow 0.2s ease',
-                    }} />
-                    <span style={{
-                      fontSize: 11, color: isActive ? color : '#7abf7a',
-                      fontWeight: isActive ? 600 : 400, letterSpacing: '0.03em',
-                    }}>
-                      {session.name}
-                    </span>
-                  </div>
-                  {isActive && (
-                    <span style={{
-                      fontSize: 8, padding: '1px 6px', borderRadius: 4,
-                      background: 'rgba(0,255,65,0.12)', color: '#00ff41',
-                      border: '1px solid rgba(0,255,65,0.3)',
-                      textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700,
-                    }}>
-                      active
-                    </span>
-                  )}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 9, color: 'rgba(0,255,65,0.3)' }}>
-                  <span>{formatTime(session.startedAt)}</span>
-                  <span>·</span>
-                  <span>{session.commandCount} cmd{session.commandCount !== 1 ? 's' : ''}</span>
-                </div>
-              </div>
-            );
-          })}
+            {loading ? (
+              <>
+                <SkeletonRow />
+                <SkeletonRow />
+                <SkeletonRow />
+              </>
+            ) : sorted.length === 0 ? (
+              <EmptyState onNew={onNewSession} />
+            ) : (
+              <>
+                {sorted.map(session => (
+                  <SessionRow
+                    key={session.id}
+                    session={session}
+                    isActive={session.id === activeSessionId}
+                    lastCmd={lastCommands[session.id]}
+                    onSelect={onSelectSession}
+                  />
+                ))}
+              </>
+            )}
+          </div>
         </div>
       )}
 

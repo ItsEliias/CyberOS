@@ -143,9 +143,27 @@ export default function TitleBar({
             History
           </button>
           {onToggleBroadcast && (
-            <button onClick={onToggleBroadcast} title="Toggle broadcast mode" style={broadcastMode ? btnDanger : btnBase}>
-              Broadcast
-            </button>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              {broadcastMode && (
+                <>
+                  <span style={{
+                    position: 'absolute', inset: -3, borderRadius: 10,
+                    border: '2px solid rgba(248,81,73,0.7)',
+                    animation: 'broadcast-ring 1.2s ease-in-out infinite',
+                    pointerEvents: 'none',
+                  }} />
+                  <span style={{
+                    position: 'absolute', inset: -6, borderRadius: 13,
+                    border: '1.5px solid rgba(248,81,73,0.3)',
+                    animation: 'broadcast-ring 1.2s ease-in-out infinite 0.3s',
+                    pointerEvents: 'none',
+                  }} />
+                </>
+              )}
+              <button onClick={onToggleBroadcast} title="Toggle broadcast mode" style={broadcastMode ? btnDanger : btnBase}>
+                Broadcast
+              </button>
+            </div>
           )}
           {onOpenLauncher && (
             <button onClick={onOpenLauncher} title="Tool launcher (Cmd+L)" style={btnBase}>
@@ -200,6 +218,7 @@ export default function TitleBar({
 
       <style>{`
         @keyframes bc-pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+        @keyframes broadcast-ring { 0%{opacity:0.9;transform:scale(1)} 70%{opacity:0.2;transform:scale(1.15)} 100%{opacity:0;transform:scale(1.25)} }
       `}</style>
     </div>
   );

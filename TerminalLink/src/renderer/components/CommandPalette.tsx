@@ -120,44 +120,72 @@ export default function CommandPalette({ items, onClose }: Props) {
               No results for "{query}"
             </div>
           )}
-          {filtered.map((item, i) => (
-            <div
-              key={item.id}
-              onClick={() => { item.action(); onClose(); }}
-              style={{
-                padding: '8px 14px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 10,
-                background: i === selected ? 'rgba(0,255,65,0.07)' : 'transparent',
-                borderLeft: i === selected ? '2px solid var(--accent)' : '2px solid transparent',
-                transition: 'background 0.1s ease',
-              }}
-              onMouseEnter={() => setSelected(i)}
-            >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12, color: i === selected ? 'var(--text-primary)' : 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {highlight(item.label, query)}
+          {(() => {
+            // Group items by category and render with section dividers
+            const CATEGORY_ORDER = ['Navigation', 'Sessions', 'Settings'];
+            const grouped: Record<string, typeof filtered> = {};
+            for (const item of filtered) {
+              const cat = item.category || 'Other';
+              if (!grouped[cat]) grouped[cat] = [];
+              grouped[cat].push(item);
+            }
+            // Order: known categories first, then others
+            const cats = [
+              ...CATEGORY_ORDER.filter(c => grouped[c]),
+              ...Object.keys(grouped).filter(c => !CATEGORY_ORDER.includes(c)),
+            ];
+            // Build a flat indexed list for keyboard navigation
+            const flatItems: (typeof filtered[0])[] = [];
+            for (const cat of cats) flatItems.push(...grouped[cat]);
+
+            return cats.map(cat => (
+              <div key={cat}>
+                {/* Category divider */}
+                <div style={{
+                  padding: '5px 14px 3px',
+                  fontSize: 9, color: 'rgba(0,255,65,0.35)',
+                  textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 700,
+                  borderBottom: '1px solid rgba(0,255,65,0.07)',
+                  background: 'rgba(0,255,65,0.02)',
+                  fontFamily: 'var(--font-mono)',
+                }}>
+                  {cat}
                 </div>
-                {item.description && (
-                  <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {highlight(item.description, query)}
-                  </div>
-                )}
+                {grouped[cat].map(item => {
+                  const i = flatItems.indexOf(item);
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => { item.action(); onClose(); }}
+                      style={{
+                        padding: '8px 14px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 10,
+                        background: i === selected ? 'rgba(0,255,65,0.07)' : 'transparent',
+                        borderLeft: i === selected ? '2px solid var(--accent)' : '2px solid transparent',
+                        transition: 'background 0.1s ease',
+                      }}
+                      onMouseEnter={() => setSelected(i)}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, color: i === selected ? 'var(--text-primary)' : 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {highlight(item.label, query)}
+                        </div>
+                        {item.description && (
+                          <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {highlight(item.description, query)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <span style={{
-                fontSize: 9, color: i === selected ? 'var(--accent)' : 'var(--text-muted)',
-                background: i === selected ? 'rgba(0,255,65,0.1)' : 'rgba(0,255,65,0.04)',
-                border: `1px solid ${i === selected ? 'rgba(0,255,65,0.3)' : 'rgba(0,255,65,0.1)'}`,
-                borderRadius: 4, padding: '2px 6px', flexShrink: 0, textTransform: 'uppercase',
-                transition: 'all 0.1s ease',
-              }}>
-                {item.category}
-              </span>
-            </div>
-          ))}
+            ));
+          })()}
         </div>
 
         <div style={{

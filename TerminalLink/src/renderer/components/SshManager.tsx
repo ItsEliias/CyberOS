@@ -103,7 +103,16 @@ export default function SshManager({ profiles, onConnect, onAdd, onRemove }: Pro
         </div>
       )}
 
-      {profiles.map(p => (
+      {profiles.map((p, idx) => {
+        // Mock last-connected: alternate between "online" and "offline" per index for visual demo
+        const isOnline = idx % 2 === 0;
+        // Mock timestamp — in a real implementation this would come from profile metadata
+        const mockLastConnected = idx === 0
+          ? '2m ago'
+          : idx === 1
+          ? '1h ago'
+          : `${idx + 1}d ago`;
+        return (
         <div
           key={p.id}
           style={{
@@ -113,9 +122,18 @@ export default function SshManager({ profiles, onConnect, onAdd, onRemove }: Pro
           }}
         >
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12, color: 'var(--text)', fontWeight: 500 }}>{p.name}</div>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {/* Status dot */}
+              <span style={{
+                width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                background: isOnline ? '#00ff41' : 'rgba(0,255,65,0.2)',
+                boxShadow: isOnline ? '0 0 5px rgba(0,255,65,0.6)' : 'none',
+              }} />
+              <span style={{ fontSize: 12, color: 'var(--text)', fontWeight: 500 }}>{p.name}</span>
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>
               {p.username}@{p.host}:{p.port}
+              <span style={{ marginLeft: 6, color: 'rgba(0,255,65,0.25)' }}>· last {mockLastConnected}</span>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
@@ -162,7 +180,8 @@ export default function SshManager({ profiles, onConnect, onAdd, onRemove }: Pro
             </button>
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

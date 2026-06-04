@@ -129,6 +129,18 @@ export default function TabBar({
                 </span>
               )}
 
+              {/* Connection quality badge — only on active tab */}
+              {isActive && (
+                <span style={{
+                  fontSize: 8, padding: '1px 4px', borderRadius: 2,
+                  background: 'rgba(0,255,65,0.08)', border: '1px solid rgba(0,255,65,0.2)',
+                  color: 'rgba(0,255,65,0.6)', flexShrink: 0, fontFamily: 'var(--font-mono)',
+                  whiteSpace: 'nowrap',
+                }}>
+                  28ms
+                </span>
+              )}
+
               <button
                 onClick={e => { e.stopPropagation(); onClose(sess.id); }}
                 title="Close tab"
