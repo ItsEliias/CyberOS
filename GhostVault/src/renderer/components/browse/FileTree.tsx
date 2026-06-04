@@ -370,7 +370,7 @@ export default function FileTree({ onOpenNote }: Props) {
               style={{
                 left: Math.min(ctxMenu.x, window.innerWidth - 176),
                 top: Math.min(ctxMenu.y, window.innerHeight - 160),
-                width: 168,
+                width: 180,
                 background: 'rgba(13,14,24,0.96)',
                 border: '1px solid rgba(42,51,71,0.6)',
                 boxShadow: '0 8px 32px rgba(0,0,0,0.55)',
@@ -385,12 +385,16 @@ export default function FileTree({ onOpenNote }: Props) {
             >
               <button
                 onClick={startRename}
-                className="w-full text-left px-4 py-2 text-xs transition-colors"
+                className="w-full flex items-center justify-between px-4 py-2 text-xs transition-colors"
                 style={{ color: 'rgba(139,148,158,0.8)', fontFamily: 'var(--font-display)' }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
               >
-                Rename
+                <span>Rename</span>
+                <kbd className="text-[9px] px-1.5 py-0.5 rounded font-mono"
+                  style={{ background: 'rgba(42,51,71,0.5)', color: 'rgba(107,122,153,0.7)', border: '1px solid rgba(42,51,71,0.6)' }}>
+                  F2
+                </kbd>
               </button>
               <button
                 onClick={() => { window.ghostvault.revealInFinder(ctxMenu.node.path); setCtxMenu(null); }}
@@ -406,12 +410,16 @@ export default function FileTree({ onOpenNote }: Props) {
                   <div className="my-1" style={{ borderTop: '1px solid rgba(42,51,71,0.4)' }} />
                   <button
                     onClick={handleDelete}
-                    className="w-full text-left px-4 py-2 text-xs transition-colors"
+                    className="w-full flex items-center justify-between px-4 py-2 text-xs transition-colors"
                     style={{ color: '#f85149', fontFamily: 'var(--font-display)' }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(248,81,73,0.08)'; }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
                   >
-                    Delete
+                    <span>Delete</span>
+                    <kbd className="text-[9px] px-1.5 py-0.5 rounded font-mono"
+                      style={{ background: 'rgba(248,81,73,0.1)', color: 'rgba(248,81,73,0.7)', border: '1px solid rgba(248,81,73,0.2)' }}>
+                      Del
+                    </kbd>
                   </button>
                 </>
               )}

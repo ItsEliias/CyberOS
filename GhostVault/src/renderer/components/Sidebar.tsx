@@ -280,21 +280,19 @@ export default function Sidebar({ onNewNote, onNewFolder, onOpenNote, onContextM
                   border: '1px solid rgba(42,51,71,0.5)',
                   color: '#c9d1d9',
                   fontFamily: 'var(--font-display)',
-                  paddingRight: searchQuery ? '3.5rem' : '0.625rem',
+                  paddingRight: '0.625rem',
                 }}
                 onFocus={e => { e.currentTarget.style.borderColor = 'rgba(123,184,255,0.3)'; }}
                 onBlur={e => { e.currentTarget.style.borderColor = 'rgba(42,51,71,0.5)'; }}
               />
-              {/* Results count indicator */}
-              {searchQuery && (
-                <span
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-mono tabular-nums pointer-events-none"
-                  style={{ color: filteredNotes.length > 0 ? '#7bb8ff' : 'rgba(248,81,73,0.7)' }}
-                >
-                  {filteredNotes.length}/{notes.length}
-                </span>
-              )}
             </div>
+            {/* Results count below input */}
+            {searchQuery && (
+              <div className="mt-1 px-0.5 text-[9px] font-mono tabular-nums"
+                style={{ color: filteredNotes.length > 0 ? 'rgba(123,184,255,0.7)' : 'rgba(248,81,73,0.65)' }}>
+                {filteredNotes.length} of {notes.length} notes
+              </div>
+            )}
             <div className="flex gap-1 mt-1.5">
               <button
                 onClick={onNewNote}

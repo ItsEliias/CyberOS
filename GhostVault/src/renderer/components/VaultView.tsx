@@ -300,11 +300,20 @@ export default function VaultView({ onOpenNote }: Props) {
       {/* Stats row */}
       <div className="px-6 py-3 border-b flex gap-3 shrink-0" style={{ borderColor: 'var(--border)' }}>
         {[
-          { label: 'Notes', value: notes.length,
-            sub: notes.length > 0 ? `last: ${new Date(Math.max(...notes.map(n => n.mtime))).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : null,
-            icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> },
-          { label: 'Folders', value: folders.length, sub: null,
-            icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> },
+          {
+            label: 'Notes', value: notes.length,
+            sub: notes.length > 0
+              ? `mod ${new Date(Math.max(...notes.map(n => n.mtime))).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+              : null,
+            icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
+          },
+          {
+            label: 'Folders', value: folders.length,
+            sub: notes.length > 0
+              ? `mod ${new Date(Math.max(...notes.map(n => n.mtime))).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+              : null,
+            icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>,
+          },
         ].map(s => (
           <div key={s.label} className="relative overflow-hidden px-4 py-2.5 rounded-xl flex items-center gap-3 card-hover"
             style={{ background: 'rgba(123,184,255,0.05)', border: '1px solid rgba(123,184,255,0.14)', flex: '0 0 auto' }}>
@@ -314,8 +323,12 @@ export default function VaultView({ onOpenNote }: Props) {
             <div className="flex flex-col">
               <span className="text-base font-bold font-mono tabular-nums leading-none" style={{ color: '#7bb8ff', textShadow: '0 0 12px rgba(123,184,255,0.35)' }}>{s.value}</span>
               <span className="text-[10px] uppercase tracking-wider mt-0.5" style={{ color: 'var(--text-dim)' }}>{s.label}</span>
+              {s.sub && (
+                <span className="text-[9px] font-mono mt-0.5" style={{ color: 'rgba(107,122,153,0.55)' }}>
+                  {s.sub}
+                </span>
+              )}
             </div>
-            {s.sub && <span className="text-[9px] font-mono ml-1" style={{ color: 'rgba(107,122,153,0.6)' }}>{s.sub}</span>}
           </div>
         ))}
       </div>

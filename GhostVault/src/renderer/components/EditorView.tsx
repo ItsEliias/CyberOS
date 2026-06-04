@@ -225,6 +225,38 @@ export default function EditorView({
     markDirty();
   }
 
+  function wrapSelection(before: string, after: string) {
+    const ta = editorRef.current;
+    if (!ta) return;
+    const s = ta.selectionStart, e = ta.selectionEnd;
+    const selected = ta.value.slice(s, e);
+    const newVal = ta.value.slice(0, s) + before + selected + after + ta.value.slice(e);
+    setEditorContent(newVal);
+    markDirty();
+    setTimeout(() => {
+      ta.selectionStart = s + before.length;
+      ta.selectionEnd = s + before.length + selected.length;
+      ta.focus();
+    }, 0);
+  }
+
+  function insertLink() {
+    const ta = editorRef.current;
+    if (!ta) return;
+    const s = ta.selectionStart, e = ta.selectionEnd;
+    const selected = ta.value.slice(s, e);
+    const ins = `[${selected || 'link text'}](url)`;
+    const newVal = ta.value.slice(0, s) + ins + ta.value.slice(e);
+    setEditorContent(newVal);
+    markDirty();
+    setTimeout(() => {
+      const urlStart = s + ins.length - 4;
+      ta.selectionStart = urlStart;
+      ta.selectionEnd = urlStart + 3;
+      ta.focus();
+    }, 0);
+  }
+
   const wordCount = useMemo(() => {
     const t = editorContent.trim();
     return t ? t.split(/\s+/).length : 0;
@@ -296,6 +328,14 @@ export default function EditorView({
 
         {/* Action buttons — grouped with dividers */}
         <div className="flex items-center gap-0.5">
+          {/* Formatting group: Bold / Italic / Code / Link */}
+          <ToolBtn onClick={() => wrapSelection('**', '**')} title="Bold (⌘B)"><span style={{ fontWeight: 700, fontFamily: 'serif', fontSize: '0.85rem' }}>B</span></ToolBtn>
+          <ToolBtn onClick={() => wrapSelection('_', '_')} title="Italic (⌘I)"><span style={{ fontStyle: 'italic', fontFamily: 'serif', fontSize: '0.85rem' }}>I</span></ToolBtn>
+          <ToolBtn onClick={() => wrapSelection('`', '`')} title="Inline Code"><span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}>&lt;/&gt;</span></ToolBtn>
+          <ToolBtn onClick={() => insertLink()} title="Insert Link">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          </ToolBtn>
+          <ToolDivider />
           {/* Insert group */}
           <ToolBtn onClick={insertTable} title="Insert Table">⊞</ToolBtn>
           <ToolBtn onClick={onTemplate} title="Insert Template">🗂</ToolBtn>

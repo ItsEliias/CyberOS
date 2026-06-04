@@ -33,8 +33,15 @@ export default function WikilinkAutocomplete({ notes, query, position, onSelect,
       style={{
         top: position.top,
         left: position.left,
-        minWidth: 220,
-        maxWidth: 320,
+        minWidth: 240,
+        maxWidth: 340,
+        background: 'rgba(10,11,22,0.96)',
+        border: '1px solid rgba(123,184,255,0.35)',
+        borderRadius: '10px',
+        boxShadow: '0 12px 40px rgba(0,0,0,0.65), 0 0 0 1px rgba(123,184,255,0.08), 0 0 20px rgba(123,184,255,0.06)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        overflow: 'hidden',
       }}
     >
       {/* Header bar */}
