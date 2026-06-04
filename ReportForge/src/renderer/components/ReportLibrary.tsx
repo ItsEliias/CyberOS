@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '../store';
 import { SeveritySummary } from './SeverityBadge';
@@ -14,10 +14,50 @@ interface Props {
 
 type SortKey = 'recent' | 'title' | 'findings';
 
+// Skeleton card shown while the library is loading
+function SkeletonCard({ index }: { index: number }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: index * 0.05 }}
+      style={{
+        background: 'var(--surface-1)',
+        border: '1px solid rgba(42,51,71,0.6)',
+        borderRadius: 12,
+        padding: '16px 18px',
+        display: 'flex', flexDirection: 'column', gap: 10,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ height: 13, width: '60%', borderRadius: 4, background: 'rgba(42,51,71,0.5)', animation: 'shimmer 1.4s ease-in-out infinite' }} />
+        <div style={{ height: 16, width: 44, borderRadius: 99, background: 'rgba(42,51,71,0.4)', animation: 'shimmer 1.4s ease-in-out infinite' }} />
+      </div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ height: 14, width: 36, borderRadius: 4, background: 'rgba(42,51,71,0.4)', animation: 'shimmer 1.4s ease-in-out infinite' }} />
+        <div style={{ height: 14, width: 80, borderRadius: 4, background: 'rgba(42,51,71,0.3)', animation: 'shimmer 1.4s ease-in-out infinite' }} />
+      </div>
+      <div style={{ display: 'flex', gap: 4 }}>
+        {[44, 36, 44, 36].map((w, i) => (
+          <div key={i} style={{ height: 18, width: w, borderRadius: 99, background: 'rgba(42,51,71,0.35)', animation: 'shimmer 1.4s ease-in-out infinite' }} />
+        ))}
+      </div>
+      <div style={{ height: 27, borderRadius: 8, background: 'rgba(42,51,71,0.4)', animation: 'shimmer 1.4s ease-in-out infinite' }} />
+    </motion.div>
+  );
+}
+
 export default function ReportLibrary({ onNew, onOpen, onDelete, onDuplicate }: Props) {
   const reports = useStore(s => s.reports);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SortKey>('recent');
+  const [loading, setLoading] = useState(true);
+
+  // Brief skeleton loader on first mount — reports load async from disk
+  useEffect(() => {
+    const id = setTimeout(() => setLoading(false), 380);
+    return () => clearTimeout(id);
+  }, []);
 
   const filtered = reports
     .filter(r => {
@@ -98,7 +138,11 @@ export default function ReportLibrary({ onNew, onOpen, onDelete, onDuplicate }: 
 
       {/* Grid / empty state */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
-        {filtered.length === 0 && reports.length === 0 ? (
+        {loading ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(288px, 1fr))', gap: 14 }}>
+            {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} index={i} />)}
+          </div>
+        ) : filtered.length === 0 && reports.length === 0 ? (
           <EmptyState onNew={onNew} />
         ) : filtered.length === 0 ? (
           <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
@@ -194,39 +238,61 @@ interface CardProps {
   onDelete: () => void;
 }
 
+function timeAgoShort(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
 function ReportCard({ report: r, index, onOpen, onDuplicate, onDelete }: CardProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.04, duration: 0.2 }}
+      transition={{ delay: index * 0.04, duration: 0.25, ease: [0.2, 0.8, 0.2, 1] }}
       onClick={onOpen}
       style={{
         background: 'var(--surface-1)',
         border: '1px solid rgba(42,51,71,0.75)',
-        borderRadius: 10,
+        borderRadius: 12,
         padding: '16px 18px',
         cursor: 'pointer',
         display: 'flex',
         flexDirection: 'column',
         gap: 10,
-        transition: 'border-color 0.15s, box-shadow 0.15s',
+        transition: 'border-color 0.2s, box-shadow 0.2s, transform 0.2s',
+        position: 'relative',
+        overflow: 'hidden',
       }}
-      whileHover={{ scale: 1.004 }}
+      whileHover={{ scale: 1.006, y: -2 }}
       onMouseEnter={e => {
-        (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(74,158,255,0.35)';
-        (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 20px rgba(0,0,0,0.4), 0 0 0 1px rgba(74,158,255,0.06)';
+        (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(74,158,255,0.4)';
+        (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(74,158,255,0.08), inset 0 1px 0 rgba(255,255,255,0.03)';
       }}
       onMouseLeave={e => {
         (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(42,51,71,0.75)';
         (e.currentTarget as HTMLDivElement).style.boxShadow = 'none';
       }}
     >
+      {/* Accent glow top-right on hover */}
+      <div style={{
+        position: 'absolute', top: 0, right: 0, width: 60, height: 60,
+        background: 'radial-gradient(circle at top right, rgba(74,158,255,0.06) 0%, transparent 70%)',
+        pointerEvents: 'none',
+      }} />
+
       {/* Title + status */}
       <div className="flex items-start justify-between gap-2">
         <div style={{
-          fontWeight: 600, fontSize: 13, color: 'var(--text-primary)',
+          fontWeight: 700, fontSize: 13, color: 'var(--text-primary)',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0,
+          letterSpacing: '-0.01em',
         }}>
           {r.title}
         </div>
@@ -238,45 +304,49 @@ function ReportCard({ report: r, index, onOpen, onDuplicate, onDelete }: CardPro
         {r.platform && (
           <span style={{
             background: 'var(--surface-2)', border: '1px solid rgba(42,51,71,0.7)',
-            borderRadius: 3, padding: '1px 6px', fontSize: 10, fontWeight: 600,
-            textTransform: 'uppercase', letterSpacing: '0.04em',
+            borderRadius: 4, padding: '1px 6px', fontSize: 10, fontWeight: 600,
+            textTransform: 'uppercase', letterSpacing: '0.05em',
           }}>
             {r.platform}
           </span>
         )}
-        {r.targetName && <span>{r.targetName}</span>}
+        {r.targetName && <span style={{ color: 'var(--text-secondary)' }}>{r.targetName}</span>}
         {r.targetIP && (
-          <span style={{ color: '#4a9eff', fontFamily: 'var(--font-mono)' }}>{r.targetIP}</span>
+          <span style={{ color: '#4a9eff', fontFamily: 'var(--font-mono)', fontSize: 10 }}>{r.targetIP}</span>
         )}
-        <span>{r.assessmentDate}</span>
       </div>
 
       {/* Severity summary */}
       <SeveritySummary findings={r.findings} />
 
-      {/* Finding count */}
-      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-        {r.findings.length === 0
-          ? 'No findings'
-          : `${r.findings.length} finding${r.findings.length !== 1 ? 's' : ''}`}
+      {/* Bottom row: finding count + last updated */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+          {r.findings.length === 0
+            ? 'No findings'
+            : `${r.findings.length} finding${r.findings.length !== 1 ? 's' : ''}`}
+        </span>
+        <span style={{ fontSize: 10, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+          {timeAgoShort(r.updatedAt)}
+        </span>
       </div>
 
       {/* Actions */}
       <div className="flex gap-1.5 mt-0.5" onClick={e => e.stopPropagation()}>
         <button
           onClick={onOpen}
-          className="flex-1 h-7 text-xs font-semibold rounded-sm transition-all"
-          style={{ background: 'rgba(74,158,255,0.12)', color: '#4a9eff', border: '1px solid rgba(74,158,255,0.25)' }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(74,158,255,0.20)'; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(74,158,255,0.12)'; }}
+          className="flex-1 h-7 text-xs font-semibold transition-all"
+          style={{ background: 'rgba(74,158,255,0.12)', color: '#4a9eff', border: '1px solid rgba(74,158,255,0.25)', borderRadius: 8 }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(74,158,255,0.22)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 10px rgba(74,158,255,0.15)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(74,158,255,0.12)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none'; }}
         >
           Open
         </button>
         <button
           onClick={onDuplicate}
           title="Duplicate report"
-          className="h-7 px-3 text-xs font-medium rounded-sm transition-all"
-          style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid rgba(42,51,71,0.7)' }}
+          className="h-7 px-3 text-xs font-medium transition-all"
+          style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid rgba(42,51,71,0.7)', borderRadius: 8 }}
           onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-2)'; }}
           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
         >
@@ -285,10 +355,10 @@ function ReportCard({ report: r, index, onOpen, onDuplicate, onDelete }: CardPro
         <button
           onClick={onDelete}
           title="Delete report"
-          className="h-7 px-2.5 text-xs rounded-sm transition-all"
-          style={{ background: 'rgba(248,81,73,0.08)', color: '#f85149', border: '1px solid rgba(248,81,73,0.20)' }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(248,81,73,0.18)'; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(248,81,73,0.08)'; }}
+          className="h-7 px-2.5 text-xs transition-all"
+          style={{ background: 'rgba(248,81,73,0.08)', color: '#f85149', border: '1px solid rgba(248,81,73,0.20)', borderRadius: 8 }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(248,81,73,0.18)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(248,81,73,0.4)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(248,81,73,0.08)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(248,81,73,0.20)'; }}
         >
           ✕
         </button>

@@ -387,18 +387,26 @@ export default function SectionEditor() {
         </button>
 
         {!isFindingsSec && !isTocSec && (
-          <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 4, overflow: 'hidden', flexShrink: 0 }}>
+          <div style={{
+            display: 'flex', borderRadius: 8, overflow: 'hidden', flexShrink: 0,
+            background: 'var(--surface-2)',
+            border: '1px solid rgba(42,51,71,0.6)',
+            padding: 2, gap: 1,
+          }}>
             {(['edit', 'split', 'preview'] as EditorMode[]).map(m => (
               <button
                 key={m}
                 onClick={() => setMode(m)}
                 style={{
-                  padding: '3px 9px', fontSize: 10, fontWeight: 500,
-                  background: mode === m ? 'var(--accent)' : 'var(--bg)',
-                  color: mode === m ? '#fff' : 'var(--text-muted)',
-                  border: 'none', cursor: 'pointer', textTransform: 'capitalize',
-                  transition: 'background 0.15s',
+                  padding: '3px 10px', fontSize: 10, fontWeight: mode === m ? 600 : 500,
+                  background: mode === m ? 'rgba(74,158,255,0.15)' : 'transparent',
+                  color: mode === m ? '#4a9eff' : 'var(--text-muted)',
+                  border: mode === m ? '1px solid rgba(74,158,255,0.3)' : '1px solid transparent',
+                  cursor: 'pointer', textTransform: 'capitalize', borderRadius: 6,
+                  transition: 'all 0.15s var(--ease)',
                 }}
+                onMouseEnter={e => { if (mode !== m) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; }}
+                onMouseLeave={e => { if (mode !== m) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; }}
               >
                 {m}
               </button>

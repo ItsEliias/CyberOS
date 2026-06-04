@@ -127,6 +127,21 @@ button, a, input, select { transition: all 0.15s ease-out; }
 
 .status-dot-pulse { animation: statusPulse 2s ease-out infinite; }
 
+/* ─── Spinner ─────────────────────────────────────────────────────────────── */
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ─── Shimmer skeleton ────────────────────────────────────────────────────── */
+
+@keyframes shimmer {
+  0%   { opacity: 0.6; }
+  50%  { opacity: 1;   }
+  100% { opacity: 0.6; }
+}
+
 /* ─── Metric / accent glow ────────────────────────────────────────────────── */
 
 .metric-glow { filter: drop-shadow(0 0 8px var(--accent-glow)); }

@@ -1,8 +1,6 @@
-import { createRequire } from 'module'
-const require = createRequire(import.meta.url)
-const preset = require('../../design-system/tailwind-preset.cjs')
-
 /** @type {import('tailwindcss').Config} */
+import preset from '../design-system/tailwind-preset.cjs'
+
 export default {
   presets: [preset],
   content: ['./src/renderer/**/*.{js,ts,jsx,tsx}'],

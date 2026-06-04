@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export interface ExportOptions {
@@ -24,6 +24,23 @@ export default function ExportModal({ onExport, onCancel, exporting, defaultForm
   const [includeCredentials, setIncludeCredentials] = useState(true);
   const [redactCredentials, setRedactCredentials] = useState(true);
   const [includeRawNmap, setIncludeRawNmap] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
+
+  // Animate progress bar when exporting
+  useEffect(() => {
+    if (!exporting) { setExportProgress(0); return; }
+    setExportProgress(0);
+    const start = performance.now();
+    const duration = 3200;
+    let raf: number;
+    function step(now: number) {
+      const t = Math.min((now - start) / duration, 0.92); // stops at 92% — completes when done
+      setExportProgress(t * 100);
+      if (t < 0.92) raf = requestAnimationFrame(step);
+    }
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [exporting]);
 
   function handleExport() {
     onExport({ format, includeToc, includeFindingsTable, includeCredentials, redactCredentials, includeRawNmap });
@@ -106,11 +123,29 @@ export default function ExportModal({ onExport, onCancel, exporting, defaultForm
             </div>
           </div>
 
+          {/* Export progress bar */}
+          {exporting && (
+            <div style={{ height: 3, background: 'rgba(42,51,71,0.4)', overflow: 'hidden' }}>
+              <div style={{
+                height: '100%',
+                width: `${exportProgress}%`,
+                background: 'linear-gradient(90deg, rgba(74,158,255,0.6) 0%, #4a9eff 60%, rgba(74,158,255,0.8) 100%)',
+                transition: 'width 0.08s linear',
+                boxShadow: '0 0 8px rgba(74,158,255,0.5)',
+              }} />
+            </div>
+          )}
+
           {/* Footer */}
-          <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <div style={{ padding: '14px 20px', borderTop: exporting ? 'none' : '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
             <button className="btn-ghost" onClick={onCancel} disabled={exporting}>Cancel</button>
             <button className="btn-primary" onClick={handleExport} disabled={exporting}>
-              {exporting ? 'Exporting…' : `Export ${format === 'markdown' ? 'Markdown' : 'PDF'}`}
+              {exporting ? (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: '50%', border: '1.5px solid rgba(74,158,255,0.3)', borderTopColor: '#4a9eff', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+                  Exporting…
+                </span>
+              ) : `Export ${format === 'markdown' ? 'Markdown' : 'PDF'}`}
             </button>
           </div>
         </motion.div>

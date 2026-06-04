@@ -71,23 +71,45 @@ export default function SectionList({ onSelectSection, activeView, onViewChange 
       display: 'flex', flexDirection: 'column', background: 'var(--panel)'
     }}>
       {/* View tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-        {(['sections', 'findings'] as const).map(v => (
-          <button
-            key={v}
-            onClick={() => onViewChange(v)}
-            style={{
-              flex: 1, padding: '9px 0', fontSize: 11, fontWeight: 600,
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: activeView === v ? 'var(--accent)' : 'var(--text-muted)',
-              borderBottom: activeView === v ? '2px solid var(--accent)' : '2px solid transparent',
-              textTransform: 'uppercase', letterSpacing: '0.04em',
-              transition: 'color 0.15s',
-            }}
-          >
-            {v === 'findings' ? `Findings${findingsCount ? ` (${findingsCount})` : ''}` : 'Sections'}
-          </button>
-        ))}
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', flexShrink: 0, padding: '6px 8px 0', gap: 2 }}>
+        {(['sections', 'findings'] as const).map(v => {
+          const isActive = activeView === v;
+          return (
+            <button
+              key={v}
+              onClick={() => onViewChange(v)}
+              style={{
+                flex: 1, padding: '6px 4px 8px', fontSize: 11, fontWeight: 600,
+                background: 'none', border: 'none', borderRadius: '6px 6px 0 0', cursor: 'pointer',
+                color: isActive ? '#4a9eff' : 'var(--text-muted)',
+                borderBottom: isActive ? '2px solid #4a9eff' : '2px solid transparent',
+                textTransform: 'uppercase', letterSpacing: '0.04em',
+                transition: 'color 0.15s, background 0.15s',
+                position: 'relative',
+              }}
+              onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; }}
+              onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; }}
+            >
+              {v === 'findings' ? (
+                <span>
+                  Findings
+                  {findingsCount > 0 && (
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      width: 14, height: 14, borderRadius: 99, fontSize: 8, fontWeight: 700,
+                      background: isActive ? 'rgba(74,158,255,0.2)' : 'rgba(42,51,71,0.6)',
+                      color: isActive ? '#4a9eff' : 'var(--text-muted)',
+                      marginLeft: 4, verticalAlign: 'middle',
+                      transition: 'all 0.15s',
+                    }}>
+                      {findingsCount}
+                    </span>
+                  )}
+                </span>
+              ) : 'Sections'}
+            </button>
+          );
+        })}
       </div>
 
       {/* Section list with drag-to-reorder */}
@@ -209,16 +231,18 @@ function SectionItem({ section, isActive, onClick, onToggleVisible }: SectionIte
       <div
         onClick={onClick}
         style={{
-          padding: '7px 8px 7px 12px',
+          padding: '7px 8px 7px 10px',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           gap: 4,
-          background: isActive ? 'rgba(63,185,80,0.08)' : 'transparent',
-          borderLeft: isActive ? '2px solid var(--accent)' : '2px solid transparent',
-          opacity: section.visible ? 1 : 0.45,
-          transition: 'background 0.1s, border-color 0.1s',
+          background: isActive ? 'rgba(74,158,255,0.07)' : 'transparent',
+          borderLeft: isActive ? '2px solid #4a9eff' : '2px solid transparent',
+          opacity: section.visible ? 1 : 0.4,
+          transition: 'background 0.15s, border-color 0.15s, opacity 0.15s',
         }}
+        onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.025)'; }}
+        onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
       >
         {/* Drag handle */}
         <span
@@ -227,6 +251,7 @@ function SectionItem({ section, isActive, onClick, onToggleVisible }: SectionIte
             cursor: 'grab', fontSize: 11, color: 'var(--text-muted)',
             flexShrink: 0, padding: '0 2px', lineHeight: 1,
             userSelect: 'none', touchAction: 'none',
+            opacity: 0.6,
           }}
           title="Drag to reorder"
         >
@@ -235,7 +260,12 @@ function SectionItem({ section, isActive, onClick, onToggleVisible }: SectionIte
 
         {/* Type indicator */}
         {section.type && section.type !== 'body' && (
-          <span style={{ fontSize: 9, color: 'var(--accent)', flexShrink: 0, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+          <span style={{
+            fontSize: 9, color: '#4a9eff', flexShrink: 0, fontWeight: 700,
+            letterSpacing: '0.04em', textTransform: 'uppercase',
+            background: 'rgba(74,158,255,0.1)', borderRadius: 3,
+            padding: '1px 4px', lineHeight: 1.4,
+          }}>
             {section.type === 'toc' ? 'TOC' : section.type === 'cover' ? 'CVR' : section.type === 'signature' ? 'SIG' : section.type === 'risk-matrix' ? 'RMX' : ''}
           </span>
         )}
@@ -243,8 +273,10 @@ function SectionItem({ section, isActive, onClick, onToggleVisible }: SectionIte
         {/* Title */}
         <span style={{
           flex: 1, fontSize: 12,
-          color: isActive ? 'var(--text)' : 'var(--text-dim)',
+          color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          fontWeight: isActive ? 600 : 400,
+          transition: 'color 0.15s, font-weight 0.15s',
         }}>
           {section.title}
         </span>
@@ -252,7 +284,7 @@ function SectionItem({ section, isActive, onClick, onToggleVisible }: SectionIte
         {/* Unresolved comments badge */}
         {unresolvedCount(section) > 0 && (
           <span style={{
-            background: 'var(--accent)', color: '#000',
+            background: '#4a9eff', color: '#07080f',
             borderRadius: 99, fontSize: 8, fontWeight: 700,
             padding: '1px 5px', flexShrink: 0, lineHeight: 1.4,
           }}>
@@ -266,8 +298,10 @@ function SectionItem({ section, isActive, onClick, onToggleVisible }: SectionIte
           onClick={onToggleVisible}
           style={{
             background: 'none', border: 'none', padding: '1px 3px',
-            fontSize: 10, color: section.visible ? 'var(--accent)' : 'var(--text-muted)',
+            fontSize: 10, color: section.visible ? '#4a9eff' : 'var(--text-muted)',
             cursor: 'pointer', flexShrink: 0, lineHeight: 1,
+            opacity: section.visible ? 0.8 : 0.4,
+            transition: 'color 0.15s, opacity 0.15s',
           }}
         >
           {section.visible ? '●' : '○'}

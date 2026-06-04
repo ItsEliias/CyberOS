@@ -140,18 +140,49 @@ export default function NewReportWizard({ onComplete, onCancel }: Props) {
       >
         {/* Header */}
         <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)' }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>New Report</h2>
-          <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-            {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map(s => (
-              <div key={s} style={{
-                height: 3, flex: 1, borderRadius: 2,
-                background: s <= step ? 'var(--accent)' : 'var(--border)',
-                transition: 'background 0.2s'
-              }} />
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>New Report</h2>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+              {step} / {TOTAL_STEPS}
+            </span>
           </div>
-          <div style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 6 }}>
-            Step {step} of {TOTAL_STEPS} — {STEP_LABELS[step - 1]}
+
+          {/* Animated progress bar */}
+          <div style={{ height: 4, background: 'rgba(42,51,71,0.5)', borderRadius: 99, overflow: 'hidden', marginBottom: 12 }}>
+            <div style={{
+              height: '100%',
+              width: `${((step - 1) / (TOTAL_STEPS - 1)) * 100}%`,
+              background: 'linear-gradient(90deg, rgba(74,158,255,0.7) 0%, #4a9eff 100%)',
+              borderRadius: 99,
+              transition: 'width 0.4s cubic-bezier(0.2,0.8,0.2,1)',
+              boxShadow: '0 0 8px rgba(74,158,255,0.4)',
+            }} />
+          </div>
+
+          {/* Step dots */}
+          <div style={{ display: 'flex', gap: 0, position: 'relative' }}>
+            {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map(s => {
+              const done = s < step;
+              const active = s === step;
+              return (
+                <div key={s} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, gap: 4 }}>
+                  <div style={{
+                    width: active ? 20 : 8, height: 8, borderRadius: 99,
+                    background: done ? '#4a9eff' : active ? '#4a9eff' : 'rgba(42,51,71,0.6)',
+                    transition: 'all 0.3s cubic-bezier(0.2,0.8,0.2,1)',
+                    boxShadow: active ? '0 0 6px rgba(74,158,255,0.5)' : 'none',
+                  }} />
+                  <span style={{
+                    fontSize: 9, fontWeight: active ? 700 : 500, letterSpacing: '0.03em',
+                    color: active ? '#4a9eff' : done ? 'var(--text-secondary)' : 'var(--text-muted)',
+                    transition: 'color 0.2s',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {STEP_LABELS[s - 1].split(' ').slice(0, 2).join(' ')}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
