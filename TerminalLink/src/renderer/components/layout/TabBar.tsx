@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import type { TerminalSession } from '../../types/terminallink';
 
 /* ── Session tag definitions ─────────────────────────────────────────────── */
@@ -41,6 +41,20 @@ export default function TabBar({
   sessions, activeSessionId, onSelect, onNew, onClose, onRename, onColorChange,
 }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Mock: assign activity to ~20% of sessions on mount (random, stable per session id)
+  const activeOutputIds = useMemo(() => {
+    return new Set(
+      sessions
+        .filter(s => {
+          // Deterministic mock — hash the id to avoid random re-renders
+          let h = 0;
+          for (let i = 0; i < s.id.length; i++) h = (h * 31 + s.id.charCodeAt(i)) >>> 0;
+          return (h % 5) === 0; // ~20%
+        })
+        .map(s => s.id)
+    );
+  }, [sessions]);
   const [editValue, setEditValue] = useState('');
   const [ctxMenu,   setCtxMenu]   = useState<CtxMenu | null>(null);
   const [ghostTab,  setGhostTab]  = useState<GhostTab | null>(null);
@@ -182,6 +196,18 @@ export default function TabBar({
                   }}>
                   {sess.name}
                 </span>
+              )}
+
+              {/* Activity indicator dot — pulsing green for tabs with recent output */}
+              {activeOutputIds.has(sess.id) && !isActive && (
+                <span
+                  className="tab-activity-dot"
+                  title="Recent output"
+                  style={{
+                    width: 5, height: 5, borderRadius: '50%',
+                    background: '#00ff41', flexShrink: 0,
+                  }}
+                />
               )}
 
               {/* Session tag chip */}

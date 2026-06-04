@@ -68,7 +68,7 @@ function ColoredOutputSnippet({ text }: { text: string }) {
 }
 
 /** Tokenize a command string for syntax coloring */
-function SyntaxColoredCommand({ text }: { text: string }) {
+export function SyntaxColoredCommand({ text }: { text: string }) {
   // Split preserving whitespace tokens
   const tokens = text.split(/(\s+)/);
   return (
@@ -93,6 +93,55 @@ function SyntaxColoredCommand({ text }: { text: string }) {
         }
         return <span key={i}>{token}</span>;
       })}
+    </>
+  );
+}
+
+/**
+ * SyntaxColoredCommand with query match highlighting overlaid.
+ * Splits the text at match boundaries, then applies syntax coloring
+ * per segment but wraps matched segments in a highlight <mark>.
+ */
+export function SyntaxHighlightedCommandWithQuery({ text, query }: { text: string; query: string }) {
+  const q = query.trim().toLowerCase();
+  if (!q) return <SyntaxColoredCommand text={text} />;
+
+  // Build segments: {str, isMatch}[]
+  const segments: Array<{ str: string; isMatch: boolean }> = [];
+  const lower = text.toLowerCase();
+  let cursor = 0;
+  while (cursor < text.length) {
+    const idx = lower.indexOf(q, cursor);
+    if (idx === -1) {
+      segments.push({ str: text.slice(cursor), isMatch: false });
+      break;
+    }
+    if (idx > cursor) segments.push({ str: text.slice(cursor, idx), isMatch: false });
+    segments.push({ str: text.slice(idx, idx + q.length), isMatch: true });
+    cursor = idx + q.length;
+  }
+
+  return (
+    <>
+      {segments.map((seg, i) =>
+        seg.isMatch ? (
+          <mark
+            key={i}
+            style={{
+              background: 'rgba(0,255,65,0.22)',
+              color: '#00ff41',
+              borderRadius: 2,
+              padding: '0 1px',
+              fontWeight: 600,
+              boxShadow: '0 0 4px rgba(0,255,65,0.3)',
+            }}
+          >
+            <SyntaxColoredCommand text={seg.str} />
+          </mark>
+        ) : (
+          <SyntaxColoredCommand key={i} text={seg.str} />
+        )
+      )}
     </>
   );
 }
@@ -182,7 +231,7 @@ export default function CommandEntryRow({ entry, query }: Props) {
         lineHeight: 1.4,
       }}>
         {query ? (
-          <HighlightedText text={entry.command} query={query} />
+          <SyntaxHighlightedCommandWithQuery text={entry.command} query={query} />
         ) : (
           <SyntaxColoredCommand text={entry.command} />
         )}

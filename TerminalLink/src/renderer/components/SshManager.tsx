@@ -1,5 +1,77 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import type { SshProfile } from '../types/terminallink';
+
+type TestState = 'idle' | 'pinging' | 'ok' | 'fail';
+
+/** Per-profile connection test button with mock 1.5s latency */
+function TestButton({ profileId }: { profileId: string }) {
+  const [state, setState] = useState<TestState>('idle');
+
+  const handleTest = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (state === 'pinging') return;
+    setState('pinging');
+    setTimeout(() => {
+      // Mock: profile ids ending in even digit succeed, odd fail — purely visual
+      const lastChar = profileId.slice(-1);
+      const succeed = !['1', '3', '5', '7', '9'].includes(lastChar);
+      setState(succeed ? 'ok' : 'fail');
+      setTimeout(() => setState('idle'), 2500);
+    }, 1500);
+  }, [state, profileId]);
+
+  const label =
+    state === 'pinging' ? (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        <span className="ssh-test-spinner" style={{
+          width: 8, height: 8, borderRadius: '50%',
+          border: '1.5px solid rgba(74,158,255,0.3)',
+          borderTopColor: '#4a9eff',
+          display: 'inline-block',
+          animation: 'spin 0.7s linear infinite',
+        }} />
+        ping…
+      </span>
+    ) : state === 'ok' ? (
+      <span style={{ color: '#00ff41' }}>✓ ok</span>
+    ) : state === 'fail' ? (
+      <span style={{ color: '#f85149' }}>✕ fail</span>
+    ) : (
+      'Test'
+    );
+
+  const bg =
+    state === 'ok'   ? 'rgba(0,255,65,0.1)' :
+    state === 'fail' ? 'rgba(248,81,73,0.08)' :
+    'rgba(74,158,255,0.08)';
+  const border =
+    state === 'ok'   ? '1px solid rgba(0,255,65,0.35)' :
+    state === 'fail' ? '1px solid rgba(248,81,73,0.3)' :
+    '1px solid rgba(74,158,255,0.3)';
+  const color =
+    state === 'ok'   ? '#00ff41' :
+    state === 'fail' ? '#f85149' :
+    '#4a9eff';
+
+  return (
+    <button
+      onClick={handleTest}
+      disabled={state === 'pinging'}
+      title="Test connection (mock)"
+      style={{
+        fontSize: 10, padding: '4px 8px', borderRadius: 8,
+        background: bg, border, color,
+        cursor: state === 'pinging' ? 'default' : 'pointer',
+        transition: 'all 0.15s ease',
+        fontFamily: 'inherit',
+        whiteSpace: 'nowrap',
+        opacity: state === 'pinging' ? 0.9 : 1,
+      }}
+    >
+      {label}
+    </button>
+  );
+}
 
 interface Props {
   profiles: SshProfile[];
@@ -137,6 +209,7 @@ export default function SshManager({ profiles, onConnect, onAdd, onRemove }: Pro
             </div>
           </div>
           <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
+            <TestButton profileId={p.id} />
             <button
               onClick={() => onConnect(buildCmd(p))}
               style={{

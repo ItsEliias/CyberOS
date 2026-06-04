@@ -26,6 +26,51 @@ function addRecentId(id: string) {
   localStorage.setItem(RECENT_KEY, JSON.stringify([id, ...prev].slice(0, MAX_RECENT)));
 }
 
+/**
+ * Compute a 1-5 integer match score for a palette item against the query.
+ * Higher = better match: exact label match → 5, starts-with → 4,
+ * includes (label) → 3, description match → 2, category match → 1.
+ */
+function matchScore(item: PaletteItem, query: string): number {
+  if (!query) return 0;
+  const q    = query.toLowerCase();
+  const lbl  = item.label.toLowerCase();
+  const desc = (item.description ?? '').toLowerCase();
+  const cat  = item.category.toLowerCase();
+  if (lbl === q)                    return 5;
+  if (lbl.startsWith(q))            return 4;
+  if (lbl.includes(q))              return 3;
+  if (desc.includes(q))             return 2;
+  if (cat.includes(q))              return 1;
+  return 1; // fallback — item is in filtered so must match something
+}
+
+/** 3–5 filled squares representing match quality */
+function MatchScoreBars({ score }: { score: number }) {
+  const MAX = 5;
+  return (
+    <span
+      title={`Match score ${score}/${MAX}`}
+      style={{ display: 'inline-flex', gap: 2, flexShrink: 0, alignItems: 'center' }}
+    >
+      {Array.from({ length: MAX }).map((_, i) => {
+        const filled = i < score;
+        return (
+          <span
+            key={i}
+            style={{
+              width: 4, height: 8, borderRadius: 1,
+              background: filled ? `rgba(0,255,65,${0.25 + (i / MAX) * 0.65})` : 'rgba(0,255,65,0.08)',
+              transition: 'background 0.15s ease',
+              flexShrink: 0,
+            }}
+          />
+        );
+      })}
+    </span>
+  );
+}
+
 function highlight(text: string, query: string): React.ReactNode {
   if (!query) return text;
   const idx = text.toLowerCase().indexOf(query.toLowerCase());
@@ -254,6 +299,9 @@ export default function CommandPalette({ items, onClose }: Props) {
                           </div>
                         )}
                       </div>
+                      {query.trim() && (
+                        <MatchScoreBars score={matchScore(item, query)} />
+                      )}
                     </div>
                   );
                 })}

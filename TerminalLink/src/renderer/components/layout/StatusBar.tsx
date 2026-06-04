@@ -87,8 +87,24 @@ function ConnIndicator({ connecting }: { connecting: boolean }) {
   );
 }
 
+type EditorMode = 'NORMAL' | 'INSERT';
+
 export default function StatusBar({ sessionCtx, commandCount, sessionName, cwd, exitCode, connecting = false, latencyMs = 28 }: Props) {
   const hasTarget = Boolean(sessionCtx.activeTarget || sessionCtx.activeIP);
+  const [editorMode, setEditorMode] = useState<EditorMode>('NORMAL');
+
+  // Toggle mode: 'i' → INSERT, 'Escape' → NORMAL
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      // Don't interfere with inputs/textareas
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea') return;
+      if (e.key === 'i' && editorMode === 'NORMAL') setEditorMode('INSERT');
+      if (e.key === 'Escape' && editorMode === 'INSERT') setEditorMode('NORMAL');
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [editorMode]);
 
   return (
     <div style={{
@@ -144,6 +160,29 @@ export default function StatusBar({ sessionCtx, commandCount, sessionName, cwd, 
       )}
 
       <div style={{ flex: 1 }} />
+
+      {/* INSERT / NORMAL mode chip — toggle with i / Escape */}
+      <span
+        key={editorMode}
+        className="mode-chip"
+        style={{
+          fontSize: 9, padding: '1px 6px', borderRadius: 3,
+          background: editorMode === 'INSERT'
+            ? 'rgba(74,158,255,0.15)'
+            : 'rgba(0,255,65,0.07)',
+          border: editorMode === 'INSERT'
+            ? '1px solid rgba(74,158,255,0.45)'
+            : '1px solid rgba(0,255,65,0.2)',
+          color: editorMode === 'INSERT' ? '#4a9eff' : 'rgba(0,255,65,0.55)',
+          fontWeight: 700,
+          letterSpacing: '0.07em',
+          fontFamily: 'var(--font-mono)',
+          userSelect: 'none',
+        }}
+      >
+        {editorMode}
+      </span>
+      <Sep />
 
       {/* Line/column counter (mock values) */}
       <span style={{ color: 'rgba(0,255,65,0.35)', fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.04em' }}>
