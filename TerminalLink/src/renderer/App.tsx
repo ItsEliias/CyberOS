@@ -13,6 +13,7 @@ import CommandPalette from './components/CommandPalette';
 import ToolLauncher   from './components/ToolLauncher';
 import AlertToast     from './components/AlertToast';
 import AiPanel        from './components/AiPanel';
+import KeyboardShortcutsPanel from './components/KeyboardShortcutsPanel';
 import { useTerminalLinkStore } from './stores/useTerminalLinkStore';
 import type { CommandEntry } from '@shared/types';
 import OnboardingModal, { useOnboarding } from './components/OnboardingModal';
@@ -40,11 +41,13 @@ export default function App() {
   } = useTerminalLinkStore();
 
   const versionRef = useRef('');
-  const [activePane, setActivePane] = useState<'left' | 'right'>('left');
+  const [activePane,  setActivePane]  = useState<'left' | 'right'>('left');
   const [lastCommand, setLastCommand] = useState('');
   const [lastOutput,  setLastOutput]  = useState('');
   const [statusCwd,   setStatusCwd]   = useState('');
   const [statusExit,  setStatusExit]  = useState<number | null>(null);
+  const [kbPanelOpen, setKbPanelOpen] = useState(false);
+  const [connecting,  setConnecting]  = useState(false);
   // Ref to write into active terminal (used by snippets/palette/ssh)
   const writeToTermRef = useRef<((data: string) => void) | null>(null);
 
@@ -73,15 +76,21 @@ export default function App() {
       if (mod && e.shiftKey && e.key === 'b') { e.preventDefault(); handleBroadcastToggle(); }
       if (mod && e.key === 'l') { e.preventDefault(); setToolLauncherOpen(true); }
       if (mod && e.key === 't') { e.preventDefault(); handleNewSession(); }
+      // ⌘? (Cmd+Shift+/ or Cmd+?) → keyboard shortcuts panel
+      if (mod && (e.key === '?' || (e.shiftKey && e.key === '/'))) {
+        e.preventDefault();
+        setKbPanelOpen(o => !o);
+      }
       if (e.key === 'Escape') {
         if (commandPaletteOpen) setCommandPaletteOpen(false);
         if (toolLauncherOpen)   setToolLauncherOpen(false);
+        if (kbPanelOpen)        setKbPanelOpen(false);
       }
     }
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [broadcastMode, commandPaletteOpen, toolLauncherOpen]);
+  }, [broadcastMode, commandPaletteOpen, toolLauncherOpen, kbPanelOpen]);
 
   const handleCommand = useCallback((entry: CommandEntry) => {
     addCommand({ command: entry.command, pane: entry.pane, outputSnippet: entry.outputSnippet });
@@ -107,7 +116,11 @@ export default function App() {
 
   const handleSshConnect = useCallback((cmd: string) => {
     handleNewSession();
-    setTimeout(() => writeToTermRef.current?.(`${cmd}\r`), 300);
+    setConnecting(true);
+    setTimeout(() => {
+      writeToTermRef.current?.(`${cmd}\r`);
+      setConnecting(false);
+    }, 2000);
   }, [handleNewSession]);
 
   const handleExportSession = useCallback(async (rec: import('./types/terminallink').RecordedSession, fmt: 'cast' | 'txt') => {
@@ -301,6 +314,7 @@ export default function App() {
         sessionName={sessionName}
         cwd={statusCwd}
         exitCode={statusExit}
+        connecting={connecting}
       />
 
       {/* Overlays */}
@@ -329,6 +343,22 @@ export default function App() {
       />
 
       {onboarding.show && <OnboardingModal onClose={onboarding.close} />}
+
+      {/* Keyboard shortcuts panel — ⌘? */}
+      <AnimatePresence>
+        {kbPanelOpen && (
+          <motion.div
+            key="kb-panel"
+            initial={{ x: 320, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 320, opacity: 0 }}
+            transition={{ duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
+            style={{ position: 'fixed', top: 0, right: 0, bottom: 0, zIndex: 10000, display: 'flex' }}
+          >
+            <KeyboardShortcutsPanel onClose={() => setKbPanelOpen(false)} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

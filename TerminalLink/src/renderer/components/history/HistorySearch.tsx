@@ -1,6 +1,6 @@
 /**
  * HistorySearch — TerminalLink
- * Search input for the history panel with result count.
+ * Search input for the history panel with result count and match rate indicator.
  */
 import { useRef } from 'react';
 
@@ -67,8 +67,27 @@ export default function HistorySearch({ query, total, filtered, onChange }: Prop
         )}
       </div>
       {query.trim() && (
-        <div style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'right', paddingRight: 2 }}>
-          {filtered} of {total} results
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: 2 }}>
+          <span style={{ fontSize: 9, color: 'rgba(0,255,65,0.3)' }}>
+            {filtered === 0 ? 'no matches' : `${filtered} of ${total}`}
+          </span>
+          {filtered > 0 && total > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              {/* Mini match-rate bar */}
+              <div style={{ width: 40, height: 3, background: 'rgba(0,255,65,0.1)', borderRadius: 2, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${Math.round((filtered / total) * 100)}%`,
+                  background: filtered === total ? '#00ff41' : 'rgba(0,255,65,0.5)',
+                  borderRadius: 2,
+                  transition: 'width 0.2s ease',
+                }} />
+              </div>
+              <span style={{ fontSize: 9, color: 'rgba(0,255,65,0.3)' }}>
+                {Math.round((filtered / total) * 100)}%
+              </span>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -15,21 +15,55 @@ interface Props {
 function HighlightedText({ text, query }: { text: string; query: string }) {
   const q = query.trim();
   if (!q) return <>{text}</>;
-  const idx = text.toLowerCase().indexOf(q.toLowerCase());
-  if (idx === -1) return <>{text}</>;
-  return (
-    <>
-      {text.slice(0, idx)}
-      <span style={{
-        background: 'rgba(245,158,11,0.2)',
-        color: 'var(--warning, #e3b341)',
+
+  // Find ALL occurrences (case-insensitive) and wrap each
+  const lower = text.toLowerCase();
+  const lq    = q.toLowerCase();
+  const nodes: React.ReactNode[] = [];
+  let cursor = 0;
+
+  while (cursor < text.length) {
+    const idx = lower.indexOf(lq, cursor);
+    if (idx === -1) {
+      nodes.push(text.slice(cursor));
+      break;
+    }
+    if (idx > cursor) nodes.push(text.slice(cursor, idx));
+    nodes.push(
+      <mark key={idx} style={{
+        background: 'rgba(0,255,65,0.22)',
+        color: '#00ff41',
         borderRadius: 2,
-        padding: '0 2px',
+        padding: '0 1px',
+        fontWeight: 600,
+        boxShadow: '0 0 4px rgba(0,255,65,0.3)',
       }}>
         {text.slice(idx, idx + q.length)}
-      </span>
-      {text.slice(idx + q.length)}
-    </>
+      </mark>
+    );
+    cursor = idx + q.length;
+  }
+
+  return <>{nodes}</>;
+}
+
+/** Colorize output snippet line using ANSI-inspired rules */
+function ColoredOutputSnippet({ text }: { text: string }) {
+  const isError   = /error|fail|denied|not found|exception|fatal|refused/i.test(text);
+  const isSuccess = /ok|success|done|complete|connected|accepted|200/i.test(text);
+  const isPath    = /^(\/|\~\/|\.\/)/.test(text.trimStart());
+  const isWarn    = /warn|timeout|retry|skip|deprecated/i.test(text);
+
+  const color = isError   ? '#f85149'
+              : isSuccess ? '#00ff41'
+              : isPath    ? '#4a9eff'
+              : isWarn    ? '#d29922'
+              : 'rgba(0,255,65,0.35)';
+
+  return (
+    <span style={{ color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      {text}
+    </span>
   );
 }
 
@@ -158,14 +192,14 @@ export default function CommandEntryRow({ entry, query }: Props) {
       {entry.outputSnippet && (
         <span style={{
           fontSize: 10,
-          color: 'var(--text-muted)',
-          whiteSpace: 'nowrap',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
           overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          borderLeft: '2px solid var(--border)',
+          borderLeft: '2px solid rgba(0,255,65,0.15)',
           paddingLeft: 6,
         }}>
-          {entry.outputSnippet}
+          <ColoredOutputSnippet text={entry.outputSnippet} />
         </span>
       )}
     </div>

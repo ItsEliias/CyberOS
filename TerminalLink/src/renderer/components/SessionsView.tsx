@@ -2,9 +2,38 @@
  * SessionsView — TerminalLink
  * Lists terminal sessions, SSH profiles, and recorded sessions with export.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { TerminalSession, SshProfile, RecordedSession } from '../types/terminallink';
 import SshManager from './SshManager';
+
+/* ── Recent hosts derived from session names ─────────────────────────────── */
+const KNOWN_RECENT_HOSTS = [
+  { host: '10.10.11.2',   label: 'HTB Linux',   icon: '🐧' },
+  { host: '10.10.11.50',  label: 'HTB Win',     icon: '🪟' },
+  { host: '192.168.1.1',  label: 'Router',      icon: '📡' },
+  { host: 'kali.local',   label: 'Kali',        icon: '💀' },
+];
+
+/* ── ANSI-like output snippet colorizer ──────────────────────────────────── */
+function ColoredSnippet({ text }: { text: string }) {
+  // Classify the snippet for color treatment
+  const lower = text.toLowerCase();
+  const isError   = /error|fail|denied|not found|exception|fatal/i.test(lower);
+  const isSuccess = /ok|success|done|complete|connected|200/i.test(lower);
+  const isPath    = /^\/|~\/|\.\//i.test(text.trimStart());
+  const isWarn    = /warn|timeout|retry|skip/i.test(lower);
+
+  const cls = isError ? 'ansi-error' : isSuccess ? 'ansi-success' : isPath ? 'ansi-path' : isWarn ? 'ansi-warn' : 'ansi-muted';
+
+  return (
+    <span className={cls} style={{
+      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 130,
+      fontStyle: 'italic', display: 'block',
+    }}>
+      {text}
+    </span>
+  );
+}
 
 /* ── Skeleton loader ── */
 function SkeletonRow() {
@@ -189,9 +218,7 @@ function SessionRow({ session, isActive, lastCmd, onSelect }: {
         <span>·</span>
         <span>{session.commandCount} cmd{session.commandCount !== 1 ? 's' : ''}</span>
         <span>·</span>
-        <span style={{ color: 'rgba(0,255,65,0.2)', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 120 }}>
-          $ {previewCmd}
-        </span>
+        <ColoredSnippet text={`$ ${previewCmd}`} />
       </div>
     </div>
   );
@@ -215,6 +242,19 @@ export default function SessionsView({
   const [loading, setLoading] = useState(true);
   const [quickConnectVal, setQuickConnectVal] = useState('');
   const sorted = [...sessions].sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+
+  // Derive recent hosts: SSH profiles + hardcoded known hosts, deduplicated
+  const recentHosts = useMemo(() => {
+    const fromProfiles = sshProfiles.slice(0, 3).map(p => ({
+      host: p.host, label: p.name, icon: '⇄',
+    }));
+    const merged = [...fromProfiles];
+    for (const kh of KNOWN_RECENT_HOSTS) {
+      if (!merged.some(h => h.host === kh.host)) merged.push(kh);
+      if (merged.length >= 5) break;
+    }
+    return merged.slice(0, 5);
+  }, [sshProfiles]);
 
   useEffect(() => {
     const t = setTimeout(() => setLoading(false), 400);
@@ -291,35 +331,56 @@ export default function SessionsView({
             padding: '8px 12px',
             borderBottom: '1px solid rgba(0,255,65,0.08)',
             background: 'rgba(0,255,65,0.02)',
-            display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0,
+            display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0,
           }}>
-            <span style={{ fontSize: 9, color: 'rgba(0,255,65,0.35)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', flexShrink: 0 }}>ssh/cmd</span>
-            <input
-              value={quickConnectVal}
-              onChange={e => setQuickConnectVal(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && quickConnectVal.trim()) {
-                  onQuickConnect?.(quickConnectVal.trim());
-                  setQuickConnectVal('');
-                }
-              }}
-              placeholder="Quick connect…"
-              style={{
-                flex: 1, background: 'rgba(0,255,65,0.04)', border: '1px solid rgba(0,255,65,0.15)',
-                borderRadius: 6, padding: '4px 8px', color: '#c8ffc8',
-                fontSize: 10, fontFamily: 'var(--font-mono)', outline: 'none',
-              }}
-            />
-            <button
-              onClick={() => { if (quickConnectVal.trim()) { onQuickConnect?.(quickConnectVal.trim()); setQuickConnectVal(''); } }}
-              style={{
-                fontSize: 10, padding: '4px 10px', borderRadius: 6,
-                background: 'rgba(0,255,65,0.1)', border: '1px solid rgba(0,255,65,0.3)',
-                color: '#00ff41', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontWeight: 600, flexShrink: 0,
-              }}
-            >
-              ↵
-            </button>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <span style={{ fontSize: 9, color: 'rgba(0,255,65,0.35)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', flexShrink: 0 }}>ssh/cmd</span>
+              <input
+                value={quickConnectVal}
+                onChange={e => setQuickConnectVal(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && quickConnectVal.trim()) {
+                    onQuickConnect?.(quickConnectVal.trim());
+                    setQuickConnectVal('');
+                  }
+                }}
+                placeholder="Quick connect…"
+                style={{
+                  flex: 1, background: 'rgba(0,255,65,0.04)', border: '1px solid rgba(0,255,65,0.15)',
+                  borderRadius: 6, padding: '4px 8px', color: '#c8ffc8',
+                  fontSize: 10, fontFamily: 'var(--font-mono)', outline: 'none',
+                }}
+              />
+              <button
+                onClick={() => { if (quickConnectVal.trim()) { onQuickConnect?.(quickConnectVal.trim()); setQuickConnectVal(''); } }}
+                style={{
+                  fontSize: 10, padding: '4px 10px', borderRadius: 6,
+                  background: 'rgba(0,255,65,0.1)', border: '1px solid rgba(0,255,65,0.3)',
+                  color: '#00ff41', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontWeight: 600, flexShrink: 0,
+                }}
+              >
+                ↵
+              </button>
+            </div>
+            {/* Recent host chips */}
+            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', paddingBottom: 2 }}>
+              {recentHosts.map(h => (
+                <button
+                  key={h.host}
+                  className="recent-host-chip"
+                  title={`ssh ${h.host}`}
+                  onClick={() => {
+                    const cmd = `ssh ${h.host}`;
+                    onQuickConnect?.(cmd);
+                  }}
+                  style={{ fontFamily: 'var(--font-mono)', border: 'none', background: 'rgba(0,255,65,0.05)', color: 'rgba(0,255,65,0.6)' }}
+                >
+                  <span style={{ fontSize: 10 }}>{h.icon}</span>
+                  <span>{h.label}</span>
+                  <span style={{ opacity: 0.5, fontSize: 8 }}>{h.host}</span>
+                </button>
+              ))}
+            </div>
           </div>
           <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
             {loading ? (

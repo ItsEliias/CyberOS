@@ -1,6 +1,24 @@
 import { useState, useRef, useCallback } from 'react';
 import type { TerminalSession } from '../../types/terminallink';
 
+/* ── Session tag definitions ─────────────────────────────────────────────── */
+interface SessionTag { label: string; color: string; bg: string }
+
+const TAG_PATTERNS: Array<{ re: RegExp; tag: SessionTag }> = [
+  { re: /htb|hack.?the.?box/i, tag: { label: 'HTB',    color: '#9fef00', bg: 'rgba(159,239,0,0.12)' } },
+  { re: /ctf/i,                 tag: { label: 'CTF',    color: '#56d4dd', bg: 'rgba(86,212,221,0.12)' } },
+  { re: /client|pentest|pt/i,   tag: { label: 'CLIENT', color: '#d29922', bg: 'rgba(210,153,34,0.12)' } },
+  { re: /lab|home|local/i,      tag: { label: 'LAB',    color: '#b44fff', bg: 'rgba(180,79,255,0.12)' } },
+  { re: /ssh/i,                  tag: { label: 'SSH',    color: '#4a9eff', bg: 'rgba(74,158,255,0.12)' } },
+];
+
+function detectTag(name: string): SessionTag | null {
+  for (const { re, tag } of TAG_PATTERNS) {
+    if (re.test(name)) return tag;
+  }
+  return null;
+}
+
 interface Props {
   sessions: TerminalSession[];
   activeSessionId: string | null;
@@ -108,26 +126,48 @@ export default function TabBar({
                   onClick={e => e.stopPropagation()}
                   style={{
                     flex: 1, minWidth: 0, fontSize: 10,
-                    background: 'rgba(0,255,65,0.05)',
+                    background: `${color}10`,
                     border: `1px solid ${color}`,
-                    borderRadius: 2,
+                    borderRadius: 3,
                     color: '#c8ffc8',
-                    padding: '1px 4px',
+                    padding: '1px 5px',
                     fontFamily: 'var(--font-mono)',
                     outline: 'none',
+                    boxShadow: `0 0 6px ${color}40`,
+                    transition: 'box-shadow 0.15s ease',
                   }}
                 />
               ) : (
-                <span style={{
-                  flex: 1, fontSize: 10,
-                  color: isActive ? '#c8ffc8' : 'rgba(0,255,65,0.4)',
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  fontWeight: isActive ? 500 : 400,
-                  letterSpacing: '0.03em',
-                }}>
+                <span
+                  title="Double-click to rename"
+                  style={{
+                    flex: 1, fontSize: 10,
+                    color: isActive ? '#c8ffc8' : 'rgba(0,255,65,0.4)',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    fontWeight: isActive ? 500 : 400,
+                    letterSpacing: '0.03em',
+                  }}>
                   {sess.name}
                 </span>
               )}
+
+              {/* Session tag chip */}
+              {(() => {
+                const tag = detectTag(sess.name);
+                if (!tag) return null;
+                return (
+                  <span
+                    className="session-tag-chip"
+                    style={{
+                      color: tag.color,
+                      background: tag.bg,
+                      border: `1px solid ${tag.color}40`,
+                    }}
+                  >
+                    {tag.label}
+                  </span>
+                );
+              })()}
 
               {/* Connection quality badge — only on active tab */}
               {isActive && (

@@ -2,6 +2,7 @@
  * StatusBar — TerminalLink
  * Bottom status bar showing session name, cwd, exit code, and target context.
  */
+import { useState, useEffect } from 'react';
 import type { SessionContext } from '@shared/types';
 
 interface Props {
@@ -10,6 +11,8 @@ interface Props {
   sessionName: string;
   cwd?: string;
   exitCode?: number | null;
+  /** When true the animated handshake icon shows; after 1.8s it resolves to steady dot */
+  connecting?: boolean;
 }
 
 function Sep() {
@@ -18,7 +21,46 @@ function Sep() {
   );
 }
 
-export default function StatusBar({ sessionCtx, commandCount, sessionName, cwd, exitCode }: Props) {
+/** Animated connection status indicator */
+function ConnIndicator({ connecting }: { connecting: boolean }) {
+  const [phase, setPhase] = useState<'shake' | 'ready'>(connecting ? 'shake' : 'ready');
+
+  useEffect(() => {
+    if (connecting) {
+      setPhase('shake');
+      const t = setTimeout(() => setPhase('ready'), 1800);
+      return () => clearTimeout(t);
+    }
+    setPhase('ready');
+  }, [connecting]);
+
+  if (phase === 'shake') {
+    return (
+      <span
+        className="conn-handshake"
+        title="Connecting…"
+        style={{ fontSize: 11, lineHeight: 1, display: 'inline-block', color: '#d29922' }}
+      >
+        ⇄
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="conn-dot-ready"
+      title="Connected"
+      style={{
+        width: 6, height: 6, borderRadius: '50%', display: 'inline-block',
+        background: '#00ff41',
+        boxShadow: '0 0 5px rgba(0,255,65,0.6)',
+        flexShrink: 0,
+      }}
+    />
+  );
+}
+
+export default function StatusBar({ sessionCtx, commandCount, sessionName, cwd, exitCode, connecting = false }: Props) {
   const hasTarget = Boolean(sessionCtx.activeTarget || sessionCtx.activeIP);
 
   return (
@@ -82,24 +124,15 @@ export default function StatusBar({ sessionCtx, commandCount, sessionName, cwd, 
       </span>
       <Sep />
 
-      {/* Target indicator */}
+      {/* Connection indicator */}
       <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 9, letterSpacing: '0.08em' }}>
-        <span
-          className={hasTarget ? 'status-dot-pulse' : ''}
-          style={{
-            width: 5, height: 5, borderRadius: '50%', display: 'inline-block',
-            background: hasTarget ? '#00ff41' : 'rgba(0,255,65,0.2)',
-            boxShadow: hasTarget ? '0 0 8px rgba(0,255,65,0.7)' : 'none',
-            flexShrink: 0,
-            '--pulse-color': 'rgba(0,255,65,0.4)',
-            '--pulse-color-fade': 'rgba(0,255,65,0)',
-          } as React.CSSProperties}
-        />
+        <ConnIndicator connecting={connecting} />
         <span style={{
-          color: hasTarget ? '#7abf7a' : 'rgba(0,255,65,0.25)', textTransform: 'uppercase',
+          color: connecting ? '#d29922' : (hasTarget ? '#7abf7a' : 'rgba(0,255,65,0.25)'),
+          textTransform: 'uppercase',
           transition: 'color 0.3s ease',
         }}>
-          {hasTarget ? 'TARGET SET' : 'NO TARGET'}
+          {connecting ? 'CONNECTING' : (hasTarget ? 'TARGET SET' : 'NO TARGET')}
         </span>
       </span>
     </div>
