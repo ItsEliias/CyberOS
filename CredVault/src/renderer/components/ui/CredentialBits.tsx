@@ -1,6 +1,7 @@
 // ─── CredentialBits — presentational micro-components for CredentialRow ───────
 // Extracted in pass 3 to keep CredentialRow.tsx under 500 lines.
 
+import type { ReactNode } from 'react'
 import type { CredentialCategory } from '@shared/types'
 import { scorePassword } from '../../utils/passwordStrength'
 
@@ -123,5 +124,36 @@ export function ExpiryBadge({ expiresAt }: { expiresAt: string }) {
       )}
       {label}
     </span>
+  )
+}
+
+// ─── Field + CopyField (expanded row helpers) ─────────────────────────────────
+
+export function Field({ label, children, wide }: { label: string; children: ReactNode; wide?: boolean }) {
+  return (
+    <div style={{ gridColumn: wide ? '1 / -1' : undefined }}>
+      <div style={{ fontSize: 9, color: '#484f58', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+        {label}
+      </div>
+      <div>{children}</div>
+    </div>
+  )
+}
+
+export function CopyField({ value, onCopy, truncate, mono }: { value: string; onCopy: () => void; truncate?: boolean; mono?: boolean }) {
+  return (
+    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+      <span style={{
+        fontFamily: mono ? 'JetBrains Mono, monospace' : undefined,
+        fontSize: 12, flex: 1, overflow: 'hidden',
+        textOverflow: truncate ? 'ellipsis' : undefined,
+        whiteSpace: 'nowrap', color: '#c9d1d9',
+      }}>
+        {value}
+      </span>
+      <button className="btn btn-ghost" style={{ padding: '2px 7px', fontSize: 11, flexShrink: 0 }} onClick={onCopy}>
+        Copy
+      </button>
+    </div>
   )
 }

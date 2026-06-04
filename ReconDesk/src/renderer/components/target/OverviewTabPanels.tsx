@@ -1,5 +1,75 @@
 // ReconDesk — OverviewTab sub-panels (split for 500-line limit)
 
+import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import type { Port } from '../../types/recondesk'
+
+// ─── Risk Score Gauge ─────────────────────────────────────────────────────────
+
+const HIGH_RISK_PORTS = new Set([21, 23, 25, 110, 135, 137, 139, 445, 512, 513, 514, 1433, 1521, 3306, 3389, 5432, 5900, 6379, 27017])
+const LOW_RISK_PORTS  = new Set([22, 80, 443, 8080, 8443])
+
+export function computeRiskScore(ports: Port[]): number {
+  const open = ports.filter(p => p.state === 'open')
+  if (open.length === 0) return 0
+  let score = 0
+  open.forEach(p => {
+    if (HIGH_RISK_PORTS.has(p.port)) score += 15
+    else if (LOW_RISK_PORTS.has(p.port)) score += 3
+    else score += 7
+  })
+  return Math.min(100, Math.round(score))
+}
+
+function riskColor(score: number): string {
+  if (score >= 70) return '#f85149'
+  if (score >= 40) return '#d29922'
+  return '#3fb950'
+}
+
+export function RiskGauge({ score }: { score: number }) {
+  const [animScore, setAnimScore] = useState(0)
+  useEffect(() => {
+    const dur = 900
+    const t0 = performance.now()
+    function step(now: number) {
+      const p = Math.min((now - t0) / dur, 1)
+      const ease = 1 - Math.pow(1 - p, 3)
+      setAnimScore(Math.round(score * ease))
+      if (p < 1) requestAnimationFrame(step)
+    }
+    requestAnimationFrame(step)
+  }, [score])
+
+  const color = riskColor(score)
+  const R = 48, CX = 60, CY = 60
+  const circumference = Math.PI * R
+  const filled = circumference * (animScore / 100)
+  const semiPath = `M ${CX - R} ${CY} A ${R} ${R} 0 0 1 ${CX + R} ${CY}`
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <svg width="120" height="72" viewBox="0 0 120 72" overflow="visible">
+        <path d={semiPath} fill="none" stroke="rgba(42,51,71,0.6)" strokeWidth="8" strokeLinecap="round" />
+        <motion.path
+          d={semiPath} fill="none" stroke={color} strokeWidth="8" strokeLinecap="round"
+          strokeDasharray={`${circumference}`}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: circumference - filled }}
+          transition={{ duration: 0.9, ease: [0.2, 0.8, 0.2, 1] }}
+          style={{ filter: `drop-shadow(0 0 4px ${color}60)` }}
+        />
+        <text x="60" y="56" textAnchor="middle" fontSize="18" fontWeight="700" fontFamily="monospace" fill={color}>
+          {animScore}
+        </text>
+        <text x="12" y="68" textAnchor="middle" fontSize="9" fill="#484f58">0</text>
+        <text x="108" y="68" textAnchor="middle" fontSize="9" fill="#484f58">100</text>
+      </svg>
+      <span className="text-[9px] uppercase tracking-widest" style={{ color: '#484f58' }}>Risk Score</span>
+    </div>
+  )
+}
+
 // ─── Screenshots Panel ────────────────────────────────────────────────────────
 
 interface ScreenshotsPanelProps {

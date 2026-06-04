@@ -4,7 +4,7 @@ import { useRecondeskStore } from '../../stores/useRecondeskStore'
 import NewTargetModal from '../target/NewTargetModal'
 import CsvImportModal from '../target/CsvImportModal'
 import EngagementScopePanel from '../engagement/EngagementScopePanel'
-import type { TargetStatus, Platform } from '../../types/recondesk'
+import type { Target, TargetStatus, Platform } from '../../types/recondesk'
 
 // ─── Live elapsed timer ───────────────────────────────────────────────────────
 
@@ -55,6 +55,36 @@ const STATUS_RGB: Record<TargetStatus, string> = {
   completed: '74,158,255',
   abandoned: '72,79,88',
   paused:    '210,153,34',
+}
+
+// ─── Status Dot with staleness + flagged logic ────────────────────────────────
+
+function targetStatusDotColor(target: Target): { color: string; rgb: string; label: string } {
+  // Red = flagged (high-risk open ports with no completed cards)
+  const hasHighRisk = target.ports.some(p =>
+    p.state === 'open' && [21, 23, 25, 445, 3389, 5900, 6379, 27017, 1433, 1521, 3306].includes(p.port)
+  )
+  const hasCompletedCards = target.attackCards.some(c => c.status === 'done')
+  if (target.status === 'active' && hasHighRisk && !hasCompletedCards) {
+    return { color: '#f85149', rgb: '248,81,73', label: 'flagged' }
+  }
+
+  // Amber = stale (active but last modified >7 days ago, no recent ports added)
+  if (target.status === 'active') {
+    const newestPort = target.ports.reduce((latest, p) => {
+      const t = new Date(p.addedAt).getTime()
+      return t > latest ? t : latest
+    }, new Date(target.createdAt).getTime())
+    const daysSince = (Date.now() - newestPort) / 86_400_000
+    if (daysSince > 7) {
+      return { color: '#d29922', rgb: '210,153,34', label: 'stale' }
+    }
+    return { color: '#3fb950', rgb: '63,185,80', label: 'active' }
+  }
+
+  const base = STATUS_COLOR[target.status]
+  const rgb  = STATUS_RGB[target.status]
+  return { color: base, rgb, label: target.status }
 }
 
 const PLATFORM_STYLE: Record<Platform, { color: string; bg: string; border: string }> = {
@@ -109,10 +139,10 @@ export default function Sidebar() {
     : null
 
   function TargetRow({ target, i }: { target: typeof targets[number]; i: number }) {
-    const isActive = target.id === activeTargetId
-    const sColor   = STATUS_COLOR[target.status]
-    const sRgb     = STATUS_RGB[target.status]
-    const pStyle   = PLATFORM_STYLE[target.platform]
+    const isActive  = target.id === activeTargetId
+    const dotInfo   = targetStatusDotColor(target)
+    const pStyle    = PLATFORM_STYLE[target.platform]
+    const isPulsing = target.status === 'active'
 
     return (
       <motion.div
@@ -145,8 +175,9 @@ export default function Sidebar() {
         >
           <div className="flex items-center gap-2">
             <span
-              className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${target.status === 'active' ? 'status-dot-pulse' : ''}`}
-              style={{ backgroundColor: sColor, '--pulse-rgb': sRgb } as React.CSSProperties}
+              className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isPulsing ? 'status-dot-pulse' : ''}`}
+              style={{ backgroundColor: dotInfo.color, '--pulse-rgb': dotInfo.rgb } as React.CSSProperties}
+              title={dotInfo.label}
             />
             <span className="text-xs flex-1 truncate font-medium" style={{ color: isActive ? '#e6edf3' : '#8b949e', fontWeight: isActive ? 600 : 500 }}>
               {target.name}
@@ -161,7 +192,7 @@ export default function Sidebar() {
           <div className="flex items-center gap-1.5 mt-0.5 pl-3.5">
             <span className="text-[10px] font-mono" style={{ color: '#484f58' }}>{target.ip}</span>
             <span className="text-[10px]" style={{ color: 'rgba(72,79,88,0.5)' }}>·</span>
-            <span className="text-[10px] capitalize" style={{ color: sColor }}>{target.status}</span>
+            <span className="text-[10px] capitalize" style={{ color: dotInfo.color }}>{dotInfo.label}</span>
           </div>
         </button>
       </motion.div>

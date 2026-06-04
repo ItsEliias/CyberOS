@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useRecondeskStore, calcHealthScore } from '../../stores/useRecondeskStore'
 import type { TargetStatus, Platform, Difficulty, AttackStage } from '../../types/recondesk'
-import { ScreenshotsPanel, AiSuggestionsPanel, NetworkDiagram } from './OverviewTabPanels'
+import { ScreenshotsPanel, AiSuggestionsPanel, NetworkDiagram, RiskGauge, computeRiskScore } from './OverviewTabPanels'
 
 const PLATFORM_STYLE: Record<Platform, { color: string; bg: string; border: string }> = {
   HTB:      { color: '#f85149', bg: 'rgba(248,81,73,0.10)',   border: 'rgba(248,81,73,0.20)'   },
@@ -295,7 +295,10 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
         {/* Stats + Attack Progress + Context */}
         <div className="grid grid-cols-3 gap-4 mb-4">
           <div className={panelCls}>
-            <p className={labelCls} style={{ color: '#484f58' }}>Quick Stats</p>
+            <div className="flex items-start justify-between mb-3">
+              <p className="label-caps" style={{ color: '#484f58' }}>Quick Stats</p>
+              <RiskGauge score={computeRiskScore(target.ports)} />
+            </div>
             <div className="grid grid-cols-2 gap-2">
               {[
                 { label: 'Ports',       value: target.ports.length,       color: '#4a9eff', max: 65535 },

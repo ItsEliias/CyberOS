@@ -1,9 +1,37 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import { useRecondeskStore } from '../../stores/useRecondeskStore'
 import ImportNmapModal from './ImportNmapModal'
 import type { PortState } from '../../types/recondesk'
+
+// ─── Service Banner Tooltip ───────────────────────────────────────────────────
+
+function BannerTooltip({ banner, visible }: { banner: string; visible: boolean }) {
+  if (!banner || !visible) return null
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -4 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -4 }}
+      transition={{ duration: 0.12 }}
+      className="absolute left-0 right-0 z-20 pointer-events-none"
+      style={{ top: '100%', marginTop: 2 }}
+    >
+      <div
+        className="mx-4 px-2.5 py-1.5 rounded text-[10px] font-mono truncate"
+        style={{
+          background: 'rgba(13,14,24,0.97)',
+          border: '1px solid rgba(210,153,34,0.25)',
+          color: '#d29922',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+        }}
+      >
+        <span className="text-[#484f58] mr-1.5">banner:</span>{banner}
+      </div>
+    </motion.div>
+  )
+}
 
 const STATE_BADGE: Record<PortState, string> = {
   open:     'text-[#3fb950] bg-[#3fb950]/10 border-[#3fb950]/25',
@@ -43,6 +71,7 @@ export default function PortsTab({ targetId }: { targetId: string }) {
   const [showAdd,     setShowAdd]     = useState(false)
   const [expandedId,  setExpandedId]  = useState<string | null>(null)
   const [sortBy,      setSortBy]      = useState<SortKey>('port')
+  const [hoveredId,   setHoveredId]   = useState<string | null>(null)
 
   const [addForm, setAddForm] = useState({
     port: '', protocol: 'tcp' as 'tcp' | 'udp',
@@ -211,13 +240,15 @@ export default function PortsTab({ targetId }: { targetId: string }) {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
                       transition={{ delay: i * 0.05, duration: 0.15 }}
-                      className="table-row-alt table-row-accent group cursor-pointer"
+                      className="table-row-alt table-row-accent group cursor-pointer relative"
                       style={{
                         borderBottom: '1px solid rgba(42,51,71,0.25)',
                         background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)',
                         transition: 'background 120ms ease, border-color 120ms ease',
                       }}
                       onClick={() => setExpandedId(expandedId === port.id ? null : port.id)}
+                      onMouseEnter={() => setHoveredId(port.id)}
+                      onMouseLeave={() => setHoveredId(null)}
                     >
                       <td className="px-4 py-2.5 font-mono font-bold tabular-nums text-[#e2e8f0]">{port.port}</td>
                       <td className="px-2 py-2.5 font-mono text-[#8b949e]">{port.protocol}</td>
@@ -246,7 +277,7 @@ export default function PortsTab({ targetId }: { targetId: string }) {
                           )
                         })()}
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-2.5 relative">
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={e => { e.stopPropagation(); setExpandedId(port.id) }}
@@ -263,6 +294,11 @@ export default function PortsTab({ targetId }: { targetId: string }) {
                             ✕
                           </button>
                         </div>
+                        <AnimatePresence>
+                          {hoveredId === port.id && port.version && (
+                            <BannerTooltip banner={port.version} visible={true} />
+                          )}
+                        </AnimatePresence>
                       </td>
                     </motion.tr>
                     {expandedId === port.id && (

@@ -5,7 +5,7 @@ import type { Credential } from '@shared/types'
 import { useStore } from '../store'
 import { fuzzyMatch, highlightSegments } from '../utils/fuzzySearch'
 import { playTotpExpiring } from '../utils/audioNotify'
-import { CategoryPill, CredTypeIcon, PasswordStrengthBar, ExpiryBadge } from './ui/CredentialBits'
+import { CategoryPill, CredTypeIcon, PasswordStrengthBar, ExpiryBadge, Field, CopyField } from './ui/CredentialBits'
 
 // ─── TOTP live code ───────────────────────────────────────────────────────────
 
@@ -489,31 +489,4 @@ export default function CredentialRow({ cred, searchQuery = '', breached, stagge
   )
 }
 
-function Field({ label, children, wide }: { label: string; children: ReactNode; wide?: boolean }) {
-  return (
-    <div style={{ gridColumn: wide ? '1 / -1' : undefined }}>
-      <div style={{ fontSize: 9, color: '#484f58', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
-        {label}
-      </div>
-      <div>{children}</div>
-    </div>
-  )
-}
-
-function CopyField({ value, onCopy, truncate, mono }: { value: string; onCopy: () => void; truncate?: boolean; mono?: boolean }) {
-  return (
-    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-      <span style={{
-        fontFamily: mono ? 'JetBrains Mono, monospace' : undefined,
-        fontSize: 12, flex: 1, overflow: 'hidden',
-        textOverflow: truncate ? 'ellipsis' : undefined,
-        whiteSpace: 'nowrap', color: '#c9d1d9',
-      }}>
-        {value}
-      </span>
-      <button className="btn btn-ghost" style={{ padding: '2px 7px', fontSize: 11, flexShrink: 0 }} onClick={onCopy}>
-        Copy
-      </button>
-    </div>
-  )
-}
+// Field and CopyField are imported from ./ui/CredentialBits
