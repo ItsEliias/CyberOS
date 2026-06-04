@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useStore } from '../store';
 import type { SourceType, ConflictStrategy, UpdateMode, ScrapeConfig } from '@shared/types';
@@ -6,6 +6,59 @@ import ScrapeSummary from './ScrapeSummary';
 import Button from './ui/Button';
 import LiveDot from './ui/LiveDot';
 import ScrapeLogPanel from './ScrapeLogPanel';
+
+const SPARKLINE_POINTS = 60;
+
+function ThroughputSparkline({ isScraping, savedCount }: { isScraping: boolean; savedCount: number }) {
+  const [points, setPoints] = useState<number[]>(Array(SPARKLINE_POINTS).fill(0));
+  const prevSavedRef = useRef(savedCount);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (!isScraping) {
+      if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+      return;
+    }
+    intervalRef.current = setInterval(() => {
+      const delta = Math.max(0, savedCount - prevSavedRef.current);
+      prevSavedRef.current = savedCount;
+      setPoints(prev => [...prev.slice(1), delta]);
+    }, 1000);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [isScraping, savedCount]);
+
+  useEffect(() => {
+    if (!isScraping) setPoints(Array(SPARKLINE_POINTS).fill(0));
+  }, [isScraping]);
+
+  const max = Math.max(1, ...points);
+  const W = 240, H = 28;
+  const step = W / (SPARKLINE_POINTS - 1);
+  const polyline = points.map((v, i) => `${i * step},${H - (v / max) * H}`).join(' ');
+
+  return (
+    <div className="shrink-0 px-4 py-2 border-b flex items-center gap-3"
+      style={{ borderColor: 'var(--border-default)', background: 'var(--surface-1)' }}>
+      <span className="text-[10px] uppercase tracking-widest shrink-0" style={{ color: 'var(--text-muted)' }}>
+        Throughput
+      </span>
+      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ flex: 1, maxWidth: W }}>
+        <polyline
+          points={polyline}
+          fill="none"
+          stroke="#3fb950"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          opacity={isScraping ? 1 : 0.35}
+        />
+      </svg>
+      <span className="text-[10px] font-mono tabular-nums shrink-0" style={{ color: '#3fb950' }}>
+        {points[points.length - 1].toFixed(1)}/s
+      </span>
+    </div>
+  );
+}
 
 const SOURCE_TYPES: Array<{ id: SourceType; label: string }> = [
   { id: 'obsidian-publish', label: 'Obsidian Publish' },
@@ -347,6 +400,12 @@ export default function ScrapeView() {
             />
           )}
         </AnimatePresence>
+
+        {/* Throughput sparkline */}
+        <ThroughputSparkline
+          isScraping={isScraping}
+          savedCount={progress?.saved ?? lastResult?.saved ?? 0}
+        />
 
         {/* Log panel with level filter */}
         <ScrapeLogPanel

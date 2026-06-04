@@ -50,6 +50,7 @@ function RecentItems({ runs, sources }: { runs: ScrapeRun[]; sources: ScrapingSo
         {completed.map((run) => {
           const src = sources.find((s) => s.id === run.sourceId);
           const badgeColor = SOURCE_TYPE_COLORS[src?.type ?? ''] ?? '#8b949e';
+          const scrapedAgo = run.completedAt ? timeAgo(run.completedAt) : null;
           return (
             <div
               key={run.id}
@@ -72,9 +73,19 @@ function RecentItems({ runs, sources }: { runs: ScrapeRun[]; sources: ScrapingSo
               >
                 {run.sourceName}
               </span>
-              <span className="text-[10px] font-mono shrink-0" style={{ color: 'var(--text-dim)' }}>
-                {run.completedAt ? timeAgo(run.completedAt) : ''}
-              </span>
+              {scrapedAgo && (
+                <span
+                  className="text-[9px] font-mono shrink-0 px-1.5 py-0.5 rounded"
+                  style={{
+                    background: 'rgba(74,158,255,0.08)',
+                    border: '1px solid rgba(74,158,255,0.18)',
+                    color: 'rgba(74,158,255,0.7)',
+                  }}
+                  title={`Scraped at ${run.completedAt}`}
+                >
+                  scraped {scrapedAgo}
+                </span>
+              )}
               {run.result?.newNotes !== undefined && (
                 <span className="text-[10px] font-mono tabular-nums shrink-0" style={{ color: '#3fb950' }}>
                   +{run.result.newNotes}

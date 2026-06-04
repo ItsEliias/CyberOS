@@ -1,4 +1,45 @@
+import { useEffect, useRef } from 'react';
 import type { ScrapingSource, SourceType } from '../../types/vaultcore';
+
+/** 20×20 SVG donut showing health/success-rate, animated on mount */
+function HealthDonut({ health, failures }: { health: ScrapingSource['health']; failures: number }) {
+  const r = 7, cx = 10, cy = 10;
+  const circ = 2 * Math.PI * r;
+  // success rate: healthy=100%, warning≈66%, error≈33%
+  const rate = health === 'healthy' ? 1 : health === 'warning' ? 0.66 : 0.33;
+  const fill = circ * (1 - rate);
+  const color = health === 'healthy' ? '#3fb950' : health === 'warning' ? '#d29922' : '#f85149';
+  const circleRef = useRef<SVGCircleElement>(null);
+
+  useEffect(() => {
+    const el = circleRef.current;
+    if (!el) return;
+    el.style.strokeDashoffset = String(circ);
+    const id = requestAnimationFrame(() => {
+      el.style.transition = 'stroke-dashoffset 0.7s cubic-bezier(0.4,0,0.2,1)';
+      el.style.strokeDashoffset = String(fill);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [fill, circ]);
+
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" className="shrink-0" aria-label={health}>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(42,51,71,0.4)" strokeWidth="2.5" />
+      <circle
+        ref={circleRef}
+        cx={cx} cy={cy} r={r}
+        fill="none"
+        stroke={color}
+        strokeWidth="2.5"
+        strokeDasharray={circ}
+        strokeDashoffset={circ}
+        strokeLinecap="round"
+        transform="rotate(-90 10 10)"
+        style={{ transition: 'none' }}
+      />
+    </svg>
+  );
+}
 
 interface Props {
   source: ScrapingSource;
@@ -159,7 +200,7 @@ export default function SourceListItem({ source, selected, onClick, highlightQue
       }}
     >
       <div className="flex items-start gap-2">
-        <HealthDot health={source.health} />
+        <HealthDonut health={source.health} failures={source.consecutiveFailures} />
         <div className="flex-1 min-w-0">
           <div
             className="text-sm font-medium truncate"

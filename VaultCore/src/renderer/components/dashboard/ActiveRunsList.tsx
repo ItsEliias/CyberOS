@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { ScrapeRun } from '../../types/vaultcore';
 
@@ -85,6 +85,72 @@ function ThroughputCounter({ startedAt, itemsSaved }: { startedAt: string; items
   );
 }
 
+/** Two-step Stop confirmation — shows "Stop / Cancel" inline before confirming */
+function CancelConfirm({ runId, onCancel }: { runId: string; onCancel: (id: string) => void }) {
+  const [confirming, setConfirming] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleStop(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!confirming) {
+      setConfirming(true);
+      // Auto-reset if not confirmed within 3s
+      timerRef.current = setTimeout(() => setConfirming(false), 3000);
+    } else {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      onCancel(runId);
+    }
+  }
+
+  function handleDismiss(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setConfirming(false);
+  }
+
+  return (
+    <AnimatePresence mode="wait">
+      {confirming ? (
+        <motion.div
+          key="confirm"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          transition={{ duration: 0.12 }}
+          className="flex items-center gap-1"
+        >
+          <button
+            onClick={handleStop}
+            className="text-[10px] px-2 py-0.5 rounded-md border transition-all"
+            style={{ borderColor: '#f85149', color: '#fff', background: 'rgba(248,81,73,0.85)' }}
+          >
+            Stop
+          </button>
+          <button
+            onClick={handleDismiss}
+            className="text-[10px] px-2 py-0.5 rounded-md border transition-all hover:bg-white/10"
+            style={{ borderColor: 'var(--border)', color: 'var(--text-dim)' }}
+          >
+            Keep
+          </button>
+        </motion.div>
+      ) : (
+        <motion.button
+          key="cancel"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={handleStop}
+          className="text-[10px] px-2 py-0.5 rounded-md border transition-all hover:bg-red-500/10"
+          style={{ borderColor: '#f85149', color: '#f85149' }}
+        >
+          Cancel
+        </motion.button>
+      )}
+    </AnimatePresence>
+  );
+}
+
 export default function ActiveRunsList({ runs, onCancel }: Props) {
   const activeRuns = runs.filter((r) => r.status === 'running');
 
@@ -134,13 +200,7 @@ export default function ActiveRunsList({ runs, onCancel }: Props) {
                   <span className="text-[10px] font-mono tabular-nums" style={{ color: 'var(--text-dim)' }}>
                     {timeAgo(run.startedAt)} ago
                   </span>
-                  <button
-                    onClick={() => onCancel(run.id)}
-                    className="text-[10px] px-2 py-0.5 rounded-md border transition-all hover:bg-red-500/10"
-                    style={{ borderColor: '#f85149', color: '#f85149' }}
-                  >
-                    Cancel
-                  </button>
+                  <CancelConfirm runId={run.id} onCancel={onCancel} />
                 </div>
               </div>
               {/* Indeterminate shimmer progress bar */}

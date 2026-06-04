@@ -39,52 +39,67 @@ function ExpandedRow({ run }: { run: ScrapeRun }) {
   const [showDiff, setShowDiff] = useState(false);
   const r = run.result;
   const hasDiff = r && r.diffs.some((d) => d.type !== 'unchanged');
+  const durationMs = run.duration != null
+    ? run.duration
+    : run.completedAt
+    ? new Date(run.completedAt).getTime() - new Date(run.startedAt).getTime()
+    : null;
 
   return (
-    <motion.tr
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-    >
-      <td colSpan={7} className="px-4 pb-3">
-        <div
-          className="rounded-lg p-3 text-[11px] space-y-2"
-          style={{ background: 'var(--bg3)', border: '1px solid var(--border)' }}
+    <tr>
+      <td colSpan={7} className="px-4 pb-0">
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
+          style={{ overflow: 'hidden' }}
         >
-          {run.status === 'failed' && run.error && (
-            <div style={{ color: '#f85149' }}>Error: {run.error}</div>
-          )}
-          {r && hasDiff && (
-            <>
-              {r.diffs.filter((d) => d.type === 'updated').slice(0, 3).map((d) => (
-                <div key={d.path} className="font-mono space-y-0.5">
-                  <div className="truncate" style={{ color: 'var(--text-muted)' }}>
-                    ~ {d.path} {d.changePercent != null && <span style={{ color: 'var(--text-dim)' }}>({d.changePercent}%)</span>}
+          <div className="rounded-lg p-3 mb-2 text-[11px] space-y-2"
+            style={{ background: 'var(--bg3)', border: '1px solid var(--border)' }}>
+            {/* Item counts */}
+            {r && (
+              <div className="flex gap-4 font-mono text-[10px]">
+                <span style={{ color: '#3fb950' }}>+{r.newNotes} new</span>
+                <span style={{ color: '#4a9eff' }}>~{r.updatedNotes} updated</span>
+                <span style={{ color: 'var(--text-dim)' }}>{r.unchangedNotes} unchanged</span>
+                {durationMs != null && (
+                  <span style={{ color: 'var(--text-dim)' }}>· {formatDuration(durationMs)}</span>
+                )}
+              </div>
+            )}
+            {/* Error message */}
+            {run.status === 'failed' && run.error && (
+              <div className="font-mono" style={{ color: '#f85149' }}>Error: {run.error}</div>
+            )}
+            {r && hasDiff && (
+              <>
+                {r.diffs.filter((d) => d.type === 'updated').slice(0, 3).map((d) => (
+                  <div key={d.path} className="font-mono space-y-0.5">
+                    <div className="truncate" style={{ color: 'var(--text-muted)' }}>
+                      ~ {d.path} {d.changePercent != null && <span style={{ color: 'var(--text-dim)' }}>({d.changePercent}%)</span>}
+                    </div>
+                    {d.oldFirstLine && (
+                      <div className="ml-2 truncate" style={{ color: '#f85149' }}>− {d.oldFirstLine}</div>
+                    )}
+                    {d.newFirstLine && (
+                      <div className="ml-2 truncate" style={{ color: '#3fb950' }}>+ {d.newFirstLine}</div>
+                    )}
                   </div>
-                  {d.oldFirstLine && (
-                    <div className="ml-2 truncate" style={{ color: '#f85149' }}>− {d.oldFirstLine}</div>
-                  )}
-                  {d.newFirstLine && (
-                    <div className="ml-2 truncate" style={{ color: '#3fb950' }}>+ {d.newFirstLine}</div>
-                  )}
-                </div>
-              ))}
-              <button
-                onClick={() => setShowDiff(true)}
-                className="text-[10px] mt-1 transition-colors"
-                style={{ color: 'var(--accent)' }}
-              >
-                Open full diff →
-              </button>
-            </>
-          )}
-          {r && !hasDiff && (
-            <div style={{ color: 'var(--text-dim)' }}>No content changes in this run</div>
-          )}
-        </div>
+                ))}
+                <button onClick={() => setShowDiff(true)} className="text-[10px] mt-1 transition-colors" style={{ color: 'var(--accent)' }}>
+                  Open full diff →
+                </button>
+              </>
+            )}
+            {r && !hasDiff && !run.error && (
+              <div style={{ color: 'var(--text-dim)' }}>No content changes in this run</div>
+            )}
+          </div>
+        </motion.div>
         {showDiff && <DiffViewer run={run} onClose={() => setShowDiff(false)} />}
       </td>
-    </motion.tr>
+    </tr>
   );
 }
 
