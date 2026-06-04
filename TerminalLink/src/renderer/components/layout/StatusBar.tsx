@@ -78,12 +78,21 @@ export default function StatusBar({ sessionCtx, commandCount, sessionName, cwd, 
 
       {/* Target indicator */}
       <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 9, letterSpacing: '0.08em' }}>
+        <span
+          className={hasTarget ? 'status-dot-pulse' : ''}
+          style={{
+            width: 5, height: 5, borderRadius: '50%', display: 'inline-block',
+            background: hasTarget ? '#00ff41' : 'rgba(0,255,65,0.2)',
+            boxShadow: hasTarget ? '0 0 8px rgba(0,255,65,0.7)' : 'none',
+            flexShrink: 0,
+            '--pulse-color': 'rgba(0,255,65,0.4)',
+            '--pulse-color-fade': 'rgba(0,255,65,0)',
+          } as React.CSSProperties}
+        />
         <span style={{
-          width: 5, height: 5, borderRadius: '50%', display: 'inline-block',
-          background: hasTarget ? '#00ff41' : 'rgba(0,255,65,0.2)',
-          boxShadow: hasTarget ? '0 0 6px rgba(0,255,65,0.5)' : 'none',
-        }} />
-        <span style={{ color: hasTarget ? '#7abf7a' : 'rgba(0,255,65,0.25)', textTransform: 'uppercase' }}>
+          color: hasTarget ? '#7abf7a' : 'rgba(0,255,65,0.25)', textTransform: 'uppercase',
+          transition: 'color 0.3s ease',
+        }}>
           {hasTarget ? 'TARGET SET' : 'NO TARGET'}
         </span>
       </span>

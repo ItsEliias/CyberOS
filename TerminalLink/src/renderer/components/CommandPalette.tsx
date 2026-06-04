@@ -73,21 +73,23 @@ export default function CommandPalette({ items, onClose }: Props) {
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
       style={{
         position: 'fixed', inset: 0, zIndex: 9998,
-        background: 'rgba(0,0,0,0.6)',
+        background: 'rgba(0,0,0,0.65)',
+        backdropFilter: 'blur(6px)',
+        WebkitBackdropFilter: 'blur(6px)',
         display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
         paddingTop: 80,
       }}
     >
       <div style={{
         width: 560,
-        background: 'var(--panel)',
-        border: '1px solid var(--accent)',
-        borderRadius: 6,
+        background: 'rgba(13,18,8,0.97)',
+        border: '1px solid rgba(0,255,65,0.45)',
+        borderRadius: 10,
         overflow: 'hidden',
-        boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+        boxShadow: '0 0 40px rgba(0,255,65,0.12), 0 24px 64px rgba(0,0,0,0.7)',
       }}>
-        <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 12, color: 'var(--accent)', flexShrink: 0 }}>{'>'}</span>
+        <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(0,255,65,0.1)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 13, color: 'var(--accent)', flexShrink: 0, fontWeight: 700, textShadow: '0 0 8px rgba(0,255,65,0.5)' }}>{'>'}</span>
           <input
             ref={inputRef}
             value={query}
@@ -104,13 +106,18 @@ export default function CommandPalette({ items, onClose }: Props) {
               fontFamily: 'inherit',
             }}
           />
-          <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>ESC</span>
+          <kbd style={{
+            fontSize: 9, color: 'rgba(0,255,65,0.4)',
+            background: 'rgba(0,255,65,0.06)', border: '1px solid rgba(0,255,65,0.15)',
+            borderRadius: 4, padding: '2px 6px', fontFamily: 'var(--font-mono)',
+          }}>ESC</kbd>
         </div>
 
         <div ref={listRef} style={{ maxHeight: 360, overflowY: 'auto' }}>
           {filtered.length === 0 && (
-            <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
-              No results
+            <div style={{ padding: 28, textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
+              <div style={{ fontSize: 20, marginBottom: 8, opacity: 0.3 }}>⌕</div>
+              No results for "{query}"
             </div>
           )}
           {filtered.map((item, i) => (
@@ -118,19 +125,20 @@ export default function CommandPalette({ items, onClose }: Props) {
               key={item.id}
               onClick={() => { item.action(); onClose(); }}
               style={{
-                padding: '7px 12px',
+                padding: '8px 14px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 gap: 10,
-                background: i === selected ? 'rgba(0,255,65,0.08)' : 'transparent',
+                background: i === selected ? 'rgba(0,255,65,0.07)' : 'transparent',
                 borderLeft: i === selected ? '2px solid var(--accent)' : '2px solid transparent',
+                transition: 'background 0.1s ease',
               }}
               onMouseEnter={() => setSelected(i)}
             >
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ fontSize: 12, color: i === selected ? 'var(--text-primary)' : 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {highlight(item.label, query)}
                 </div>
                 {item.description && (
@@ -140,9 +148,11 @@ export default function CommandPalette({ items, onClose }: Props) {
                 )}
               </div>
               <span style={{
-                fontSize: 9, color: 'var(--text-muted)',
-                background: 'var(--bg)', border: '1px solid var(--border)',
-                borderRadius: 2, padding: '1px 5px', flexShrink: 0, textTransform: 'uppercase',
+                fontSize: 9, color: i === selected ? 'var(--accent)' : 'var(--text-muted)',
+                background: i === selected ? 'rgba(0,255,65,0.1)' : 'rgba(0,255,65,0.04)',
+                border: `1px solid ${i === selected ? 'rgba(0,255,65,0.3)' : 'rgba(0,255,65,0.1)'}`,
+                borderRadius: 4, padding: '2px 6px', flexShrink: 0, textTransform: 'uppercase',
+                transition: 'all 0.1s ease',
               }}>
                 {item.category}
               </span>
@@ -150,10 +160,20 @@ export default function CommandPalette({ items, onClose }: Props) {
           ))}
         </div>
 
-        <div style={{ padding: '5px 12px', borderTop: '1px solid var(--border)', fontSize: 10, color: 'var(--text-muted)', display: 'flex', gap: 12 }}>
-          <span>↑↓ navigate</span>
-          <span>↵ select</span>
-          <span>ESC close</span>
+        <div style={{
+          padding: '6px 14px', borderTop: '1px solid rgba(0,255,65,0.08)',
+          fontSize: 10, color: 'rgba(0,255,65,0.3)', display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          {[['↑↓', 'navigate'], ['↵', 'select'], ['ESC', 'close']].map(([key, label]) => (
+            <span key={key} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <kbd style={{
+                fontSize: 9, background: 'rgba(0,255,65,0.06)', border: '1px solid rgba(0,255,65,0.12)',
+                borderRadius: 3, padding: '1px 5px', fontFamily: 'var(--font-mono)',
+                color: 'rgba(0,255,65,0.45)',
+              }}>{key}</kbd>
+              <span>{label}</span>
+            </span>
+          ))}
           <span style={{ marginLeft: 'auto' }}>{filtered.length} result{filtered.length !== 1 ? 's' : ''}</span>
         </div>
       </div>

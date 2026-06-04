@@ -38,14 +38,25 @@ export default function SshManager({ profiles, onConnect, onAdd, onRemove }: Pro
         </span>
         <button
           onClick={() => setAdding(a => !a)}
-          style={{ fontSize: 10, padding: '2px 8px', borderRadius: 3, background: adding ? 'var(--accent-dim)' : 'var(--bg)', border: `1px solid ${adding ? 'var(--accent)' : 'var(--border)'}`, color: adding ? 'var(--accent)' : 'var(--text-dim)', cursor: 'pointer' }}
+          style={{
+            fontSize: 10, padding: '3px 10px', borderRadius: 8,
+            background: adding ? 'var(--accent-dim)' : 'var(--bg)',
+            border: `1px solid ${adding ? 'var(--accent)' : 'var(--border)'}`,
+            color: adding ? 'var(--accent)' : 'var(--text-dim)', cursor: 'pointer',
+            transition: 'all 0.15s ease',
+            boxShadow: adding ? '0 0 8px rgba(0,255,65,0.15)' : 'none',
+          }}
         >
           + Add
         </button>
       </div>
 
       {adding && (
-        <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 4, padding: 10, marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{
+          background: 'var(--bg)', border: '1px solid rgba(0,255,65,0.2)', borderRadius: 8,
+          padding: 10, marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 6,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+        }}>
           {(['name', 'host', 'username', 'identityFile', 'options'] as const).map(k => (
             <input
               key={k}
@@ -62,34 +73,90 @@ export default function SshManager({ profiles, onConnect, onAdd, onRemove }: Pro
             placeholder="Port"
             style={iStyle}
           />
-          <button onClick={handleAdd} style={{ padding: '5px 0', fontSize: 11, borderRadius: 3, background: 'var(--accent-dim)', border: '1px solid var(--accent)', color: 'var(--accent)', cursor: 'pointer' }}>
+          <button
+            onClick={handleAdd}
+            style={{
+              padding: '6px 0', fontSize: 11, borderRadius: 8,
+              background: 'var(--accent-dim)', border: '1px solid var(--accent)',
+              color: 'var(--accent)', cursor: 'pointer',
+              transition: 'all 0.15s ease',
+              fontFamily: 'inherit', fontWeight: 600,
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(0,255,65,0.2)';
+              e.currentTarget.style.boxShadow = '0 0 10px rgba(0,255,65,0.2)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'var(--accent-dim)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
             Save Profile
           </button>
         </div>
       )}
 
       {profiles.length === 0 && !adding && (
-        <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', padding: 12 }}>No SSH profiles yet</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', padding: 16 }}>
+          <div style={{ fontSize: 18, marginBottom: 6, opacity: 0.3 }}>⇄</div>
+          No SSH profiles yet
+        </div>
       )}
 
       {profiles.map(p => (
-        <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '7px 0', borderBottom: '1px solid rgba(42,51,71,0.5)' }}>
+        <div
+          key={p.id}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+            padding: '8px 0', borderBottom: '1px solid rgba(0,255,65,0.07)',
+            transition: 'background 0.15s ease',
+          }}
+        >
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 12, color: 'var(--text)', fontWeight: 500 }}>{p.name}</div>
             <div style={{ fontSize: 10, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {p.username}@{p.host}:{p.port}
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
             <button
               onClick={() => onConnect(buildCmd(p))}
-              style={{ fontSize: 10, padding: '3px 8px', borderRadius: 3, background: 'var(--accent)', border: 'none', color: '#000', cursor: 'pointer', fontWeight: 600 }}
+              style={{
+                fontSize: 10, padding: '4px 10px', borderRadius: 8,
+                background: 'rgba(0,255,65,0.12)',
+                border: '1px solid rgba(0,255,65,0.4)',
+                color: '#00ff41', cursor: 'pointer', fontWeight: 600,
+                transition: 'all 0.15s ease',
+                fontFamily: 'inherit',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'rgba(0,255,65,0.22)';
+                e.currentTarget.style.boxShadow = '0 0 10px rgba(0,255,65,0.25)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'rgba(0,255,65,0.12)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
             >
               Connect
             </button>
             <button
               onClick={() => onRemove(p.id)}
-              style={{ fontSize: 10, padding: '3px 6px', borderRadius: 3, background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--error)', cursor: 'pointer' }}
+              style={{
+                fontSize: 10, padding: '4px 8px', borderRadius: 8,
+                background: 'rgba(248,81,73,0.06)', border: '1px solid rgba(248,81,73,0.25)',
+                color: 'var(--error)', cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                fontFamily: 'inherit',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'rgba(248,81,73,0.15)';
+                e.currentTarget.style.boxShadow = '0 0 8px rgba(248,81,73,0.15)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'rgba(248,81,73,0.06)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
             >
               ✕
             </button>
@@ -101,7 +168,8 @@ export default function SshManager({ profiles, onConnect, onAdd, onRemove }: Pro
 }
 
 const iStyle: React.CSSProperties = {
-  width: '100%', background: 'var(--panel)', border: '1px solid var(--border)',
-  borderRadius: 3, padding: '4px 6px', color: 'var(--text)', fontSize: 11,
+  width: '100%', background: 'rgba(5,10,4,0.8)', border: '1px solid rgba(0,255,65,0.18)',
+  borderRadius: 6, padding: '5px 8px', color: 'var(--text)', fontSize: 11,
   fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
+  transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
 };

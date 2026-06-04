@@ -76,14 +76,17 @@ export default function TabBar({
                   ? `2px solid ${color}`
                   : '2px solid transparent',
                 background: isActive
-                  ? 'rgba(0,255,65,0.06)'
+                  ? 'rgba(0,255,65,0.07)'
                   : 'transparent',
+                boxShadow: isActive
+                  ? `inset 0 -1px 6px rgba(0,255,65,0.08), 0 0 0 0 transparent`
+                  : 'none',
                 flexShrink: 0,
                 minWidth: 90,
                 maxWidth: 160,
                 position: 'relative',
                 userSelect: 'none',
-                transition: 'background 0.1s ease',
+                transition: 'background 0.15s cubic-bezier(0.2,0.8,0.2,1), box-shadow 0.15s ease',
               }}
             >
               <span style={{
@@ -133,9 +136,19 @@ export default function TabBar({
                   fontSize: 9,
                   color: 'rgba(0,255,65,0.3)',
                   background: 'none', border: 'none',
-                  cursor: 'pointer', padding: '0 2px',
-                  lineHeight: 1, flexShrink: 0, opacity: 0.7,
+                  cursor: 'pointer', padding: '2px 4px',
+                  lineHeight: 1, flexShrink: 0,
                   fontFamily: 'var(--font-mono)',
+                  borderRadius: 4,
+                  transition: 'color 0.15s ease, background 0.15s ease',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.color = '#f85149';
+                  e.currentTarget.style.background = 'rgba(248,81,73,0.12)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.color = 'rgba(0,255,65,0.3)';
+                  e.currentTarget.style.background = 'none';
                 }}
               >
                 ✕
@@ -154,6 +167,15 @@ export default function TabBar({
             background: 'none', border: 'none',
             cursor: 'pointer', flexShrink: 0, lineHeight: 1,
             fontFamily: 'var(--font-mono)',
+            transition: 'color 0.15s ease, transform 0.15s ease',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.color = '#00ff41';
+            e.currentTarget.style.transform = 'scale(1.2)';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.color = 'rgba(0,255,65,0.35)';
+            e.currentTarget.style.transform = 'scale(1)';
           }}
         >
           +

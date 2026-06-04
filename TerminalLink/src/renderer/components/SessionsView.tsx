@@ -2,9 +2,78 @@
  * SessionsView — TerminalLink
  * Lists terminal sessions, SSH profiles, and recorded sessions with export.
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { TerminalSession, SshProfile, RecordedSession } from '../types/terminallink';
 import SshManager from './SshManager';
+
+/* ── Skeleton loader ── */
+function SkeletonRow() {
+  return (
+    <div style={{
+      padding: '10px 16px',
+      borderBottom: '1px solid rgba(0,255,65,0.06)',
+      display: 'flex', flexDirection: 'column', gap: 6,
+    }}>
+      <div style={{
+        height: 10, borderRadius: 4, width: '55%',
+        background: 'linear-gradient(90deg, rgba(0,255,65,0.06) 0%, rgba(0,255,65,0.12) 50%, rgba(0,255,65,0.06) 100%)',
+        backgroundSize: '200% 100%',
+        animation: 'skeleton-shimmer 1.4s ease-in-out infinite',
+      }} />
+      <div style={{
+        height: 8, borderRadius: 4, width: '35%',
+        background: 'linear-gradient(90deg, rgba(0,255,65,0.04) 0%, rgba(0,255,65,0.09) 50%, rgba(0,255,65,0.04) 100%)',
+        backgroundSize: '200% 100%',
+        animation: 'skeleton-shimmer 1.4s ease-in-out 0.2s infinite',
+      }} />
+    </div>
+  );
+}
+
+/* ── Empty state ── */
+function EmptyState({ onNew }: { onNew: () => void }) {
+  return (
+    <div style={{
+      flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', padding: '32px 24px', gap: 16,
+    }}>
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" style={{ opacity: 0.25 }}>
+        <rect x="4" y="8" width="32" height="24" rx="3" stroke="#00ff41" strokeWidth="1.5" />
+        <path d="M10 16l5 4-5 4" stroke="#00ff41" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <line x1="18" y1="24" x2="28" y2="24" stroke="#00ff41" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+      <div style={{ textAlign: 'center' }}>
+        <p style={{ fontSize: 12, color: 'rgba(0,255,65,0.5)', fontWeight: 600, letterSpacing: '0.05em', marginBottom: 6 }}>
+          No sessions yet
+        </p>
+        <p style={{ fontSize: 10, color: 'rgba(0,255,65,0.25)', lineHeight: 1.6 }}>
+          Start a new session to open a terminal.
+        </p>
+      </div>
+      <button
+        onClick={onNew}
+        style={{
+          marginTop: 4, fontSize: 10, padding: '6px 16px', borderRadius: 8,
+          background: 'rgba(0,255,65,0.1)', border: '1px solid rgba(0,255,65,0.35)',
+          color: '#00ff41', cursor: 'pointer', fontFamily: 'var(--font-mono)',
+          letterSpacing: '0.05em', fontWeight: 600,
+          transition: 'all 0.15s cubic-bezier(0.2,0.8,0.2,1)',
+          boxShadow: '0 0 0 rgba(0,255,65,0)',
+        }}
+        onMouseEnter={e => {
+          e.currentTarget.style.background = 'rgba(0,255,65,0.18)';
+          e.currentTarget.style.boxShadow = '0 0 12px rgba(0,255,65,0.2)';
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.background = 'rgba(0,255,65,0.1)';
+          e.currentTarget.style.boxShadow = '0 0 0 rgba(0,255,65,0)';
+        }}
+      >
+        + New Session
+      </button>
+    </div>
+  );
+}
 
 interface Props {
   sessions: TerminalSession[];
@@ -40,7 +109,13 @@ export default function SessionsView({
   recordedSessions = [], onExportSession,
 }: Props) {
   const [tab, setTab] = useState<Tab>('sessions');
+  const [loading, setLoading] = useState(true);
   const sorted = [...sessions].sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 400);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
     <div style={{
@@ -64,10 +139,20 @@ export default function SessionsView({
           <button
             onClick={onNewSession}
             style={{
-              fontSize: 10, padding: '4px 10px', borderRadius: 3,
+              fontSize: 10, padding: '4px 12px', borderRadius: 8,
               background: 'rgba(0,255,65,0.1)', border: '1px solid rgba(0,255,65,0.35)',
               color: '#00ff41', cursor: 'pointer', fontFamily: 'var(--font-mono)',
               letterSpacing: '0.05em', fontWeight: 600,
+              transition: 'all 0.15s cubic-bezier(0.2,0.8,0.2,1)',
+              boxShadow: '0 0 0 rgba(0,255,65,0)',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(0,255,65,0.18)';
+              e.currentTarget.style.boxShadow = '0 0 10px rgba(0,255,65,0.2)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'rgba(0,255,65,0.1)';
+              e.currentTarget.style.boxShadow = '0 0 0 rgba(0,255,65,0)';
             }}
           >
             + New Session
@@ -96,13 +181,16 @@ export default function SessionsView({
 
       {/* Sessions tab */}
       {tab === 'sessions' && (
-        <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
-          {sorted.length === 0 && (
-            <div style={{ padding: 24, textAlign: 'center', color: 'rgba(0,255,65,0.25)', fontSize: 11 }}>
-              No sessions yet.
-            </div>
-          )}
-          {sorted.map(session => {
+        <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0', display: 'flex', flexDirection: 'column' }}>
+          {loading ? (
+            <>
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
+            </>
+          ) : sorted.length === 0 ? (
+            <EmptyState onNew={onNewSession} />
+          ) : sorted.map(session => {
             const isActive = session.id === activeSessionId;
             const color = session.color ?? '#00ff41';
             return (
@@ -114,18 +202,30 @@ export default function SessionsView({
                   borderBottom: '1px solid rgba(0,255,65,0.06)',
                   borderLeft: `2px solid ${isActive ? color : 'transparent'}`,
                   cursor: 'pointer',
-                  background: isActive ? 'rgba(0,255,65,0.04)' : 'transparent',
-                  transition: 'background 0.1s ease',
+                  background: isActive ? `rgba(0,255,65,0.06)` : 'transparent',
+                  transition: 'background 0.15s cubic-bezier(0.2,0.8,0.2,1), border-left-color 0.15s ease',
+                  boxShadow: isActive ? `inset 2px 0 8px rgba(0,255,65,0.08)` : 'none',
                 }}
-                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(0,255,65,0.02)'; }}
-                onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                onMouseEnter={e => {
+                  if (!isActive) {
+                    e.currentTarget.style.background = 'rgba(0,255,65,0.03)';
+                    e.currentTarget.style.borderLeftColor = `rgba(0,255,65,0.3)`;
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!isActive) {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.borderLeftColor = 'transparent';
+                  }
+                }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                     <span style={{
                       width: 6, height: 6, borderRadius: '50%',
                       background: color, flexShrink: 0,
-                      boxShadow: isActive ? `0 0 5px ${color}` : 'none',
+                      boxShadow: isActive ? `0 0 8px ${color}, 0 0 3px ${color}` : 'none',
+                      transition: 'box-shadow 0.2s ease',
                     }} />
                     <span style={{
                       fontSize: 11, color: isActive ? color : '#7abf7a',
@@ -136,8 +236,9 @@ export default function SessionsView({
                   </div>
                   {isActive && (
                     <span style={{
-                      fontSize: 8, padding: '1px 6px', borderRadius: 2,
+                      fontSize: 8, padding: '1px 6px', borderRadius: 4,
                       background: 'rgba(0,255,65,0.12)', color: '#00ff41',
+                      border: '1px solid rgba(0,255,65,0.3)',
                       textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700,
                     }}>
                       active

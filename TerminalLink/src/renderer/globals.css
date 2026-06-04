@@ -162,6 +162,21 @@ button, a, input, select {
   border-left: 3px solid var(--accent-color, #00ff41);
 }
 
+/* ─── Input focus glow ────────────────────────────────────────────────────── */
+
+input:focus, textarea:focus, select:focus {
+  border-color: rgba(0,255,65,0.45) !important;
+  box-shadow: 0 0 0 2px rgba(0,255,65,0.08), 0 0 8px rgba(0,255,65,0.12) !important;
+  outline: none !important;
+}
+
+/* ─── Skeleton shimmer ────────────────────────────────────────────────────── */
+
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* ─── xterm overrides ─────────────────────────────────────────────────────── */
 
 .xterm {

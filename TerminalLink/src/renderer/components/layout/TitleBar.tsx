@@ -20,21 +20,22 @@ interface Props {
 }
 
 const btnBase: React.CSSProperties = {
-  fontSize: 10, padding: '3px 8px', borderRadius: 3,
+  fontSize: 10, padding: '3px 10px', borderRadius: 8,
   border: '1px solid rgba(0,255,65,0.2)',
   background: 'rgba(0,255,65,0.04)',
   color: '#7abf7a', cursor: 'pointer',
   fontFamily: 'var(--font-mono)', lineHeight: '16px',
   WebkitAppRegion: 'no-drag' as unknown as undefined,
-  transition: 'all 0.1s ease',
+  transition: 'all 0.15s cubic-bezier(0.2,0.8,0.2,1)',
 };
 
 const btnActive: React.CSSProperties = {
   ...btnBase,
   background: 'rgba(0,255,65,0.14)',
-  border: '1px solid rgba(0,255,65,0.5)',
+  border: '1px solid rgba(0,255,65,0.55)',
   color: '#00ff41',
   textShadow: '0 0 8px rgba(0,255,65,0.6)',
+  boxShadow: '0 0 10px rgba(0,255,65,0.18), inset 0 0 8px rgba(0,255,65,0.06)',
 };
 
 const btnDanger: React.CSSProperties = {
@@ -42,6 +43,7 @@ const btnDanger: React.CSSProperties = {
   background: 'rgba(248,81,73,0.12)',
   border: '1px solid rgba(248,81,73,0.5)',
   color: '#f85149',
+  boxShadow: '0 0 8px rgba(248,81,73,0.15)',
 };
 
 export default function TitleBar({
