@@ -66,12 +66,14 @@ export default function AppStatusCard({ card, index }: AppStatusCardProps) {
       transition={{ duration: 0.2, delay: index * 0.025, ease: 'easeOut' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="relative overflow-hidden rounded-xl cursor-default transition-all duration-150"
+      className="relative overflow-hidden rounded-xl cursor-default"
       style={{
-        background: hovered ? 'rgba(19,21,37,0.9)' : 'var(--surface-2)',
+        background: hovered ? 'rgba(19,21,37,0.92)' : 'var(--surface-2)',
         border: `1px solid ${card.active ? card.accentColor + '28' : 'rgba(42,51,71,0.4)'}`,
         borderLeft: `2px solid ${card.active ? card.accentColor : 'rgba(42,51,71,0.5)'}`,
-        boxShadow: hovered ? `0 4px 20px rgba(0,0,0,0.4), inset 0 0 0 1px ${card.accentColor}18` : 'none',
+        boxShadow: hovered ? `0 6px 24px rgba(0,0,0,0.45), inset 0 0 0 1px ${card.accentColor}18` : 'none',
+        transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
+        transition: 'transform 180ms cubic-bezier(0.2,0.8,0.2,1), box-shadow 180ms cubic-bezier(0.2,0.8,0.2,1), background 180ms',
       }}
     >
       {/* Subtle glow when active */}
@@ -180,20 +182,22 @@ export default function AppStatusCard({ card, index }: AppStatusCardProps) {
           <span className="text-[9px] text-text-muted font-mono">
             {card.lastActive ? timeAgo(card.lastActive) : '—'}
           </span>
-          {hovered && card.execPath && (
+          {card.execPath && (
             <motion.button
-              initial={{ opacity: 0, scale: 0.85 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.1 }}
+              initial={false}
+              animate={{ opacity: hovered ? 1 : 0.35, scale: hovered ? 1 : 0.92 }}
+              transition={{ duration: 0.15 }}
               onClick={handleLaunch}
-              className="text-[9px] font-semibold px-2 py-0.5 rounded transition-colors"
+              className="text-[9px] font-semibold px-2 py-0.5 rounded-md"
               style={{
                 color: card.accentColor,
-                background: `${card.accentColor}15`,
-                border: `1px solid ${card.accentColor}30`,
+                background: hovered ? `${card.accentColor}20` : `${card.accentColor}0a`,
+                border: `1px solid ${card.accentColor}${hovered ? '40' : '20'}`,
+                transition: 'background 150ms, border-color 150ms',
+                cursor: 'pointer',
               }}
             >
-              Open
+              Launch
             </motion.button>
           )}
         </div>

@@ -27,27 +27,36 @@ export default function EcosystemHealthBar() {
       }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-2.5">
+      <div className="flex items-center justify-between mb-3">
         <span className="text-[10px] font-semibold text-text-muted uppercase tracking-widest">
           Ecosystem Health
         </span>
-        <div className="flex items-center gap-2">
-          {/* Health bar */}
+        <div className="flex items-center gap-2.5">
+          {/* Health percentage label */}
+          <span
+            className="text-[11px] font-bold font-mono tabular-nums"
+            style={{
+              color: healthColor,
+              textShadow: `0 0 8px ${healthColor}66`,
+            }}
+          >
+            {healthPct}%
+          </span>
+          {/* Health bar — wider, taller, spring-animated */}
           <div
-            className="w-24 h-1 rounded-full overflow-hidden"
-            style={{ background: 'rgba(42,51,71,0.6)' }}
+            className="w-32 h-2 rounded-full overflow-hidden"
+            style={{ background: 'rgba(42,51,71,0.55)' }}
           >
             <motion.div
               className="h-full rounded-full"
-              style={{ background: healthColor, boxShadow: `0 0 6px ${healthColor}88` }}
+              style={{ background: `linear-gradient(90deg, ${healthColor}cc, ${healthColor})`, boxShadow: `0 0 8px ${healthColor}88` }}
               initial={{ width: 0 }}
               animate={{ width: `${healthPct}%` }}
-              transition={{ duration: 0.8, ease: 'easeOut' }}
+              transition={{ duration: 0.9, type: 'spring', stiffness: 60, damping: 14 }}
             />
           </div>
-          <span className="text-[10px] font-mono tabular-nums" style={{ color: healthColor }}>
-            {activeCount}
-            <span className="text-text-muted">/{cards.length}</span>
+          <span className="text-[10px] font-mono tabular-nums text-text-muted">
+            {activeCount}/{cards.length}
           </span>
         </div>
       </div>

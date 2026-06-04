@@ -53,33 +53,43 @@ export default function SkillRadarLarge() {
       </div>
 
       {/* Skill bars */}
-      <div className="space-y-2 mt-2">
+      <div className="space-y-2.5 mt-2">
         {Object.entries(skills).map(([key, rawValue], i) => {
           const value = rawValue as number
           const label = key === 'activeDirectory' ? 'Active Directory' : key.charAt(0).toUpperCase() + key.slice(1)
           const level = getSkillLevel(value)
           const levelColor = LEVEL_COLORS[level]
+          const isHighLevel = level === 'Expert' || level === 'Advanced'
           return (
             <div key={key} className="flex items-center gap-3">
               <span className="text-[11px] text-text-secondary w-28 shrink-0">{label}</span>
               <div
-                className="flex-1 h-1.5 rounded-full overflow-hidden"
-                style={{ background: 'rgba(42,51,71,0.5)' }}
+                className="flex-1 h-2.5 rounded-full overflow-hidden"
+                style={{ background: 'rgba(42,51,71,0.45)' }}
               >
                 <motion.div
                   className="h-full rounded-full"
-                  style={{ background: levelColor, boxShadow: `0 0 4px ${levelColor}88` }}
+                  style={{
+                    background: isHighLevel
+                      ? `linear-gradient(90deg, ${levelColor}bb, ${levelColor})`
+                      : levelColor,
+                    boxShadow: isHighLevel ? `0 0 8px ${levelColor}aa` : `0 0 3px ${levelColor}55`,
+                  }}
                   initial={{ width: 0 }}
                   animate={{ width: `${value}%` }}
-                  transition={{ duration: 0.7, delay: i * 0.05, ease: 'easeOut' }}
+                  transition={{ duration: 0.75, delay: i * 0.06, ease: [0.2, 0.8, 0.2, 1] }}
                 />
               </div>
               <span className="text-[11px] text-text-primary font-mono w-7 text-right tabular-nums shrink-0">
                 {value}
               </span>
               <span
-                className="text-[9px] font-medium w-20 shrink-0"
-                style={{ color: levelColor }}
+                className="text-[9px] font-semibold w-20 shrink-0 px-1.5 py-0.5 rounded text-center"
+                style={{
+                  color: levelColor,
+                  background: `${levelColor}12`,
+                  border: `1px solid ${levelColor}28`,
+                }}
               >
                 {level}
               </span>

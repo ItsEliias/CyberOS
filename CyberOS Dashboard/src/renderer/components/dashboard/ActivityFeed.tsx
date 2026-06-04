@@ -144,15 +144,23 @@ export default function ActivityFeed() {
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         <AnimatePresence initial={false}>
           {deduplicated.length === 0 ? (
-            <div className="px-4 py-10 text-center">
-              <div className="w-8 h-8 rounded-full bg-surface-2 flex items-center justify-center mx-auto mb-2">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-muted">
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="8" x2="12" y2="12" />
-                  <line x1="12" y1="16" x2="12.01" y2="16" />
+            <div className="px-4 py-12 text-center fade-in">
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3"
+                style={{
+                  background: 'rgba(74,158,255,0.07)',
+                  border: '1px solid rgba(74,158,255,0.14)',
+                  boxShadow: '0 0 20px rgba(74,158,255,0.06)',
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: 'rgba(74,158,255,0.5)' }}>
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
                 </svg>
               </div>
-              <p className="text-[10px] text-text-muted">No events yet</p>
+              <p className="text-[11px] font-medium text-text-secondary mb-1">No activity yet</p>
+              <p className="text-[10px] text-text-muted leading-relaxed">
+                Events will appear here as<br />your apps send updates.
+              </p>
             </div>
           ) : (
             deduplicated.map((event, i) => {

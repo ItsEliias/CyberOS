@@ -1,17 +1,31 @@
 // CyberOS Dashboard — Status Bar
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useDashboardStore } from '../../stores/useDashboardStore'
 
 export default function StatusBar() {
   const alerts = useDashboardStore((s) => s.alerts)
   const dismissedIds = useDashboardStore((s) => s.dismissedAlertIds)
+  const events = useDashboardStore((s) => s.events)
   const [utcTime, setUtcTime] = useState(getUTC())
+  const [newEventFlash, setNewEventFlash] = useState(false)
+  const prevEventCountRef = useRef(events.length)
 
   useEffect(() => {
     const interval = setInterval(() => setUtcTime(getUTC()), 1000)
     return () => clearInterval(interval)
   }, [])
+
+  // Flash indicator on new event
+  useEffect(() => {
+    if (events.length > prevEventCountRef.current) {
+      setNewEventFlash(true)
+      const t = setTimeout(() => setNewEventFlash(false), 1200)
+      prevEventCountRef.current = events.length
+      return () => clearTimeout(t)
+    }
+    prevEventCountRef.current = events.length
+  }, [events.length])
 
   const activeAlerts = alerts.filter((a) => !dismissedIds.has(a.id))
   const hasWarnings = activeAlerts.length > 0
@@ -24,9 +38,10 @@ export default function StatusBar() {
       {/* Ecosystem status */}
       <div className="flex items-center gap-1.5">
         <span
-          className={`w-1.5 h-1.5 rounded-full ${hasWarnings ? 'bg-warning animate-pulse' : 'bg-success'}`}
+          className={`w-1.5 h-1.5 rounded-full ${hasWarnings ? 'animate-pulse' : ''}`}
+          style={{ background: hasWarnings ? 'var(--sev-medium)' : 'var(--state-online)' }}
         />
-        <span className={hasWarnings ? 'text-warning' : 'text-text-muted'}>
+        <span style={{ color: hasWarnings ? 'var(--sev-medium)' : 'var(--text-muted)' }}>
           {hasWarnings
             ? `${activeAlerts.length} alert${activeAlerts.length > 1 ? 's' : ''}`
             : 'Ecosystem OK'}
@@ -42,6 +57,30 @@ export default function StatusBar() {
           <path d="M7 11V7a5 5 0 0 1 10 0v4" />
         </svg>
         <span className="text-text-muted">VPN</span>
+      </div>
+
+      <span className="mx-2.5 text-text-muted/30 select-none">|</span>
+
+      {/* Live event indicator */}
+      <div className="flex items-center gap-1.5">
+        <span className="relative flex items-center justify-center w-2 h-2">
+          {newEventFlash && (
+            <span
+              className="absolute inset-0 rounded-full new-event-ping"
+              style={{ background: 'var(--accent)' }}
+            />
+          )}
+          <span
+            className="w-1.5 h-1.5 rounded-full"
+            style={{
+              background: newEventFlash ? 'var(--accent)' : 'rgba(74,158,255,0.35)',
+              transition: 'background 300ms',
+            }}
+          />
+        </span>
+        <span className="text-text-muted tabular-nums font-mono">
+          {events.length} events
+        </span>
       </div>
 
       <div className="flex-1" />
