@@ -28,7 +28,7 @@ export default function EventLog() {
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
         border: '1px solid var(--border-glass)',
-        boxShadow: 'var(--elevation-1)',
+        boxShadow: 'var(--elevation-1), inset 0 1px 0 rgba(255,255,255,0.06)',
       }}
     >
       {/* Header */}
@@ -97,11 +97,16 @@ export default function EventLog() {
             <p className="text-xs text-text-muted">No events match your filters</p>
           </div>
         ) : (
-          filtered.map((event) => {
+          filtered.map((event, rowIdx) => {
             const accentColor = getAppAccentColor(event.app)
             const isExpanded = expandedId === event.id
             return (
-              <div key={event.id}>
+              <motion.div
+                key={event.id}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.16, delay: Math.min(rowIdx, 12) * 0.05, ease: 'easeOut' }}
+              >
                 <div
                   className="px-4 py-2 flex items-center gap-3 cursor-pointer transition-colors hover:bg-white/[0.025]"
                   style={{ borderBottom: '1px solid rgba(42,51,71,0.2)' }}
@@ -152,7 +157,7 @@ export default function EventLog() {
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </div>
+              </motion.div>
             )
           })
         )}

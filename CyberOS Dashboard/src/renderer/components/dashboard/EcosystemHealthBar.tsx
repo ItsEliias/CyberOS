@@ -33,6 +33,16 @@ function useCountUp(target: number, duration = 800): number {
   return current
 }
 
+/** Convert a 6-digit hex colour to an "r,g,b" string for use with --pulse-rgb */
+function hexToRgbStr(hex: string): string {
+  const h = hex.replace('#', '')
+  if (h.length !== 6) return '74,158,255'
+  const r = parseInt(h.slice(0, 2), 16)
+  const g = parseInt(h.slice(2, 4), 16)
+  const b = parseInt(h.slice(4, 6), 16)
+  return `${r},${g},${b}`
+}
+
 // Number of segments in the progress bar
 const SEGMENTS = 20
 
@@ -59,7 +69,7 @@ export default function EcosystemHealthBar() {
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
         border: '1px solid var(--border-glass)',
-        boxShadow: 'var(--elevation-1)',
+        boxShadow: 'var(--elevation-1), inset 0 1px 0 rgba(255,255,255,0.06)',
       }}
     >
       {/* Header */}
@@ -162,7 +172,7 @@ export default function EcosystemHealthBar() {
               style={{
                 backgroundColor: card.accentColor,
                 opacity: card.active ? 1 : 0.22,
-                '--pulse-rgb': '74,158,255',
+                '--pulse-rgb': hexToRgbStr(card.accentColor),
                 boxShadow: card.active ? `0 0 6px ${card.accentColor}99` : 'none',
               } as React.CSSProperties}
             />

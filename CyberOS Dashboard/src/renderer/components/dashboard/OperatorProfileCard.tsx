@@ -25,7 +25,7 @@ export default function OperatorProfileCard() {
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
         border: '1px solid var(--border-glass)',
-        boxShadow: 'var(--elevation-2)',
+        boxShadow: 'var(--elevation-2), inset 0 1px 0 rgba(74,158,255,0.12)',
       }}
     >
       {/* Subtle radial glow behind radar */}
@@ -92,16 +92,16 @@ export default function OperatorProfileCard() {
         className="grid grid-cols-2 gap-1.5 px-3 pb-3 relative"
         style={{ borderTop: '1px solid rgba(42,51,71,0.35)', paddingTop: '10px' }}
       >
-        <HeroMetric label="Labs" value={labs} />
-        <HeroMetric label="Flags" value={flags} />
-        <HeroMetric label="Credentials" value={creds} />
-        <HeroMetric label="Streak" value={streak} suffix="d" />
+        <HeroMetric label="Labs" value={labs} index={0} />
+        <HeroMetric label="Flags" value={flags} index={1} />
+        <HeroMetric label="Credentials" value={creds} index={2} />
+        <HeroMetric label="Streak" value={streak} suffix="d" index={3} />
       </div>
     </div>
   )
 }
 
-function HeroMetric({ label, value, suffix = '' }: { label: string; value: number; suffix?: string }) {
+function HeroMetric({ label, value, suffix = '', index = 0 }: { label: string; value: number; suffix?: string; index?: number }) {
   const motionVal = useMotionValue(0)
   const [display, setDisplay] = useState(0)
 
@@ -113,9 +113,9 @@ function HeroMetric({ label, value, suffix = '' }: { label: string; value: numbe
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 4 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.28, delay: index * 0.065, ease: 'easeOut' }}
       className="text-center py-2 rounded-lg"
       style={{
         background: 'rgba(74,158,255,0.05)',

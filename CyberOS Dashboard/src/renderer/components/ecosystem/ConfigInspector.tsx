@@ -20,7 +20,7 @@ export default function ConfigInspector() {
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
         border: '1px solid var(--border-glass)',
-        boxShadow: 'var(--elevation-1)',
+        boxShadow: 'var(--elevation-1), inset 0 1px 0 rgba(255,255,255,0.06)',
       }}
     >
       <span className="text-[10px] font-semibold text-text-muted uppercase tracking-widest block mb-4">
@@ -66,7 +66,7 @@ export default function ConfigInspector() {
 
         {/* Key count */}
         <Row label="Top-level keys">
-          <span className="text-[11px] text-text-primary font-mono">{Object.keys(config).length}</span>
+          <span className="text-[11px] text-text-primary font-mono tabular-nums">{Object.keys(config).length}</span>
         </Row>
 
         {/* Error */}
@@ -83,14 +83,26 @@ export default function ConfigInspector() {
         <div className="pt-2">
           <button
             onClick={handleOpenInEditor}
-            className="text-[11px] font-medium px-3 py-1.5 rounded transition-colors"
+            className="flex items-center gap-2 text-[11px] font-medium px-3 py-1.5 rounded transition-colors"
             style={{
               color: 'var(--accent)',
               background: 'rgba(74,158,255,0.1)',
               border: '1px solid rgba(74,158,255,0.2)',
             }}
+            title="Open config file in default editor (⌘E)"
           >
             Open in editor
+            <kbd
+              className="text-[9px] font-mono px-1 py-0.5 rounded"
+              style={{
+                background: 'rgba(74,158,255,0.12)',
+                border: '1px solid rgba(74,158,255,0.22)',
+                color: 'rgba(74,158,255,0.7)',
+                lineHeight: 1,
+              }}
+            >
+              ⌘E
+            </kbd>
           </button>
         </div>
       </div>

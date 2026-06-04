@@ -56,10 +56,13 @@ export default function StatusBar() {
       {/* Ecosystem status */}
       <div className="flex items-center gap-1.5">
         <span
-          className={`w-1.5 h-1.5 rounded-full ${hasWarnings ? 'animate-pulse' : ''}`}
-          style={{ background: hasWarnings ? 'var(--sev-medium)' : 'var(--state-online)' }}
+          className={`w-1.5 h-1.5 rounded-full ${hasWarnings ? 'status-dot-pulse' : 'status-dot-pulse'}`}
+          style={{
+            background: hasWarnings ? 'var(--sev-medium)' : 'var(--state-online)',
+            '--pulse-rgb': hasWarnings ? '210,153,34' : '63,185,80',
+          } as React.CSSProperties}
         />
-        <span style={{ color: hasWarnings ? 'var(--sev-medium)' : 'var(--text-muted)' }}>
+        <span className="tabular-nums" style={{ color: hasWarnings ? 'var(--sev-medium)' : 'var(--text-muted)' }}>
           {hasWarnings
             ? `${activeAlerts.length} alert${activeAlerts.length > 1 ? 's' : ''}`
             : 'Ecosystem OK'}

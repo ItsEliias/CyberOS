@@ -61,9 +61,9 @@ export default function AppStatusCard({ card, index }: AppStatusCardProps) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2, delay: index * 0.025, ease: 'easeOut' }}
+      transition={{ duration: 0.22, delay: index * 0.06, ease: 'easeOut' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className="relative overflow-hidden rounded-xl cursor-default"
@@ -71,7 +71,9 @@ export default function AppStatusCard({ card, index }: AppStatusCardProps) {
         background: hovered ? 'rgba(19,21,37,0.92)' : 'var(--surface-2)',
         border: `1px solid ${card.active ? card.accentColor + '28' : 'rgba(42,51,71,0.4)'}`,
         borderTop: `2px solid ${card.active ? card.accentColor : card.accentColor + '40'}`,
-        boxShadow: hovered ? `0 6px 24px rgba(0,0,0,0.45), inset 0 0 0 1px ${card.accentColor}18` : 'none',
+        boxShadow: hovered
+          ? `0 6px 24px rgba(0,0,0,0.45), inset 0 0 0 1px ${card.accentColor}18, inset 0 1px 0 ${card.accentColor}22`
+          : `inset 0 1px 0 ${card.accentColor}14`,
         transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
         transition: 'transform 180ms cubic-bezier(0.2,0.8,0.2,1), box-shadow 180ms cubic-bezier(0.2,0.8,0.2,1), background 180ms',
       }}

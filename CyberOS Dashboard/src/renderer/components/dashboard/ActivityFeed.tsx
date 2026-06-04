@@ -121,6 +121,8 @@ export default function ActivityFeed() {
       style={{
         background: 'rgba(11,12,19,0.7)',
         borderLeft: '1px solid rgba(42,51,71,0.3)',
+        /* inner glow on top edge */
+        boxShadow: 'inset 0 1px 0 rgba(74,158,255,0.08)',
       }}
     >
       {/* Header */}
@@ -229,7 +231,7 @@ export default function ActivityFeed() {
                   initial={{ x: 16, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
                   exit={{ x: -12, opacity: 0 }}
-                  transition={{ duration: 0.15, ease: 'easeOut' }}
+                  transition={{ duration: 0.18, delay: i * 0.055, ease: 'easeOut' }}
                   className="px-3 py-2.5 transition-colors hover:bg-white/[0.02]"
                   style={{
                     borderBottom: '1px solid rgba(42,51,71,0.2)',

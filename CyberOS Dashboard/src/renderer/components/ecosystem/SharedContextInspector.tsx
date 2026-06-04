@@ -1,5 +1,6 @@
 // CyberOS Dashboard — Shared Context Inspector
 
+import { motion } from 'framer-motion'
 import { useDashboardStore } from '../../stores/useDashboardStore'
 import { timeAgo } from '../../utils/timeAgo'
 
@@ -26,7 +27,7 @@ export default function SharedContextInspector() {
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
         border: '1px solid var(--border-glass)',
-        boxShadow: 'var(--elevation-1)',
+        boxShadow: 'var(--elevation-1), inset 0 1px 0 rgba(255,255,255,0.06)',
       }}
     >
       <div className="flex items-center justify-between mb-4">
@@ -45,20 +46,27 @@ export default function SharedContextInspector() {
       </div>
 
       <div className="space-y-2.5">
-        {fields.map((field) => (
-          <div key={field.label} className="flex items-center justify-between gap-4">
+        {fields.map((field, i) => (
+          <motion.div
+            key={field.label}
+            initial={{ opacity: 0, x: -6 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.18, delay: i * 0.06, ease: 'easeOut' }}
+            className="flex items-center justify-between gap-4"
+          >
             <span className="text-[11px] text-text-secondary shrink-0">{field.label}</span>
             {field.value ? (
               <span
                 className="text-[11px] text-text-primary truncate max-w-[180px]"
                 style={{ fontFamily: field.mono ? 'var(--font-mono)' : 'var(--font-display)' }}
+                title={String(field.value)}
               >
                 {field.value}
               </span>
             ) : (
               <span className="text-[11px] text-text-muted italic">Not set</span>
             )}
-          </div>
+          </motion.div>
         ))}
       </div>
     </div>
