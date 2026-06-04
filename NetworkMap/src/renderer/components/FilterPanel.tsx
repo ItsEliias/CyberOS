@@ -1,5 +1,5 @@
 // NetworkMap — FilterPanel.tsx — Dark glass filter sidebar (UI redesign, logic unchanged)
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import type { NetworkNode } from '@shared/types'
 
 export interface FilterState {
@@ -72,6 +72,20 @@ function ActivePill({ label, onRemove }: { label: string; onRemove: () => void }
 }
 
 export default function FilterPanel({ nodes, filters, onChange, onClose }: Props) {
+  const [applyFlash, setApplyFlash] = useState(false)
+
+  function handleApply() {
+    // Trigger apply callback (onChange already called on each change; this is
+    // a explicit "commit" with brief visual feedback flash)
+    setApplyFlash(true)
+    setTimeout(() => setApplyFlash(false), 600)
+    onClose()
+  }
+
+  function handleReset() {
+    onChange(EMPTY_FILTERS)
+  }
+
   const commonPorts = useMemo(() => {
     const counts = new Map<number, number>()
     for (const n of nodes) {

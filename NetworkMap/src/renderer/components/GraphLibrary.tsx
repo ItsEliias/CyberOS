@@ -1,6 +1,37 @@
 // NetworkMap — GraphLibrary.tsx — Orange-accent library view (UI redesign, logic unchanged)
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { GraphSummary, NetworkGraph } from '@shared/types'
+
+/** Highlight substrings matching query in amber */
+function AmberHighlight({ text, query }: { text: string; query: string }) {
+  const q = query.trim()
+  if (!q) return <>{text}</>
+  const lower = text.toLowerCase()
+  const lq = q.toLowerCase()
+  const nodes: React.ReactNode[] = []
+  let cursor = 0
+  while (cursor < text.length) {
+    const idx = lower.indexOf(lq, cursor)
+    if (idx === -1) { nodes.push(text.slice(cursor)); break }
+    if (idx > cursor) nodes.push(text.slice(cursor, idx))
+    nodes.push(
+      <mark
+        key={idx}
+        style={{
+          background: 'rgba(255,140,66,0.28)',
+          color: '#ff8c42',
+          borderRadius: 2,
+          padding: '0 1px',
+          fontWeight: 700,
+        }}
+      >
+        {text.slice(idx, idx + q.length)}
+      </mark>
+    )
+    cursor = idx + q.length
+  }
+  return <>{nodes}</>
+}
 
 interface Props {
   onOpenGraph: (graph: NetworkGraph) => void
@@ -69,6 +100,7 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
   const [error, setError]                 = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [sort, setSort]                   = useState<SortKey>('date-desc')
+  const [libSearch, setLibSearch]         = useState('')
 
   const reload = useCallback(() => {
     window.electronAPI.loadGraphs().then(setGraphs).catch(console.error)
@@ -100,7 +132,12 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
     }
   }
 
-  const sorted = sortGraphs(graphs, sort)
+  const sorted = useMemo(() => {
+    const base = sortGraphs(graphs, sort)
+    if (!libSearch.trim()) return base
+    const q = libSearch.toLowerCase()
+    return base.filter(g => g.name.toLowerCase().includes(q))
+  }, [graphs, sort, libSearch])
 
   const SORT_OPTIONS: { value: SortKey; label: string }[] = [
     { value: 'date-desc',  label: 'Newest first' },
@@ -207,6 +244,48 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
         </div>
       </div>
 
+      {/* Search bar */}
+      <div style={{ padding: '10px 24px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <span style={{
+            position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)',
+            fontSize: 12, color: 'rgba(255,140,66,0.4)', pointerEvents: 'none',
+          }}>⌕</span>
+          <input
+            type="text"
+            value={libSearch}
+            onChange={e => setLibSearch(e.target.value)}
+            placeholder="Search graphs by name…"
+            style={{
+              width: '100%', background: '#0d0e18',
+              border: '1px solid rgba(42,51,71,0.75)', borderRadius: 8,
+              padding: '6px 28px 6px 28px',
+              color: 'var(--text-primary)', fontSize: 12,
+              fontFamily: 'var(--font-display)', outline: 'none',
+              boxSizing: 'border-box',
+              transition: 'border-color 150ms',
+            }}
+            onFocus={e => (e.currentTarget.style.borderColor = 'rgba(255,140,66,0.4)')}
+            onBlur={e => (e.currentTarget.style.borderColor = 'rgba(42,51,71,0.75)')}
+          />
+          {libSearch && (
+            <button
+              onClick={() => setLibSearch('')}
+              style={{
+                position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', color: 'var(--text-muted)',
+                cursor: 'pointer', fontSize: 11, lineHeight: 1, padding: '0 2px',
+              }}
+            >✕</button>
+          )}
+        </div>
+        {libSearch && (
+          <span style={{ fontSize: 10, color: 'rgba(255,140,66,0.6)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            {sorted.length} result{sorted.length !== 1 ? 's' : ''}
+          </span>
+        )}
+      </div>
+
       {/* Action toolbar */}
       <div style={{
         display: 'flex', gap: 8, padding: '14px 24px',
@@ -297,7 +376,9 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
                   style={{ cursor: 'pointer' }}
                 >
                   <td style={tdStyle}>
-                    <span style={{ fontWeight: 500, color: 'var(--text-primary)', fontSize: 13 }}>{g.name}</span>
+                    <span style={{ fontWeight: 500, color: 'var(--text-primary)', fontSize: 13 }}>
+                      <AmberHighlight text={g.name} query={libSearch} />
+                    </span>
                   </td>
                   <td style={tdStyle}>
                     <span style={{
