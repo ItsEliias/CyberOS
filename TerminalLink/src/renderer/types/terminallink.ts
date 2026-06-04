@@ -25,6 +25,23 @@ export interface SharedContext {
   sessions?: string[]
 }
 
+export interface AppTheme {
+  accentColor: string  // Default: '#00ff41'
+  bgColor: string      // Default: '#0a0a0f'
+  textColor: string    // Default: '#e2e8f0'
+}
+
+export const APP_THEME_PRESETS: Record<string, AppTheme> = {
+  dark:     { accentColor: '#00ff41', bgColor: '#0a0a0f',  textColor: '#e2e8f0' },
+  graphite: { accentColor: '#00ff41', bgColor: '#111218',  textColor: '#e2e8f0' },
+  navy:     { accentColor: '#00ff41', bgColor: '#0a0f1a',  textColor: '#e2e8f0' },
+  oled:     { accentColor: '#00ff41', bgColor: '#000000',  textColor: '#e2e8f0' },
+}
+
+export const ACCENT_SWATCHES = [
+  '#00ff41', '#4a9eff', '#3fb950', '#d29922', '#b44fff', '#f78166',
+] as const
+
 export interface TerminalSettings {
   shellPath: string
   fontSize: number
@@ -39,6 +56,7 @@ export interface TerminalSettings {
   ollamaUrl: string
   ollamaEnabled: boolean
   snippetsOpen: boolean
+  appTheme: AppTheme
 }
 
 export type ActiveView = 'terminal' | 'sessions' | 'settings'

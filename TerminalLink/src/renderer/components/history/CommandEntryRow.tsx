@@ -158,7 +158,8 @@ function relativeTime(iso: string): string {
 }
 
 export default function CommandEntryRow({ entry, query }: Props) {
-  const [copied, setCopied] = useState(false);
+  const [copied,  setCopied]  = useState(false);
+  const [hovered, setHovered] = useState(false);
 
   async function copy() {
     await navigator.clipboard.writeText(entry.command);
@@ -170,64 +171,69 @@ export default function CommandEntryRow({ entry, query }: Props) {
     <div
       onClick={copy}
       title="Click to copy"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
         padding: '6px 10px',
-        borderBottom: '1px solid var(--border)',
+        borderBottom: '1px solid rgba(42,51,71,0.4)',
         display: 'flex',
         flexDirection: 'column',
         gap: 3,
         cursor: 'pointer',
         transition: 'background 0.1s ease',
+        background: hovered ? 'rgba(255,255,255,0.03)' : 'transparent',
       }}
-      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
-      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
     >
-      {/* Top row: pane badge, timestamp, copy button */}
+      {/* Top row: timestamp, copy button */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <span style={{
             fontSize: 9,
             padding: '1px 4px',
-            background: entry.pane === 'left' ? 'rgba(0,255,65,0.15)' : 'rgba(74,158,255,0.15)',
-            color:      entry.pane === 'left' ? 'var(--accent)' : '#4a9eff',
+            background: entry.pane === 'left' ? 'rgba(0,255,65,0.12)' : 'rgba(74,158,255,0.12)',
+            color:      entry.pane === 'left' ? '#00ff41' : '#4a9eff',
             borderRadius: 2,
             textTransform: 'uppercase',
+            fontFamily: 'var(--font-mono)',
           }}>
             {entry.pane}
           </span>
-          <span style={{ fontSize: 10, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ fontSize: 10, color: '#4a5568', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
             {new Date(entry.timestamp).toLocaleTimeString()}
           </span>
-          <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>
+          <span style={{ fontSize: 9, color: '#4a5568', fontFamily: 'var(--font-mono)' }}>
             ({relativeTime(entry.timestamp)})
           </span>
         </div>
+        {/* Copy button — shown on hover */}
         <button
           title="Copy command"
           onClick={e => { e.stopPropagation(); copy(); }}
           style={{
             fontSize: 10,
-            color: copied ? 'var(--accent)' : 'var(--text-muted)',
-            padding: '1px 5px',
-            borderRadius: 2,
-            background: 'var(--bg)',
-            border: `1px solid ${copied ? 'var(--accent)' : 'var(--border)'}`,
+            color: copied ? '#00ff41' : '#4a5568',
+            padding: '1px 6px',
+            borderRadius: 3,
+            background: copied ? 'rgba(0,255,65,0.08)' : 'rgba(42,51,71,0.3)',
+            border: `1px solid ${copied ? 'rgba(0,255,65,0.4)' : 'rgba(42,51,71,0.4)'}`,
             cursor: 'pointer',
-            fontFamily: 'inherit',
+            fontFamily: 'var(--font-mono)',
             flexShrink: 0,
+            opacity: hovered || copied ? 1 : 0,
+            transition: 'opacity 0.15s ease',
           }}
         >
-          {copied ? '✓ Copied' : '📋'}
+          {copied ? '✓ Copied' : 'Copy'}
         </button>
       </div>
 
       {/* Command text */}
       <span style={{
         fontSize: 12,
-        color: 'var(--text)',
+        color: '#e2e8f0',
         wordBreak: 'break-all',
         whiteSpace: 'pre-wrap',
-        fontFamily: 'inherit',
+        fontFamily: 'var(--font-mono)',
         lineHeight: 1.4,
       }}>
         {query ? (
@@ -245,7 +251,7 @@ export default function CommandEntryRow({ entry, query }: Props) {
           alignItems: 'center',
           gap: 6,
           overflow: 'hidden',
-          borderLeft: '2px solid rgba(0,255,65,0.15)',
+          borderLeft: '2px solid rgba(42,51,71,0.6)',
           paddingLeft: 6,
         }}>
           <ColoredOutputSnippet text={entry.outputSnippet} />

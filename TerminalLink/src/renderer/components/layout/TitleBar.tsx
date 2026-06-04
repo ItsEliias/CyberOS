@@ -20,10 +20,10 @@ interface Props {
 }
 
 const btnBase: React.CSSProperties = {
-  fontSize: 10, padding: '3px 10px', borderRadius: 8,
-  border: '1px solid rgba(0,255,65,0.2)',
-  background: 'rgba(0,255,65,0.04)',
-  color: '#7abf7a', cursor: 'pointer',
+  fontSize: 10, padding: '3px 10px', borderRadius: 6, height: 24,
+  border: '1px solid rgba(42,51,71,0.6)',
+  background: 'rgba(42,51,71,0.4)',
+  color: '#e2e8f0', cursor: 'pointer',
   fontFamily: 'var(--font-mono)', lineHeight: '16px',
   WebkitAppRegion: 'no-drag' as unknown as undefined,
   transition: 'all 0.15s cubic-bezier(0.2,0.8,0.2,1)',

@@ -13,6 +13,10 @@
   --success:    #00ff41;
   --error:      #f85149;
   --warning:    #d29922;
+  /* Per-app theme vars — updated at runtime by App.tsx */
+  --app-accent: #00ff41;
+  --app-bg:     #0a0a0f;
+  --app-text:   #e2e8f0;
 }
 
 *, *::before, *::after {

@@ -20,20 +20,25 @@ interface DotProps {
 function ContextDot({ active, label, value }: DotProps) {
   return (
     <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-      <span style={{
-        width: 6,
-        height: 6,
-        borderRadius: '50%',
-        background: active ? 'var(--accent)' : 'var(--text-muted)',
-        flexShrink: 0,
-        boxShadow: active ? '0 0 6px rgba(0,255,65,0.6)' : 'none',
-        transition: 'all 0.3s ease',
-      }} />
-      <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>{label}:</span>
+      <span
+        className={active ? 'status-dot-pulse' : undefined}
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: '50%',
+          background: active ? 'var(--accent)' : '#4a5568',
+          flexShrink: 0,
+          boxShadow: active ? '0 0 6px rgba(0,255,65,0.6)' : 'none',
+          transition: 'all 0.3s ease',
+          '--pulse-color': 'rgba(0,255,65,0.4)',
+          '--pulse-color-fade': 'rgba(0,255,65,0)',
+        } as React.CSSProperties}
+      />
+      <span style={{ color: '#4a5568', fontSize: 10, fontFamily: 'var(--font-mono)' }}>{label}:</span>
       <span style={{
         fontSize: 10,
-        color: active ? 'var(--text)' : 'var(--text-muted)',
-        fontFamily: 'inherit',
+        color: active ? '#e2e8f0' : '#4a5568',
+        fontFamily: 'var(--font-mono)',
       }}>
         {active ? value : 'not set'}
       </span>
@@ -51,11 +56,9 @@ export default function ContextBar({ sessionCtx, sessionName }: Props) {
       transition={{ duration: 0.2, ease: 'easeOut' }}
       style={{
         overflow: 'hidden',
-        borderBottom: '1px solid var(--border)',
+        borderBottom: '1px solid rgba(42,51,71,0.4)',
         flexShrink: 0,
-        background: hasAny
-          ? 'rgba(0,255,65,0.04)'
-          : 'transparent',
+        background: 'rgba(10,10,15,0.6)',
       }}
     >
       <div style={{
@@ -73,7 +76,7 @@ export default function ContextBar({ sessionCtx, sessionName }: Props) {
               label="$TARGET"
               value={sessionCtx.activeTarget}
             />
-            <span style={{ color: 'var(--border)', fontSize: 10 }}>·</span>
+            <span style={{ color: '#4a5568', fontSize: 10 }}>·</span>
             <ContextDot
               active={Boolean(sessionCtx.activeIP)}
               label="$TARGET_IP"
@@ -81,21 +84,23 @@ export default function ContextBar({ sessionCtx, sessionName }: Props) {
             />
             {sessionCtx.activeLab && (
               <>
-                <span style={{ color: 'var(--border)', fontSize: 10 }}>·</span>
+                <span style={{ color: '#4a5568', fontSize: 10 }}>·</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>Session:</span>
-                  <span style={{ fontSize: 10, color: 'var(--accent)' }}>{sessionCtx.activeLab}</span>
+                  <span style={{ color: '#4a5568', fontSize: 10, fontFamily: 'var(--font-mono)' }}>Session:</span>
+                  <span style={{ fontSize: 10, color: '#e2e8f0', fontFamily: 'var(--font-mono)' }}>
+                    {sessionCtx.activeLab}
+                  </span>
                 </span>
               </>
             )}
           </>
         ) : (
-          <span style={{ fontSize: 10, color: 'var(--text-muted)', fontStyle: 'italic' }}>
-            No active session — $TARGET not set
+          <span style={{ fontSize: 10, color: '#4a5568', fontFamily: 'var(--font-mono)' }}>
+            No active target — $TARGET not set
           </span>
         )}
         <div style={{ flex: 1 }} />
-        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{sessionName}</span>
+        <span style={{ fontSize: 10, color: '#4a5568', fontFamily: 'var(--font-mono)' }}>{sessionName}</span>
       </div>
     </motion.div>
   );
