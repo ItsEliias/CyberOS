@@ -1,3 +1,5 @@
+// GhostVault — EditorView (redesigned: glass panel aesthetic, soft blue accent)
+
 import { useRef, useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
@@ -24,6 +26,31 @@ function modeLabel(m: EditorMode): string {
 
 const TABLE_TEMPLATE = '\n| Col 1 | Col 2 | Col 3 |\n|-------|-------|-------|\n|       |       |       |\n|       |       |       |\n|       |       |       |\n';
 
+// Small toolbar icon button
+function ToolBtn({ onClick, title, active, children, disabled }: {
+  onClick?: () => void; title: string; active?: boolean;
+  children: React.ReactNode; disabled?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      disabled={disabled}
+      className="w-7 h-7 rounded flex items-center justify-center text-sm transition-colors"
+      style={{
+        color: active ? '#7bb8ff' : 'rgba(72,79,88,0.75)',
+        background: active ? 'rgba(123,184,255,0.1)' : 'transparent',
+        border: active ? '1px solid rgba(123,184,255,0.2)' : '1px solid transparent',
+        opacity: disabled ? 0.3 : 1,
+      }}
+      onMouseEnter={e => { if (!active && !disabled) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+      onMouseLeave={e => { if (!active && !disabled) e.currentTarget.style.background = 'transparent'; }}
+    >
+      {children}
+    </button>
+  );
+}
+
 export default function EditorView({
   onSave, onAiMenu, onTemplate, onTogglePin, onToggleAot, onCapture, onOpenNote
 }: Props) {
@@ -39,16 +66,12 @@ export default function EditorView({
   const [previewHtml, setPreviewHtml] = useState('');
   const [exportToast, setExportToast] = useState(false);
 
-  // Wikilink autocomplete state
   const [wikiAc, setWikiAc] = useState<{ query: string; pos: { top: number; left: number } } | null>(null);
-
-  // Inline AI commands
   const [aiCmd, setAiCmd] = useState<{ pos: { top: number; left: number } } | null>(null);
 
   const isPinned = activeNote ? pinnedPaths.has(activeNote.path) : false;
   const isLocked = activeNote ? lockedNotes.has(activeNote.path) : false;
 
-  // Debounced preview update (150ms)
   useEffect(() => {
     if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current);
     previewDebounceRef.current = setTimeout(() => {
@@ -57,7 +80,6 @@ export default function EditorView({
     return () => { if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current); };
   }, [editorContent]);
 
-  // Set wiki link opener for preview pane
   useEffect(() => {
     if (onOpenNote) {
       setWikiLinkOpener((name: string) => {
@@ -67,7 +89,6 @@ export default function EditorView({
     }
   }, [onOpenNote, notes]);
 
-  // F5 toggles presentation mode
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'F5') { e.preventDefault(); setPresentMode(!presentMode); }
@@ -107,7 +128,6 @@ export default function EditorView({
     const before = val.slice(0, pos);
     const lastLine = before.split('\n').pop() || '';
 
-    // Wikilink autocomplete: detect [[
     const wikiMatch = lastLine.match(/\[\[([^\]]*?)$/);
     if (wikiMatch) {
       setWikiAc({ query: wikiMatch[1], pos: getCursorPixelPos(ta) });
@@ -117,7 +137,6 @@ export default function EditorView({
       setWikiAc(null);
     }
 
-    // Inline AI commands: detect / at start of line
     if (lastLine === '/') {
       setAiCmd({ pos: getCursorPixelPos(ta) });
     } else {
@@ -189,7 +208,6 @@ export default function EditorView({
     const pos = ta.selectionStart;
     const before = ta.value.slice(0, pos).replace(/\/$/, '');
     const remaining = ta.value.slice(pos);
-    // Replace the / with the command invocation marker
     setEditorContent(before + remaining);
     setAiCmd(null);
     onAiMenu();
@@ -213,124 +231,177 @@ export default function EditorView({
   const hasOllama = useStore.getState().ollamaStatus?.running || false;
 
   return (
-    <div className="flex flex-col h-full" style={{ position: 'relative' }}>
+    <div className="flex flex-col h-full relative" style={{ background: '#07080f' }}>
       {/* Toolbar */}
-      <div className="flex items-center gap-2 px-4 py-2 border-b flex-shrink-0"
-        style={{ borderColor: 'var(--border)', background: 'var(--bg2)' }}>
-
+      <div
+        className="flex items-center gap-2 px-4 py-2 flex-shrink-0"
+        style={{
+          borderBottom: '1px solid rgba(42,51,71,0.4)',
+          background: 'rgba(10,11,20,0.7)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+        }}
+      >
+        {/* Note title */}
         <div className="flex-1 min-w-0">
           {activeNote ? (
             <div className="flex items-baseline gap-1.5 min-w-0">
-              <span className="text-[10px]" style={{ color: 'var(--text-dim)' }}>{activeNote.folder}/</span>
-              <span className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>{activeNote.name}</span>
-              {isLocked && <span className="text-[10px]" style={{ color: '#d29922' }}>🔒</span>}
+              <span className="text-[10px] font-mono" style={{ color: 'rgba(72,79,88,0.7)' }}>
+                {activeNote.folder}/
+              </span>
+              <span
+                className="text-sm font-semibold truncate"
+                style={{ color: '#e6edf3', fontFamily: 'var(--font-display)' }}
+              >
+                {activeNote.name}
+              </span>
+              {isLocked && (
+                <span className="text-[10px]" style={{ color: '#d29922' }}>locked</span>
+              )}
             </div>
           ) : (
-            <span className="text-sm font-semibold" style={{ color: 'var(--text-dim)' }}>GhostVault</span>
+            <span
+              className="text-sm font-semibold"
+              style={{ color: 'rgba(72,79,88,0.7)', fontFamily: 'var(--font-display)' }}
+            >
+              GhostVault
+            </span>
           )}
         </div>
 
-        {/* Mode pill */}
-        <div className="flex rounded border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+        {/* Mode pills */}
+        <div
+          className="flex rounded overflow-hidden"
+          style={{ border: '1px solid rgba(42,51,71,0.5)' }}
+        >
           {modes.map(m => (
-            <button key={m}
+            <button
+              key={m}
               onClick={() => { setEditorMode(m); window.ghostvault.saveConfig({ editorMode: m }); }}
-              className="px-2 py-0.5 text-[10px] transition-colors"
+              className="px-2.5 py-1 text-[10px] font-medium transition-colors"
               style={{
-                background: editorMode === m ? 'var(--accent)' : 'var(--bg3)',
-                color     : editorMode === m ? '#fff' : 'var(--text-dim)'
-              }}>
+                background: editorMode === m ? 'rgba(123,184,255,0.12)' : 'transparent',
+                color: editorMode === m ? '#7bb8ff' : 'rgba(72,79,88,0.7)',
+                borderRight: m !== 'preview' ? '1px solid rgba(42,51,71,0.4)' : 'none',
+                fontFamily: 'var(--font-display)',
+              }}
+            >
               {modeLabel(m)}
             </button>
           ))}
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-1">
-          <button onClick={insertTable}
-            title="Insert Table" className="w-7 h-7 rounded flex items-center justify-center text-sm hover:bg-white/10 transition-colors"
-            style={{ color: 'var(--text-dim)' }}>⊞</button>
-          <button onClick={onTemplate}
-            title="Templates" className="w-7 h-7 rounded flex items-center justify-center text-sm hover:bg-white/10 transition-colors"
-            style={{ color: 'var(--text-dim)' }}>🗂</button>
-          <button onClick={onAiMenu}
-            title="AI" className="w-7 h-7 rounded flex items-center justify-center text-sm hover:bg-white/10 transition-colors"
-            style={{ color: 'var(--text-dim)' }}>✨</button>
-          <button onClick={onCapture}
-            title="Capture window" className="w-7 h-7 rounded flex items-center justify-center text-sm hover:bg-white/10 transition-colors"
-            style={{ color: 'var(--text-dim)' }}>⚡</button>
-          <button onClick={onTogglePin}
-            title={isPinned ? 'Unpin' : 'Pin'}
-            className="w-7 h-7 rounded flex items-center justify-center text-sm hover:bg-white/10 transition-colors"
-            style={{ color: isPinned ? 'var(--accent)' : 'var(--text-dim)' }}>📌</button>
-          <button onClick={onToggleAot}
-            title="Always on top"
-            className="w-7 h-7 rounded flex items-center justify-center text-sm hover:bg-white/10 transition-colors"
-            style={{ color: alwaysOnTop ? 'var(--accent)' : 'var(--text-dim)' }}>⬆</button>
+        <div className="flex items-center gap-0.5">
+          <ToolBtn onClick={insertTable} title="Insert Table">⊞</ToolBtn>
+          <ToolBtn onClick={onTemplate} title="Templates">🗂</ToolBtn>
+          <ToolBtn onClick={onAiMenu} title="AI Assistant">✨</ToolBtn>
+          <ToolBtn onClick={onCapture} title="Capture window">⚡</ToolBtn>
+          <ToolBtn onClick={onTogglePin} title={isPinned ? 'Unpin' : 'Pin'} active={isPinned}>📌</ToolBtn>
+          <ToolBtn onClick={onToggleAot} title="Always on top" active={alwaysOnTop}>⬆</ToolBtn>
           {activeNote && (
-            <button onClick={() => setShowHistory(!showHistory)}
+            <ToolBtn
+              onClick={() => setShowHistory(!showHistory)}
               title="Version history"
-              className="w-7 h-7 rounded flex items-center justify-center text-sm hover:bg-white/10 transition-colors"
-              style={{ color: showHistory ? 'var(--accent)' : 'var(--text-dim)' }}>⏱</button>
+              active={showHistory}
+            >
+              ⏱
+            </ToolBtn>
           )}
-          <button onClick={() => activeNote && setPresentMode(true)}
+          <ToolBtn
+            onClick={() => activeNote && setPresentMode(true)}
             title="Presentation mode (F5)"
-            className="w-7 h-7 rounded flex items-center justify-center text-sm hover:bg-white/10 transition-colors"
             disabled={!activeNote}
-            style={{ color: 'var(--text-dim)', opacity: activeNote ? 1 : 0.3 }}>▶</button>
-          <button onClick={onSave}
+          >
+            ▶
+          </ToolBtn>
+
+          <button
+            onClick={onSave}
             disabled={!dirty}
-            className="px-2.5 py-1 rounded text-[10px] font-medium transition-colors"
+            className="px-2.5 py-1 rounded text-[10px] font-semibold transition-all ml-1"
             style={{
-              background: dirty ? 'var(--accent)' : 'var(--bg3)',
-              color: dirty ? '#fff' : 'var(--text-dim)',
-              border: '1px solid var(--border)'
-            }}>
+              background: dirty ? 'rgba(123,184,255,0.15)' : 'rgba(42,51,71,0.15)',
+              color: dirty ? '#7bb8ff' : 'rgba(72,79,88,0.6)',
+              border: dirty ? '1px solid rgba(123,184,255,0.3)' : '1px solid rgba(42,51,71,0.3)',
+              fontFamily: 'var(--font-display)',
+            }}
+          >
             {dirty ? 'Save' : 'Saved'}
           </button>
+
           {activeNote && editorContent.trim() && (
-            <button onClick={handleExportToReport}
-              title="Export notes to ReportForge"
-              className="px-2.5 py-1 rounded text-[10px] font-medium transition-colors"
-              style={{ border: '1px solid var(--accent-dim, rgba(88,166,255,0.3))', color: 'var(--accent)' }}>
+            <button
+              onClick={handleExportToReport}
+              title="Export to ReportForge"
+              className="px-2.5 py-1 rounded text-[10px] font-medium transition-colors ml-0.5"
+              style={{
+                border: '1px solid rgba(123,184,255,0.2)',
+                color: '#7bb8ff',
+                background: 'transparent',
+                fontFamily: 'var(--font-display)',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(123,184,255,0.08)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+            >
               → Report
             </button>
           )}
         </div>
       </div>
 
+      {/* Export toast */}
       {exportToast && (
-        <div className="absolute top-14 right-4 px-3 py-1.5 rounded text-[11px] font-medium z-50"
-          style={{ background: 'var(--bg3)', border: '1px solid var(--success)', color: 'var(--success)', boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }}>
+        <div
+          className="absolute top-14 right-4 px-3 py-1.5 rounded text-[11px] font-medium z-50"
+          style={{
+            background: 'rgba(19,21,37,0.95)',
+            border: '1px solid rgba(63,185,80,0.4)',
+            color: '#3fb950',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+            fontFamily: 'var(--font-display)',
+          }}
+        >
           Notes staged for ReportForge
         </div>
       )}
 
-      {/* Editor + Preview */}
+      {/* Editor + Preview panes */}
       <div className="flex flex-1 min-h-0 relative">
         {editorMode !== 'preview' && (
-          <div className={`flex flex-col ${editorMode === 'split' ? 'w-1/2 border-r' : 'flex-1'}`}
-            style={{ borderColor: 'var(--border)' }}>
+          <div
+            className={`flex flex-col ${editorMode === 'split' ? 'w-1/2' : 'flex-1'}`}
+            style={{ borderRight: editorMode === 'split' ? '1px solid rgba(42,51,71,0.35)' : 'none' }}
+          >
             <textarea
               ref={editorRef}
               value={editorContent}
               onChange={handleInput}
               onKeyDown={handleKeyDown}
-              placeholder={activeNote ? '' : 'Select or create a note to start editing…'}
-              className="flex-1 w-full p-4 text-sm font-mono resize-none outline-none"
+              placeholder={activeNote ? '' : 'Select or create a note to start editing...'}
+              className="flex-1 w-full p-5 resize-none outline-none"
               style={{
-                background: 'var(--bg)',
-                color     : 'var(--text)',
-                lineHeight : '1.7',
-                tabSize    : 2
+                background: 'transparent',
+                color: '#c9d1d9',
+                fontFamily: 'var(--font-mono)',
+                fontSize: '0.8125rem',
+                lineHeight: 1.8,
+                tabSize: 2,
+                caretColor: '#7bb8ff',
               }}
             />
-            {/* Status bar */}
-            <div className="flex items-center gap-4 px-4 py-1.5 border-t text-[10px]"
-              style={{ borderColor: 'var(--border)', color: 'var(--text-dim)' }}>
-              <span>{wordCount} words · ~{Math.max(1, Math.ceil(wordCount / 200))} min read</span>
-              <span>{editorContent.length} chars</span>
-              <span>{editorContent.split('\n').length} lines</span>
+            {/* Mini status bar */}
+            <div
+              className="flex items-center gap-4 px-4 py-1 text-[10px] font-mono"
+              style={{
+                borderTop: '1px solid rgba(42,51,71,0.3)',
+                color: 'rgba(72,79,88,0.6)',
+                background: 'rgba(7,8,15,0.5)',
+              }}
+            >
+              <span className="tabular-nums">{wordCount} words</span>
+              <span className="tabular-nums">{editorContent.length} chars</span>
+              <span className="tabular-nums">{editorContent.split('\n').length} lines</span>
             </div>
           </div>
         )}
@@ -338,11 +409,17 @@ export default function EditorView({
         {editorMode !== 'edit' && (
           <div
             className="flex-1 overflow-y-auto p-6"
-            style={{ background: 'var(--bg)', scrollbarWidth: 'thin', scrollbarColor: 'var(--border) transparent' }}
+            style={{
+              background: 'transparent',
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'rgba(42,51,71,0.4) transparent',
+            }}
             data-wiki-root
           >
-            <div className="markdown-preview max-w-prose mx-auto"
-              dangerouslySetInnerHTML={{ __html: previewHtml }} />
+            <div
+              className="markdown-preview max-w-prose mx-auto"
+              dangerouslySetInnerHTML={{ __html: previewHtml }}
+            />
           </div>
         )}
 
