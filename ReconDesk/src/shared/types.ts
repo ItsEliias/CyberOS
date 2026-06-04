@@ -9,28 +9,23 @@ export interface CveResult {
   url: string
 }
 
-export type Platform = 'HTB' | 'THM' | 'CTF' | 'Custom'
-export type TargetStatus = 'active' | 'completed' | 'abandoned'
+export type Platform = 'HTB' | 'THM' | 'CTF' | 'Custom' | 'Client' | 'Internal'
+export type TargetStatus = 'active' | 'completed' | 'abandoned' | 'paused'
 export type PortState = 'open' | 'filtered' | 'closed'
 export type CredType = 'plaintext' | 'hash' | 'key' | 'token'
 export type AttackStage = 'recon' | 'enum' | 'exploit' | 'post' | 'privesc' | 'loot'
 export type CardStatus = 'todo' | 'inprogress' | 'done' | 'blocked'
 
-export interface TimelineEvent {
-  id: string
-  timestamp: string
-  type: 'card' | 'asset' | 'status'
-  description: string
-}
-
 export interface Port {
   id: string
-  number: number
+  port: number
   protocol: 'tcp' | 'udp'
   service?: string
   version?: string
   state: PortState
   notes?: string
+  addedAt?: string
+  source?: string
 }
 
 export interface Credential {
@@ -38,9 +33,29 @@ export interface Credential {
   username?: string
   password?: string
   hash?: string
-  type: CredType
+  type?: CredType
   service?: string
   notes?: string
+  verified?: boolean
+  addedAt?: string
+}
+
+export interface AttackCard {
+  id: string
+  targetId?: string
+  title: string
+  notes?: string
+  command?: string
+  stage: AttackStage
+  status: CardStatus
+  createdAt: string
+}
+
+export interface Engagement {
+  id: string
+  name: string
+  color: string
+  createdAt: string
 }
 
 export interface Target {
@@ -54,24 +69,9 @@ export interface Target {
   notes?: string
   ports: Port[]
   credentials: Credential[]
-  flags?: string[]
-  timeline: TimelineEvent[]
+  timeline: unknown[]
   createdAt: string
-  updatedAt: string
-}
-
-export interface AttackCard {
-  id: string
-  targetId: string
-  title: string
-  notes?: string
-  command?: string
-  stage: AttackStage
-  status: CardStatus
-  findings: string[]
-  linkedAssets?: string[]
-  createdAt: string
-  updatedAt: string
+  engagementId?: string
 }
 
 export interface ReconDeskData {
@@ -79,9 +79,9 @@ export interface ReconDeskData {
   cards: AttackCard[]
   activeTargetId: string | null
   version: string
+  engagements?: Engagement[]
 }
 
-// Ecosystem shared config keys written by ReconDesk
 export interface ReconDeskStatus {
   active: boolean
   lastActive: string

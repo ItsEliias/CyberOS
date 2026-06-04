@@ -87,7 +87,7 @@ export const useRecondeskStore = create<RecondeskState>((set, get) => ({
         activeTargetId,
         version: '3.0.0',
         engagements,
-      } as any)
+      })
     } catch { /* no-op */ }
   },
 
