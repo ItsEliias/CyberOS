@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { motion } from 'framer-motion'
 import { useRecondeskStore, calcHealthScore } from '../../stores/useRecondeskStore'
 import type { TargetStatus, Platform, Difficulty, AttackStage } from '../../types/recondesk'
 
@@ -32,6 +33,63 @@ const inputCls = [
   'focus:outline-none focus:border-[#d29922] transition-colors',
 ].join(' ')
 
+const panelSkel = { background: '#0d0e18', border: '1px solid rgba(42,51,71,0.4)' }
+function OverviewSkeleton() {
+  return (
+    <div className="flex-1 overflow-y-auto p-4">
+      <div className="max-w-4xl">
+        <div className="flex items-start justify-between mb-5">
+          <div className="flex flex-col gap-2">
+            <div className="skeleton h-5 w-48 rounded-md" />
+            <div className="skeleton h-3 w-32 rounded" />
+          </div>
+          <div className="flex gap-2">
+            <div className="skeleton h-7 w-14 rounded-md" />
+            <div className="skeleton h-7 w-14 rounded-md" />
+            <div className="skeleton h-7 w-16 rounded-md" />
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          {[0,1,2].map(i => (
+            <div key={i} className="rounded-lg p-3.5" style={panelSkel}>
+              <div className="skeleton h-2.5 w-20 rounded mb-3" />
+              <div className="grid grid-cols-2 gap-2">
+                {[0,1,2,3].map(j => <div key={j} className="skeleton h-8 rounded" />)}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="rounded-lg p-3.5" style={panelSkel}>
+          <div className="skeleton h-2.5 w-14 rounded mb-3" />
+          <div className="skeleton h-28 w-full rounded-md" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function CountUpNumber({ value, color }: { value: number; color: string }) {
+  const [display, setDisplay] = useState(0)
+  useEffect(() => {
+    const start = 0
+    const duration = 600
+    const startTime = performance.now()
+    function step(now: number) {
+      const elapsed = now - startTime
+      const progress = Math.min(elapsed / duration, 1)
+      const eased = 1 - Math.pow(1 - progress, 3)
+      setDisplay(Math.round(start + (value - start) * eased))
+      if (progress < 1) requestAnimationFrame(step)
+    }
+    requestAnimationFrame(step)
+  }, [value])
+  return (
+    <span className="text-2xl font-bold tabular-nums" style={{ color, textShadow: `0 0 14px ${color}40` }}>
+      {display}
+    </span>
+  )
+}
+
 export default function OverviewTab({ targetId }: { targetId: string }) {
   const targets       = useRecondeskStore(s => s.targets)
   const updateTarget  = useRecondeskStore(s => s.updateTarget)
@@ -42,6 +100,13 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
   const addTimelineEntry = useRecondeskStore(s => s.addTimelineEntry)
   const engagements   = useRecondeskStore(s => s.engagements)
   const emitEvent     = useRecondeskStore(s => s.emitEvent)
+
+  const [isLoading, setIsLoading] = useState(true)
+  useEffect(() => {
+    setIsLoading(true)
+    const t = setTimeout(() => setIsLoading(false), 280)
+    return () => clearTimeout(t)
+  }, [targetId])
 
   const target = targets.find(t => t.id === targetId)
   if (!target) return null
@@ -135,23 +200,25 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
   const targetEngagement = engagements.find(e => e.id === target.engagementId)
   const showScopeBanner  = (target.platform === 'Client' || target.platform === 'Internal') && !targetEngagement?.inScope
 
-  const enrichBadge = target.enrichment?.status === 'pending' ? (
-    <span className="text-[9px] px-1.5 py-0.5 rounded animate-pulse" style={{ background: 'rgba(210,153,34,0.10)', border: '1px solid rgba(210,153,34,0.25)', color: '#d29922' }}>Enriching...</span>
-  ) : target.enrichment?.status === 'done' ? (
-    <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ background: 'rgba(63,185,80,0.10)', border: '1px solid rgba(63,185,80,0.25)', color: '#3fb950' }}>Enriched</span>
-  ) : target.enrichment?.status === 'error' ? (
-    <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ background: 'rgba(248,81,73,0.10)', border: '1px solid rgba(248,81,73,0.25)', color: '#f85149' }}>Enrich failed</span>
-  ) : null
+  const enrichBadge = target.enrichment?.status === 'pending'
+    ? <span className="text-[9px] px-1.5 py-0.5 rounded animate-pulse bg-[rgba(210,153,34,0.10)] border border-[rgba(210,153,34,0.25)] text-[#d29922]">Enriching...</span>
+    : target.enrichment?.status === 'done'
+    ? <span className="text-[9px] px-1.5 py-0.5 rounded bg-[rgba(63,185,80,0.10)] border border-[rgba(63,185,80,0.25)] text-[#3fb950]">Enriched</span>
+    : target.enrichment?.status === 'error'
+    ? <span className="text-[9px] px-1.5 py-0.5 rounded bg-[rgba(248,81,73,0.10)] border border-[rgba(248,81,73,0.25)] text-[#f85149]">Enrich failed</span>
+    : null
 
-  const geoLabel = target.geo?.status === 'done' ? (
-    <span className="text-xs" style={{ color: '#8b949e' }}>{target.geo.flag} {target.geo.city}{target.geo.city && target.geo.country ? ', ' : ''}{target.geo.country}</span>
-  ) : target.geo?.status === 'private' ? (
-    <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ background: 'rgba(72,79,88,0.20)', border: '1px solid rgba(72,79,88,0.30)', color: '#484f58' }}>Private IP</span>
-  ) : null
+  const geoLabel = target.geo?.status === 'done'
+    ? <span className="text-xs text-[#8b949e]">{target.geo.flag} {target.geo.city}{target.geo.city && target.geo.country ? ', ' : ''}{target.geo.country}</span>
+    : target.geo?.status === 'private'
+    ? <span className="text-[9px] px-1.5 py-0.5 rounded bg-[rgba(72,79,88,0.20)] border border-[rgba(72,79,88,0.30)] text-[#484f58]">Private IP</span>
+    : null
 
   const panelCls = 'rounded-lg p-3.5'
   const panelStyle = { background: '#0d0e18', border: '1px solid rgba(42,51,71,0.6)' }
   const labelCls = 'text-[10px] uppercase tracking-widest mb-3 block font-semibold'
+
+  if (isLoading) return <OverviewSkeleton />
 
   return (
     <div className="flex-1 overflow-y-auto p-4">
@@ -239,16 +306,9 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
 
           {!editMode && (
             <div className="flex items-center gap-2">
-              <button onClick={openInNetworkMap} className="px-2.5 py-1.5 text-xs rounded transition-colors" style={{ border: '1px solid rgba(42,51,71,0.6)', color: '#4a9eff' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(74,158,255,0.10)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(74,158,255,0.30)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ''; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(42,51,71,0.6)' }}
-                title="View in NetworkMap">Map</button>
-              <button onClick={() => setEditMode(true)} className="px-3 py-1.5 text-xs rounded transition-colors" style={{ border: '1px solid rgba(42,51,71,0.6)', color: '#8b949e' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#e6edf3'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(210,153,34,0.35)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#8b949e'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(42,51,71,0.6)' }}>Edit</button>
-              <button onClick={() => setActiveTab('export')} className="px-3 py-1.5 text-xs rounded transition-colors" style={{ background: 'rgba(210,153,34,0.10)', border: '1px solid rgba(210,153,34,0.25)', color: '#d29922' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(210,153,34,0.18)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(210,153,34,0.10)' }}>Export</button>
+              <button onClick={openInNetworkMap} className="px-2.5 py-1.5 text-xs rounded border border-[rgba(42,51,71,0.6)] text-[#4a9eff] hover:bg-[rgba(74,158,255,0.10)] hover:border-[rgba(74,158,255,0.30)] transition-colors" title="View in NetworkMap">Map</button>
+              <button onClick={() => setEditMode(true)} className="px-3 py-1.5 text-xs rounded border border-[rgba(42,51,71,0.6)] text-[#8b949e] hover:text-[#e6edf3] hover:border-[rgba(210,153,34,0.35)] transition-colors">Edit</button>
+              <button onClick={() => setActiveTab('export')} className="px-3 py-1.5 text-xs rounded border border-[rgba(210,153,34,0.25)] bg-[rgba(210,153,34,0.10)] text-[#d29922] hover:bg-[rgba(210,153,34,0.18)] transition-colors">Export</button>
             </div>
           )}
         </div>
@@ -263,11 +323,17 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
                 { label: 'Creds',       value: target.credentials.length, color: '#f85149' },
                 { label: 'Cards',       value: target.attackCards.length, color: '#d29922' },
                 { label: 'Screenshots', value: target.screenshots.length, color: '#b44fff' },
-              ].map(item => (
-                <div key={item.label} className="flex flex-col">
-                  <span className="text-2xl font-bold tabular-nums" style={{ color: item.color }}>{item.value}</span>
+              ].map((item, idx) => (
+                <motion.div
+                  key={item.label}
+                  className="flex flex-col"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.06, duration: 0.25, ease: [0.2, 0.8, 0.2, 1] }}
+                >
+                  <CountUpNumber value={item.value} color={item.color} />
                   <span className="text-[10px]" style={{ color: '#484f58' }}>{item.label}</span>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -278,29 +344,34 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
               <p className="text-xs" style={{ color: '#484f58' }}>No attack cards yet</p>
             ) : (
               <>
-                <div className="flex gap-0.5 mb-2.5 rounded overflow-hidden h-2.5">
+                <div className="flex gap-0.5 mb-2.5 rounded-full overflow-hidden h-2" style={{ background: 'rgba(42,51,71,0.4)' }}>
                   {STAGES.map(stage => {
                     const sc = target.attackCards.filter(c => c.stage === stage)
                     if (sc.length === 0) return null
                     const done    = sc.filter(c => c.status === 'done').length
                     const inprog  = sc.filter(c => c.status === 'inprogress').length
                     const blocked = sc.filter(c => c.status === 'blocked').length
+                    const stagePct = (sc.length / totalCards) * 100
                     return (
-                      <div key={stage} className="flex flex-1 gap-0.5" title={`${stage}: ${sc.length}`}>
-                        {done    > 0 && <div className="flex-none bg-[#3fb950]" style={{ width: `${(done/sc.length)*100}%` }} />}
-                        {inprog  > 0 && <div className="flex-none bg-[#d29922]" style={{ width: `${(inprog/sc.length)*100}%` }} />}
-                        {blocked > 0 && <div className="flex-none bg-[#f85149]" style={{ width: `${(blocked/sc.length)*100}%` }} />}
-                        <div className="flex-1" style={{ background: 'rgba(42,51,71,0.5)' }} />
+                      <div key={stage} className="flex overflow-hidden" style={{ width: `${stagePct}%` }} title={`${stage}: ${sc.length}`}>
+                        {done    > 0 && <motion.div initial={{ width: 0 }} animate={{ width: `${(done/sc.length)*100}%` }} transition={{ duration: 0.7, ease: [0.2, 0.8, 0.2, 1] }} className="h-full flex-shrink-0" style={{ background: '#3fb950' }} />}
+                        {inprog  > 0 && <motion.div initial={{ width: 0 }} animate={{ width: `${(inprog/sc.length)*100}%` }} transition={{ duration: 0.7, delay: 0.1, ease: [0.2, 0.8, 0.2, 1] }} className="h-full flex-shrink-0" style={{ background: '#d29922' }} />}
+                        {blocked > 0 && <motion.div initial={{ width: 0 }} animate={{ width: `${(blocked/sc.length)*100}%` }} transition={{ duration: 0.7, delay: 0.2, ease: [0.2, 0.8, 0.2, 1] }} className="h-full flex-shrink-0" style={{ background: '#f85149' }} />}
                       </div>
                     )
                   })}
                 </div>
-                <p className="text-xs">
-                  <span style={{ color: '#3fb950', fontWeight: 500 }}>{doneCards}</span>
-                  <span style={{ color: '#484f58' }}> of </span>
-                  <span style={{ color: '#e6edf3', fontWeight: 500 }}>{totalCards}</span>
-                  <span style={{ color: '#484f58' }}> cards · {progressPct}%</span>
-                </p>
+                {/* Overall progress bar */}
+                <div className="rounded-full overflow-hidden h-1 mb-2" style={{ background: 'rgba(42,51,71,0.4)' }}>
+                  <motion.div
+                    className="h-full rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressPct}%` }}
+                    transition={{ duration: 0.8, ease: [0.2, 0.8, 0.2, 1] }}
+                    style={{ background: 'linear-gradient(90deg, #3fb950, #d29922)' }}
+                  />
+                </div>
+                <p className="text-xs"><span className="text-[#3fb950] font-medium">{doneCards}</span><span className="text-[#484f58]"> of </span><span className="text-[#e6edf3] font-medium">{totalCards}</span><span className="text-[#484f58]"> cards · {progressPct}%</span></p>
               </>
             )}
           </div>
@@ -323,25 +394,16 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
           <div className="flex items-center justify-between mb-3">
             <p className={labelCls} style={{ color: '#484f58', marginBottom: 0 }}>Screenshots</p>
             <button
-              onClick={captureScreenshot}
-              disabled={screenshotBusy}
-              className="text-[10px] px-2.5 py-1 rounded border transition-colors disabled:opacity-40"
-              style={{ borderColor: 'rgba(210,153,34,0.25)', background: 'rgba(210,153,34,0.07)', color: '#d29922' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(210,153,34,0.15)' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(210,153,34,0.07)' }}
-            >
-              {screenshotBusy ? 'Capturing...' : '+ Screenshot'}
-            </button>
+              onClick={captureScreenshot} disabled={screenshotBusy}
+              className="text-[10px] px-2.5 py-1 rounded border border-[rgba(210,153,34,0.25)] bg-[rgba(210,153,34,0.07)] text-[#d29922] hover:bg-[rgba(210,153,34,0.15)] transition-colors disabled:opacity-40"
+            >{screenshotBusy ? 'Capturing...' : '+ Screenshot'}</button>
           </div>
           {target.screenshots.length === 0 ? (
             <p className="text-xs" style={{ color: '#484f58' }}>No screenshots yet. Click to capture the current screen.</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {target.screenshots.map(sc => (
-                <button key={sc.id} onClick={() => setFullImg(sc.thumbnail ?? sc.path)} className="group relative rounded overflow-hidden transition-colors" style={{ border: '1px solid rgba(42,51,71,0.6)' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(210,153,34,0.30)' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(42,51,71,0.6)' }}
-                >
+                <button key={sc.id} onClick={() => setFullImg(sc.thumbnail ?? sc.path)} className="group relative rounded overflow-hidden border border-[rgba(42,51,71,0.6)] hover:border-[rgba(210,153,34,0.30)] transition-colors">
                   {sc.thumbnail
                     ? <img src={sc.thumbnail} alt={sc.label} className="w-24 h-16 object-cover" />
                     : <div className="w-24 h-16 flex items-center justify-center text-[10px]" style={{ background: 'rgba(42,51,71,0.40)', color: '#484f58' }}>Screenshot</div>
@@ -375,18 +437,13 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
           <div className="flex items-center justify-between mb-3">
             <p className={labelCls} style={{ color: '#484f58', marginBottom: 0 }}>Notes</p>
             <div className="flex items-center gap-2">
-              <button onClick={() => setNotesMode(m => m === 'edit' ? 'preview' : 'edit')} className="text-[10px] transition-colors" style={{ color: '#484f58' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#8b949e' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#484f58' }}
-              >{notesMode === 'edit' ? 'Preview' : 'Edit'}</button>
+              <button onClick={() => setNotesMode(m => m === 'edit' ? 'preview' : 'edit')} className="text-[10px] text-[#484f58] hover:text-[#8b949e] transition-colors">{notesMode === 'edit' ? 'Preview' : 'Edit'}</button>
               <button onClick={() => updateTarget(targetId, { notes })} className="text-[10px] px-2 py-0.5 rounded transition-colors" style={{ background: 'rgba(210,153,34,0.10)', border: '1px solid rgba(210,153,34,0.20)', color: '#d29922' }}>Save</button>
             </div>
           </div>
           {notesMode === 'edit' ? (
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Markdown notes for this target..." className="w-full rounded px-3 py-2.5 text-xs placeholder-[#484f58] focus:outline-none resize-none transition-colors font-mono leading-relaxed" style={{ background: '#07080f', border: '1px solid rgba(42,51,71,0.6)', color: '#e6edf3' }}
-              onFocus={e => { (e.currentTarget as HTMLTextAreaElement).style.borderColor = '#d29922' }}
-              onBlur={e => { (e.currentTarget as HTMLTextAreaElement).style.borderColor = 'rgba(42,51,71,0.6)' }}
-              rows={10} />
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Markdown notes for this target..." rows={10}
+              className="w-full rounded px-3 py-2.5 text-xs placeholder-[#484f58] focus:outline-none focus:border-[#d29922] resize-none font-mono leading-relaxed bg-[#07080f] border border-[rgba(42,51,71,0.6)] text-[#e6edf3] transition-colors" />
           ) : (
             <div className="min-h-[120px] text-xs leading-relaxed whitespace-pre-wrap font-mono rounded px-3 py-2.5" style={{ background: '#07080f', border: '1px solid rgba(42,51,71,0.5)', color: '#e6edf3' }}>
               {notes || <span style={{ color: '#484f58' }}>No notes yet.</span>}
@@ -405,19 +462,10 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
             </div>
             <div className="flex items-center gap-2">
               {aiSuggestions && (
-                <button onClick={() => setAiExpanded(e => !e)} className="text-[10px] transition-colors" style={{ color: '#484f58' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#8b949e' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#484f58' }}
-                >{aiExpanded ? 'Collapse' : 'Expand'}</button>
+                <button onClick={() => setAiExpanded(e => !e)} className="text-[10px] text-[#484f58] hover:text-[#8b949e] transition-colors">{aiExpanded ? 'Collapse' : 'Expand'}</button>
               )}
-              <button
-                onClick={fetchAiSuggestions}
-                disabled={!settings.anthropicApiKey || aiLoading}
-                className="text-[10px] px-2.5 py-1 rounded border transition-colors disabled:opacity-40"
-                style={{ borderColor: 'rgba(210,153,34,0.30)', background: 'rgba(210,153,34,0.10)', color: '#d29922' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(210,153,34,0.18)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(210,153,34,0.10)' }}
-              >
+              <button onClick={fetchAiSuggestions} disabled={!settings.anthropicApiKey || aiLoading}
+                className="text-[10px] px-2.5 py-1 rounded border border-[rgba(210,153,34,0.30)] bg-[rgba(210,153,34,0.10)] text-[#d29922] hover:bg-[rgba(210,153,34,0.18)] transition-colors disabled:opacity-40">
                 {aiLoading ? 'Thinking...' : 'Suggest Next Steps'}
               </button>
             </div>
@@ -428,19 +476,14 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
                 <div key={i} className="flex items-start gap-3 p-2.5 rounded group" style={{ background: '#07080f', border: '1px solid rgba(42,51,71,0.5)' }}>
                   <span className="text-[10px] font-mono flex-shrink-0 mt-0.5" style={{ color: 'rgba(210,153,34,0.60)' }}>{String(i + 1).padStart(2, '0')}</span>
                   <span className="text-xs flex-1 leading-relaxed" style={{ color: '#e6edf3' }}>{step}</span>
-                  <button
-                    onClick={() => emitEvent('playbookstudio:add-step', { step, targetName: target.name, targetIP: target.ip })}
-                    className="opacity-0 group-hover:opacity-100 text-[9px] px-1.5 py-0.5 rounded border transition-all flex-shrink-0"
-                    style={{ background: 'rgba(210,153,34,0.10)', borderColor: 'rgba(210,153,34,0.25)', color: '#d29922' }}
-                  >
-                    + Playbook
-                  </button>
+                  <button onClick={() => emitEvent('playbookstudio:add-step', { step, targetName: target.name, targetIP: target.ip })}
+                    className="opacity-0 group-hover:opacity-100 text-[9px] px-1.5 py-0.5 rounded border bg-[rgba(210,153,34,0.10)] border-[rgba(210,153,34,0.25)] text-[#d29922] transition-all flex-shrink-0">+ Playbook</button>
                 </div>
               ))}
             </div>
           )}
           {!aiSuggestions && !aiLoading && settings.anthropicApiKey && (
-            <p className="text-[10px]" style={{ color: '#484f58' }}>Click "Suggest Next Steps" to get AI-generated enumeration recommendations based on this target's ports, OS, and CVEs.</p>
+            <p className="text-[10px] text-[#484f58]">Click "Suggest Next Steps" to get AI-generated enumeration recommendations.</p>
           )}
         </div>
       </div>

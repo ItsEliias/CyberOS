@@ -81,7 +81,7 @@ export default function Sidebar() {
       >
         <button
           onClick={() => setActiveTarget(target.id)}
-          className="group w-full text-left px-3 py-2 transition-all relative"
+          className={`group w-full text-left px-3 py-2 relative sidebar-row ${isActive ? 'sidebar-row-active' : ''}`}
           style={isActive ? {
             background: 'rgba(210,153,34,0.07)',
             borderLeft: '2px solid #d29922',
@@ -91,7 +91,7 @@ export default function Sidebar() {
           onMouseEnter={e => {
             if (!isActive) {
               (e.currentTarget as HTMLButtonElement).style.background = 'rgba(42,51,71,0.18)'
-              ;(e.currentTarget as HTMLButtonElement).style.borderLeftColor = 'rgba(210,153,34,0.35)'
+              ;(e.currentTarget as HTMLButtonElement).style.borderLeftColor = 'rgba(210,153,34,0.30)'
             }
           }}
           onMouseLeave={e => {
@@ -196,14 +196,23 @@ export default function Sidebar() {
 
       {/* Active lab context strip */}
       {activeTarget && (
-        <div
-          className="mx-2 mt-2 px-2.5 py-2 rounded-md"
-          style={{ background: 'rgba(210,153,34,0.05)', border: '1px solid rgba(210,153,34,0.15)' }}
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
+          className="mx-2 mt-2 px-2.5 py-2 rounded-lg relative overflow-hidden"
+          style={{
+            background: 'rgba(210,153,34,0.05)',
+            border: '1px solid rgba(210,153,34,0.20)',
+            boxShadow: '0 0 12px rgba(210,153,34,0.06), inset 0 1px 0 rgba(210,153,34,0.08)',
+          }}
         >
-          <p className="text-[9px] uppercase tracking-widest mb-0.5" style={{ color: 'rgba(210,153,34,0.6)' }}>Active Lab</p>
-          <p className="text-xs font-semibold truncate" style={{ color: '#e6edf3' }}>{activeTarget.name}</p>
-          <p className="text-[10px] font-mono" style={{ color: 'rgba(210,153,34,0.75)' }}>{activeTarget.ip}</p>
-        </div>
+          {/* Subtle animated glow sweep */}
+          <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(135deg, rgba(210,153,34,0.04) 0%, transparent 60%)' }} />
+          <p className="text-[9px] uppercase tracking-widest mb-0.5 relative z-10" style={{ color: 'rgba(210,153,34,0.6)' }}>Active Lab</p>
+          <p className="text-xs font-semibold truncate relative z-10" style={{ color: '#e6edf3' }}>{activeTarget.name}</p>
+          <p className="text-[10px] font-mono relative z-10" style={{ color: 'rgba(210,153,34,0.75)' }}>{activeTarget.ip}</p>
+        </motion.div>
       )}
 
       {/* Engagement filter pills */}

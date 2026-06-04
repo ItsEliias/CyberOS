@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+
 import { useRecondeskStore } from '../../stores/useRecondeskStore'
 import ImportNmapModal from './ImportNmapModal'
 import type { PortState } from '../../types/recondesk'
@@ -151,12 +152,26 @@ export default function PortsTab({ targetId }: { targetId: string }) {
       {/* Table */}
       <div className="flex-1 overflow-y-auto">
         {ports.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
+          <motion.div
+            className="flex items-center justify-center h-full"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
+          >
             <div className="text-center">
-              <p className="text-sm text-[#4a5568]">No ports recorded</p>
-              <p className="text-xs text-[#4a5568]/60 mt-1">Import nmap XML or add manually</p>
+              <div className="relative inline-flex items-center justify-center mb-4">
+                <div className="absolute w-16 h-16 rounded-full" style={{ background: 'radial-gradient(circle, rgba(74,158,255,0.07) 0%, transparent 70%)' }} />
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" style={{ color: '#4a9eff', opacity: 0.35 }}>
+                  <rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M8 21h8M12 17v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <circle cx="12" cy="10" r="2" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M7 10h2M15 10h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium" style={{ color: '#8b949e' }}>No ports recorded</p>
+              <p className="text-xs mt-1" style={{ color: '#484f58' }}>Import nmap XML or add manually above</p>
             </div>
-          </div>
+          </motion.div>
         ) : (
           <table className="w-full text-xs">
             <thead>

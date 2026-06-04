@@ -268,8 +268,10 @@ function KanbanCard({ card, target, delay, onOpen, onDragStart }: KanbanCardProp
     <motion.div
       initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }} transition={{ delay, duration: 0.18 }}
+      whileHover={{ y: -2, boxShadow: '0 6px 20px rgba(0,0,0,0.4), 0 0 0 1px rgba(210,153,34,0.18)' }}
       draggable onDragStart={onDragStart} onClick={onOpen}
-      className={`rounded-lg border p-3 cursor-pointer hover:border-[#d29922]/30 transition-all group ${cardBg}`}
+      className={`rounded-lg border p-3 cursor-pointer transition-colors group ${cardBg}`}
+      style={{ transitionProperty: 'border-color, background-color' }}
     >
       <div className="flex items-start gap-1.5 mb-1.5">
         <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1" style={{ backgroundColor: statusDotColor }} />
@@ -393,6 +395,14 @@ export default function AttackBoardTab({ targetId }: { targetId: string }) {
                       />
                     ))}
                   </AnimatePresence>
+                  {stageCards.length === 0 && !isAdding && (
+                    <div className="flex flex-col items-center justify-center flex-1 py-6 gap-1.5">
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: `${stage.color}12`, border: `1px dashed ${stage.color}30` }}>
+                        <span style={{ color: `${stage.color}60`, fontSize: 10 }}>0</span>
+                      </div>
+                      <span className="text-[10px]" style={{ color: '#484f58' }}>No cards</span>
+                    </div>
+                  )}
                   <AnimatePresence>
                     {isAdding && <AddCardForm key="add-form" targetId={targetId} stage={stage.id} onClose={() => setAddingInStage(null)} />}
                   </AnimatePresence>

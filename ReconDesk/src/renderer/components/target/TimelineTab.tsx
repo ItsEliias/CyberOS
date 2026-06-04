@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+
 import { useRecondeskStore } from '../../stores/useRecondeskStore'
 import type { TimelineEntryType } from '../../types/recondesk'
 
@@ -129,12 +130,25 @@ export default function TimelineTab({ targetId }: { targetId: string }) {
       {/* Timeline list */}
       <div className="flex-1 overflow-y-auto px-4 py-3">
         {filtered.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
+          <motion.div
+            className="flex items-center justify-center h-full"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
+          >
             <div className="text-center">
-              <p className="text-sm text-[#4a5568]">No timeline entries</p>
-              <p className="text-xs text-[#4a5568]/60 mt-1">Activity is logged automatically as you work</p>
+              <div className="relative inline-flex items-center justify-center mb-4">
+                <div className="absolute w-16 h-16 rounded-full" style={{ background: 'radial-gradient(circle, rgba(139,148,158,0.07) 0%, transparent 70%)' }} />
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" style={{ color: '#8b949e', opacity: 0.4 }}>
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M5 3l1.5 1.5M19 3l-1.5 1.5M5 21l1.5-1.5M19 21l-1.5-1.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity="0.4" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium" style={{ color: '#8b949e' }}>No timeline entries</p>
+              <p className="text-xs mt-1" style={{ color: '#484f58' }}>Activity is logged automatically as you work</p>
             </div>
-          </div>
+          </motion.div>
         ) : (
           <div className="relative">
             {/* Vertical line */}
