@@ -224,32 +224,35 @@ export default function CredentialsTab({ targetId }: { targetId: string }) {
                         transition: 'background 120ms ease',
                       }}
                     >
-                      {/* Username cell — monospace, copy on hover */}
+                      {/* Username cell — monospace, icon-only copy */}
                       <td className="px-4 py-2.5">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-[#e2e8f0] text-[11px]">{cred.username || <span className="text-[#4a5568]">—</span>}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono text-[#e2e8f0] text-[11px] tracking-tight">{cred.username || <span className="text-[#4a5568]">—</span>}</span>
                           {cred.username && (
                             <button
                               onClick={() => copyToClipboard(cred.username, `user-${cred.id}`)}
-                              className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded border transition-all"
+                              className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded transition-all flex-shrink-0"
                               style={{
-                                background: isUserCopied ? 'rgba(63,185,80,0.12)' : 'rgba(42,51,71,0.45)',
-                                borderColor: isUserCopied ? 'rgba(63,185,80,0.30)' : 'rgba(42,51,71,0.7)',
-                                color: isUserCopied ? '#3fb950' : '#8b949e',
+                                background: isUserCopied ? 'rgba(63,185,80,0.15)' : 'rgba(42,51,71,0.45)',
+                                color: isUserCopied ? '#3fb950' : '#4a5568',
                               }}
+                              title="Copy username"
                             >
-                              {isUserCopied ? '✓' : 'copy'}
+                              {isUserCopied
+                                ? <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                : <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><rect x="1" y="3" width="7" height="8" rx="1" stroke="currentColor" strokeWidth="1.2"/><path d="M4 3V2a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-1" stroke="currentColor" strokeWidth="1.2"/></svg>
+                              }
                             </button>
                           )}
                         </div>
                       </td>
 
-                      {/* Secret cell — monospace, show/hide/copy */}
+                      {/* Secret cell — monospace, show/hide/icon-only copy */}
                       <td className="px-2 py-2.5 max-w-[220px]">
                         {secret ? (
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1">
                             <span
-                              className="font-mono text-[11px] truncate flex-1"
+                              className="font-mono text-[11px] truncate flex-1 tracking-tight"
                               style={{ color: isRevealed ? (cred.hash ? '#4a9eff' : '#d29922') : '#8b949e', opacity: isRevealed ? 1 : 0.7 }}
                             >
                               {isRevealed
@@ -263,29 +266,32 @@ export default function CredentialsTab({ targetId }: { targetId: string }) {
                                 {cred.hashType}
                               </span>
                             )}
-                            {/* Reveal toggle always visible on hover */}
+                            {/* Reveal toggle — icon eye */}
                             <button
                               onClick={() => toggleReveal(cred.id)}
-                              className="opacity-0 group-hover:opacity-100 text-[9px] px-1.5 py-0.5 rounded border transition-all flex-shrink-0"
-                              style={{
-                                background: 'rgba(42,51,71,0.45)',
-                                borderColor: 'rgba(42,51,71,0.7)',
-                                color: '#8b949e',
-                              }}
+                              className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded transition-all flex-shrink-0"
+                              style={{ background: 'rgba(42,51,71,0.45)', color: isRevealed ? '#d29922' : '#4a5568' }}
+                              title={isRevealed ? 'Hide' : 'Reveal'}
                             >
-                              {isRevealed ? 'hide' : 'show'}
+                              {isRevealed
+                                ? <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M1 6s2-4 5-4 5 4 5 4-2 4-5 4-5-4-5-4z" stroke="currentColor" strokeWidth="1.2"/><circle cx="6" cy="6" r="1.5" stroke="currentColor" strokeWidth="1.2"/><path d="M2 2l8 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                                : <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M1 6s2-4 5-4 5 4 5 4-2 4-5 4-5-4-5-4z" stroke="currentColor" strokeWidth="1.2"/><circle cx="6" cy="6" r="1.5" stroke="currentColor" strokeWidth="1.2"/></svg>
+                              }
                             </button>
-                            {/* Copy — always available, not only when revealed */}
+                            {/* Copy — icon clipboard */}
                             <button
                               onClick={() => copyToClipboard(secret, cred.id)}
-                              className="opacity-0 group-hover:opacity-100 text-[9px] px-1.5 py-0.5 rounded border transition-all flex-shrink-0"
+                              className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded transition-all flex-shrink-0"
                               style={{
-                                background: isCopied ? 'rgba(63,185,80,0.12)' : 'rgba(42,51,71,0.45)',
-                                borderColor: isCopied ? 'rgba(63,185,80,0.30)' : 'rgba(42,51,71,0.7)',
-                                color: isCopied ? '#3fb950' : '#8b949e',
+                                background: isCopied ? 'rgba(63,185,80,0.15)' : 'rgba(42,51,71,0.45)',
+                                color: isCopied ? '#3fb950' : '#4a5568',
                               }}
+                              title="Copy secret"
                             >
-                              {isCopied ? '✓' : 'copy'}
+                              {isCopied
+                                ? <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                : <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><rect x="1" y="3" width="7" height="8" rx="1" stroke="currentColor" strokeWidth="1.2"/><path d="M4 3V2a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-1" stroke="currentColor" strokeWidth="1.2"/></svg>
+                              }
                             </button>
                           </div>
                         ) : (

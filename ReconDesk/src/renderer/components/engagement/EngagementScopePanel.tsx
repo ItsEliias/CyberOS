@@ -7,8 +7,49 @@ interface Props {
   onClose: () => void
 }
 
-const inputCls = 'field-premium w-full rounded-md px-3 py-2 text-xs'
-const inputStyle = {}
+// Floating-label wrapper: label animates up when input has value or is focused
+function FloatField({
+  label,
+  children,
+  hasValue,
+}: {
+  label: string
+  children: React.ReactNode
+  hasValue: boolean
+}) {
+  const [focused, setFocused] = useState(false)
+  const floated = focused || hasValue
+
+  return (
+    <div
+      className="relative"
+      onFocusCapture={() => setFocused(true)}
+      onBlurCapture={() => setFocused(false)}
+    >
+      <span
+        className="pointer-events-none absolute left-3 transition-all duration-150 select-none"
+        style={{
+          top:      floated ? '4px'    : '50%',
+          transform: floated ? 'none'  : 'translateY(-50%)',
+          fontSize:  floated ? '9px'   : '11px',
+          color:     focused  ? '#d29922' : (floated ? 'rgba(210,153,34,0.55)' : '#484f58'),
+          letterSpacing: floated ? '0.08em' : '0',
+          textTransform: 'uppercase',
+          fontWeight: 600,
+          lineHeight: '1',
+          zIndex: 1,
+        }}
+      >
+        {label}
+      </span>
+      <div style={{ paddingTop: floated ? '18px' : undefined }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+const inputCls = 'field-premium w-full rounded-[8px] px-3 py-2 text-xs'
 const labelCls = 'label-caps mb-1.5 block'
 
 export default function EngagementScopePanel({ engagementId, onClose }: Props) {
@@ -105,58 +146,56 @@ export default function EngagementScopePanel({ engagementId, onClose }: Props) {
         {/* Form */}
         <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4">
           {/* Engagement name */}
-          <div>
-            <label className={labelCls}>Engagement Name</label>
+          <FloatField label="Engagement Name" hasValue={!!form.name}>
             <input
               value={form.name}
               onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
               className={inputCls}
-              placeholder="Engagement name"
+              style={{ borderRadius: 8 }}
             />
-          </div>
+          </FloatField>
 
           {/* Auth */}
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Authorised By</label>
+            <FloatField label="Authorised By" hasValue={!!form.authorisedBy}>
               <input
                 value={form.authorisedBy}
                 onChange={e => setForm(f => ({ ...f, authorisedBy: e.target.value }))}
                 className={inputCls}
-                placeholder="Name or role"
+                style={{ borderRadius: 8 }}
               />
-            </div>
-            <div>
-              <label className={labelCls}>Authorised Date</label>
+            </FloatField>
+            <FloatField label="Authorised Date" hasValue={!!form.authorisedDate}>
               <input
                 type="date"
                 value={form.authorisedDate}
                 onChange={e => setForm(f => ({ ...f, authorisedDate: e.target.value }))}
                 className={inputCls}
+                style={{ borderRadius: 8 }}
               />
-            </div>
+            </FloatField>
           </div>
 
           {/* Testing window */}
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Window Start</label>
+            <FloatField label="Window Start" hasValue={!!form.windowStart}>
               <input
                 type="datetime-local"
                 value={form.windowStart}
                 onChange={e => setForm(f => ({ ...f, windowStart: e.target.value }))}
                 className={inputCls}
+                style={{ borderRadius: 8 }}
               />
-            </div>
-            <div>
-              <label className={labelCls}>Window End</label>
+            </FloatField>
+            <FloatField label="Window End" hasValue={!!form.windowEnd}>
               <input
                 type="datetime-local"
                 value={form.windowEnd}
                 onChange={e => setForm(f => ({ ...f, windowEnd: e.target.value }))}
                 className={inputCls}
+                style={{ borderRadius: 8 }}
               />
-            </div>
+            </FloatField>
           </div>
 
           {/* In scope */}
@@ -166,6 +205,7 @@ export default function EngagementScopePanel({ engagementId, onClose }: Props) {
               value={form.inScope}
               onChange={e => setForm(f => ({ ...f, inScope: e.target.value }))}
               className={`${inputCls} resize-none font-mono`}
+              style={{ borderRadius: 8 }}
               rows={3}
               placeholder="IPs, CIDR ranges, hostnames, services..."
             />
@@ -178,6 +218,7 @@ export default function EngagementScopePanel({ engagementId, onClose }: Props) {
               value={form.outOfScope}
               onChange={e => setForm(f => ({ ...f, outOfScope: e.target.value }))}
               className={`${inputCls} resize-none font-mono`}
+              style={{ borderRadius: 8 }}
               rows={2}
               placeholder="Explicitly excluded targets or actions..."
             />
@@ -190,32 +231,31 @@ export default function EngagementScopePanel({ engagementId, onClose }: Props) {
               value={form.allowedActivity}
               onChange={e => setForm(f => ({ ...f, allowedActivity: e.target.value }))}
               className={`${inputCls} resize-none`}
+              style={{ borderRadius: 8 }}
               rows={2}
               placeholder="e.g. port scanning, web app testing — no DoS..."
             />
           </div>
 
           {/* Emergency contact */}
-          <div>
-            <label className={labelCls}>Emergency Contact</label>
+          <FloatField label="Emergency Contact" hasValue={!!form.emergencyContact}>
             <input
               value={form.emergencyContact}
               onChange={e => setForm(f => ({ ...f, emergencyContact: e.target.value }))}
               className={inputCls}
-              placeholder="Name / phone / email for incident escalation"
+              style={{ borderRadius: 8 }}
             />
-          </div>
+          </FloatField>
 
           {/* Auth document */}
-          <div>
-            <label className={labelCls}>Authorisation Document Location</label>
+          <FloatField label="Authorisation Document Location" hasValue={!!form.authStorageLocation}>
             <input
               value={form.authStorageLocation}
               onChange={e => setForm(f => ({ ...f, authStorageLocation: e.target.value }))}
               className={`${inputCls} font-mono`}
-              placeholder="e.g. /home/user/engagements/sow.pdf"
+              style={{ borderRadius: 8 }}
             />
-          </div>
+          </FloatField>
         </div>
 
         {/* Footer */}

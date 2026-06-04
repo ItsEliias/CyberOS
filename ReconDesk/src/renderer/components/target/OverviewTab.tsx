@@ -35,58 +35,38 @@ const inputCls = [
 
 function OverviewSkeleton() {
   return (
-    <div className="flex-1 overflow-y-auto p-4">
-      <div className="max-w-4xl">
-        <div className="flex items-start justify-between mb-5">
-          <div className="flex flex-col gap-2">
-            <div className="skeleton h-5 w-48 rounded-md" />
-            <div className="skeleton h-3 w-32 rounded" />
-          </div>
-          <div className="flex gap-2">
-            <div className="skeleton h-7 w-14 rounded-md" />
-            <div className="skeleton h-7 w-14 rounded-md" />
-            <div className="skeleton h-7 w-16 rounded-md" />
-          </div>
-        </div>
-        <div className="grid grid-cols-3 gap-4 mb-4">
-          {[0,1,2].map(i => (
-            <div key={i} className="panel-card rounded-lg p-3.5">
-              <div className="skeleton h-2.5 w-20 rounded mb-3" />
-              <div className="grid grid-cols-2 gap-2">
-                {[0,1,2,3].map(j => <div key={j} className="skeleton h-8 rounded" />)}
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="panel-card rounded-lg p-3.5">
-          <div className="skeleton h-2.5 w-14 rounded mb-3" />
-          <div className="skeleton h-28 w-full rounded-md" />
-        </div>
+    <div className="flex-1 overflow-y-auto p-4"><div className="max-w-4xl">
+      <div className="flex items-start justify-between mb-5">
+        <div className="flex flex-col gap-2"><div className="skeleton h-5 w-48 rounded-md" /><div className="skeleton h-3 w-32 rounded" /></div>
+        <div className="flex gap-2"><div className="skeleton h-7 w-14 rounded-md" /><div className="skeleton h-7 w-14 rounded-md" /><div className="skeleton h-7 w-16 rounded-md" /></div>
       </div>
-    </div>
+      <div className="grid grid-cols-3 gap-4 mb-4">
+        {[0,1,2].map(i => (
+          <div key={i} className="panel-card rounded-lg p-3.5">
+            <div className="skeleton h-2.5 w-20 rounded mb-3" />
+            <div className="grid grid-cols-2 gap-2">{[0,1,2,3].map(j => <div key={j} className="skeleton h-8 rounded" />)}</div>
+          </div>
+        ))}
+      </div>
+      <div className="panel-card rounded-lg p-3.5">
+        <div className="skeleton h-2.5 w-14 rounded mb-3" /><div className="skeleton h-28 w-full rounded-md" />
+      </div>
+    </div></div>
   )
 }
 
 function CountUpNumber({ value, color }: { value: number; color: string }) {
   const [display, setDisplay] = useState(0)
   useEffect(() => {
-    const start = 0
-    const duration = 600
-    const startTime = performance.now()
+    const dur = 600, t0 = performance.now()
     function step(now: number) {
-      const elapsed = now - startTime
-      const progress = Math.min(elapsed / duration, 1)
-      const eased = 1 - Math.pow(1 - progress, 3)
-      setDisplay(Math.round(start + (value - start) * eased))
-      if (progress < 1) requestAnimationFrame(step)
+      const p = Math.min((now - t0) / dur, 1), e = 1 - Math.pow(1 - p, 3)
+      setDisplay(Math.round(value * e))
+      if (p < 1) requestAnimationFrame(step)
     }
     requestAnimationFrame(step)
   }, [value])
-  return (
-    <span className="text-2xl font-bold tabular-nums" style={{ color, textShadow: `0 0 14px ${color}40` }}>
-      {display}
-    </span>
-  )
+  return <span className="text-2xl font-bold tabular-nums" style={{ color, textShadow: `0 0 14px ${color}40` }}>{display}</span>
 }
 
 export default function OverviewTab({ targetId }: { targetId: string }) {
@@ -221,7 +201,6 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
   return (
     <div className="flex-1 overflow-y-auto p-4">
       <div className="max-w-4xl">
-        {/* Scope warning banner */}
         {showScopeBanner && (
           <div className="mb-4 flex items-start gap-3 px-4 py-3 rounded-lg" style={{ background: 'rgba(210,153,34,0.07)', border: '1px solid rgba(210,153,34,0.30)' }}>
             <span className="text-base flex-shrink-0 mt-0.5" style={{ color: '#d29922' }}>⚠</span>
@@ -234,8 +213,6 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
             </div>
           </div>
         )}
-
-        {/* Target header */}
         <div className="flex items-start justify-between mb-5">
           <div>
             {editMode ? (
@@ -317,22 +294,34 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
             <p className={labelCls} style={{ color: '#484f58' }}>Quick Stats</p>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { label: 'Ports',       value: target.ports.length,       color: '#4a9eff' },
-                { label: 'Creds',       value: target.credentials.length, color: '#f85149' },
-                { label: 'Cards',       value: target.attackCards.length, color: '#d29922' },
-                { label: 'Screenshots', value: target.screenshots.length, color: '#b44fff' },
-              ].map((item, idx) => (
-                <motion.div
-                  key={item.label}
-                  className="flex flex-col"
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.06, duration: 0.25, ease: [0.2, 0.8, 0.2, 1] }}
-                >
-                  <CountUpNumber value={item.value} color={item.color} />
-                  <span className="text-[10px]" style={{ color: '#484f58' }}>{item.label}</span>
-                </motion.div>
-              ))}
+                { label: 'Ports',       value: target.ports.length,       color: '#4a9eff', max: 65535 },
+                { label: 'Creds',       value: target.credentials.length, color: '#f85149', max: 50    },
+                { label: 'Cards',       value: target.attackCards.length, color: '#d29922', max: 100   },
+                { label: 'Screenshots', value: target.screenshots.length, color: '#b44fff', max: 20    },
+              ].map((item, idx) => {
+                const pct = Math.min(100, item.max > 0 ? (item.value / item.max) * 100 : 0)
+                return (
+                  <motion.div
+                    key={item.label}
+                    className="flex flex-col gap-1"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.06, duration: 0.25, ease: [0.2, 0.8, 0.2, 1] }}
+                  >
+                    <CountUpNumber value={item.value} color={item.color} />
+                    <span className="text-[10px]" style={{ color: '#484f58' }}>{item.label}</span>
+                    <div className="h-[3px] rounded-full overflow-hidden" style={{ background: 'rgba(42,51,71,0.5)' }}>
+                      <motion.div
+                        className="h-full rounded-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ delay: idx * 0.06 + 0.3, duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }}
+                        style={{ background: item.color, opacity: 0.55 }}
+                      />
+                    </div>
+                  </motion.div>
+                )
+              })}
             </div>
           </div>
 
@@ -445,8 +434,15 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
             </div>
           </div>
           {notesMode === 'edit' ? (
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Markdown notes for this target..." rows={10}
-              className="w-full rounded px-3 py-2.5 text-xs placeholder-[#484f58] focus:outline-none focus:border-[#d29922] resize-none font-mono leading-relaxed bg-[#07080f] border border-[rgba(42,51,71,0.6)] text-[#e6edf3] transition-colors" />
+            <>
+              <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Markdown notes for this target..." rows={10}
+                className="w-full rounded px-3 py-2.5 text-xs placeholder-[#484f58] focus:outline-none focus:border-[#d29922] resize-none font-mono leading-relaxed bg-[#07080f] border border-[rgba(42,51,71,0.6)] text-[#e6edf3] transition-colors" />
+              <div className="flex justify-end mt-1">
+                <span className="text-[9px] font-mono tabular-nums" style={{ color: notes.length > 4000 ? '#f85149' : '#484f58' }}>
+                  {notes.length.toLocaleString()} chars
+                </span>
+              </div>
+            </>
           ) : (
             <div className="min-h-[120px] text-xs leading-relaxed whitespace-pre-wrap font-mono rounded px-3 py-2.5" style={{ background: '#07080f', border: '1px solid rgba(42,51,71,0.5)', color: '#e6edf3' }}>
               {notes || <span style={{ color: '#484f58' }}>No notes yet.</span>}

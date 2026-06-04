@@ -399,7 +399,20 @@ export default function AttackBoardTab({ targetId }: { targetId: string }) {
                     <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: stage.color }} />
                     <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: stage.color }}>{stage.label}</span>
                   </div>
-                  <span className="text-[10px] text-[#4a5568]">{stageCards.length}</span>
+                  {stageCards.length > 0 ? (
+                    <span
+                      className="text-[9px] font-bold font-mono min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1"
+                      style={{
+                        color: stage.color,
+                        background: `${stage.color}18`,
+                        border: `1px solid ${stage.color}30`,
+                      }}
+                    >
+                      {stageCards.length}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-[#4a5568]">0</span>
+                  )}
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">

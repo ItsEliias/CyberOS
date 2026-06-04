@@ -254,7 +254,10 @@ export default function Sidebar() {
 
         <AnimatePresence initial>
           {groups.map(({ engagement: eng, targets: engTargets }) => {
-            const isCollapsed = collapsed.has(eng.id)
+            const isCollapsed   = collapsed.has(eng.id)
+            // Active engagement = has the currently active target
+            const hasActiveTarget = engTargets.some(t => t.id === activeTargetId)
+
             return (
               <div key={eng.id}>
                 <div className="flex items-center group">
@@ -264,8 +267,19 @@ export default function Sidebar() {
                     onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(42,51,71,0.15)' }}
                     onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '' }}
                   >
-                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: eng.color }} />
-                    <span className="text-[10px] font-semibold uppercase tracking-widest flex-1 truncate text-left" style={{ color: eng.color }}>
+                    <span className="relative flex-shrink-0 w-2 h-2 flex items-center justify-center">
+                      <span className="w-1.5 h-1.5 rounded-full block" style={{ backgroundColor: eng.color }} />
+                      {hasActiveTarget && (
+                        <>
+                          <span
+                            className="absolute inset-0 rounded-full animate-ping"
+                            style={{ backgroundColor: '#d29922', opacity: 0.5, animationDuration: '1.8s' }}
+                          />
+                          <span className="absolute inset-0 w-1.5 h-1.5 m-auto rounded-full" style={{ backgroundColor: '#d29922' }} />
+                        </>
+                      )}
+                    </span>
+                    <span className="text-[10px] font-semibold uppercase tracking-widest flex-1 truncate text-left" style={{ color: hasActiveTarget ? '#d29922' : eng.color }}>
                       {eng.name}
                     </span>
                     <span className="text-[9px]" style={{ color: '#484f58' }}>{engTargets.length}</span>

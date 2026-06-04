@@ -11,6 +11,22 @@ const STATE_BADGE: Record<PortState, string> = {
   closed:   'text-[#4a5568] bg-[#4a5568]/10 border-[#4a5568]/25',
 }
 
+// Risk-score mock: high-risk ports get 'high', safe/common get 'low', rest 'med'
+const HIGH_RISK_PORTS = new Set([21, 23, 25, 110, 135, 137, 139, 445, 512, 513, 514, 1433, 1521, 3306, 3389, 5432, 5900, 6379, 27017])
+const LOW_RISK_PORTS  = new Set([22, 80, 443, 8080, 8443])
+
+function portRisk(port: number): 'low' | 'med' | 'high' {
+  if (HIGH_RISK_PORTS.has(port)) return 'high'
+  if (LOW_RISK_PORTS.has(port))  return 'low'
+  return 'med'
+}
+
+const RISK_PILL: Record<'low' | 'med' | 'high', { label: string; cls: string }> = {
+  low:  { label: 'low',  cls: 'text-[#3fb950] bg-[#3fb950]/08 border-[#3fb950]/20' },
+  med:  { label: 'med',  cls: 'text-[#d29922] bg-[#d29922]/08 border-[#d29922]/20' },
+  high: { label: 'high', cls: 'text-[#f85149] bg-[#f85149]/08 border-[#f85149]/20' },
+}
+
 const SORT_OPTIONS = ['port', 'service', 'state'] as const
 type SortKey = typeof SORT_OPTIONS[number]
 
@@ -181,6 +197,7 @@ export default function PortsTab({ targetId }: { targetId: string }) {
                 <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Service</th>
                 <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Version</th>
                 <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest w-20" style={{ color: '#484f58', letterSpacing: '0.07em' }}>State</th>
+                <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest w-16" style={{ color: '#484f58', letterSpacing: '0.07em' }}>Risk</th>
                 <th className="px-4 py-2.5 w-16" />
               </tr>
             </thead>
@@ -197,6 +214,7 @@ export default function PortsTab({ targetId }: { targetId: string }) {
                       className="table-row-alt group cursor-pointer"
                       style={{
                         borderBottom: '1px solid rgba(42,51,71,0.25)',
+                        background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)',
                         transition: 'background 120ms ease, border-color 120ms ease',
                       }}
                       onClick={() => setExpandedId(expandedId === port.id ? null : port.id)}
@@ -209,6 +227,17 @@ export default function PortsTab({ targetId }: { targetId: string }) {
                         <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${STATE_BADGE[port.state]}`}>
                           {port.state}
                         </span>
+                      </td>
+                      <td className="px-2 py-2.5">
+                        {port.state === 'open' && (() => {
+                          const risk = portRisk(port.port)
+                          const rp   = RISK_PILL[risk]
+                          return (
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded border font-semibold uppercase tracking-wide ${rp.cls}`}>
+                              {rp.label}
+                            </span>
+                          )
+                        })()}
                       </td>
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -231,7 +260,7 @@ export default function PortsTab({ targetId }: { targetId: string }) {
                     </motion.tr>
                     {expandedId === port.id && (
                       <tr key={`${port.id}-notes`} className="bg-[#0d0d14]">
-                        <td colSpan={6} className="px-4 py-3">
+                        <td colSpan={7} className="px-4 py-3">
                           <textarea
                             value={port.notes}
                             onChange={e => updatePort(targetId, port.id, { notes: e.target.value })}

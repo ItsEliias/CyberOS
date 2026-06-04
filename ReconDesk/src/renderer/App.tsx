@@ -37,6 +37,8 @@ export default function App() {
   const toasts          = useRecondeskStore(s => s.toasts)
   const dismissToast    = useRecondeskStore(s => s.dismissToast)
 
+  const activeTarget    = targets.find(t => t.id === activeTargetId)
+
   useEffect(() => {
     loadTargets()
     window.electronAPI.onConfigUpdated?.((data) => {
@@ -102,6 +104,22 @@ export default function App() {
                     <span className="relative z-10">{t.label}</span>
                   </button>
                 ))}
+                {/* Target IP badge — shown when a target is active */}
+                {activeTarget?.ip && (
+                  <div className="ml-auto flex items-center">
+                    <span
+                      className="font-mono text-[10px] px-2 py-0.5 rounded border tabular-nums"
+                      style={{
+                        color: 'rgba(210,153,34,0.75)',
+                        background: 'rgba(210,153,34,0.06)',
+                        borderColor: 'rgba(210,153,34,0.18)',
+                        letterSpacing: '0.02em',
+                      }}
+                    >
+                      {activeTarget.ip}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <AnimatePresence mode="wait">

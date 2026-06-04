@@ -196,17 +196,25 @@ export default function TimelineTab({ targetId }: { targetId: string }) {
                           >
                             {cfg.label}
                           </span>
-                          {/* Relative time + full datetime on hover */}
-                          <span
-                            className="text-[10px] font-mono flex-shrink-0 tabular-nums"
-                            style={{ color: '#484f58' }}
-                            title={`${formatTimestamp(entry.timestamp).date} ${formatTimestamp(entry.timestamp).time}`}
-                          >
-                            {formatTimestamp(entry.timestamp).relative}
-                            <span className="ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-[9px]" style={{ color: '#484f58' }}>
-                              {formatTimestamp(entry.timestamp).time}
-                            </span>
-                          </span>
+                          {/* Relative time (primary) with full date as tooltip */}
+                          {(() => {
+                            const ts = formatTimestamp(entry.timestamp)
+                            return (
+                              <span
+                                className="text-[10px] font-mono flex-shrink-0 tabular-nums cursor-default"
+                                style={{ color: '#484f58' }}
+                                title={`${ts.date} ${ts.time}`}
+                              >
+                                <span style={{ color: '#6b7585' }}>{ts.relative}</span>
+                                <span
+                                  className="ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-[9px]"
+                                  style={{ color: '#484f58' }}
+                                >
+                                  · {ts.date}
+                                </span>
+                              </span>
+                            )
+                          })()}
                         </div>
                         <p className="text-xs mt-0.5 leading-relaxed" style={{ color: '#e2e8f0' }}>{entry.description}</p>
                       </div>
