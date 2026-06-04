@@ -3,6 +3,19 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../../store'
 
+// Drop-cap style injected once
+const DROP_CAP_STYLE = `
+.prose-drop-cap::first-letter {
+  float: left;
+  font-size: 3.2em;
+  line-height: 0.85;
+  padding-right: 6px;
+  padding-top: 2px;
+  font-weight: 700;
+  color: #ff6b6b;
+}
+`
+
 const TIER_CONFIG = {
   critical: { label: 'CRITICAL', color: '#ff6b6b' },
   high:     { label: 'HIGH',     color: '#f85149' },
@@ -48,6 +61,18 @@ export default function ReadingPane() {
   const [cveData, setCveData]       = useState<Record<string, { cvss?: number; severity?: string }>>({})
   const [reconResult, setReconResult] = useState<{ targets: string[] } | null>(null)
   const [tagInput, setTagInput]     = useState('')
+  const [copyToast, setCopyToast]   = useState(false)
+
+  // Inject drop-cap styles once
+  useEffect(() => {
+    const id = 'signalboard-dropcap'
+    if (!document.getElementById(id)) {
+      const s = document.createElement('style')
+      s.id = id
+      s.textContent = DROP_CAP_STYLE
+      document.head.appendChild(s)
+    }
+  }, [])
 
   const item = items.find(i => i.id === selectedId)
   const isBookmarked = item ? bookmarks.includes(item.id) : false
@@ -267,33 +292,49 @@ export default function ReadingPane() {
           <div className="flex items-center gap-2 no-drag flex-wrap">
             <button
               onClick={() => window.electronAPI.openUrl(item.url)}
-              className="text-xs px-2.5 py-1 rounded border transition-colors"
-              style={{ background: 'rgba(255,107,107,0.15)', borderColor: 'rgba(255,107,107,0.3)', color: '#ff6b6b' }}
+              className="text-xs px-2.5 py-1 rounded-lg border transition-colors"
+              style={{ background: 'rgba(255,107,107,0.15)', borderColor: 'rgba(255,107,107,0.3)', color: '#ff6b6b', borderRadius: '8px' }}
             >
               Open →
             </button>
             <button
+              onClick={() => { navigator.clipboard.writeText(item.url); setCopyToast(true); setTimeout(() => setCopyToast(false), 1800) }}
+              className="text-xs px-2.5 py-1 border transition-colors"
+              style={{ background: copyToast ? 'rgba(63,185,80,0.12)' : readerMode ? '#f9fafb' : 'rgba(22,27,39,0.6)', borderColor: copyToast ? 'rgba(63,185,80,0.3)' : readerMode ? '#d1d5db' : 'rgba(42,51,71,0.5)', color: copyToast ? '#3fb950' : readerMode ? '#374151' : '#8b949e', borderRadius: '8px' }}
+            >
+              {copyToast ? '✓ Copied' : '⎘ Copy Link'}
+            </button>
+            <button
               onClick={handleToggleBookmark}
-              className="text-xs px-2.5 py-1 rounded border transition-colors"
+              className="text-xs px-2.5 py-1 border transition-colors"
               style={{
                 background: isBookmarked ? 'rgba(210,153,34,0.15)' : readerMode ? '#f9fafb' : 'rgba(22,27,39,0.6)',
                 borderColor: isBookmarked ? 'rgba(210,153,34,0.3)' : readerMode ? '#d1d5db' : 'rgba(42,51,71,0.5)',
                 color: isBookmarked ? '#d29922' : readerMode ? '#374151' : '#8b949e',
+                borderRadius: '8px',
               }}
             >
               {isBookmarked ? '★ Bookmarked' : '☆ Bookmark'}
             </button>
             <button
+              onClick={() => { items.filter(i => !i.read).forEach(i => { window.electronAPI.markRead(i.id); patchItem(i.id, { read: true }) }) }}
+              className="text-xs px-2.5 py-1 border transition-colors"
+              style={{ background: readerMode ? '#f9fafb' : 'rgba(22,27,39,0.6)', borderColor: readerMode ? '#d1d5db' : 'rgba(42,51,71,0.5)', color: readerMode ? '#374151' : '#8b949e', borderRadius: '8px' }}
+              title="Mark all feed items as read"
+            >
+              ✓ Mark all read
+            </button>
+            <button
               onClick={handleSaveToVault}
-              className="text-xs px-2.5 py-1 rounded border transition-colors"
-              style={{ background: readerMode ? '#f9fafb' : 'rgba(22,27,39,0.6)', borderColor: readerMode ? '#d1d5db' : 'rgba(42,51,71,0.5)', color: readerMode ? '#374151' : '#8b949e' }}
+              className="text-xs px-2.5 py-1 border transition-colors"
+              style={{ background: readerMode ? '#f9fafb' : 'rgba(22,27,39,0.6)', borderColor: readerMode ? '#d1d5db' : 'rgba(42,51,71,0.5)', color: readerMode ? '#374151' : '#8b949e', borderRadius: '8px' }}
             >
               Save to Vault
             </button>
             <button
               onClick={handleReconDesk}
-              className="text-xs px-2.5 py-1 rounded border transition-colors"
-              style={{ background: 'rgba(74,158,255,0.1)', borderColor: 'rgba(74,158,255,0.25)', color: '#4a9eff' }}
+              className="text-xs px-2.5 py-1 border transition-colors"
+              style={{ background: 'rgba(74,158,255,0.1)', borderColor: 'rgba(74,158,255,0.25)', color: '#4a9eff', borderRadius: '8px' }}
               title="Extract IPs/hostnames and send to ReconDesk"
             >
               + ReconDesk
@@ -398,9 +439,21 @@ export default function ReadingPane() {
           {/* Full content */}
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: readerMode ? '#9ca3af' : '#4a5568' }}>Full Content</p>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: readerMode ? '#1f2937' : 'rgba(226,232,240,0.8)' }}>
-              {item.summary}
-            </p>
+            <div
+              className="max-w-[68ch] mx-auto"
+            >
+              <p
+                className="prose-drop-cap text-[13.5px] whitespace-pre-wrap"
+                style={{
+                  color: readerMode ? '#1f2937' : 'rgba(226,232,240,0.82)',
+                  lineHeight: '1.8',
+                  letterSpacing: '0.01em',
+                  fontFamily: readerMode ? "'Georgia', 'Times New Roman', serif" : 'inherit',
+                }}
+              >
+                {item.summary}
+              </p>
+            </div>
             {item.tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-4">
                 {item.tags.map(tag => (

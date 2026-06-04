@@ -46,6 +46,66 @@ function AnimatedBar({ pct, color, delay = 0 }: { pct: number; color: string; de
   )
 }
 
+// SVG mini bar chart for keyword frequency
+function SvgBarChart({ data, max, color }: { data: [string, number][]; max: number; color: string }) {
+  const BAR_H = 28
+  const GAP = 4
+  const LABEL_W = 96
+  const COUNT_W = 24
+  const TOTAL_H = data.length * (BAR_H + GAP)
+  const svgW = 320 // bar area width
+
+  return (
+    <svg
+      width="100%"
+      viewBox={`0 0 ${LABEL_W + svgW + COUNT_W + 16} ${TOTAL_H}`}
+      style={{ overflow: 'visible', display: 'block' }}
+    >
+      {data.map(([word, count], idx) => {
+        const y = idx * (BAR_H + GAP)
+        const barW = Math.max(2, (count / max) * svgW)
+        return (
+          <g key={word}>
+            {/* Label */}
+            <text
+              x={LABEL_W - 6}
+              y={y + BAR_H / 2 + 4}
+              textAnchor="end"
+              fontSize="10"
+              fill="rgba(139,148,158,0.75)"
+              fontFamily="ui-monospace, monospace"
+            >
+              {word.length > 14 ? word.slice(0, 13) + '…' : word}
+            </text>
+            {/* Bar bg */}
+            <rect x={LABEL_W} y={y + 4} width={svgW} height={BAR_H - 8} rx="4" fill="rgba(42,51,71,0.35)" />
+            {/* Bar fill */}
+            <rect
+              x={LABEL_W}
+              y={y + 4}
+              width={barW}
+              height={BAR_H - 8}
+              rx="4"
+              fill={color}
+              style={{ transition: 'width 0.65s cubic-bezier(0.2,0.8,0.2,1)' }}
+            />
+            {/* Count */}
+            <text
+              x={LABEL_W + svgW + 8}
+              y={y + BAR_H / 2 + 4}
+              fontSize="10"
+              fill="rgba(139,148,158,0.55)"
+              fontFamily="ui-monospace, monospace"
+            >
+              {count}
+            </text>
+          </g>
+        )
+      })}
+    </svg>
+  )
+}
+
 function KeywordFrequency({ items }: { items: FeedItem[] }) {
   const freqMap = useMemo(() => {
     const m = new Map<string, number>()
@@ -62,22 +122,24 @@ function KeywordFrequency({ items }: { items: FeedItem[] }) {
 
   return (
     <div className="p-5 border border-border/40 rounded bg-panel/20">
-      <h3 className="text-xs font-semibold text-text mb-4">Keyword Frequency — Last 7 Days</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-xs font-semibold text-text">Keyword Frequency — Last 7 Days</h3>
+        <span className="text-[9px] font-mono text-muted/40">{top10.length} terms</span>
+      </div>
       {top10.length === 0 ? (
         <p className="text-xs text-muted/40">Not enough data yet.</p>
       ) : (
-        <div className="space-y-2">
-          {top10.map(([word, count], idx) => (
-            <div key={word} className="flex items-center gap-3">
-              <span className="text-[11px] font-mono text-muted/70 w-28 truncate">{word}</span>
-              <div className="flex-1 h-3 bg-border/30 rounded overflow-hidden">
-                <AnimatedBar pct={(count / max) * 100} color="linear-gradient(90deg, #ff6b6b, #ff9b9b)" delay={idx * 50} />
-              </div>
-              <span className="text-[10px] font-mono text-muted/60 w-6 text-right tabular-nums">{count}</span>
-            </div>
-          ))}
-        </div>
+        <SvgBarChart data={top10} max={max} color="url(#kw-grad)" />
       )}
+      {/* Gradient def */}
+      <svg width="0" height="0" style={{ position: 'absolute' }}>
+        <defs>
+          <linearGradient id="kw-grad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#ff6b6b" />
+            <stop offset="100%" stopColor="#ff9b9b" />
+          </linearGradient>
+        </defs>
+      </svg>
     </div>
   )
 }

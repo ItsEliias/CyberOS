@@ -77,9 +77,14 @@ export default function StatusBar() {
           <span className="text-[10px] tabular-nums" style={{ color: '#484f58' }}>
             <span style={{ color: '#8b949e' }}>{enabled}</span> sources
           </span>
+          {/* Last-sync timestamp with coral dot */}
           {lastRefreshed && !refreshing && (
-            <span className="text-[10px]" style={{ color: '#484f58' }}>
-              Updated <span style={{ color: '#8b949e' }}>{timeAgo(lastRefreshed)}</span>
+            <span className="flex items-center gap-1 text-[10px]" style={{ color: '#484f58' }}>
+              <span
+                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                style={{ background: '#ff6b6b', boxShadow: '0 0 4px rgba(255,107,107,0.5)' }}
+              />
+              <span>synced <span style={{ color: '#ff6b6b' }}>{timeAgo(lastRefreshed)}</span></span>
             </span>
           )}
           {refreshing && (

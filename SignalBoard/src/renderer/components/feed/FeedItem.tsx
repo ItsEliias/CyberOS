@@ -11,6 +11,28 @@ const TIER_CONFIG = {
   low:      { label: 'LOW',      color: '#4a5568', bgAlpha: '22' },
 }
 
+// Generate a deterministic color from a source name for the favicon avatar
+function sourceInitialColor(name: string): string {
+  const PALETTE = ['#ff6b6b','#f85149','#d29922','#4a9eff','#3fb950','#a78bfa','#f472b6','#34d399','#fbbf24','#60a5fa']
+  let hash = 0
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) & 0xffffffff
+  return PALETTE[Math.abs(hash) % PALETTE.length]
+}
+
+function SourceAvatar({ name, color }: { name: string; color: string }) {
+  const initial = name.trim()[0]?.toUpperCase() ?? '?'
+  const avatarColor = sourceInitialColor(name)
+  return (
+    <span
+      className="inline-flex items-center justify-center w-5 h-5 rounded flex-shrink-0 text-[9px] font-bold leading-none select-none"
+      style={{ background: `${avatarColor}20`, color: avatarColor, border: `1px solid ${avatarColor}35` }}
+      title={name}
+    >
+      {initial}
+    </span>
+  )
+}
+
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
   if (diff < 3600_000)  return `${Math.floor(diff / 60_000)}m ago`
@@ -97,11 +119,12 @@ export default function FeedItemCard({ item }: { item: FeedItemType }) {
       }}
     >
       <div className="px-3 py-2.5">
-        {/* Row 1: source badge + badges + timestamp */}
+        {/* Row 1: source avatar + badge + badges + timestamp */}
         <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
           {!item.read && (
             <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#ff6b6b' }} />
           )}
+          <SourceAvatar name={item.sourceName} color={sourceColor} />
           <span
             className="text-[9px] font-bold uppercase px-1.5 py-[2px] rounded flex-shrink-0"
             style={{ background: `${sourceColor}18`, color: sourceColor, border: `1px solid ${sourceColor}33` }}
@@ -157,7 +180,7 @@ export default function FeedItemCard({ item }: { item: FeedItemType }) {
         <div className="flex items-center gap-1.5 mt-2 opacity-0 group-hover:opacity-100 transition-all duration-150">
           <button
             onClick={handleBookmark}
-            className="text-[10px] px-2.5 py-1 rounded-lg border transition-all duration-150"
+            className="text-[10px] px-2.5 py-1 border transition-all duration-150"
             style={{
               color: isBookmarked ? '#d29922' : '#8b949e',
               borderColor: isBookmarked ? 'rgba(210,153,34,0.35)' : 'rgba(42,51,71,0.5)',
@@ -177,6 +200,16 @@ export default function FeedItemCard({ item }: { item: FeedItemType }) {
             onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
           >
             Open ↗
+          </button>
+          <button
+            onClick={e => { e.stopPropagation(); navigator.clipboard.writeText(item.url) }}
+            className="text-[10px] px-2.5 py-1 border border-white/10 text-white/40 transition-all duration-150"
+            style={{ borderRadius: '8px', background: 'rgba(42,51,71,0.2)' }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
+            title="Copy link"
+          >
+            ⎘ Copy
           </button>
           <button
             onClick={handleVault}

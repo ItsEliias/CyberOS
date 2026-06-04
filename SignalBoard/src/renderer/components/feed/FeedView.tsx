@@ -7,6 +7,19 @@ import FeedItemCard from './FeedItem'
 import ReadingPane from './ReadingPane'
 import type { FeedItem } from '../../../shared/types'
 
+// Inject refresh glow animation once
+const REFRESH_GLOW_STYLE = `
+@keyframes refresh-glow-spin {
+  0%   { transform: rotate(0deg);   filter: drop-shadow(0 0 4px rgba(255,107,107,0.0)); }
+  25%  { filter: drop-shadow(0 0 6px rgba(255,107,107,0.7)); }
+  100% { transform: rotate(360deg); filter: drop-shadow(0 0 4px rgba(255,107,107,0.0)); }
+}
+.refresh-glow-spin {
+  animation: refresh-glow-spin 0.9s cubic-bezier(0.5,0,0.5,1) infinite;
+  transform-origin: center;
+}
+`
+
 function applyFilter(items: FeedItem[], filter: string): FeedItem[] {
   switch (filter) {
     case 'high':    return items.filter(i => i.relevanceTier === 'critical' || i.relevanceTier === 'high')
@@ -26,6 +39,17 @@ export default function FeedView() {
   const [digestItems, setDigestItems] = useState<FeedItem[]>([])
   const [showDigest, setShowDigest]   = useState(false)
 
+  // Inject refresh glow keyframes once
+  useEffect(() => {
+    const id = 'signalboard-refresh-glow'
+    if (!document.getElementById(id)) {
+      const s = document.createElement('style')
+      s.id = id
+      s.textContent = REFRESH_GLOW_STYLE
+      document.head.appendChild(s)
+    }
+  }, [])
+
   useEffect(() => {
     const unsub = window.electronAPI.onDigest(digest => {
       setDigestItems(digest)
@@ -43,6 +67,22 @@ export default function FeedView() {
     <div className="flex-1 flex min-w-0">
       {/* Feed column */}
       <div className="w-[340px] flex flex-col border-r border-white/[0.06] flex-shrink-0">
+        {/* Column header with refresh indicator */}
+        <div className="flex items-center justify-between px-3 pt-2 pb-1" style={{ minHeight: '28px' }}>
+          <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.2)' }}>Feed</span>
+          {refreshing && (
+            <svg
+              className="refresh-glow-spin w-3.5 h-3.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="#ff6b6b"
+              strokeWidth={2.2}
+              style={{ color: '#ff6b6b' }}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          )}
+        </div>
         <FeedFilterBar />
 
         <div className="flex-1 overflow-y-auto py-1">

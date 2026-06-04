@@ -76,6 +76,16 @@ export default function Sidebar() {
   const items         = useStore(s => s.items)
   const unread        = items.filter(i => !i.read).length
 
+  // Per-category unread counts for badges
+  const categoryUnread: Record<string, number> = {
+    feed:      unread,
+    timeline:  items.filter(i => !i.read && i.relevanceTier !== 'low').length,
+    bookmarks: bookmarks.length,
+    trends:    items.filter(i => (i.alertMatches?.length ?? 0) > 0).length,
+    sources:   0,
+    settings:  0,
+  }
+
   return (
     <aside
       className="w-[200px] flex flex-col flex-shrink-0"
@@ -121,22 +131,18 @@ export default function Sidebar() {
                 )}
                 <span style={{ color: isActive ? '#ff6b6b' : 'inherit' }}>{item.icon}</span>
                 <span>{item.label}</span>
-                {item.id === 'feed' && unread > 0 && (
-                  <span
-                    className="ml-auto min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full text-[9px] font-bold tabular-nums leading-none"
-                    style={{ background: 'rgba(255,107,107,0.18)', color: '#ff6b6b', border: '1px solid rgba(255,107,107,0.3)' }}
-                  >
-                    {unread > 99 ? '99+' : unread}
-                  </span>
-                )}
-                {item.id === 'bookmarks' && bookmarks.length > 0 && (
-                  <span
-                    className="ml-auto text-[9px] font-mono tabular-nums"
-                    style={{ color: 'rgba(255,107,107,0.6)' }}
-                  >
-                    {bookmarks.length}
-                  </span>
-                )}
+                {(() => {
+                  const cnt = categoryUnread[item.id] ?? 0
+                  if (cnt <= 0) return null
+                  return (
+                    <span
+                      className="ml-auto min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full text-[9px] font-bold tabular-nums leading-none"
+                      style={{ background: 'rgba(255,107,107,0.18)', color: '#ff6b6b', border: '1px solid rgba(255,107,107,0.3)' }}
+                    >
+                      {cnt > 99 ? '99+' : cnt}
+                    </span>
+                  )
+                })()}
               </button>
             )
           })}
