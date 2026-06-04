@@ -113,12 +113,12 @@ export default function GraphToolbar({
         )}
       </div>
 
-      {/* Search */}
+      {/* Search + highlight */}
       <div className="no-drag relative">
         <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
           <svg
             width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"
-            style={{ position: 'absolute', left: 8, color: 'var(--text-muted)', pointerEvents: 'none' }}
+            style={{ position: 'absolute', left: 8, color: searchQuery ? '#ff8c42' : 'var(--text-muted)', pointerEvents: 'none', transition: 'color 150ms' }}
           >
             <circle cx="7" cy="7" r="5" /><path d="M11 11l3 3" />
           </svg>
@@ -126,18 +126,65 @@ export default function GraphToolbar({
             value={searchQuery}
             onChange={e => onSearchChange(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') onSearchEnter() }}
-            placeholder="Search IP / host / port…"
+            placeholder="Search & highlight nodes…"
             style={{
-              background: '#0d0e18', border: '1px solid rgba(42,51,71,0.75)',
-              borderRadius: 6, padding: '4px 8px 4px 26px',
-              color: 'var(--text-primary)', fontSize: 11, width: 190,
+              background: '#0d0e18',
+              border: `1px solid ${searchQuery ? 'rgba(255,140,66,0.5)' : 'rgba(42,51,71,0.75)'}`,
+              borderRadius: 8, padding: '4px 8px 4px 26px',
+              color: 'var(--text-primary)', fontSize: 11, width: 200,
               fontFamily: 'var(--font-display)',
-              transition: 'border-color 150ms',
+              transition: 'border-color 150ms, box-shadow 150ms',
+              boxShadow: searchQuery ? '0 0 0 2px rgba(255,140,66,0.08), 0 0 8px rgba(255,140,66,0.1)' : 'none',
             }}
-            onFocus={e => (e.currentTarget.style.borderColor = 'rgba(255,140,66,0.4)')}
-            onBlur={e => (e.currentTarget.style.borderColor = 'rgba(42,51,71,0.75)')}
+            onFocus={e => {
+              e.currentTarget.style.borderColor = 'rgba(255,140,66,0.5)'
+              e.currentTarget.style.boxShadow = '0 0 0 2px rgba(255,140,66,0.08)'
+            }}
+            onBlur={e => {
+              if (!searchQuery) {
+                e.currentTarget.style.borderColor = 'rgba(42,51,71,0.75)'
+                e.currentTarget.style.boxShadow = 'none'
+              }
+            }}
           />
+          {searchQuery && (
+            <button
+              onClick={() => onSearchChange('')}
+              title="Clear search"
+              style={{
+                position: 'absolute', right: 6,
+                background: 'none', border: 'none', color: 'var(--text-muted)',
+                cursor: 'pointer', fontSize: 13, lineHeight: 1,
+                display: 'flex', alignItems: 'center', padding: '1px 2px',
+                borderRadius: 4, transition: 'color 120ms',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.color = '#ff8c42')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+            >×</button>
+          )}
         </div>
+        {/* Highlight count badge */}
+        {searchQuery && (
+          <div style={{
+            position: 'absolute', top: 'calc(100% + 4px)', left: 0,
+            fontSize: 10, color: '#ff8c42',
+            background: 'rgba(13,14,24,0.96)',
+            border: '1px solid rgba(255,140,66,0.25)',
+            borderRadius: 6, padding: '3px 8px',
+            whiteSpace: 'nowrap',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+            zIndex: 50,
+            animation: 'badgePop 0.18s var(--ease)',
+          }}>
+            <span style={{ opacity: 0.65 }}>Highlighting matches — press </span>
+            <kbd style={{
+              fontSize: 9, padding: '1px 4px', borderRadius: 3,
+              background: 'rgba(255,140,66,0.12)', border: '1px solid rgba(255,140,66,0.28)',
+              fontFamily: 'var(--font-mono)',
+            }}>Enter</kbd>
+            <span style={{ opacity: 0.65 }}> to jump</span>
+          </div>
+        )}
       </div>
 
       {/* Layout buttons */}
@@ -148,7 +195,7 @@ export default function GraphToolbar({
             onClick={() => onLayoutChange(l.mode)}
             title={l.label}
             style={{
-              padding: '4px 7px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
+              padding: '4px 7px', borderRadius: 8, fontSize: 11, cursor: 'pointer',
               background: layoutMode === l.mode ? 'rgba(255,140,66,0.13)' : 'transparent',
               color: layoutMode === l.mode ? '#ff8c42' : 'var(--text-secondary)',
               border: `1px solid ${layoutMode === l.mode ? 'rgba(255,140,66,0.38)' : 'rgba(42,51,71,0.6)'}`,
@@ -303,7 +350,7 @@ function ToggleBtn({ label, active, onClick }: { label: string; active: boolean;
     <button
       onClick={onClick}
       style={{
-        padding: '4px 9px', fontSize: 10, fontWeight: active ? 600 : 500, borderRadius: 6, cursor: 'pointer',
+        padding: '4px 9px', fontSize: 10, fontWeight: active ? 600 : 500, borderRadius: 8, cursor: 'pointer',
         background: active ? 'rgba(255,140,66,0.13)' : 'transparent',
         color: active ? '#ff8c42' : 'var(--text-muted)',
         border: `1px solid ${active ? 'rgba(255,140,66,0.38)' : 'rgba(42,51,71,0.6)'}`,
@@ -342,7 +389,7 @@ function TbBtn({
       disabled={disabled}
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 4,
-        padding: '5px 10px', borderRadius: 6, fontSize: 11, cursor: disabled ? 'not-allowed' : 'pointer',
+        padding: '5px 10px', borderRadius: 8, fontSize: 11, cursor: disabled ? 'not-allowed' : 'pointer',
         background: '#0d0e18', border: '1px solid rgba(42,51,71,0.75)',
         color: 'var(--text-secondary)', opacity: disabled ? 0.45 : 1,
         transition: 'all 150ms', fontFamily: 'var(--font-display)',

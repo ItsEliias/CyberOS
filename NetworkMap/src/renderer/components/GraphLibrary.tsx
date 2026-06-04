@@ -9,9 +9,25 @@ interface Props {
   onOpenHelp?: () => void
 }
 
+type SortKey = 'date-desc' | 'date-asc' | 'name-asc' | 'name-desc' | 'nodes-desc' | 'nodes-asc'
+
 function fmt(iso: string): string {
   try {
     return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  } catch { return iso }
+}
+
+function fmtRelative(iso: string): string {
+  try {
+    const ms = Date.now() - new Date(iso).getTime()
+    const mins = Math.floor(ms / 60000)
+    const hrs = Math.floor(ms / 3600000)
+    const days = Math.floor(ms / 86400000)
+    if (mins < 1)  return 'just now'
+    if (mins < 60) return `${mins}m ago`
+    if (hrs < 24)  return `${hrs}h ago`
+    if (days < 7)  return `${days}d ago`
+    return fmt(iso)
   } catch { return iso }
 }
 
@@ -19,6 +35,7 @@ function importSourceLabel(src?: string): string {
   if (src === 'nmap-xml')   return 'nmap XML'
   if (src === 'paste')      return 'Paste'
   if (src === 'recondesk')  return 'ReconDesk'
+  if (src === 'gns3')       return 'GNS3'
   return '—'
 }
 
@@ -32,11 +49,26 @@ function makeEmptyGraph(): NetworkGraph {
   }
 }
 
+function sortGraphs(graphs: GraphSummary[], sort: SortKey): GraphSummary[] {
+  return [...graphs].sort((a, b) => {
+    switch (sort) {
+      case 'date-desc': return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      case 'date-asc':  return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      case 'name-asc':  return a.name.localeCompare(b.name)
+      case 'name-desc': return b.name.localeCompare(a.name)
+      case 'nodes-desc': return (b.nodeCount ?? 0) - (a.nodeCount ?? 0)
+      case 'nodes-asc':  return (a.nodeCount ?? 0) - (b.nodeCount ?? 0)
+      default: return 0
+    }
+  })
+}
+
 export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings, onOpenHelp }: Props) {
   const [graphs, setGraphs]               = useState<GraphSummary[]>([])
   const [loading, setLoading]             = useState(false)
   const [error, setError]                 = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [sort, setSort]                   = useState<SortKey>('date-desc')
 
   const reload = useCallback(() => {
     window.electronAPI.loadGraphs().then(setGraphs).catch(console.error)
@@ -67,6 +99,17 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
       setLoading(false)
     }
   }
+
+  const sorted = sortGraphs(graphs, sort)
+
+  const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+    { value: 'date-desc',  label: 'Newest first' },
+    { value: 'date-asc',   label: 'Oldest first' },
+    { value: 'name-asc',   label: 'Name A–Z' },
+    { value: 'name-desc',  label: 'Name Z–A' },
+    { value: 'nodes-desc', label: 'Most nodes' },
+    { value: 'nodes-asc',  label: 'Fewest nodes' },
+  ]
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#07080f' }}>
@@ -113,7 +156,7 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
             onClick={onOpenHelp}
             title="Help & onboarding"
             style={{
-              width: 28, height: 28, borderRadius: 6,
+              width: 28, height: 28, borderRadius: 8,
               border: '1px solid rgba(42,51,71,0.75)', background: 'transparent',
               color: 'var(--text-muted)', fontSize: 12, fontWeight: 700,
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -129,7 +172,7 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
           onClick={onOpenSettings}
           title="Settings"
           style={{
-            width: 28, height: 28, borderRadius: 6, marginLeft: 6,
+            width: 28, height: 28, borderRadius: 8, marginLeft: 6,
             border: '1px solid rgba(42,51,71,0.75)', background: 'transparent',
             color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -174,7 +217,7 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
           onClick={onOpenImport}
           disabled={loading}
           style={{
-            padding: '7px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600,
+            padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
             background: 'rgba(255,140,66,0.12)', border: '1px solid rgba(255,140,66,0.30)',
             color: '#ff8c42', cursor: loading ? 'not-allowed' : 'pointer',
             opacity: loading ? 0.5 : 1, transition: 'all 150ms',
@@ -186,7 +229,7 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
         <button
           onClick={() => onOpenGraph(makeEmptyGraph())}
           style={{
-            padding: '7px 14px', borderRadius: 7, fontSize: 12, fontWeight: 500,
+            padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500,
             background: '#0d0e18', border: '1px solid rgba(42,51,71,0.75)',
             color: 'var(--text-secondary)', cursor: 'pointer', transition: 'all 150ms',
             fontFamily: 'var(--font-display)',
@@ -194,12 +237,34 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)' }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)' }}
         >+ New Empty Graph</button>
+
+        {graphs.length > 1 && (
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Sort:</span>
+            <select
+              value={sort}
+              onChange={e => setSort(e.target.value as SortKey)}
+              style={{
+                background: '#0d0e18', border: '1px solid rgba(42,51,71,0.75)',
+                borderRadius: 8, padding: '4px 8px', color: 'var(--text-secondary)',
+                fontSize: 11, cursor: 'pointer', fontFamily: 'var(--font-display)',
+                outline: 'none', transition: 'border-color 150ms',
+              }}
+              onFocus={e => (e.currentTarget.style.borderColor = 'rgba(255,140,66,0.4)')}
+              onBlur={e => (e.currentTarget.style.borderColor = 'rgba(42,51,71,0.75)')}
+            >
+              {SORT_OPTIONS.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Error banner */}
       {error && (
         <div style={{
-          margin: '8px 24px', padding: '8px 12px', borderRadius: 7,
+          margin: '8px 24px', padding: '8px 12px', borderRadius: 8,
           background: 'rgba(248,81,73,0.08)', border: '1px solid rgba(248,81,73,0.3)',
           color: '#f85149', fontSize: 12,
         }}>{error}</div>
@@ -207,13 +272,13 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
 
       {/* Graph table */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 16px' }}>
-        {graphs.length === 0 ? (
+        {sorted.length === 0 ? (
           <EmptyState onOpenImport={onOpenImport} />
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 4 }}>
             <thead>
               <tr>
-                {(['Name', 'Source', 'Date', 'Nodes', 'Edges', 'Actions'] as const).map(h => (
+                {(['Name', 'Source', 'Created', 'Nodes', 'Edges', 'Actions'] as const).map(h => (
                   <th key={h} style={{
                     textAlign: 'left', padding: '10px 12px',
                     fontSize: 9, fontWeight: 700, color: 'var(--text-muted)',
@@ -224,7 +289,7 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
               </tr>
             </thead>
             <tbody>
-              {graphs.map(g => (
+              {sorted.map(g => (
                 <tr
                   key={g.id}
                   className="lib-row"
@@ -241,7 +306,12 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
                       color: '#ff8c42',
                     }}>{importSourceLabel(g.importSource)}</span>
                   </td>
-                  <td style={{ ...tdStyle, color: 'var(--text-muted)', fontSize: 12 }}>{fmt(g.createdAt)}</td>
+                  <td style={{ ...tdStyle }} title={fmt(g.createdAt)}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      <span style={{ color: 'var(--text-secondary)', fontSize: 11 }}>{fmt(g.createdAt)}</span>
+                      <span style={{ color: 'var(--text-muted)', fontSize: 9 }}>{fmtRelative(g.createdAt)}</span>
+                    </div>
+                  </td>
                   <td style={{ ...tdStyle, fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
                     <NodeCountBadge count={g.nodeCount} />
                   </td>
@@ -360,7 +430,7 @@ function RowBtn({ children, onClick, danger }: { children: React.ReactNode; onCl
     <button
       onClick={onClick}
       style={{
-        padding: '4px 10px', borderRadius: 5,
+        padding: '4px 10px', borderRadius: 8,
         background: danger ? 'rgba(248,81,73,0.10)' : '#0d0e18',
         border: `1px solid ${danger ? 'rgba(248,81,73,0.35)' : 'rgba(42,51,71,0.75)'}`,
         color: danger ? '#f85149' : 'var(--text-secondary)',

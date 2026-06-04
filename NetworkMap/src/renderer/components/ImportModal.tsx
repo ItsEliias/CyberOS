@@ -108,20 +108,71 @@ function FileTab({ onSave }: { onSave: (g: NetworkGraph) => void }) {
         onDragOver={e => { e.preventDefault(); setDragging(true) }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
-        style={{
-          border: `2px dashed ${dragging ? 'var(--accent)' : 'var(--border)'}`,
-          borderRadius: 8, padding: '28px 20px',
-          textAlign: 'center', cursor: 'pointer',
-          transition: 'border-color 0.15s',
-          background: dragging ? 'rgba(210,153,34,0.05)' : 'transparent',
-        }}
         onClick={handlePickFile}
+        className={dragging ? 'dropzone-active' : ''}
+        style={{
+          borderRadius: 10, padding: '32px 24px',
+          textAlign: 'center', cursor: 'pointer',
+          transition: 'all 0.2s ease',
+          position: 'relative',
+          background: dragging
+            ? 'rgba(255,140,66,0.06)'
+            : result
+            ? 'rgba(63,185,80,0.04)'
+            : 'rgba(13,14,24,0.5)',
+          border: `2px dashed ${
+            dragging ? '#ff8c42' : result ? 'rgba(63,185,80,0.4)' : 'rgba(42,51,71,0.7)'
+          }`,
+          boxShadow: dragging ? '0 0 20px rgba(255,140,66,0.12), inset 0 0 20px rgba(255,140,66,0.04)' : 'none',
+          transform: dragging ? 'scale(1.01)' : 'scale(1)',
+        }}
       >
-        <div style={{ fontSize: 24, marginBottom: 8, opacity: 0.5 }}>📄</div>
-        <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>
-          {loading ? 'Opening…' : 'Click to select nmap XML file, or drag & drop here'}
+        {/* Animated corner accents on drag-over */}
+        {dragging && (
+          <>
+            <div style={{ position: 'absolute', top: -1, left: -1, width: 16, height: 16, borderTop: '2px solid #ff8c42', borderLeft: '2px solid #ff8c42', borderRadius: '10px 0 0 0' }} />
+            <div style={{ position: 'absolute', top: -1, right: -1, width: 16, height: 16, borderTop: '2px solid #ff8c42', borderRight: '2px solid #ff8c42', borderRadius: '0 10px 0 0' }} />
+            <div style={{ position: 'absolute', bottom: -1, left: -1, width: 16, height: 16, borderBottom: '2px solid #ff8c42', borderLeft: '2px solid #ff8c42', borderRadius: '0 0 0 10px' }} />
+            <div style={{ position: 'absolute', bottom: -1, right: -1, width: 16, height: 16, borderBottom: '2px solid #ff8c42', borderRight: '2px solid #ff8c42', borderRadius: '0 0 10px 0' }} />
+          </>
+        )}
+
+        {/* Icon */}
+        {dragging ? (
+          <div style={{ marginBottom: 10 }}>
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style={{ margin: '0 auto', display: 'block' }}>
+              <circle cx="16" cy="16" r="14" fill="rgba(255,140,66,0.12)" stroke="rgba(255,140,66,0.4)" strokeWidth="1.5" />
+              <path d="M16 10v12M10 16l6-6 6 6" stroke="#ff8c42" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        ) : result ? (
+          <div style={{ fontSize: 26, marginBottom: 8 }}>
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style={{ margin: '0 auto', display: 'block' }}>
+              <circle cx="14" cy="14" r="12" fill="rgba(63,185,80,0.12)" stroke="rgba(63,185,80,0.35)" strokeWidth="1.5" />
+              <path d="M9 14l3.5 3.5L19 11" stroke="#3fb950" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        ) : (
+          <div style={{ marginBottom: 10 }}>
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style={{ margin: '0 auto', display: 'block', opacity: 0.4 }}>
+              <rect x="6" y="4" width="16" height="20" rx="2" fill="none" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M10 10h8M10 14h8M10 18h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </div>
+        )}
+
+        <div style={{ fontSize: 13, color: dragging ? '#ff8c42' : result ? '#3fb950' : 'var(--text-dim)', fontWeight: dragging ? 600 : 400 }}>
+          {loading ? 'Opening…'
+            : dragging ? 'Drop to import'
+            : result ? `${filename} — ready to import`
+            : 'Click to select nmap XML file, or drag & drop'}
         </div>
-        {filename && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>{filename}</div>}
+        {!dragging && !result && (
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 5 }}>
+            Supports .xml (nmap -oX format)
+          </div>
+        )}
+        {filename && !result && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>{filename}</div>}
       </div>
 
       {result && (

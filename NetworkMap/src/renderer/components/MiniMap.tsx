@@ -1,4 +1,4 @@
-// NetworkMap — MiniMap.tsx — Feature 7: 160x120 mini-map with viewport rect
+// NetworkMap — MiniMap.tsx — Feature 7: 160x120 mini-map with viewport rect + node type legend
 import { useCallback } from 'react'
 import type { NetworkNode } from '@shared/types'
 
@@ -15,6 +15,24 @@ interface Props {
 const W = 160
 const H = 120
 const PAD = 8
+
+// Map a node to a minimap color matching GraphCanvas legend (by port count)
+function nodeColor(n: NetworkNode): string {
+  if (n.status !== 'up') return 'rgba(72,79,88,0.55)'
+  const open = n.openPortCount ?? n.ports.filter(p => p.state === 'open').length
+  if (open >= 6) return 'rgba(248,81,73,0.7)'
+  if (open >= 3) return 'rgba(210,153,34,0.7)'
+  if (open >= 1) return 'rgba(63,185,80,0.7)'
+  return 'rgba(255,140,66,0.5)'  // up but no open ports
+}
+
+// Legend entries — match GraphCanvas sidebar legend
+const LEGEND_ENTRIES = [
+  { color: '#3fb950', label: '1–2 ports' },
+  { color: '#d29922', label: '3–5 ports' },
+  { color: '#f85149', label: '6+ ports'  },
+  { color: '#484f58', label: 'Down'      },
+]
 
 export default function MiniMap({ nodes, transform, canvasW, canvasH, onPan }: Props) {
   if (nodes.length === 0) return null
@@ -80,6 +98,8 @@ export default function MiniMap({ nodes, transform, canvasW, canvasH, onPan }: P
           {nodes.length}n
         </span>
       </div>
+
+      {/* SVG minimap */}
       <svg
         width={W} height={H}
         onClick={handleClick}
@@ -91,7 +111,7 @@ export default function MiniMap({ nodes, transform, canvasW, canvasH, onPan }: P
             <circle
               key={n.id}
               cx={nx} cy={ny} r={2.5}
-              fill={n.status === 'up' ? 'rgba(255,140,66,0.55)' : 'rgba(72,79,88,0.5)'}
+              fill={nodeColor(n)}
             />
           )
         })}
@@ -104,6 +124,29 @@ export default function MiniMap({ nodes, transform, canvasW, canvasH, onPan }: P
           rx={2}
         />
       </svg>
+
+      {/* Node type legend */}
+      <div style={{
+        borderTop: '1px solid rgba(255,255,255,0.04)',
+        padding: '5px 8px 6px',
+        background: 'rgba(7,8,15,0.6)',
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '3px 8px',
+      }}>
+        {LEGEND_ENTRIES.map(entry => (
+          <div key={entry.label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{
+              width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+              background: entry.color,
+              boxShadow: entry.color !== '#484f58' ? `0 0 4px ${entry.color}80` : 'none',
+            }} />
+            <span style={{ fontSize: 8, color: 'rgba(139,148,158,0.55)', lineHeight: 1 }}>
+              {entry.label}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

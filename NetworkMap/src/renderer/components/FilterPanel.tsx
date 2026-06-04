@@ -43,6 +43,34 @@ interface Props {
   onClose: () => void
 }
 
+// ─── Active filter pill ────────────────────────────────────────────────────────
+function ActivePill({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <div style={{
+      display: 'inline-flex', alignItems: 'center', gap: 5,
+      padding: '3px 8px 3px 10px', borderRadius: 20,
+      background: 'rgba(255,140,66,0.12)',
+      border: '1px solid rgba(255,140,66,0.32)',
+      fontSize: 10, color: '#ff8c42', fontWeight: 500,
+      animation: 'badgePop 0.2s var(--ease)',
+    }}>
+      <span>{label}</span>
+      <button
+        onClick={onRemove}
+        style={{
+          width: 14, height: 14, borderRadius: '50%', border: 'none',
+          background: 'rgba(255,140,66,0.18)', color: '#ff8c42',
+          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 10, lineHeight: 1, padding: 0,
+          transition: 'all 120ms',
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,140,66,0.35)' }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,140,66,0.18)' }}
+      >×</button>
+    </div>
+  )
+}
+
 export default function FilterPanel({ nodes, filters, onChange, onClose }: Props) {
   const commonPorts = useMemo(() => {
     const counts = new Map<number, number>()
@@ -63,7 +91,7 @@ export default function FilterPanel({ nodes, filters, onChange, onClose }: Props
 
   const inputStyle: React.CSSProperties = {
     background: '#07080f', border: '1px solid rgba(42,51,71,0.75)',
-    borderRadius: 6, padding: '5px 9px', color: 'var(--text-primary)', fontSize: 11, width: '100%',
+    borderRadius: 8, padding: '5px 9px', color: 'var(--text-primary)', fontSize: 11, width: '100%',
     fontFamily: 'var(--font-display)', transition: 'border-color 150ms',
     outline: 'none',
   }
@@ -84,6 +112,17 @@ export default function FilterPanel({ nodes, filters, onChange, onClose }: Props
     { value: 'router',  label: 'Router',  icon: '⬡' },
     { value: 'unknown', label: '?',       icon: '?' },
   ]
+
+  // Build active filter pills
+  type FilterPill = { key: keyof FilterState; label: string }
+  const activePills: FilterPill[] = []
+  if (filters.osType) {
+    const match = OS_OPTIONS.find(o => o.value === filters.osType)
+    activePills.push({ key: 'osType', label: `OS: ${match?.label ?? filters.osType}` })
+  }
+  if (filters.openPort) activePills.push({ key: 'openPort', label: `Port: ${filters.openPort}` })
+  if (filters.dateFrom) activePills.push({ key: 'dateFrom', label: `From: ${filters.dateFrom}` })
+  if (filters.dateTo)   activePills.push({ key: 'dateTo',   label: `To: ${filters.dateTo}` })
 
   return (
     <div style={{
@@ -124,13 +163,36 @@ export default function FilterPanel({ nodes, filters, onChange, onClose }: Props
           onClick={onClose}
           style={{
             background: 'transparent', color: 'var(--text-muted)', fontSize: 18, lineHeight: 1,
-            width: 26, height: 26, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 26, height: 26, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'all 150ms var(--ease)',
           }}
           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)' }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' }}
         >×</button>
       </div>
+
+      {/* Active filters pill area */}
+      {activePills.length > 0 && (
+        <div style={{
+          padding: '8px 14px',
+          borderBottom: '1px solid rgba(42,51,71,0.4)',
+          background: 'rgba(255,140,66,0.02)',
+          flexShrink: 0,
+        }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,140,66,0.55)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+            Active filters
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+            {activePills.map(pill => (
+              <ActivePill
+                key={pill.key}
+                label={pill.label}
+                onRemove={() => set(pill.key, '')}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -198,6 +260,55 @@ export default function FilterPanel({ nodes, filters, onChange, onClose }: Props
               e.currentTarget.style.boxShadow = 'none'
             }}
           />
+
+          {/* Port range visual indicator when a port is set */}
+          {filters.openPort && !isNaN(parseInt(filters.openPort, 10)) && (
+            <div style={{ marginTop: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>1</span>
+                <span style={{ fontSize: 9, color: '#ff8c42', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                  Port {filters.openPort}
+                </span>
+                <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>65535</span>
+              </div>
+              <div style={{ position: 'relative', height: 6, borderRadius: 3, background: 'rgba(42,51,71,0.4)' }}>
+                {/* Track fill up to port position */}
+                <div style={{
+                  position: 'absolute', left: 0, top: 0, height: '100%',
+                  borderRadius: 3,
+                  width: `${Math.min(100, (parseInt(filters.openPort, 10) / 65535) * 100)}%`,
+                  background: 'linear-gradient(90deg, rgba(255,140,66,0.3), rgba(255,140,66,0.7))',
+                }} />
+                {/* Port marker */}
+                <div style={{
+                  position: 'absolute', top: '50%',
+                  left: `${Math.min(98, (parseInt(filters.openPort, 10) / 65535) * 100)}%`,
+                  transform: 'translate(-50%, -50%)',
+                  width: 10, height: 10, borderRadius: '50%',
+                  background: '#ff8c42',
+                  border: '2px solid rgba(13,14,24,0.9)',
+                  boxShadow: '0 0 6px rgba(255,140,66,0.6)',
+                }} />
+              </div>
+              {/* Well-known ranges label */}
+              {parseInt(filters.openPort, 10) <= 1023 && (
+                <div style={{ fontSize: 9, color: 'rgba(255,140,66,0.55)', marginTop: 3 }}>
+                  Well-known range (0–1023)
+                </div>
+              )}
+              {parseInt(filters.openPort, 10) > 1023 && parseInt(filters.openPort, 10) <= 49151 && (
+                <div style={{ fontSize: 9, color: 'rgba(210,153,34,0.6)', marginTop: 3 }}>
+                  Registered range (1024–49151)
+                </div>
+              )}
+              {parseInt(filters.openPort, 10) > 49151 && (
+                <div style={{ fontSize: 9, color: 'rgba(139,148,158,0.6)', marginTop: 3 }}>
+                  Dynamic/ephemeral range (49152–65535)
+                </div>
+              )}
+            </div>
+          )}
+
           {commonPorts.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
               {commonPorts.map(port => {
@@ -207,7 +318,7 @@ export default function FilterPanel({ nodes, filters, onChange, onClose }: Props
                     key={port}
                     onClick={() => set('openPort', active ? '' : String(port))}
                     style={{
-                      padding: '3px 8px', fontSize: 10, borderRadius: 6, cursor: 'pointer',
+                      padding: '3px 8px', fontSize: 10, borderRadius: 8, cursor: 'pointer',
                       background: active ? 'rgba(255,140,66,0.15)' : 'rgba(42,51,71,0.3)',
                       border: `1px solid ${active ? 'rgba(255,140,66,0.45)' : 'rgba(42,51,71,0.55)'}`,
                       color: active ? '#ff8c42' : 'var(--text-secondary)',

@@ -15,11 +15,44 @@ type Tab = 'ports' | 'timeline' | 'vulns' | 'recondesk'
 function stateColor(state: string): string {
   if (state === 'open')     return '#3fb950'
   if (state === 'filtered') return '#d29922'
-  return 'var(--text-muted)'
+  return '#484f58'
+}
+
+function stateBg(state: string): string {
+  if (state === 'open')     return 'rgba(63,185,80,0.08)'
+  if (state === 'filtered') return 'rgba(210,153,34,0.08)'
+  return 'rgba(72,79,88,0.08)'
+}
+
+function stateBorder(state: string): string {
+  if (state === 'open')     return 'rgba(63,185,80,0.22)'
+  if (state === 'filtered') return 'rgba(210,153,34,0.22)'
+  return 'rgba(72,79,88,0.22)'
 }
 
 function copyToClipboard(text: string): void {
   navigator.clipboard.writeText(text).catch(console.error)
+}
+
+// Common port service names
+const PORT_NAMES: Record<number, string> = {
+  21: 'FTP', 22: 'SSH', 23: 'Telnet', 25: 'SMTP', 53: 'DNS',
+  67: 'DHCP', 68: 'DHCP', 69: 'TFTP', 80: 'HTTP', 110: 'POP3',
+  111: 'RPC', 123: 'NTP', 135: 'MSRPC', 137: 'NetBIOS', 138: 'NetBIOS',
+  139: 'NetBIOS', 143: 'IMAP', 161: 'SNMP', 389: 'LDAP', 443: 'HTTPS',
+  445: 'SMB', 465: 'SMTPS', 500: 'IKE', 514: 'Syslog', 515: 'LPD',
+  587: 'SMTP', 631: 'IPP', 636: 'LDAPS', 993: 'IMAPS', 995: 'POP3S',
+  1080: 'SOCKS', 1194: 'OpenVPN', 1433: 'MSSQL', 1521: 'Oracle',
+  1723: 'PPTP', 2049: 'NFS', 2181: 'Zookeeper', 3306: 'MySQL',
+  3389: 'RDP', 4444: 'Metasploit', 4899: 'Radmin', 5432: 'PostgreSQL',
+  5900: 'VNC', 5985: 'WinRM', 6379: 'Redis', 6443: 'K8s API',
+  8080: 'HTTP-Alt', 8443: 'HTTPS-Alt', 8888: 'HTTP-Dev', 9200: 'Elasticsearch',
+  27017: 'MongoDB', 11211: 'Memcached',
+}
+
+function getServiceName(port: number, service?: string): string {
+  if (service && service !== 'unknown') return service
+  return PORT_NAMES[port] ?? '—'
 }
 
 // ─── Port Timeline ─────────────────────────────────────────────────────────────
@@ -75,6 +108,36 @@ function PortTimeline({ node, allScans }: { node: NetworkNode; allScans: { scanN
   )
 }
 
+// ─── Risk bar for vuln entries ─────────────────────────────────────────────────
+function RiskBar({ severity }: { severity: string }) {
+  const levels: Record<string, { pct: number; color: string; label: string }> = {
+    critical: { pct: 100, color: '#f85149', label: 'Critical' },
+    high:     { pct: 75,  color: '#ff8c42', label: 'High' },
+    medium:   { pct: 50,  color: '#d29922', label: 'Medium' },
+    low:      { pct: 25,  color: '#3fb950', label: 'Low' },
+    info:     { pct: 10,  color: '#8b949e', label: 'Info' },
+  }
+  const { pct, color } = levels[severity] ?? levels.info
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
+      <span style={{ fontSize: 9, color: 'var(--text-muted)', width: 28, flexShrink: 0 }}>Risk</span>
+      <div style={{
+        flex: 1, height: 4, borderRadius: 2,
+        background: 'rgba(42,51,71,0.4)',
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          width: `${pct}%`, height: '100%', borderRadius: 2,
+          background: `linear-gradient(90deg, ${color}99, ${color})`,
+          boxShadow: `0 0 6px ${color}55`,
+          transition: 'width 0.4s var(--ease)',
+        }} />
+      </div>
+      <span style={{ fontSize: 9, color, fontWeight: 600, width: 26, flexShrink: 0 }}>{pct}%</span>
+    </div>
+  )
+}
+
 // ─── Vulns Tab ────────────────────────────────────────────────────────────────
 function VulnsTab({ node }: { node: NetworkNode }) {
   const vulns = node.vulns ?? []
@@ -123,6 +186,7 @@ function VulnsTab({ node }: { node: NetworkNode }) {
           {v.description && (
             <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>{v.description}</div>
           )}
+          <RiskBar severity={v.severity} />
         </div>
       ))}
     </div>
@@ -135,6 +199,13 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate }:
   const [rdMsg, setRdMsg] = useState<{ text: string; ok: boolean } | null>(null)
   const [tab, setTab] = useState<Tab>('ports')
   const [annotationDraft, setAnnotationDraft] = useState(node.annotation ?? '')
+  const [copyFeedback, setCopyFeedback] = useState(false)
+
+  function handleCopyIP() {
+    copyToClipboard(node.ip)
+    setCopyFeedback(true)
+    setTimeout(() => setCopyFeedback(false), 1500)
+  }
 
   async function handlePushToReconDesk() {
     const payload = {
@@ -190,7 +261,7 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate }:
           onClick={onClose}
           style={{
             background: 'transparent', color: 'var(--text-muted)', fontSize: 18, lineHeight: 1,
-            width: 26, height: 26, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 26, height: 26, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'all 150ms var(--ease)',
           }}
           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)' }}
@@ -201,9 +272,53 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate }:
       {/* Identity block */}
       <div style={{ padding: '12px 14px', borderBottom: '1px solid rgba(42,51,71,0.5)', flexShrink: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>
-            {node.ip}
-          </span>
+          {/* IP + Copy IP inline */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>
+              {node.ip}
+            </span>
+            <button
+              onClick={handleCopyIP}
+              title="Copy IP address"
+              style={{
+                padding: '2px 7px', borderRadius: 8, fontSize: 10, cursor: 'pointer',
+                background: copyFeedback ? 'rgba(63,185,80,0.12)' : 'rgba(42,51,71,0.3)',
+                border: `1px solid ${copyFeedback ? 'rgba(63,185,80,0.35)' : 'rgba(42,51,71,0.6)'}`,
+                color: copyFeedback ? '#3fb950' : 'var(--text-muted)',
+                transition: 'all 150ms var(--ease)', fontFamily: 'var(--font-display)',
+                display: 'flex', alignItems: 'center', gap: 3,
+              }}
+              onMouseEnter={e => {
+                if (!copyFeedback) {
+                  (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,140,66,0.35)'
+                  ;(e.currentTarget as HTMLElement).style.color = '#ff8c42'
+                }
+              }}
+              onMouseLeave={e => {
+                if (!copyFeedback) {
+                  (e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,51,71,0.6)'
+                  ;(e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'
+                }
+              }}
+            >
+              {copyFeedback ? (
+                <>
+                  <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M2 5l2.5 2.5L8 3" />
+                  </svg>
+                  Copied
+                </>
+              ) : (
+                <>
+                  <svg width="8" height="8" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <rect x="4" y="4" width="8" height="8" rx="1.5" />
+                    <path d="M10 4V3a1 1 0 00-1-1H3a1 1 0 00-1 1v6a1 1 0 001 1h1" />
+                  </svg>
+                  Copy IP
+                </>
+              )}
+            </button>
+          </div>
           <span style={{
             fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 600,
             background: statusOnline ? 'rgba(63,185,80,0.10)' : 'rgba(72,79,88,0.18)',
@@ -239,7 +354,7 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate }:
             placeholder="Add annotation…"
             style={{
               width: '100%', background: '#07080f', border: '1px solid rgba(42,51,71,0.75)',
-              borderRadius: 6, padding: '5px 8px', color: 'var(--text-primary)', fontSize: 11,
+              borderRadius: 8, padding: '5px 8px', color: 'var(--text-primary)', fontSize: 11,
               fontFamily: 'var(--font-display)', transition: 'border-color 150ms',
             }}
             onFocus={e => (e.currentTarget.style.borderColor = 'rgba(255,140,66,0.4)')}
@@ -266,6 +381,7 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate }:
               cursor: 'pointer',
               transition: 'all 180ms var(--ease)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
+              borderRadius: 0,
             }}
             onMouseEnter={e => { if (tab !== t.id) (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)' }}
             onMouseLeave={e => { if (tab !== t.id) (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' }}
@@ -293,7 +409,6 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate }:
         {tab === 'ports' && (
           <>
             <div style={{ display: 'flex', gap: 5, marginBottom: 10 }}>
-              <ActionBtn onClick={() => copyToClipboard(node.ip)}>Copy IP</ActionBtn>
               <ActionBtn onClick={() => {
                 const line = `${node.ip}${node.hostname ? ` (${node.hostname})` : ''} — ${openPorts.map(p => `${p.port}/${p.protocol}`).join(', ')}`
                 copyToClipboard(line)
@@ -309,25 +424,44 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate }:
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr>
-                      {(['PORT', 'SERVICE', 'STATE'] as const).map(h => (
+                      {(['PORT', 'SERVICE', 'NAME', 'STATE'] as const).map(h => (
                         <th key={h} style={thStyle}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {node.ports.map(p => (
-                      <tr key={`${p.port}-${p.protocol}`} style={{ transition: 'background 100ms' }}
-                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
-                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      <tr key={`${p.port}-${p.protocol}`}
+                        style={{ transition: 'background 100ms', background: stateBg(p.state) }}
+                        onMouseEnter={e => (e.currentTarget.style.background = p.state === 'open' ? 'rgba(63,185,80,0.12)' : p.state === 'filtered' ? 'rgba(210,153,34,0.12)' : 'rgba(72,79,88,0.12)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = stateBg(p.state))}
                       >
-                        <td style={{ padding: '4px 0', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-primary)' }}>
+                        <td style={{ padding: '4px 4px 4px 0', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-primary)' }}>
                           {p.port}/{p.protocol}
                         </td>
-                        <td style={{ padding: '4px 4px', fontSize: 11, color: 'var(--text-secondary)', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <td style={{ padding: '4px 4px', fontSize: 11, color: 'var(--text-secondary)', maxWidth: 64, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {p.service || '—'}
                         </td>
-                        <td style={{ padding: '4px 0', fontSize: 11, color: stateColor(p.state), fontWeight: p.state === 'open' ? 600 : 400 }}>
-                          {p.state}
+                        <td style={{ padding: '4px 4px', fontSize: 10, color: 'var(--text-muted)', maxWidth: 58, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {getServiceName(p.port, p.service) !== (p.service || '—') ? getServiceName(p.port, p.service) : '—'}
+                        </td>
+                        <td style={{ padding: '4px 0' }}>
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 3,
+                            fontSize: 10, fontWeight: p.state === 'open' ? 600 : 400,
+                            color: stateColor(p.state),
+                            background: `${stateColor(p.state)}12`,
+                            border: `1px solid ${stateBorder(p.state)}`,
+                            borderRadius: 8, padding: '1px 6px',
+                          }}>
+                            <span style={{
+                              width: 5, height: 5, borderRadius: '50%',
+                              background: stateColor(p.state),
+                              boxShadow: p.state === 'open' ? `0 0 4px ${stateColor(p.state)}` : 'none',
+                              flexShrink: 0,
+                            }} />
+                            {p.state}
+                          </span>
                         </td>
                       </tr>
                     ))}
@@ -344,7 +478,7 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate }:
             <ActionBtn onClick={handlePushToReconDesk}>Add to ReconDesk</ActionBtn>
             {rdMsg && (
               <div style={{
-                fontSize: 11, padding: '6px 10px', borderRadius: 6,
+                fontSize: 11, padding: '6px 10px', borderRadius: 8,
                 background: rdMsg.ok ? 'rgba(63,185,80,0.08)' : 'rgba(248,81,73,0.08)',
                 border: `1px solid ${rdMsg.ok ? 'rgba(63,185,80,0.25)' : 'rgba(248,81,73,0.25)'}`,
                 color: rdMsg.ok ? '#3fb950' : '#f85149',
@@ -362,7 +496,7 @@ function ActionBtn({ children, onClick }: { children: React.ReactNode; onClick: 
     <button
       onClick={onClick}
       style={{
-        padding: '5px 10px', borderRadius: 6,
+        padding: '5px 10px', borderRadius: 8,
         background: '#07080f', border: '1px solid rgba(42,51,71,0.75)',
         color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer',
         transition: 'all 150ms', fontFamily: 'var(--font-display)',
