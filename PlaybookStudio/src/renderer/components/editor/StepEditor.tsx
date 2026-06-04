@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { PlaybookStep, StepCategory, StepType } from '@shared/types'
 
@@ -69,12 +69,47 @@ const STEP_TYPE_LABELS: { type: StepType; label: string }[] = [
   { type: 'decision',      label: 'Decision' },
 ]
 
+// Variable autocomplete dropdown
+function VarAutocomplete({ vars, onSelect }: { vars: string[]; onSelect: (v: string) => void }) {
+  if (vars.length === 0) return null
+  return (
+    <div
+      className="absolute left-8 z-30 rounded overflow-hidden"
+      style={{
+        top: '100%',
+        minWidth: 160,
+        background: '#0d0e18',
+        border: '1px solid rgba(45,212,191,0.35)',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.55)',
+        marginTop: 2,
+      }}
+    >
+      <div className="px-2 py-1" style={{ fontSize: 9, color: '#484f58', borderBottom: '1px solid rgba(42,51,71,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        Variables
+      </div>
+      {vars.map(v => (
+        <button
+          key={v}
+          onMouseDown={e => { e.preventDefault(); onSelect(v) }}
+          className="w-full text-left px-2 py-1 text-xs font-mono flex items-center gap-1.5 transition-colors"
+          style={{ color: '#2dd4bf', background: 'transparent' }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(45,212,191,0.08)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+        >
+          <span style={{ color: '#484f58' }}>{'{{'}</span>{v}<span style={{ color: '#484f58' }}>{'}} '}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
 // Commands editor with line numbers
-function CommandsEditor({ value, disabled, onChange }: {
-  value: string; disabled: boolean; onChange: (v: string) => void
+function CommandsEditor({ value, disabled, onChange, knownVars = [] }: {
+  value: string; disabled: boolean; onChange: (v: string) => void; knownVars?: string[]
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const numbersRef  = useRef<HTMLDivElement>(null)
+  const [showVarHint, setShowVarHint] = useState(false)
   const lines = value.split('\n')
 
   // Sync scroll between textarea and line numbers
@@ -84,51 +119,89 @@ function CommandsEditor({ value, disabled, onChange }: {
     }
   }
 
+  function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    const v = e.target.value
+    onChange(v)
+    const pos = e.target.selectionStart ?? 0
+    const before = v.slice(0, pos)
+    setShowVarHint(before.endsWith('{{') && knownVars.length > 0)
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === 'Escape') setShowVarHint(false)
+  }
+
+  function insertVar(varName: string) {
+    const ta = textareaRef.current
+    if (!ta) return
+    const pos = ta.selectionStart ?? 0
+    const before = value.slice(0, pos)
+    // Remove trailing {{ since we insert the full token
+    const trimBefore = before.endsWith('{{') ? before.slice(0, -2) : before
+    const after = value.slice(pos)
+    const newVal = `${trimBefore}{{${varName}}}${after}`
+    onChange(newVal)
+    setShowVarHint(false)
+    // Restore focus with cursor after inserted token
+    setTimeout(() => {
+      ta.focus()
+      const newPos = trimBefore.length + varName.length + 4
+      ta.setSelectionRange(newPos, newPos)
+    }, 0)
+  }
+
   return (
-    <div
-      className="flex rounded overflow-hidden"
-      style={{ background: 'var(--bg)', border: '1px solid var(--border)', fontFamily: 'var(--font-mono)' }}
-    >
-      {/* Line numbers */}
+    <div className="relative">
       <div
-        ref={numbersRef}
-        className="flex-shrink-0 overflow-hidden select-none"
-        style={{
-          width: 28,
-          background: 'rgba(42,51,71,0.2)',
-          borderRight: '1px solid rgba(42,51,71,0.5)',
-          padding: '6px 0',
-          fontSize: 11,
-          lineHeight: '18px',
-          textAlign: 'right',
-          color: '#484f58',
-          overflowY: 'hidden',
-          userSelect: 'none',
-        }}
+        className="flex rounded overflow-hidden"
+        style={{ background: 'var(--bg)', border: '1px solid var(--border)', fontFamily: 'var(--font-mono)' }}
       >
-        {lines.map((_, i) => (
-          <div key={i} style={{ paddingRight: 5 }}>{i + 1}</div>
-        ))}
+        {/* Line numbers */}
+        <div
+          ref={numbersRef}
+          className="flex-shrink-0 overflow-hidden select-none"
+          style={{
+            width: 28,
+            background: 'rgba(42,51,71,0.2)',
+            borderRight: '1px solid rgba(42,51,71,0.5)',
+            padding: '6px 0',
+            fontSize: 11,
+            lineHeight: '18px',
+            textAlign: 'right',
+            color: '#484f58',
+            overflowY: 'hidden',
+            userSelect: 'none',
+          }}
+        >
+          {lines.map((_, i) => (
+            <div key={i} style={{ paddingRight: 5 }}>{i + 1}</div>
+          ))}
+        </div>
+        {/* Textarea */}
+        <textarea
+          ref={textareaRef}
+          rows={Math.max(3, lines.length)}
+          className="flex-1 px-2 py-1.5 text-xs font-mono resize-none"
+          style={{
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
+            color: 'var(--text)',
+            lineHeight: '18px',
+            fontSize: 11,
+          }}
+          value={value}
+          disabled={disabled}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onBlur={() => setTimeout(() => setShowVarHint(false), 150)}
+          onScroll={handleScroll}
+          spellCheck={false}
+        />
       </div>
-      {/* Textarea */}
-      <textarea
-        ref={textareaRef}
-        rows={Math.max(3, lines.length)}
-        className="flex-1 px-2 py-1.5 text-xs font-mono resize-none"
-        style={{
-          background: 'transparent',
-          border: 'none',
-          outline: 'none',
-          color: 'var(--text)',
-          lineHeight: '18px',
-          fontSize: 11,
-        }}
-        value={value}
-        disabled={disabled}
-        onChange={e => onChange(e.target.value)}
-        onScroll={handleScroll}
-        spellCheck={false}
-      />
+      {showVarHint && (
+        <VarAutocomplete vars={knownVars} onSelect={insertVar} />
+      )}
     </div>
   )
 }
@@ -152,6 +225,7 @@ interface Props {
   total: number
   allSteps: PlaybookStep[]
   disabled: boolean
+  knownVars?: string[]
   onChange: (s: PlaybookStep) => void
   onDelete: () => void
   onDuplicate: () => void
@@ -160,7 +234,7 @@ interface Props {
 }
 
 export default function StepEditor({
-  step, index, total, allSteps, disabled,
+  step, index, total, allSteps, disabled, knownVars = [],
   onChange, onDelete, onDuplicate, onMoveUp, onMoveDown,
 }: Props) {
   const [open, setOpen] = useState(false)
@@ -282,6 +356,7 @@ export default function StepEditor({
               value={step.commands.join('\n')}
               disabled={disabled}
               onChange={v => onChange({ ...step, commands: v.split('\n') })}
+              knownVars={knownVars}
             />
           </div>
 

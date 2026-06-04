@@ -91,6 +91,23 @@ export default function LibraryView() {
   const [showVapt,      setShowVapt]      = useState(false)
   const [mitreFilter,   setMitreFilter]   = useState('')
   const [searchTerm,    setSearchTerm]    = useState('')
+  const [activeTags,    setActiveTags]    = useState<Set<string>>(new Set())
+
+  // Derive unique tags across all playbooks
+  const allTags = (() => {
+    const tagSet = new Set<string>()
+    playbooks.forEach(p => (p.tags ?? []).forEach(t => t && tagSet.add(t)))
+    return Array.from(tagSet).sort()
+  })()
+
+  function toggleTag(tag: string) {
+    setActiveTags(prev => {
+      const next = new Set(prev)
+      if (next.has(tag)) next.delete(tag)
+      else next.add(tag)
+      return next
+    })
+  }
 
   const filtered = (() => {
     let list = playbooks
@@ -106,6 +123,9 @@ export default function LibraryView() {
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toLowerCase()
       list = list.filter(p => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q))
+    }
+    if (activeTags.size > 0) {
+      list = list.filter(p => (p.tags ?? []).some(t => activeTags.has(t)))
     }
     return list
   })()
@@ -269,6 +289,43 @@ export default function LibraryView() {
           </button>
         </div>
       </div>
+
+      {/* Tag filter chips */}
+      {allTags.length > 0 && (
+        <div
+          className="flex items-center gap-1.5 px-4 py-2 flex-shrink-0 overflow-x-auto no-drag"
+          style={{ borderBottom: '1px solid rgba(42,51,71,0.4)', background: 'rgba(7,8,15,0.4)' }}
+        >
+          <span className="text-xs flex-shrink-0" style={{ color: '#484f58' }}>Tags:</span>
+          {activeTags.size > 0 && (
+            <button
+              onClick={() => setActiveTags(new Set())}
+              className="flex-shrink-0 text-xs px-2 py-0.5 rounded"
+              style={{ background: 'rgba(248,81,73,0.08)', color: '#f85149', border: '1px solid rgba(248,81,73,0.2)' }}
+            >
+              clear
+            </button>
+          )}
+          {allTags.map(tag => {
+            const active = activeTags.has(tag)
+            return (
+              <button
+                key={tag}
+                onClick={() => toggleTag(tag)}
+                className="flex-shrink-0 text-xs px-2 py-0.5 rounded-full transition-all"
+                style={{
+                  background: active ? 'rgba(45,212,191,0.14)' : 'rgba(42,51,71,0.2)',
+                  color: active ? '#2dd4bf' : '#6b7280',
+                  border: `1px solid ${active ? 'rgba(45,212,191,0.32)' : 'rgba(42,51,71,0.4)'}`,
+                  fontSize: 10,
+                }}
+              >
+                #{tag}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {/* VAPT methodology panel */}
       {showVapt && (

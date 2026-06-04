@@ -24,7 +24,9 @@ export default function RunView() {
   const [exporting, setExporting]   = useState(false)
   const [paused,    setPaused]      = useState(false)
   const [runElapsed, setRunElapsed] = useState('0:00')
+  const [scrollLock, setScrollLock] = useState(true)
   const notesFocusRef = useRef<HTMLTextAreaElement>(null)
+  const stepListRef   = useRef<HTMLDivElement>(null)
 
   // Real-time elapsed timer (improvement 4)
   useEffect(() => {
@@ -71,6 +73,13 @@ export default function RunView() {
     const first = activeRun.steps.find(s => s.status !== 'done' && s.status !== 'skipped') ?? activeRun.steps[0]
     if (first) setSelectedStepId(first.id)
   }, [activeRun?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-scroll step list to active step when scroll lock is on
+  useEffect(() => {
+    if (!scrollLock || !stepListRef.current || !selectedStepId) return
+    const el = stepListRef.current.querySelector(`[data-step-id="${selectedStepId}"]`) as HTMLElement | null
+    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [selectedStepId, scrollLock])
 
   // Keyboard shortcuts (Feature 15)
   useEffect(() => {
@@ -161,14 +170,41 @@ export default function RunView() {
 
       <div className="flex flex-1 min-h-0">
         {/* Step list */}
-        <div className="flex-shrink-0 overflow-y-auto flex flex-col py-1" style={{ width: 260, borderRight: '1px solid var(--border)', background: 'var(--panel)' }}>
-          {steps.map(step => {
-            const blocked = isBlocked(step, steps) || skipSet.has(step.id)
-            return (
-              <StepListItem key={step.id} step={step} isActive={step.id === selectedStep?.id}
-                isBlocked={blocked} onClick={() => setSelectedStepId(step.id)} />
-            )
-          })}
+        <div className="flex-shrink-0 flex flex-col" style={{ width: 260, borderRight: '1px solid var(--border)', background: 'var(--panel)' }}>
+          {/* Scroll lock toggle */}
+          <div
+            className="flex items-center justify-between px-2 py-1 flex-shrink-0"
+            style={{ borderBottom: '1px solid rgba(42,51,71,0.3)', background: 'rgba(7,8,15,0.4)' }}
+          >
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Steps</span>
+            <button
+              onClick={() => setScrollLock(l => !l)}
+              title={scrollLock ? 'Scroll lock on — click to disable' : 'Scroll lock off — click to enable'}
+              className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded transition-all"
+              style={{
+                background: scrollLock ? 'rgba(45,212,191,0.1)' : 'rgba(42,51,71,0.2)',
+                color: scrollLock ? '#2dd4bf' : '#484f58',
+                border: `1px solid ${scrollLock ? 'rgba(45,212,191,0.25)' : 'rgba(42,51,71,0.4)'}`,
+              }}
+            >
+              {/* Pin icon */}
+              <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                <path d="M6 1l3 3-4 4-1-1 1-1-2-2-1 1-1-1 4-4zM4 6L1 9" />
+              </svg>
+              {scrollLock ? 'lock' : 'free'}
+            </button>
+          </div>
+          <div ref={stepListRef} className="flex-1 overflow-y-auto py-1">
+            {steps.map(step => {
+              const blocked = isBlocked(step, steps) || skipSet.has(step.id)
+              return (
+                <div key={step.id} data-step-id={step.id}>
+                  <StepListItem step={step} isActive={step.id === selectedStep?.id}
+                    isBlocked={blocked} onClick={() => setSelectedStepId(step.id)} />
+                </div>
+              )
+            })}
+          </div>
         </div>
 
         {/* Step detail */}

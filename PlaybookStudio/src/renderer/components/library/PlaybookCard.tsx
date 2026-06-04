@@ -153,6 +153,22 @@ export default function PlaybookCard({ pb, searchTerm = '', staggerIndex = 0 }: 
             <HighlightMatch text={pb.name} term={searchTerm} />
           </div>
           <div className="text-xs mt-0.5 line-clamp-2" style={{ color: '#8b949e' }}>{pb.description}</div>
+          {pb.tags && pb.tags.length > 0 && (
+            <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+              {pb.tags.slice(0, 3).map(tag => (
+                <span
+                  key={tag}
+                  className="text-xs px-1.5 py-0.5 rounded"
+                  style={{ background: 'rgba(139,148,158,0.1)', color: '#6b7280', border: '1px solid rgba(139,148,158,0.2)', fontSize: 10 }}
+                >
+                  #{tag}
+                </span>
+              ))}
+              {pb.tags.length > 3 && (
+                <span className="text-xs" style={{ color: '#484f58', fontSize: 10 }}>+{pb.tags.length - 3} more</span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

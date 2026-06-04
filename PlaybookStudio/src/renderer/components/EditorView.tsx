@@ -543,6 +543,7 @@ export default function EditorView() {
             <StepEditorRow
               key={step.id} step={step} index={idx} total={pb.steps.length}
               allSteps={pb.steps} disabled={disabled}
+              knownVars={Object.keys(pb.variables ?? {})}
               onChange={s => updateStep(idx, s)}
               onDelete={() => deleteStep(idx)}
               onDuplicate={() => duplicateStep(idx)}

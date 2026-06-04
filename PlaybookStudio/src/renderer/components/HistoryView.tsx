@@ -208,14 +208,25 @@ function InfoCell({ label, value, color }: { label: string; value: string; color
   )
 }
 
+type ResultFilter = 'all' | 'pass' | 'fail'
+
+function runResult(run: PlaybookRun): 'pass' | 'fail' | 'running' {
+  if (run.status === 'running') return 'running'
+  if (run.status === 'abandoned') return 'fail'
+  const anyRequired = run.steps.some(s => s.required && s.status !== 'done' && s.status !== 'skipped')
+  if (anyRequired) return 'fail'
+  return 'pass'
+}
+
 export default function HistoryView() {
   const runs         = useStore(s => s.runs)
   const setActiveRun = useStore(s => s.setActiveRun)
   const setView      = useStore(s => s.setView)
 
-  const [selected,    setSelected]    = useState<PlaybookRun | null>(null)
-  const [compareSet,  setCompareSet]  = useState<Set<string>>(new Set())
-  const [comparing,   setComparing]   = useState<[PlaybookRun, PlaybookRun] | null>(null)
+  const [selected,      setSelected]      = useState<PlaybookRun | null>(null)
+  const [compareSet,    setCompareSet]     = useState<Set<string>>(new Set())
+  const [comparing,     setComparing]      = useState<[PlaybookRun, PlaybookRun] | null>(null)
+  const [resultFilter,  setResultFilter]   = useState<ResultFilter>('all')
 
   function handleRowClick(run: PlaybookRun, e: React.MouseEvent) {
     if (e.shiftKey) {
@@ -279,10 +290,39 @@ export default function HistoryView() {
     )
   }
 
+  const filteredRuns = runs.filter(run => {
+    if (resultFilter === 'all') return true
+    const r = runResult(run)
+    if (resultFilter === 'pass') return r === 'pass'
+    if (resultFilter === 'fail') return r === 'fail' || r === 'running'
+    return true
+  })
+
   return (
     <div className="flex flex-col h-full">
-      <div className="px-4 py-3 flex-shrink-0 flex items-center gap-3" style={{ borderBottom: '1px solid var(--border)' }}>
+      <div className="px-4 py-3 flex-shrink-0 flex items-center gap-3 flex-wrap" style={{ borderBottom: '1px solid var(--border)' }}>
         <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>Run History ({runs.length})</span>
+        {/* Result filter toggle */}
+        <div className="flex items-center gap-1 p-0.5 rounded-full" style={{ background: 'rgba(42,51,71,0.25)', border: '1px solid rgba(42,51,71,0.4)' }}>
+          {(['all', 'pass', 'fail'] as ResultFilter[]).map(f => {
+            const active = resultFilter === f
+            const color = f === 'pass' ? 'var(--success)' : f === 'fail' ? 'var(--error)' : 'var(--text-dim)'
+            return (
+              <button
+                key={f}
+                onClick={() => setResultFilter(f)}
+                className="text-xs px-2.5 py-0.5 rounded-full capitalize transition-all"
+                style={{
+                  background: active ? (f === 'all' ? 'rgba(139,148,158,0.2)' : f === 'pass' ? 'rgba(63,185,80,0.18)' : 'rgba(248,81,73,0.18)') : 'transparent',
+                  color: active ? color : 'var(--text-muted)',
+                  border: `1px solid ${active ? (f === 'pass' ? 'rgba(63,185,80,0.3)' : f === 'fail' ? 'rgba(248,81,73,0.3)' : 'rgba(139,148,158,0.3)') : 'transparent'}`,
+                }}
+              >
+                {f}
+              </button>
+            )
+          })}
+        </div>
         {compareSet.size === 2 && (
           <button onClick={handleCompare} className="text-xs px-3 py-1 rounded font-medium ml-auto"
             style={{ background: 'var(--accent)', color: '#fff' }}>
@@ -297,7 +337,12 @@ export default function HistoryView() {
         )}
       </div>
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
-        {runs.map(run => {
+        {filteredRuns.length === 0 && runs.length > 0 && (
+          <div className="flex items-center justify-center h-24">
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>No {resultFilter} runs found</span>
+          </div>
+        )}
+        {filteredRuns.map(run => {
           const done  = run.steps.filter(s => s.status === 'done').length
           const total = run.steps.length
           const pct   = total > 0 ? Math.round((done / total) * 100) : 0
