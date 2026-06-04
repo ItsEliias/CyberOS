@@ -6,7 +6,7 @@ import { useStore } from '../store'
 import { fuzzyMatch, highlightSegments } from '../utils/fuzzySearch'
 import { playTotpExpiring } from '../utils/audioNotify'
 
-// ─── Category pill colors ──────────────────────────────────────────────────────
+// ─── Category pill colors ─────────────────────────────────────────────────────
 
 const CATEGORY_COLORS: Record<CredentialCategory, string> = {
   'SSH':         '#4a9eff',
@@ -23,7 +23,7 @@ function CategoryPill({ cat }: { cat: CredentialCategory }) {
   return (
     <span style={{
       fontSize: 9, fontWeight: 600, padding: '1px 6px', borderRadius: 8,
-      border: `1px solid ${color}40`, background: `${color}18`, color,
+      border: `1px solid ${color}40`, background: `${color}14`, color,
       letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap',
     }}>
       {cat}
@@ -31,7 +31,7 @@ function CategoryPill({ cat }: { cat: CredentialCategory }) {
   )
 }
 
-// ─── Expiry badge ──────────────────────────────────────────────────────────────
+// ─── Expiry badge ─────────────────────────────────────────────────────────────
 
 function ExpiryBadge({ expiresAt }: { expiresAt: string }) {
   const now   = Date.now()
@@ -40,11 +40,11 @@ function ExpiryBadge({ expiresAt }: { expiresAt: string }) {
   const days  = Math.ceil(diff / 86_400_000)
   let color   = '#3fb950'
   let label   = `${days}d`
-  if (diff < 0)          { color = '#f85149'; label = 'Expired' }
-  else if (days <= 7)    { color = '#f85149'; label = `${days}d` }
-  else if (days <= 30)   { color = '#d29922'; label = `${days}d` }
+  if (diff < 0)        { color = '#f85149'; label = 'Expired' }
+  else if (days <= 7)  { color = '#f85149'; label = `${days}d` }
+  else if (days <= 30) { color = '#d29922'; label = `${days}d` }
   return (
-    <span style={{ fontSize: 9, fontWeight: 600, padding: '1px 5px', borderRadius: 6, border: `1px solid ${color}40`, background: `${color}18`, color }}>
+    <span style={{ fontSize: 9, fontWeight: 600, padding: '1px 5px', borderRadius: 6, border: `1px solid ${color}40`, background: `${color}14`, color }}>
       {label}
     </span>
   )
@@ -57,8 +57,8 @@ const TOTP_PERIOD = 30
 function TotpCode({ secret }: { secret: string }) {
   const [code, setCode]       = useState('')
   const [secLeft, setSecLeft] = useState(0)
-  const intervalRef  = useRef<ReturnType<typeof setInterval> | null>(null)
-  const warnedRef    = useRef(false)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const warnedRef   = useRef(false)
 
   useEffect(() => {
     function generate() {
@@ -67,28 +67,20 @@ function TotpCode({ secret }: { secret: string }) {
         const token = totp.generate()
         const epoch = Math.floor(Date.now() / 1000)
         const left  = TOTP_PERIOD - (epoch % TOTP_PERIOD)
-        setCode(token)
-        setSecLeft(left)
-        // Play warning when 5 seconds remain (once per period)
-        if (left === 5 && !warnedRef.current) {
-          warnedRef.current = true
-          playTotpExpiring()
-        } else if (left > 10) {
-          warnedRef.current = false
-        }
-      } catch {
-        setCode('ERROR')
-      }
+        setCode(token); setSecLeft(left)
+        if (left === 5 && !warnedRef.current) { warnedRef.current = true; playTotpExpiring() }
+        else if (left > 10) { warnedRef.current = false }
+      } catch { setCode('ERROR') }
     }
     generate()
     intervalRef.current = setInterval(generate, 1000)
     return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
   }, [secret])
 
-  const frac       = secLeft / TOTP_PERIOD
-  const circ       = 2 * Math.PI * 5
-  const dashOff    = circ * (1 - frac)
-  const ringColor  = frac > 0.5 ? '#3fb950' : frac > 0.2 ? '#d29922' : '#f85149'
+  const frac      = secLeft / TOTP_PERIOD
+  const circ      = 2 * Math.PI * 5
+  const dashOff   = circ * (1 - frac)
+  const ringColor = frac > 0.5 ? '#3fb950' : frac > 0.2 ? '#d29922' : '#f85149'
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -105,7 +97,7 @@ function TotpCode({ secret }: { secret: string }) {
   )
 }
 
-// ─── Highlight span ────────────────────────────────────────────────────────────
+// ─── Highlight text ───────────────────────────────────────────────────────────
 
 function HighlightText({ text, query }: { text: string; query: string }) {
   if (!query) return <>{text}</>
@@ -126,30 +118,30 @@ function HighlightText({ text, query }: { text: string; query: string }) {
 // ─── Credential age ────────────────────────────────────────────────────────────
 
 function credAge(createdAt: string): { label: string; color: string; stale: boolean } {
-  const ms   = Date.now() - new Date(createdAt).getTime()
-  const h    = ms / 3_600_000
-  const d    = ms / 86_400_000
-  if (h < 1)  return { label: 'just now', color: 'var(--text-muted)', stale: false }
-  if (h < 24) return { label: `${Math.floor(h)}h ago`,  color: 'var(--text-muted)', stale: false }
-  if (d < 7)  return { label: `${Math.floor(d)}d ago`,  color: 'var(--success)',    stale: false }
-  if (d < 30) return { label: `${Math.floor(d)}d ago`,  color: 'var(--warning)',    stale: false }
-  if (d < 90) return { label: `${Math.floor(d)}d ago`,  color: 'var(--error)',      stale: false }
-  return       { label: `${Math.floor(d)}d ago`,  color: 'var(--error)',      stale: true  }
+  const ms = Date.now() - new Date(createdAt).getTime()
+  const h  = ms / 3_600_000
+  const d  = ms / 86_400_000
+  if (h < 1)  return { label: 'just now',             color: '#484f58', stale: false }
+  if (h < 24) return { label: `${Math.floor(h)}h ago`, color: '#484f58', stale: false }
+  if (d < 7)  return { label: `${Math.floor(d)}d ago`, color: '#3fb950', stale: false }
+  if (d < 30) return { label: `${Math.floor(d)}d ago`, color: '#d29922', stale: false }
+  if (d < 90) return { label: `${Math.floor(d)}d ago`, color: '#f85149', stale: false }
+  return       { label: `${Math.floor(d)}d ago`,        color: '#f85149', stale: true  }
 }
 
 const STATUS_COLORS: Record<Credential['status'], string> = {
-  active:  'var(--success)',
-  rotated: 'var(--warning)',
-  invalid: 'var(--text-muted)',
+  active:  '#3fb950',
+  rotated: '#d29922',
+  invalid: '#484f58',
 }
 
 interface Props {
-  cred:          Credential
-  searchQuery?:  string
-  breached?:     boolean
-  onEdit:        (c: Credential) => void
-  onDelete:      (id: string) => void
-  onRotate?:     (id: string) => void
+  cred:         Credential
+  searchQuery?: string
+  breached?:    boolean
+  onEdit:       (c: Credential) => void
+  onDelete:     (id: string) => void
+  onRotate?:    (id: string) => void
 }
 
 export default function CredentialRow({ cred, searchQuery = '', breached, onEdit, onDelete, onRotate }: Props) {
@@ -174,11 +166,8 @@ export default function CredentialRow({ cred, searchQuery = '', breached, onEdit
     await window.electronAPI.copySecure(text, clearMs)
     await window.electronAPI.recordUsage(cred.id)
     setCopyMsg(label)
-    if (secure && clearMs > 0) {
-      setCountdown(Math.round(clearMs / 1000))
-    } else {
-      setTimeout(() => setCopyMsg(null), 1500)
-    }
+    if (secure && clearMs > 0) { setCountdown(Math.round(clearMs / 1000)) }
+    else { setTimeout(() => setCopyMsg(null), 1500) }
   }
 
   async function handleExpand() {
@@ -191,23 +180,24 @@ export default function CredentialRow({ cred, searchQuery = '', breached, onEdit
   const age       = credAge(cred.createdAt)
   const isNote    = cred.type === 'note'
 
+  const rowBg = expanded
+    ? 'rgba(247,129,102,0.05)'
+    : rowHovered ? 'rgba(247,129,102,0.03)' : 'transparent'
+
   return (
     <>
       <tr
         onClick={handleExpand}
         onMouseEnter={() => setRowHovered(true)}
         onMouseLeave={() => setRowHovered(false)}
-        style={{
-          cursor: 'pointer',
-          background: expanded ? 'rgba(247,129,102,0.04)' : undefined,
-          transition: 'background 0.15s',
-        }}
-        className="hover:bg-accent-dim"
+        style={{ cursor: 'pointer', background: rowBg, transition: 'background 0.15s' }}
       >
         {/* Service */}
-        <td style={{ padding: '9px 14px', fontSize: 12, color: 'var(--text-dim)' }}>
+        <td style={{ padding: '9px 14px', fontSize: 12, color: '#8b949e' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-            <HighlightText text={cred.service} query={searchQuery} />
+            <span style={{ color: expanded ? '#e6edf3' : '#c9d1d9' }}>
+              <HighlightText text={cred.service} query={searchQuery} />
+            </span>
             {cred.category && <CategoryPill cat={cred.category} />}
             {breached && (
               <span title="Found in HIBP breach database" style={{
@@ -221,7 +211,7 @@ export default function CredentialRow({ cred, searchQuery = '', breached, onEdit
             {isNote && (
               <span style={{
                 fontSize: 9, padding: '1px 5px', borderRadius: 6,
-                border: '1px solid rgba(161,139,250,0.4)', background: 'rgba(161,139,250,0.12)',
+                border: '1px solid rgba(167,139,250,0.4)', background: 'rgba(167,139,250,0.12)',
                 color: '#a78bfa', fontWeight: 600,
               }}>
                 NOTE
@@ -231,13 +221,13 @@ export default function CredentialRow({ cred, searchQuery = '', breached, onEdit
         </td>
 
         {/* Username */}
-        <td style={{ padding: '9px 14px', fontSize: 12, fontFamily: 'monospace', color: 'var(--text)' }}>
+        <td style={{ padding: '9px 14px', fontSize: 12, fontFamily: 'JetBrains Mono, monospace', color: '#c9d1d9' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <HighlightText text={cred.username} query={searchQuery} />
             {rowHovered && (
               <button
                 onClick={e => { e.stopPropagation(); copyValue(cred.username, 'Username') }}
-                style={{ padding: '1px 5px', fontSize: 10, borderRadius: 3, background: 'var(--panel)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer' }}
+                style={{ padding: '1px 5px', fontSize: 10, borderRadius: 3, background: 'rgba(13,14,24,0.9)', border: '1px solid rgba(42,51,71,0.6)', color: '#484f58', cursor: 'pointer' }}
               >
                 copy
               </button>
@@ -246,7 +236,7 @@ export default function CredentialRow({ cred, searchQuery = '', breached, onEdit
         </td>
 
         {/* IP / Port */}
-        <td style={{ padding: '9px 14px', fontSize: 11, color: 'var(--text-muted)' }}>
+        <td style={{ padding: '9px 14px', fontSize: 11, color: '#484f58', fontFamily: 'JetBrains Mono, monospace' }}>
           {cred.ip ? `${cred.ip}${cred.port ? ':' + cred.port : ''}` : '—'}
         </td>
 
@@ -254,32 +244,33 @@ export default function CredentialRow({ cred, searchQuery = '', breached, onEdit
         <td style={{ padding: '9px 14px' }}>
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {cred.tags.slice(0, 3).map(t => <span key={t} className="tag-chip">{t}</span>)}
-            {cred.tags.length > 3 && <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>+{cred.tags.length - 3}</span>}
+            {cred.tags.length > 3 && <span style={{ fontSize: 10, color: '#484f58' }}>+{cred.tags.length - 3}</span>}
           </div>
         </td>
 
         {/* Source */}
-        <td style={{ padding: '9px 14px', fontSize: 11, color: 'var(--text-muted)' }}>{cred.source}</td>
+        <td style={{ padding: '9px 14px', fontSize: 11, color: '#484f58' }}>{cred.source}</td>
 
         {/* Date */}
-        <td style={{ padding: '9px 14px', fontSize: 11, color: 'var(--text-muted)' }}>
+        <td style={{ padding: '9px 14px', fontSize: 11, color: '#484f58', fontFamily: 'JetBrains Mono, monospace' }}>
           {new Date(cred.createdAt).toLocaleDateString()}
         </td>
 
         {/* Status */}
         <td style={{ padding: '9px 14px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: STATUS_COLORS[cred.status], flexShrink: 0 }} />
             <span style={{ fontSize: 11, color: STATUS_COLORS[cred.status] }}>{cred.status}</span>
-            {cred.verified && <span style={{ fontSize: 10, color: 'var(--success)' }}>✓</span>}
+            {cred.verified && <span style={{ fontSize: 10, color: '#3fb950' }}>✓</span>}
             {cred.expiresAt && <ExpiryBadge expiresAt={cred.expiresAt} />}
           </div>
         </td>
 
         {/* Age */}
         <td style={{ padding: '9px 14px', whiteSpace: 'nowrap' }}>
-          <span style={{ fontSize: 10, color: age.color }}>{age.label}</span>
+          <span style={{ fontSize: 10, color: age.color, fontFamily: 'JetBrains Mono, monospace' }}>{age.label}</span>
           {age.stale && (
-            <span style={{ display: 'inline-block', marginLeft: 4, fontSize: 9, color: 'var(--error)', opacity: 0.8, border: '1px solid var(--error)', borderRadius: 3, padding: '0 3px', lineHeight: '14px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+            <span style={{ display: 'inline-block', marginLeft: 4, fontSize: 9, color: '#f85149', opacity: 0.8, border: '1px solid rgba(248,81,73,0.4)', borderRadius: 3, padding: '0 3px', lineHeight: '14px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
               stale
             </span>
           )}
@@ -299,7 +290,9 @@ export default function CredentialRow({ cred, searchQuery = '', breached, onEdit
                 style={{ overflow: 'hidden' }}
               >
                 <div style={{
-                  background: 'var(--panel)', border: '1px solid var(--border)', borderTop: 'none',
+                  background: 'rgba(13,14,24,0.8)',
+                  borderTop: '1px solid rgba(247,129,102,0.12)',
+                  borderBottom: '1px solid rgba(42,51,71,0.4)',
                   padding: '14px 16px',
                   display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12,
                 }}>
@@ -310,7 +303,7 @@ export default function CredentialRow({ cred, searchQuery = '', breached, onEdit
                   {cred.password && (
                     <Field label="Password">
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                        <span style={{ fontFamily: 'monospace', fontSize: 12, flex: 1 }}>
+                        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, flex: 1 }}>
                           {showPw ? cred.password : '••••••••'}
                         </span>
                         <button className="btn btn-ghost" style={{ padding: '2px 7px', fontSize: 11 }} onClick={() => setShowPw(s => !s)}>
@@ -341,32 +334,30 @@ export default function CredentialRow({ cred, searchQuery = '', breached, onEdit
                     </Field>
                   )}
 
-                  {cred.protocol  && <Field label="Protocol">{cred.protocol}</Field>}
-                  {cred.labName   && <Field label="Lab">{cred.labName}</Field>}
+                  {cred.protocol   && <Field label="Protocol">{cred.protocol}</Field>}
+                  {cred.labName    && <Field label="Lab">{cred.labName}</Field>}
                   {cred.targetName && <Field label="Target">{cred.targetName}</Field>}
-                  {cred.folder    && <Field label="Folder">{cred.folder}</Field>}
-                  {cred.expiresAt && (
+                  {cred.folder     && <Field label="Folder">{cred.folder}</Field>}
+                  {cred.expiresAt  && (
                     <Field label="Expires">
                       <span style={{ fontSize: 12 }}>{new Date(cred.expiresAt).toLocaleDateString()}</span>
                     </Field>
                   )}
                   {cred.lastUsed && (
                     <Field label="Last Used">
-                      <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+                      <span style={{ fontSize: 12, color: '#8b949e' }}>
                         {new Date(cred.lastUsed).toLocaleString()} ({cred.useCount ?? 1}x)
                       </span>
                     </Field>
                   )}
-
                   {cred.notes && (
                     <Field label={cred.type === 'note' ? 'Content' : 'Notes'} wide>
-                      <span style={{ fontSize: 12, color: 'var(--text-dim)', whiteSpace: 'pre-wrap' }}>{cred.notes}</span>
+                      <span style={{ fontSize: 12, color: '#8b949e', whiteSpace: 'pre-wrap' }}>{cred.notes}</span>
                     </Field>
                   )}
 
-                  {/* Copy feedback + clipboard countdown */}
                   {copyMsg && (
-                    <div style={{ gridColumn: '1 / -1', fontSize: 11, color: 'var(--success)' }}>
+                    <div style={{ gridColumn: '1 / -1', fontSize: 11, color: '#3fb950' }}>
                       {copyMsg} copied{hasSecret && countdown > 0 ? ` — clipboard clears in ${countdown}s` : ''}
                     </div>
                   )}
@@ -382,7 +373,7 @@ export default function CredentialRow({ cred, searchQuery = '', breached, onEdit
                     {cred.status !== 'rotated' && onRotate && (
                       <button
                         className="btn btn-ghost"
-                        style={{ fontSize: 11, padding: '4px 10px', borderColor: 'rgba(210,153,34,0.35)', color: 'var(--warning)' }}
+                        style={{ fontSize: 11, padding: '4px 10px', borderColor: 'rgba(210,153,34,0.35)', color: '#d29922' }}
                         onClick={() => onRotate(cred.id)}
                         title="Mark this credential as rotated (no longer active)"
                       >
@@ -403,7 +394,7 @@ export default function CredentialRow({ cred, searchQuery = '', breached, onEdit
 function Field({ label, children, wide }: { label: string; children: ReactNode; wide?: boolean }) {
   return (
     <div style={{ gridColumn: wide ? '1 / -1' : undefined }}>
-      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+      <div style={{ fontSize: 9, color: '#484f58', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
         {label}
       </div>
       <div>{children}</div>
@@ -414,7 +405,12 @@ function Field({ label, children, wide }: { label: string; children: ReactNode; 
 function CopyField({ value, onCopy, truncate, mono }: { value: string; onCopy: () => void; truncate?: boolean; mono?: boolean }) {
   return (
     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-      <span style={{ fontFamily: mono ? 'monospace' : undefined, fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: truncate ? 'ellipsis' : undefined, whiteSpace: 'nowrap', color: 'var(--text)' }}>
+      <span style={{
+        fontFamily: mono ? 'JetBrains Mono, monospace' : undefined,
+        fontSize: 12, flex: 1, overflow: 'hidden',
+        textOverflow: truncate ? 'ellipsis' : undefined,
+        whiteSpace: 'nowrap', color: '#c9d1d9',
+      }}>
         {value}
       </span>
       <button className="btn btn-ghost" style={{ padding: '2px 7px', fontSize: 11, flexShrink: 0 }} onClick={onCopy}>
