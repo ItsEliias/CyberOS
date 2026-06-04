@@ -15,6 +15,24 @@ const STEP_STATUS_COLOR: Record<StepStatus, string> = {
   skipped:    'var(--text-dim)',
 }
 
+const STEP_STATUS_BG: Record<StepStatus, string> = {
+  todo:       'transparent',
+  inprogress: 'rgba(210,153,34,0.05)',
+  done:       'rgba(63,185,80,0.05)',
+  skipped:    'transparent',
+}
+
+const STEP_STATUS_BORDER: Record<StepStatus, string> = {
+  todo:       'var(--border)',
+  inprogress: 'rgba(210,153,34,0.25)',
+  done:       'rgba(63,185,80,0.22)',
+  skipped:    'var(--border)',
+}
+
+const STEP_STATUS_ICON: Record<StepStatus, string> = {
+  todo: '○', inprogress: '▶', done: '✓', skipped: '↷',
+}
+
 function fmtDuration(ms: number): string {
   if (ms < 0) return '—'
   const s = Math.floor(ms / 1000)
@@ -56,15 +74,31 @@ function RunDetail({ run }: { run: PlaybookRun }) {
 
       <div className="flex flex-col gap-1.5">
         {run.steps.map(step => {
-          const sd = stepDuration(step)
+          const sd  = stepDuration(step)
+          const st  = step.status ?? 'todo'
           return (
-            <div key={step.id} className="rounded px-3 py-2" style={{ background: 'var(--panel)', border: '1px solid var(--border)', opacity: step.status === 'skipped' ? 0.55 : 1 }}>
+            <div
+              key={step.id}
+              className="rounded px-3 py-2"
+              style={{
+                background: STEP_STATUS_BG[st],
+                border: `1px solid ${STEP_STATUS_BORDER[st]}`,
+                borderLeft: `3px solid ${STEP_STATUS_COLOR[st]}`,
+                opacity: st === 'skipped' ? 0.55 : 1,
+              }}
+            >
               <div className="flex items-center gap-2">
-                <span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>{String(step.order).padStart(2, '0')}</span>
-                <span className="flex-1 text-sm" style={{ color: 'var(--text)' }}>{step.title}</span>
-                {sd > 0 && <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{fmtDuration(sd)}</span>}
-                <span className="text-xs font-medium flex-shrink-0" style={{ color: STEP_STATUS_COLOR[step.status ?? 'todo'] }}>
-                  {step.status ?? 'todo'}
+                <span className="text-xs font-mono flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{String(step.order).padStart(2, '0')}</span>
+                <span
+                  className="text-xs flex-shrink-0 w-4 text-center font-bold"
+                  style={{ color: STEP_STATUS_COLOR[st] }}
+                >
+                  {STEP_STATUS_ICON[st]}
+                </span>
+                <span className="flex-1 text-sm" style={{ color: 'var(--text)', textDecoration: st === 'skipped' ? 'line-through' : 'none' }}>{step.title}</span>
+                {sd > 0 && <span className="text-xs flex-shrink-0 font-mono" style={{ color: 'var(--text-muted)' }}>{fmtDuration(sd)}</span>}
+                <span className="text-xs font-medium flex-shrink-0" style={{ color: STEP_STATUS_COLOR[st] }}>
+                  {st}
                 </span>
                 {step.completedAt && <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{new Date(step.completedAt).toLocaleTimeString()}</span>}
               </div>

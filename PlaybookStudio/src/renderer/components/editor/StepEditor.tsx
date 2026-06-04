@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { PlaybookStep, StepCategory, StepType } from '@shared/types'
 
@@ -69,13 +69,77 @@ const STEP_TYPE_LABELS: { type: StepType; label: string }[] = [
   { type: 'decision',      label: 'Decision' },
 ]
 
+// Commands editor with line numbers
+function CommandsEditor({ value, disabled, onChange }: {
+  value: string; disabled: boolean; onChange: (v: string) => void
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const numbersRef  = useRef<HTMLDivElement>(null)
+  const lines = value.split('\n')
+
+  // Sync scroll between textarea and line numbers
+  function handleScroll() {
+    if (numbersRef.current && textareaRef.current) {
+      numbersRef.current.scrollTop = textareaRef.current.scrollTop
+    }
+  }
+
+  return (
+    <div
+      className="flex rounded overflow-hidden"
+      style={{ background: 'var(--bg)', border: '1px solid var(--border)', fontFamily: 'var(--font-mono)' }}
+    >
+      {/* Line numbers */}
+      <div
+        ref={numbersRef}
+        className="flex-shrink-0 overflow-hidden select-none"
+        style={{
+          width: 28,
+          background: 'rgba(42,51,71,0.2)',
+          borderRight: '1px solid rgba(42,51,71,0.5)',
+          padding: '6px 0',
+          fontSize: 11,
+          lineHeight: '18px',
+          textAlign: 'right',
+          color: '#484f58',
+          overflowY: 'hidden',
+          userSelect: 'none',
+        }}
+      >
+        {lines.map((_, i) => (
+          <div key={i} style={{ paddingRight: 5 }}>{i + 1}</div>
+        ))}
+      </div>
+      {/* Textarea */}
+      <textarea
+        ref={textareaRef}
+        rows={Math.max(3, lines.length)}
+        className="flex-1 px-2 py-1.5 text-xs font-mono resize-none"
+        style={{
+          background: 'transparent',
+          border: 'none',
+          outline: 'none',
+          color: 'var(--text)',
+          lineHeight: '18px',
+          fontSize: 11,
+        }}
+        value={value}
+        disabled={disabled}
+        onChange={e => onChange(e.target.value)}
+        onScroll={handleScroll}
+        spellCheck={false}
+      />
+    </div>
+  )
+}
+
 function VariableToken({ text }: { text: string }) {
   const parts = text.split(/({{[^}]+}})/)
   return (
     <>
       {parts.map((p, i) =>
         /^{{.+}}$/.test(p)
-          ? <span key={i} style={{ color: '#4a9eff', background: 'rgba(74,158,255,0.12)', borderRadius: 3, padding: '0 2px' }}>{p}</span>
+          ? <span key={i} style={{ color: '#2dd4bf', background: 'rgba(45,212,191,0.12)', borderRadius: 3, padding: '0 2px' }}>{p}</span>
           : <span key={i}>{p}</span>
       )}
     </>
@@ -214,8 +278,11 @@ export default function StepEditor({
           {/* Commands */}
           <div>
             <label className="text-xs block mb-1" style={{ color: 'var(--text-muted)' }}>Commands (one per line)</label>
-            <textarea rows={3} className="w-full rounded px-2 py-1 text-xs font-mono" style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
-              value={step.commands.join('\n')} disabled={disabled} onChange={e => onChange({ ...step, commands: e.target.value.split('\n') })} />
+            <CommandsEditor
+              value={step.commands.join('\n')}
+              disabled={disabled}
+              onChange={v => onChange({ ...step, commands: v.split('\n') })}
+            />
           </div>
 
           {/* Notes */}
