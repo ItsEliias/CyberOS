@@ -1,5 +1,6 @@
 // FeedFilterBar — All / High / Medium / Low / Starred / Unread
 import { useMemo } from 'react'
+import { motion } from 'framer-motion'
 import { useStore } from '../../store'
 import type { ActiveFilter } from '../../../shared/types'
 
@@ -40,22 +41,26 @@ export default function FeedFilterBar() {
           <button
             key={tab.id}
             onClick={() => setFilter(tab.id)}
-            className="relative px-2.5 py-2.5 text-[11px] transition-colors whitespace-nowrap"
+            className="relative px-2.5 py-2.5 text-[11px] whitespace-nowrap transition-colors duration-150"
             style={{ color: active ? '#e2e8f0' : '#8b949e' }}
+            onMouseEnter={e => { if (!active) e.currentTarget.style.color = '#c9d1d9' }}
+            onMouseLeave={e => { if (!active) e.currentTarget.style.color = '#8b949e' }}
           >
             {tab.label}
             {count > 0 && (
               <span
-                className="ml-1 text-[9px] font-mono"
-                style={{ color: active ? '#ff6b6b' : 'rgba(139,148,158,0.5)' }}
+                className="ml-1 text-[9px] font-mono tabular-nums"
+                style={{ color: active ? '#ff6b6b' : 'rgba(139,148,158,0.4)' }}
               >
                 {count}
               </span>
             )}
             {active && (
-              <span
+              <motion.span
+                layoutId="filter-pill"
                 className="absolute bottom-0 left-1 right-1 h-[2px] rounded-t"
-                style={{ background: '#ff6b6b' }}
+                style={{ background: 'linear-gradient(90deg, #ff6b6b, #ff9b9b)' }}
+                transition={{ type: 'spring', stiffness: 500, damping: 35 }}
               />
             )}
           </button>

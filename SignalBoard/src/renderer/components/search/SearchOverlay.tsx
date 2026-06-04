@@ -150,19 +150,36 @@ export default function SearchOverlay({ onClose }: { onClose: () => void }) {
                 {group.results.map(r => {
                   const gi = globalIndex++
                   const isSelected = gi === selected
+                  const tierColors: Record<string, string> = { critical: '#ff6b6b', high: '#f85149', medium: '#d29922', low: '#4a5568' }
+                  const tc = tierColors[r.item.relevanceTier] ?? '#4a5568'
                   return (
                     <button
                       key={r.item.id}
                       onClick={() => selectItem(r.item)}
-                      className={`w-full text-left px-4 py-2.5 border-b border-border/20 last:border-0 transition-colors ${isSelected ? 'bg-accent/8' : 'hover:bg-white/[0.03]'}`}
+                      className="w-full text-left px-4 py-2.5 border-b border-border/20 last:border-0 transition-all duration-100"
                       style={{ background: isSelected ? 'rgba(255,107,107,0.06)' : undefined }}
+                      onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.025)' }}
+                      onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = '' }}
                     >
-                      <p className="text-xs font-medium text-text/90 leading-snug mb-1">
-                        {highlightMatch(r.item.title, query.trim())}
-                      </p>
-                      <p className="text-[11px] text-muted/55 leading-relaxed">
-                        {highlightMatch(r.snippet, query.trim())}
-                      </p>
+                      <div className="flex items-start gap-2">
+                        <span
+                          className="flex-shrink-0 mt-0.5 text-[8px] font-bold uppercase px-1 py-px rounded"
+                          style={{ color: tc, background: `${tc}18`, border: `1px solid ${tc}30` }}
+                        >
+                          {r.item.relevanceTier}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium leading-snug mb-1" style={{ color: isSelected ? '#e2e8f0' : 'rgba(226,232,240,0.85)' }}>
+                            {highlightMatch(r.item.title, query.trim())}
+                          </p>
+                          <p className="text-[11px] leading-relaxed" style={{ color: 'rgba(139,148,158,0.7)' }}>
+                            {highlightMatch(r.snippet, query.trim())}
+                          </p>
+                        </div>
+                        {!r.item.read && (
+                          <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1" style={{ background: '#ff6b6b' }} />
+                        )}
+                      </div>
                     </button>
                   )
                 })}
@@ -172,12 +189,23 @@ export default function SearchOverlay({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Footer */}
-        {results.length > 0 && (
-          <div className="px-4 py-2 border-t border-border/30 flex items-center gap-4 text-[10px] text-muted/40">
-            <span>{results.length} result{results.length !== 1 ? 's' : ''}</span>
-            <span>↑↓ navigate · Enter select</span>
+        <div className="px-4 py-2 border-t border-border/30 flex items-center gap-3 text-[10px]" style={{ color: 'rgba(139,148,158,0.4)' }}>
+          {results.length > 0 && (
+            <span className="font-mono">{results.length} result{results.length !== 1 ? 's' : ''}</span>
+          )}
+          <div className="ml-auto flex items-center gap-2.5">
+            {[
+              { key: '↑↓', label: 'navigate' },
+              { key: '↵', label: 'select' },
+              { key: 'ESC', label: 'close' },
+            ].map(({ key, label }) => (
+              <span key={key} className="flex items-center gap-1">
+                <kbd className="px-1 py-px rounded text-[9px] font-mono" style={{ background: 'rgba(42,51,71,0.5)', border: '1px solid rgba(42,51,71,0.8)', color: 'rgba(139,148,158,0.6)' }}>{key}</kbd>
+                <span>{label}</span>
+              </span>
+            ))}
           </div>
-        )}
+        </div>
       </motion.div>
     </motion.div>
   )

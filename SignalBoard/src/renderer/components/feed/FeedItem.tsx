@@ -85,13 +85,15 @@ export default function FeedItemCard({ item }: { item: FeedItemType }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.15 }}
+      whileHover={{ y: -1, boxShadow: `0 4px 16px rgba(0,0,0,0.35), 0 0 0 1px ${alertColor ? `${alertColor}30` : selected ? 'rgba(255,107,107,0.2)' : 'rgba(42,51,71,0.6)'}` }}
       onClick={handleClick}
-      className="group cursor-pointer mx-3 my-1.5 rounded-lg transition-all"
+      className="group cursor-pointer mx-3 my-1.5 rounded-lg"
       style={{
         background: bgColor,
         border: `1px solid ${alertColor ? `${alertColor}40` : selected ? 'rgba(255,107,107,0.3)' : 'rgba(42, 51, 71, 0.5)'}`,
         opacity: item.read ? 0.65 : 1,
         borderLeft: `3px solid ${borderLeftColor}`,
+        transition: 'background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease',
       }}
     >
       <div className="px-3 py-2.5">
@@ -152,32 +154,41 @@ export default function FeedItemCard({ item }: { item: FeedItemType }) {
         )}
 
         {/* Hover actions */}
-        <div className="flex items-center gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1.5 mt-2 opacity-0 group-hover:opacity-100 transition-all duration-150">
           <button
             onClick={handleBookmark}
-            className="text-[10px] px-2 py-0.5 rounded border transition-colors"
+            className="text-[10px] px-2.5 py-1 rounded-lg border transition-all duration-150"
             style={{
               color: isBookmarked ? '#d29922' : '#8b949e',
-              borderColor: isBookmarked ? 'rgba(210,153,34,0.3)' : 'rgba(42,51,71,0.6)',
-              background: isBookmarked ? 'rgba(210,153,34,0.1)' : 'transparent',
+              borderColor: isBookmarked ? 'rgba(210,153,34,0.35)' : 'rgba(42,51,71,0.5)',
+              background: isBookmarked ? 'rgba(210,153,34,0.12)' : 'rgba(42,51,71,0.2)',
+              borderRadius: '8px',
             }}
+            onMouseEnter={e => { if (!isBookmarked) { e.currentTarget.style.color = '#e2e8f0'; e.currentTarget.style.borderColor = 'rgba(42,51,71,0.8)' } }}
+            onMouseLeave={e => { if (!isBookmarked) { e.currentTarget.style.color = '#8b949e'; e.currentTarget.style.borderColor = 'rgba(42,51,71,0.5)' } }}
           >
             {isBookmarked ? '★' : '☆'}
           </button>
           <button
             onClick={handleOpen}
-            className="text-[10px] px-2 py-0.5 rounded border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 transition-colors"
+            className="text-[10px] px-2.5 py-1 border border-white/10 text-white/40 transition-all duration-150"
+            style={{ borderRadius: '8px', background: 'rgba(42,51,71,0.2)' }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
           >
-            Open
+            Open ↗
           </button>
           <button
             onClick={handleVault}
-            className="text-[10px] px-2 py-0.5 rounded border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 transition-colors"
+            className="text-[10px] px-2.5 py-1 border border-white/10 text-white/40 transition-all duration-150"
+            style={{ borderRadius: '8px', background: 'rgba(42,51,71,0.2)' }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
           >
             Vault
           </button>
-          <span className="ml-auto text-[10px] font-mono font-bold" style={{ color: tier.color }}>
-            [{item.relevanceScore}]
+          <span className="ml-auto text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md" style={{ color: tier.color, background: `${tier.color}12`, border: `1px solid ${tier.color}25` }}>
+            {item.relevanceScore}
           </span>
         </div>
       </div>

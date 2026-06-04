@@ -1,5 +1,5 @@
 // TrendsView — keyword frequency, source activity, score distribution, tag cloud
-import { useMemo } from 'react'
+import { useMemo, useEffect, useRef } from 'react'
 import { useStore } from '../../store'
 import type { FeedItem } from '../../../shared/types'
 
@@ -30,6 +30,22 @@ function within7Days(items: FeedItem[]): FeedItem[] {
 
 // ── components ──────────────────────────────────────────────────────────────
 
+function AnimatedBar({ pct, color, delay = 0 }: { pct: number; color: string; delay?: number }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const timer = setTimeout(() => {
+      el.style.width = `${pct}%`
+    }, delay)
+    return () => clearTimeout(timer)
+  }, [pct, delay])
+
+  return (
+    <div ref={ref} className="h-full rounded" style={{ width: '0%', background: color, transition: 'width 0.65s cubic-bezier(0.2,0.8,0.2,1)' }} />
+  )
+}
+
 function KeywordFrequency({ items }: { items: FeedItem[] }) {
   const freqMap = useMemo(() => {
     const m = new Map<string, number>()
@@ -51,16 +67,13 @@ function KeywordFrequency({ items }: { items: FeedItem[] }) {
         <p className="text-xs text-muted/40">Not enough data yet.</p>
       ) : (
         <div className="space-y-2">
-          {top10.map(([word, count]) => (
+          {top10.map(([word, count], idx) => (
             <div key={word} className="flex items-center gap-3">
               <span className="text-[11px] font-mono text-muted/70 w-28 truncate">{word}</span>
               <div className="flex-1 h-3 bg-border/30 rounded overflow-hidden">
-                <div
-                  className="h-full rounded transition-all"
-                  style={{ width: `${(count / max) * 100}%`, background: 'linear-gradient(90deg, #ff6b6b, #ff9b9b)' }}
-                />
+                <AnimatedBar pct={(count / max) * 100} color="linear-gradient(90deg, #ff6b6b, #ff9b9b)" delay={idx * 50} />
               </div>
-              <span className="text-[10px] font-mono text-muted/60 w-6 text-right">{count}</span>
+              <span className="text-[10px] font-mono text-muted/60 w-6 text-right tabular-nums">{count}</span>
             </div>
           ))}
         </div>
@@ -87,16 +100,13 @@ function SourceActivity({ items }: { items: FeedItem[] }) {
         <p className="text-xs text-muted/40">No activity data.</p>
       ) : (
         <div className="space-y-2">
-          {data.map(([name, count]) => (
+          {data.map(([name, count], idx) => (
             <div key={name} className="flex items-center gap-3">
               <span className="text-[11px] text-muted/70 w-32 truncate">{name}</span>
               <div className="flex-1 h-3 bg-border/30 rounded overflow-hidden">
-                <div
-                  className="h-full rounded transition-all"
-                  style={{ width: `${(count / max) * 100}%`, background: '#4a9eff55', borderRight: '1px solid #4a9eff' }}
-                />
+                <AnimatedBar pct={(count / max) * 100} color="linear-gradient(90deg, rgba(74,158,255,0.5), rgba(74,158,255,0.8))" delay={idx * 60} />
               </div>
-              <span className="text-[10px] font-mono text-muted/60 w-6 text-right">{count}</span>
+              <span className="text-[10px] font-mono text-muted/60 w-6 text-right tabular-nums">{count}</span>
             </div>
           ))}
         </div>
@@ -227,10 +237,7 @@ function FeedHealth({ items }: { items: FeedItem[] }) {
             <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
             <span className="text-[11px] text-muted/80 w-36 truncate flex-shrink-0">{src.name}</span>
             <div className="flex-1 h-2 bg-border/30 rounded overflow-hidden">
-              <div
-                className="h-full rounded transition-all"
-                style={{ width: rate !== null ? `${rate}%` : '0%', background: color }}
-              />
+              <AnimatedBar pct={rate ?? 0} color={color} delay={0} />
             </div>
             <span className="text-[10px] font-mono text-muted/60 w-10 text-right flex-shrink-0">
               {rate !== null ? `${rate}%` : '—'}

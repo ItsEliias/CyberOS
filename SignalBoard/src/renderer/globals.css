@@ -172,3 +172,50 @@ button, a, input, select {
 .feed-item-pulse {
   animation: feedPulse 1.2s ease-out;
 }
+
+/* ─── Skeleton shimmer ────────────────────────────────────────────────────── */
+
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg,
+    rgba(42,51,71,0.18) 25%,
+    rgba(42,51,71,0.38) 50%,
+    rgba(42,51,71,0.18) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.5s infinite linear;
+  border-radius: 4px;
+}
+
+/* ─── Progress bar slide-in ───────────────────────────────────────────────── */
+
+@keyframes barSlideIn {
+  from { width: 0% !important; }
+  to   { /* width set inline */ }
+}
+
+.bar-animate {
+  animation: barSlideIn 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+/* ─── Float-up entrance ───────────────────────────────────────────────────── */
+
+@keyframes floatUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.float-up {
+  animation: floatUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* ─── Spin (for radar sweep) ──────────────────────────────────────────────── */
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}

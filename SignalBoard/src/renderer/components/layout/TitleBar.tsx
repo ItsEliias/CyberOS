@@ -84,21 +84,30 @@ export default function TitleBar({ onHelp }: TitleBarProps) {
         {/* Search */}
         <button
           onClick={() => setSearchOpen(true)}
-          className="flex items-center gap-2 px-2.5 py-1 rounded-sm transition-colors"
+          className="flex items-center gap-2 px-2.5 py-1 transition-all duration-150 group"
           style={{
             background: 'rgba(19,21,37,0.8)',
             border: '1px solid rgba(42,51,71,0.6)',
             color: '#484f58',
+            borderRadius: '8px',
           }}
-          onMouseEnter={e => { e.currentTarget.style.color = '#8b949e'; e.currentTarget.style.borderColor = 'rgba(42,51,71,0.9)' }}
-          onMouseLeave={e => { e.currentTarget.style.color = '#484f58'; e.currentTarget.style.borderColor = 'rgba(42,51,71,0.6)' }}
+          onMouseEnter={e => {
+            e.currentTarget.style.color = '#8b949e'
+            e.currentTarget.style.borderColor = 'rgba(255,107,107,0.25)'
+            e.currentTarget.style.background = 'rgba(255,107,107,0.05)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.color = '#484f58'
+            e.currentTarget.style.borderColor = 'rgba(42,51,71,0.6)'
+            e.currentTarget.style.background = 'rgba(19,21,37,0.8)'
+          }}
           title="Search all items (Cmd+K)"
         >
           <svg className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <span className="text-[11px]">Search</span>
-          <span className="text-[9px] font-mono opacity-50 ml-0.5">⌘K</span>
+          <kbd className="text-[9px] font-mono px-1 py-px rounded ml-0.5" style={{ background: 'rgba(42,51,71,0.4)', border: '1px solid rgba(42,51,71,0.7)', color: 'rgba(139,148,158,0.5)' }}>⌘K</kbd>
         </button>
 
         {/* Notification bell */}
@@ -126,10 +135,16 @@ export default function TitleBar({ onHelp }: TitleBarProps) {
         <button
           onClick={doRefresh}
           disabled={refreshing}
-          className="w-8 h-8 flex items-center justify-center rounded-sm transition-colors disabled:opacity-40"
-          style={{ color: refreshing ? '#ff6b6b' : '#484f58' }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+          className="w-8 h-8 flex items-center justify-center transition-all duration-150 disabled:opacity-40"
+          style={{ color: refreshing ? '#ff6b6b' : '#484f58', borderRadius: '8px' }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = 'rgba(255,107,107,0.08)'
+            e.currentTarget.style.color = '#ff6b6b'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = 'transparent'
+            e.currentTarget.style.color = refreshing ? '#ff6b6b' : '#484f58'
+          }}
           title={refreshing ? 'Refreshing…' : 'Refresh feeds'}
         >
           <svg

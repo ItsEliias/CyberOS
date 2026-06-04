@@ -72,17 +72,40 @@ export default function FeedView() {
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center px-6">
               {refreshing ? (
-                <p className="text-xs text-white/30">Loading feeds…</p>
+                <div className="w-full px-3 space-y-2 pt-2">
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <div key={n} className="rounded-lg p-3 mx-0" style={{ background: 'rgba(22,27,39,0.5)', border: '1px solid rgba(42,51,71,0.4)' }}>
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <div className="skeleton h-3 w-14 rounded" />
+                        <div className="skeleton h-3 w-10 rounded" />
+                        <div className="ml-auto skeleton h-3 w-8 rounded" />
+                      </div>
+                      <div className="skeleton h-3.5 w-full rounded mb-1.5" style={{ animationDelay: `${n * 0.08}s` }} />
+                      <div className="skeleton h-3.5 w-4/5 rounded" style={{ animationDelay: `${n * 0.1}s` }} />
+                    </div>
+                  ))}
+                </div>
               ) : (
-                <>
-                  <svg className="w-7 h-7 mb-3" style={{ color: 'rgba(255,107,107,0.25)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7M6 17a1 1 0 110-2 1 1 0 010 2z" />
-                  </svg>
-                  <p className="text-sm font-medium text-white/50 mb-1">No signals found</p>
-                  <p className="text-xs text-white/25 max-w-[180px] leading-relaxed">
-                    Add a source in Sources to start receiving intel
+                <div className="float-up">
+                  {/* Illustrated empty state */}
+                  <div className="relative mx-auto mb-4 w-16 h-16">
+                    <svg className="w-16 h-16" viewBox="0 0 64 64" fill="none" style={{ color: 'rgba(255,107,107,0.12)' }}>
+                      <circle cx="32" cy="32" r="30" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 3" />
+                      <circle cx="32" cy="32" r="20" stroke="currentColor" strokeWidth="1" />
+                      <circle cx="32" cy="32" r="10" stroke="currentColor" strokeWidth="1" />
+                      <circle cx="32" cy="32" r="2" fill="rgba(255,107,107,0.3)" />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <svg className="w-5 h-5" style={{ color: 'rgba(255,107,107,0.4)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7M6 17a1 1 0 110-2 1 1 0 010 2z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <p className="text-sm font-semibold mb-1.5" style={{ color: 'rgba(255,255,255,0.45)' }}>No signals found</p>
+                  <p className="text-xs leading-relaxed max-w-[170px]" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                    Add a source in Sources to start receiving intelligence
                   </p>
-                </>
+                </div>
               )}
             </div>
           ) : (

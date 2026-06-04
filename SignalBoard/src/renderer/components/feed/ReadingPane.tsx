@@ -125,12 +125,39 @@ export default function ReadingPane() {
   if (!item) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="text-center px-8">
-          <svg className="w-10 h-10 mx-auto mb-3" style={{ color: 'rgba(255,107,107,0.15)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7M6 17a1 1 0 110-2 1 1 0 010 2z" />
-          </svg>
-          <p className="text-sm font-medium text-white/40 mb-1.5">Select a signal to read</p>
-          <p className="text-xs text-white/20 leading-relaxed">Click any item from the feed to view the full article and AI summary</p>
+        <div className="text-center px-8 float-up">
+          {/* Animated radar illustration */}
+          <div className="relative w-20 h-20 mx-auto mb-5">
+            <svg className="w-20 h-20" viewBox="0 0 80 80" fill="none">
+              <circle cx="40" cy="40" r="36" stroke="rgba(255,107,107,0.07)" strokeWidth="1.5" />
+              <circle cx="40" cy="40" r="26" stroke="rgba(255,107,107,0.09)" strokeWidth="1" />
+              <circle cx="40" cy="40" r="16" stroke="rgba(255,107,107,0.12)" strokeWidth="1" />
+              <circle cx="40" cy="40" r="4" fill="rgba(255,107,107,0.2)" />
+              {/* Cross-hairs */}
+              <line x1="40" y1="4" x2="40" y2="76" stroke="rgba(255,107,107,0.05)" strokeWidth="1" />
+              <line x1="4" y1="40" x2="76" y2="40" stroke="rgba(255,107,107,0.05)" strokeWidth="1" />
+            </svg>
+            {/* Rotating sweep */}
+            <div className="absolute inset-0 flex items-center justify-center"
+              style={{
+                animation: 'spin 4s linear infinite',
+              }}
+            >
+              <svg className="w-20 h-20" viewBox="0 0 80 80" fill="none">
+                <path d="M40 40 L40 6" stroke="rgba(255,107,107,0.35)" strokeWidth="1.5" strokeLinecap="round" />
+                <path d="M40 40 L40 6 A34 34 0 0 1 52 9 Z" fill="rgba(255,107,107,0.05)" />
+              </svg>
+            </div>
+          </div>
+          <p className="text-sm font-semibold mb-1.5" style={{ color: 'rgba(255,255,255,0.35)' }}>Scanning for signals</p>
+          <p className="text-xs leading-relaxed max-w-[200px] mx-auto" style={{ color: 'rgba(255,255,255,0.18)' }}>
+            Select an item from the feed to read the full article and AI summary
+          </p>
+          <div className="mt-4 flex items-center justify-center gap-3 text-[10px]" style={{ color: 'rgba(255,107,107,0.3)' }}>
+            <span>↑↓ navigate</span>
+            <span>·</span>
+            <span>Enter select</span>
+          </div>
         </div>
       </div>
     )
