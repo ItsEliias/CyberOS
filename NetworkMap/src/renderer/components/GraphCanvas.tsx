@@ -351,7 +351,7 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
         {/* Canvas area */}
         <div ref={containerRef} style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
           {graph.nodes.length === 0 ? (
-            <CanvasEmptyState />
+            <CanvasEmptyState savedCount={savedGraphs.length} />
           ) : (
             <>
               <GraphSvg
@@ -452,7 +452,7 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
 }
 
 // ─── Canvas empty state ────────────────────────────────────────────────────
-function CanvasEmptyState() {
+function CanvasEmptyState({ savedCount }: { savedCount: number }) {
   return (
     <div className="fade-up" style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -491,6 +491,22 @@ function CanvasEmptyState() {
         <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>Empty graph</p>
         <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Go back to the library and import nodes</p>
       </div>
+      {savedCount > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '6px 12px', borderRadius: 8,
+          background: 'rgba(255,140,66,0.06)',
+          border: '1px solid rgba(255,140,66,0.18)',
+        }}>
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <circle cx="5" cy="5" r="4" stroke="rgba(255,140,66,0.7)" strokeWidth="1.2" fill="none" />
+            <circle cx="5" cy="5" r="1.5" fill="rgba(255,140,66,0.7)" />
+          </svg>
+          <span style={{ fontSize: 10, color: 'rgba(255,140,66,0.7)', fontVariantNumeric: 'tabular-nums' }}>
+            You have <span style={{ fontWeight: 700, color: '#ff8c42' }}>{savedCount}</span> saved {savedCount === 1 ? 'graph' : 'graphs'} — switch from the sidebar
+          </span>
+        </div>
+      )}
     </div>
   )
 }

@@ -127,14 +127,21 @@ function FileTab({ onSave }: { onSave: (g: NetworkGraph) => void }) {
           transform: dragging ? 'scale(1.01)' : 'scale(1)',
         }}
       >
-        {/* Animated corner accents on drag-over */}
+        {/* Animated marching dashes overlay on drag-over */}
         {dragging && (
-          <>
-            <div style={{ position: 'absolute', top: -1, left: -1, width: 16, height: 16, borderTop: '2px solid #ff8c42', borderLeft: '2px solid #ff8c42', borderRadius: '10px 0 0 0' }} />
-            <div style={{ position: 'absolute', top: -1, right: -1, width: 16, height: 16, borderTop: '2px solid #ff8c42', borderRight: '2px solid #ff8c42', borderRadius: '0 10px 0 0' }} />
-            <div style={{ position: 'absolute', bottom: -1, left: -1, width: 16, height: 16, borderBottom: '2px solid #ff8c42', borderLeft: '2px solid #ff8c42', borderRadius: '0 0 0 10px' }} />
-            <div style={{ position: 'absolute', bottom: -1, right: -1, width: 16, height: 16, borderBottom: '2px solid #ff8c42', borderRight: '2px solid #ff8c42', borderRadius: '0 0 10px 0' }} />
-          </>
+          <svg
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', borderRadius: 10 }}
+            viewBox="0 0 100 100" preserveAspectRatio="none"
+          >
+            <rect
+              x="1" y="1" width="98" height="98" rx="9"
+              fill="none"
+              stroke="#ff8c42"
+              strokeWidth="2"
+              strokeDasharray="10 5"
+              className="dropzone-dash-rect"
+            />
+          </svg>
         )}
 
         {/* Icon */}
