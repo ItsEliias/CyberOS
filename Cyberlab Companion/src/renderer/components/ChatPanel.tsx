@@ -13,8 +13,9 @@ import WriteupEditor from './writeup/WriteupEditor';
 import FlagLogger from './flags/FlagLogger';
 import ParsedPortChips from './chat/ParsedPortChips';
 import ParsedCredChips from './chat/ParsedCredChips';
+import LiveDot from './ui/LiveDot';
+import Badge from './ui/Badge';
 
-// Port/credential regex for ReconDesk quick-save
 const PORT_PATTERN = /\bport[s]?\s+(\d{1,5})\s+(?:is\s+)?(?:open|running|listening)/gi;
 const CRED_PATTERN = /credential[s]?[:\s]+([^\s/]+)\/([^\s,.\n]+)/gi;
 
@@ -62,7 +63,6 @@ export default function ChatPanel() {
     if (!activeTabId) return;
     const newSession = createSession(opts);
     updateTab(activeTabId, { session: newSession, chatHistory: [] });
-    // Ecosystem: notify other CyberOS tools that a lab has started
     try {
       await (window.electronAPI as Record<string, Function>).startLab({
         name: newSession.labName,
@@ -70,19 +70,15 @@ export default function ChatPanel() {
         targetIP: newSession.target.ip || undefined,
       });
       showToast('Ecosystem updated — GhostVault and PlaybookStudio notified');
-    } catch {
-      // Non-fatal — session still starts locally
-    }
+    } catch { /* Non-fatal */ }
   }
 
   async function sendMessage() {
     if (!input.trim() || streaming || !session || !activeTabId) return;
 
     const userMsg: ChatMessage = {
-      id: makeId(),
-      role: 'user',
-      content: input.trim(),
-      timestamp: new Date().toISOString(),
+      id: makeId(), role: 'user',
+      content: input.trim(), timestamp: new Date().toISOString(),
     };
 
     addChatMessage(activeTabId, userMsg);
@@ -97,22 +93,15 @@ export default function ChatPanel() {
       let responseText = '';
 
       if (aiProvider === 'ollama') {
-        const ollamaMessages = [
-          { role: 'system', content: systemPrompt },
-          ...history,
-        ];
         const raw = await (window.electronAPI as Record<string, Function>).ollamaChat({
-          model: ollamaModel,
-          messages: ollamaMessages,
+          model: ollamaModel, messages: [{ role: 'system', content: systemPrompt }, ...history],
           endpoint: ollamaEndpoint,
         }) as { success: boolean; content?: string; error?: string };
         if (!raw?.success) throw new Error(raw?.error || 'Ollama error');
         responseText = raw.content || '';
       } else {
         const raw = await window.electronAPI.claudeChat({
-          system: systemPrompt,
-          messages: history,
-          model: claudeModel,
+          system: systemPrompt, messages: history, model: claudeModel,
         }) as { success: boolean; data?: { content?: Array<{ text?: string }> }; error?: string };
         if (!raw?.success) throw new Error(raw?.error || 'Claude API error');
         responseText = raw.data?.content?.[0]?.text || '';
@@ -120,13 +109,10 @@ export default function ChatPanel() {
 
       const assistantMsgId = makeId();
       const assistantMsg: ChatMessage = {
-        id: assistantMsgId,
-        role: 'assistant',
-        content: responseText,
-        timestamp: new Date().toISOString(),
+        id: assistantMsgId, role: 'assistant',
+        content: responseText, timestamp: new Date().toISOString(),
       };
 
-      // Parse findings from response
       const newFindings = parseFindings(responseText, session);
       if (newFindings.length > 0) {
         SOUNDS.finding();
@@ -138,29 +124,24 @@ export default function ChatPanel() {
         updateSession(activeTabId, { findings: session.findings, updatedAt: new Date().toISOString() });
       }
 
-      // Parse for ReconDesk suggestions
       const suggestions: ReconSuggestion[] = [];
       let pm: RegExpExecArray | null;
-      const portPatternCopy = new RegExp(PORT_PATTERN.source, 'gi');
-      while ((pm = portPatternCopy.exec(responseText)) !== null) {
+      const portPat = new RegExp(PORT_PATTERN.source, 'gi');
+      while ((pm = portPat.exec(responseText)) !== null)
         suggestions.push({ type: 'port', data: { port: pm[1], source: 'AI analysis' }, msgId: assistantMsgId });
-      }
-      const credPatternCopy = new RegExp(CRED_PATTERN.source, 'gi');
-      while ((pm = credPatternCopy.exec(responseText)) !== null) {
+      const credPat = new RegExp(CRED_PATTERN.source, 'gi');
+      while ((pm = credPat.exec(responseText)) !== null)
         suggestions.push({ type: 'credential', data: { username: pm[1], password: pm[2] }, msgId: assistantMsgId });
-      }
       if (suggestions.length > 0) setReconSuggestions(prev => [...prev, ...suggestions]);
 
       addChatMessage(activeTabId, assistantMsg);
     } catch (e: unknown) {
       SOUNDS.apiError();
-      const errMsg: ChatMessage = {
-        id: makeId(),
-        role: 'assistant',
+      addChatMessage(activeTabId, {
+        id: makeId(), role: 'assistant',
         content: `**Error:** ${e instanceof Error ? e.message : 'API request failed. Check your settings.'}`,
         timestamp: new Date().toISOString(),
-      };
-      addChatMessage(activeTabId, errMsg);
+      });
     } finally {
       setStreaming(false);
       setStreamingContent('');
@@ -178,38 +159,26 @@ export default function ChatPanel() {
   async function takeScreenshot() {
     setScreenshotLoading(true);
     try {
-      const res = await (window.electronAPI as Record<string, Function>).takeScreenshot() as { success: boolean; data?: string; error?: string };
-      if (res.success && res.data) {
-        setScreenshot({ base64: res.data, id: makeId() });
-      }
-    } catch (e) {
-      console.error('screenshot error', e);
-    } finally {
-      setScreenshotLoading(false);
-    }
+      const res = await (window.electronAPI as Record<string, Function>).takeScreenshot() as { success: boolean; data?: string };
+      if (res.success && res.data) setScreenshot({ base64: res.data, id: makeId() });
+    } catch (e) { console.error('screenshot error', e); }
+    finally { setScreenshotLoading(false); }
   }
 
   async function saveScreenshotToVault() {
     if (!screenshot || !session) return;
     try {
       await (window.electronAPI as Record<string, Function>).saveScreenshot({
-        base64: screenshot.base64,
-        sessionName: session.name,
-        labName: session.labName,
-        vaultPath: config?.obsidianVault || '',
+        base64: screenshot.base64, sessionName: session.name,
+        labName: session.labName, vaultPath: config?.obsidianVault || '',
       });
       const attachment: ScreenshotAttachment = {
-        id: screenshot.id,
-        path: '',
-        timestamp: new Date().toISOString(),
-        sessionId: session.id,
-        labName: session.labName,
+        id: screenshot.id, path: '', timestamp: new Date().toISOString(),
+        sessionId: session.id, labName: session.labName,
       };
       updateSession(activeTabId!, { screenshots: [...(session.screenshots || []), attachment] });
       setScreenshot(null);
-    } catch (e) {
-      console.error('save screenshot error', e);
-    }
+    } catch (e) { console.error('save screenshot error', e); }
   }
 
   async function pushToReconDesk(suggestion: ReconSuggestion) {
@@ -220,19 +189,12 @@ export default function ChatPanel() {
         finding: { type: suggestion.type, data: suggestion.data },
       });
       setReconSuggestions(prev => prev.filter(s => s !== suggestion));
-    } catch (e) {
-      console.error('recondesk push error', e);
-    }
+    } catch (e) { console.error('recondesk push error', e); }
   }
 
   async function handleEndSessionConfirm() {
     setShowCloseModal(false);
-    try {
-      await (window.electronAPI as Record<string, Function>).endLab();
-    } catch {
-      // Non-fatal
-    }
-    // Reset this tab to a blank session
+    try { await (window.electronAPI as Record<string, Function>).endLab(); } catch {}
     if (activeTabId) {
       const blank = createSession({ name: 'New Session' });
       updateTab(activeTabId, { session: blank, chatHistory: [] });
@@ -240,40 +202,33 @@ export default function ChatPanel() {
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   }
 
   if (isSetup) return <SessionSetup onStart={handleSetupDone} />;
 
+  const modelLabel = aiProvider === 'ollama'
+    ? `ollama:${ollamaModel || '?'}`
+    : claudeModel.split('-').slice(1, 3).join('-');
+
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" style={{ background: 'var(--surface-0)' }}>
       {/* Ecosystem toast */}
       <AnimatePresence>
         {ecosystemToast && (
           <motion.div
-            key="ecosystem-toast"
+            key="toast"
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}
             style={{
-              position: 'fixed',
-              top: '54px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              zIndex: 9999,
-              background: 'var(--panel)',
-              border: '1px solid var(--success)',
-              borderRadius: '6px',
-              padding: '7px 14px',
-              fontSize: '12px',
-              color: 'var(--success)',
-              pointerEvents: 'none',
-              whiteSpace: 'nowrap',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+              position: 'fixed', top: '54px', left: '50%', transform: 'translateX(-50%)',
+              zIndex: 9999, background: 'rgba(13,14,24,0.96)',
+              border: '1px solid rgba(63,185,80,0.3)', borderRadius: '8px',
+              padding: '7px 14px', fontSize: '12px', color: '#3fb950',
+              pointerEvents: 'none', whiteSpace: 'nowrap',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
             }}
           >
             {ecosystemToast}
@@ -281,7 +236,6 @@ export default function ChatPanel() {
         )}
       </AnimatePresence>
 
-      {/* Close modal */}
       {showCloseModal && (
         <LabCloseModal
           labName={session.labName}
@@ -291,73 +245,120 @@ export default function ChatPanel() {
       )}
 
       {/* Session bar */}
-      <div className="flex items-center gap-3 px-4 py-2 border-b border-[var(--border)] bg-[var(--bg2)] flex-shrink-0">
-        <span className="text-xs text-[var(--text-muted)]">
-          {session.labName} • {session.platform} • {session.difficulty}
-          {session.target.ip && ` • ${session.target.ip}`}
-        </span>
-        {/* AI model badge */}
-        <span className="text-[10px] px-1.5 py-0.5 rounded border border-[var(--border)] text-[var(--text-muted)] font-mono">
-          {aiProvider === 'ollama' ? `ollama:${ollamaModel || '?'}` : claudeModel.split('-').slice(1,3).join('-')}
-        </span>
-        <div className="flex-1" />
-        {/* End Session button */}
-        <button
-          className="text-xs px-2 py-1 rounded btn-ghost"
-          style={{ color: 'var(--error)', borderColor: 'var(--error)' }}
-          onClick={() => setShowCloseModal(true)}
-          title="End this lab session"
-        >
-          End Session
-        </button>
-        {/* Hint taken button */}
-        <button
-          className="relative flex items-center gap-1 text-xs px-2 py-1 rounded btn-ghost"
-          onClick={logHint}
-          title="Log a hint taken"
-        >
-          <span>?</span>
-          <span>Hint</span>
-          {(session.hintsUsed || 0) > 0 && (
-            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[var(--warning)] text-[10px] text-black flex items-center justify-center font-bold">
-              {session.hintsUsed}
+      <div
+        className="flex items-center gap-2 px-4 py-2 flex-shrink-0"
+        style={{ borderBottom: '1px solid var(--border-default)', background: 'rgba(7,8,15,0.7)' }}
+      >
+        <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
+          <span className="text-xs font-medium truncate" style={{ color: '#8b949e' }}>
+            {session.labName}
+          </span>
+          <span style={{ color: 'rgba(42,51,71,0.8)' }}>·</span>
+          <Badge variant={session.platform === 'HTB' ? 'purple' : 'default'}>
+            {session.platform}
+          </Badge>
+          <Badge
+            variant={
+              session.difficulty === 'Easy' ? 'success'
+              : session.difficulty === 'Medium' ? 'warning'
+              : session.difficulty === 'Hard' ? 'warning'
+              : 'danger'
+            }
+          >
+            {session.difficulty}
+          </Badge>
+          {session.target.ip && (
+            <span className="font-mono text-[11px]" style={{ color: '#484f58' }}>
+              {session.target.ip}
             </span>
           )}
-        </button>
-        {/* Screenshot button */}
-        <button
-          className="text-xs px-2 py-1 rounded btn-ghost"
-          onClick={takeScreenshot}
-          disabled={screenshotLoading}
-          title="Capture screenshot"
-        >
-          {screenshotLoading ? '...' : '[ss]'}
-        </button>
-        {/* Hint level */}
-        <div className="flex items-center gap-1">
-          <span className="text-xs text-[var(--text-muted)]">Hint:</span>
-          {[1,2,3,4,5].map(l => (
-            <button
-              key={l}
-              className={`w-5 h-5 text-xs rounded transition-colors ${
-                session.hintLevel === l ? `hint-${l} border bg-[var(--accent-dim)]` : 'text-[var(--text-muted)] hover:text-[var(--text)]'
-              }`}
-              style={{ border: session.hintLevel === l ? undefined : 'none', padding: 0 }}
-              onClick={() => activeTabId && updateSession(activeTabId, { hintLevel: l })}
-            >
-              {l}
-            </button>
-          ))}
+          <span
+            className="font-mono text-[10px] px-1.5 py-0.5 rounded"
+            style={{
+              background: 'rgba(13,14,24,0.8)',
+              border: '1px solid rgba(42,51,71,0.5)',
+              color: '#484f58',
+            }}
+          >
+            {modelLabel}
+          </span>
         </div>
-        {/* Teach Me toggle */}
-        <button
-          className={`text-xs px-2.5 py-1 rounded transition-colors ${
-            session.teachMeMode ? 'bg-[var(--accent)] text-white border-[var(--accent)]' : 'btn-ghost'
-          }`}
-          onClick={() => activeTabId && updateSession(activeTabId, { teachMeMode: !session.teachMeMode, usedTeachMe: true })}
-        >
-          Teach Me
-        </button>
+
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {/* End session */}
+          <button
+            className="text-xs px-2.5 py-1 rounded-md"
+            style={{
+              background: 'rgba(248,81,73,0.08)',
+              border: '1px solid rgba(248,81,73,0.25)',
+              color: '#f85149',
+            }}
+            onClick={() => setShowCloseModal(true)}
+            title="End this lab session"
+          >
+            End Session
+          </button>
+
+          {/* Hint button */}
+          <button
+            className="relative flex items-center gap-1 text-xs px-2.5 py-1 rounded-md btn-ghost"
+            onClick={logHint}
+            title="Log a hint taken"
+          >
+            <span>? Hint</span>
+            {(session.hintsUsed || 0) > 0 && (
+              <span
+                className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center"
+                style={{ background: '#d29922', color: '#07080f' }}
+              >
+                {session.hintsUsed}
+              </span>
+            )}
+          </button>
+
+          {/* Screenshot */}
+          <button
+            className="text-xs px-2.5 py-1 rounded-md btn-ghost"
+            onClick={takeScreenshot}
+            disabled={screenshotLoading}
+            title="Capture screenshot"
+          >
+            {screenshotLoading ? '...' : '[ss]'}
+          </button>
+
+          {/* Hint level */}
+          <div className="flex items-center gap-0.5">
+            {[1,2,3,4,5].map(l => (
+              <button
+                key={l}
+                className="w-5 h-5 text-[10px] rounded transition-colors flex items-center justify-center font-bold"
+                style={{
+                  border: session.hintLevel === l ? `1px solid currentColor` : '1px solid transparent',
+                  background: session.hintLevel === l ? 'rgba(180,79,255,0.08)' : 'transparent',
+                  color: session.hintLevel === l ? '#b44fff' : '#484f58',
+                  padding: 0,
+                }}
+                onClick={() => activeTabId && updateSession(activeTabId, { hintLevel: l })}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+
+          {/* Teach Me */}
+          <button
+            className="text-xs px-2.5 py-1 rounded-md transition-colors"
+            style={{
+              background: session.teachMeMode ? '#b44fff' : 'transparent',
+              border: session.teachMeMode ? '1px solid #b44fff' : '1px solid rgba(42,51,71,0.6)',
+              color: session.teachMeMode ? '#fff' : '#484f58',
+              fontWeight: 500,
+            }}
+            onClick={() => activeTabId && updateSession(activeTabId, { teachMeMode: !session.teachMeMode, usedTeachMe: true })}
+          >
+            Teach Me
+          </button>
+        </div>
       </div>
 
       {/* Screenshot preview */}
@@ -367,19 +368,21 @@ export default function ChatPanel() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="border-b border-[var(--border)] bg-[var(--bg3)] px-4 py-2 flex items-center gap-3"
+            className="flex items-center gap-3 px-4 py-2 flex-shrink-0"
+            style={{ borderBottom: '1px solid var(--border-default)', background: 'rgba(13,14,24,0.8)' }}
           >
             <img
               src={`data:image/png;base64,${screenshot.base64}`}
               alt="screenshot"
-              className="w-24 h-16 object-cover rounded border border-[var(--border)] cursor-pointer"
+              className="w-24 h-16 object-cover rounded cursor-pointer"
+              style={{ border: '1px solid rgba(42,51,71,0.6)' }}
               onClick={() => {
                 const w = window.open('', '_blank');
                 if (w) w.document.write(`<img src="data:image/png;base64,${screenshot.base64}" style="max-width:100%" />`);
               }}
             />
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-[var(--text-muted)]">Screenshot captured — click to expand</span>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs" style={{ color: '#8b949e' }}>Screenshot captured — click to expand</span>
               <div className="flex gap-2">
                 <button className="btn-accent text-xs px-2 py-1" onClick={saveScreenshotToVault}>Save to Vault</button>
                 <button className="btn-ghost text-xs px-2 py-1" onClick={() => setScreenshot(null)}>Discard</button>
@@ -390,12 +393,24 @@ export default function ChatPanel() {
       </AnimatePresence>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 scroll-area">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 scroll-area">
         {messages.length === 0 && (
-          <div className="text-center text-[var(--text-muted)] text-sm mt-8">
-            <div className="text-2xl mb-2">🤖</div>
-            <div>Ask me anything about your lab.</div>
-            <div className="text-xs mt-1 text-[var(--text-muted)] opacity-60">Hint level {session.hintLevel} active</div>
+          <div className="flex flex-col items-center justify-center h-full gap-3" style={{ color: '#484f58' }}>
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center"
+              style={{
+                background: 'rgba(180,79,255,0.08)',
+                border: '1px solid rgba(180,79,255,0.15)',
+              }}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b44fff" strokeWidth="1.5">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+            </div>
+            <div className="text-center">
+              <div className="text-sm font-medium" style={{ color: '#8b949e' }}>Ask me anything about your lab.</div>
+              <div className="text-xs mt-1" style={{ color: '#484f58' }}>Hint level {session.hintLevel} active</div>
+            </div>
           </div>
         )}
 
@@ -411,21 +426,17 @@ export default function ChatPanel() {
             >
               <div className={`max-w-[85%] ${msg.role === 'user' ? 'chat-msg-user' : 'chat-msg-ai'}`}>
                 {msg.role === 'user' ? (
-                  <p className="text-sm selectable whitespace-pre-wrap">{msg.content}</p>
+                  <p className="text-sm selectable whitespace-pre-wrap" style={{ color: '#e6edf3' }}>
+                    {msg.content}
+                  </p>
                 ) : (
                   <>
                     <MarkdownRenderer content={msg.content} />
                     {parsed && parsed.ports.length > 0 && (
-                      <ParsedPortChips
-                        ports={parsed.ports}
-                        targetName={session?.labName || ''}
-                      />
+                      <ParsedPortChips ports={parsed.ports} targetName={session?.labName || ''} />
                     )}
                     {parsed && parsed.credentials.length > 0 && (
-                      <ParsedCredChips
-                        creds={parsed.credentials}
-                        targetName={session?.labName || ''}
-                      />
+                      <ParsedCredChips creds={parsed.credentials} targetName={session?.labName || ''} />
                     )}
                   </>
                 )}
@@ -436,10 +447,13 @@ export default function ChatPanel() {
 
         {streaming && (
           <div className="flex justify-start">
-            <div className="chat-msg-ai max-w-[85%]">
+            <div className="chat-msg-ai">
               <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse-dot" />
-                <span className="text-xs text-[var(--text-muted)]">Thinking...</span>
+                <div
+                  className="w-1.5 h-1.5 rounded-full animate-pulse-dot"
+                  style={{ background: '#b44fff' }}
+                />
+                <span className="text-xs" style={{ color: '#484f58' }}>Thinking...</span>
               </div>
             </div>
           </div>
@@ -447,20 +461,23 @@ export default function ChatPanel() {
 
         {/* ReconDesk quick-save suggestions */}
         {reconSuggestions.length > 0 && (
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             {reconSuggestions.map((s, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, x: -4 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-2 px-3 py-2 rounded border border-[var(--border)] bg-[var(--bg3)] text-xs"
+                className="flex items-center gap-2 px-3 py-2 rounded-md text-xs"
+                style={{ border: '1px solid rgba(180,79,255,0.2)', background: 'rgba(180,79,255,0.05)' }}
               >
-                <span className="text-[var(--accent)]">ReconDesk:</span>
-                <span className="text-[var(--text-dim)]">
-                  {s.type === 'port' ? `Port ${(s.data as Record<string,string>).port} open` : `Credential: ${(s.data as Record<string,string>).username}/${(s.data as Record<string,string>).password}`}
+                <span style={{ color: '#b44fff', fontWeight: 600 }}>ReconDesk:</span>
+                <span style={{ color: '#8b949e' }}>
+                  {s.type === 'port'
+                    ? `Port ${(s.data as Record<string,string>).port} open`
+                    : `Cred: ${(s.data as Record<string,string>).username}/${(s.data as Record<string,string>).password}`}
                 </span>
                 <button className="btn-accent px-2 py-0.5 text-xs ml-auto" onClick={() => pushToReconDesk(s)}>Save</button>
-                <button className="btn-ghost px-2 py-0.5 text-xs" onClick={() => setReconSuggestions(p => p.filter((_, j) => j !== i))}>Dismiss</button>
+                <button className="btn-ghost px-2 py-0.5 text-xs" onClick={() => setReconSuggestions(p => p.filter((_, j) => j !== i))}>×</button>
               </motion.div>
             ))}
           </div>
@@ -469,42 +486,70 @@ export default function ChatPanel() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="p-3 border-t border-[var(--border)] bg-[var(--bg2)] flex-shrink-0">
-        <div className="flex gap-2 items-end">
+      {/* Input area */}
+      <div
+        className="flex-shrink-0 p-3"
+        style={{ borderTop: '1px solid var(--border-default)', background: 'rgba(7,8,15,0.8)' }}
+      >
+        <div
+          className="flex gap-2 items-end rounded-lg p-2"
+          style={{
+            background: 'var(--surface-1)',
+            border: streaming ? '1px solid rgba(180,79,255,0.3)' : '1px solid rgba(42,51,71,0.6)',
+            transition: 'border-color 0.15s',
+          }}
+        >
           <textarea
             ref={textareaRef}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask about your lab... (Enter to send, Shift+Enter for newline)"
-            className="flex-1 resize-none text-sm leading-relaxed max-h-32 min-h-[40px]"
-            style={{ height: 'auto' }}
+            className="flex-1 resize-none text-sm leading-relaxed max-h-32 min-h-[36px] bg-transparent"
+            style={{
+              border: 'none', outline: 'none', padding: '2px 4px',
+              color: '#e6edf3', fontFamily: 'var(--font-display)',
+            }}
             rows={1}
             disabled={streaming}
           />
           <button
-            className="btn-accent px-4 py-2 flex-shrink-0"
+            className="flex-shrink-0 px-4 py-1.5 rounded-md text-sm font-medium transition-all"
+            style={{
+              background: streaming || !input.trim() ? 'rgba(180,79,255,0.1)' : '#b44fff',
+              color: streaming || !input.trim() ? '#b44fff' : '#fff',
+              border: '1px solid rgba(180,79,255,0.3)',
+              opacity: streaming || !input.trim() ? 0.5 : 1,
+            }}
             onClick={sendMessage}
             disabled={streaming || !input.trim()}
           >
-            {streaming ? '...' : 'Send'}
+            {streaming ? (
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 border border-current/40 border-t-current rounded-full animate-spin" />
+                Wait
+              </span>
+            ) : 'Send'}
           </button>
         </div>
-        <div className="flex items-center gap-4 mt-1.5">
-          <span className="text-xs text-[var(--text-muted)]">
-            {session.chat.length} message{session.chat.length !== 1 ? 's' : ''}
+
+        <div className="flex items-center gap-3 mt-1.5 px-1">
+          <span className="text-[11px]" style={{ color: '#484f58' }}>
+            {session.chat.length} msg{session.chat.length !== 1 ? 's' : ''}
           </span>
           {(session.hintsUsed || 0) > 0 && (
-            <span className="text-xs" style={{ color: 'var(--warning)' }}>
-              Hints: {session.hintsUsed}
+            <span className="text-[11px]" style={{ color: '#d29922' }}>
+              {session.hintsUsed} hint{session.hintsUsed !== 1 ? 's' : ''}
             </span>
           )}
           {session.findings.flags.length > 0 && (
-            <span className="text-xs" style={{ color: 'var(--success)' }}>
+            <span className="text-[11px]" style={{ color: '#3fb950' }}>
               {session.findings.flags.length} flag{session.findings.flags.length !== 1 ? 's' : ''}
             </span>
           )}
+          <span className="text-[11px] ml-auto" style={{ color: '#484f58' }}>
+            Shift+Enter for newline
+          </span>
         </div>
       </div>
     </div>
