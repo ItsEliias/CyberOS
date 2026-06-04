@@ -9,6 +9,7 @@ import InlineAICommands from './InlineAICommands';
 import VersionHistoryPanel from './VersionHistoryPanel';
 import PresentationMode from './PresentationMode';
 import EditorStatusBar from './notes/EditorStatusBar';
+import LineNumberGutter from './notes/LineNumberGutter';
 import EditorEmptyState from './notes/EditorEmptyState';
 import EditorTopBar from './notes/EditorTopBar';
 import { TABLE_TEMPLATE } from './notes/EditorToolbar';
@@ -242,6 +243,10 @@ export default function EditorView({
     return t ? t.split(/\s+/).length : 0;
   }, [editorContent]);
 
+  const WORD_GOAL = 500;
+  const goalProgress = Math.min(wordCount / WORD_GOAL, 1);
+  const goalReached  = wordCount >= WORD_GOAL;
+
   const hasOllama = useStore.getState().ollamaStatus?.running || false;
 
   function toggleFocusMode() {
@@ -317,27 +322,60 @@ export default function EditorView({
             className={`flex flex-col ${editorMode === 'split' ? 'w-1/2' : 'flex-1'} ${!activeNote ? 'hidden' : ''}`}
             style={{ borderRight: editorMode === 'split' ? '1px solid rgba(42,51,71,0.35)' : 'none' }}
           >
-            <textarea
-              ref={editorRef}
-              value={editorContent}
-              onChange={handleInput}
-              onKeyDown={handleKeyDown}
-              placeholder=""
-              className="flex-1 w-full p-5 resize-none outline-none"
-              style={{
-                background: 'transparent',
-                color: '#c9d1d9',
-                fontFamily: 'var(--font-mono)',
-                fontSize: '0.8125rem',
-                lineHeight: 1.8,
-                tabSize: 2,
-                caretColor: '#7bb8ff',
-              }}
-            />
+            {/* Gutter + textarea row */}
+            <div className="flex flex-1 min-h-0">
+              <LineNumberGutter
+                content={editorContent}
+                textareaRef={editorRef}
+                lineHeight={23}
+                paddingTop={20}
+              />
+              <textarea
+                ref={editorRef}
+                value={editorContent}
+                onChange={handleInput}
+                onKeyDown={handleKeyDown}
+                placeholder=""
+                className="flex-1 p-5 resize-none outline-none overflow-y-auto"
+                style={{
+                  background: 'transparent',
+                  color: '#c9d1d9',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '0.8125rem',
+                  lineHeight: '23px',
+                  tabSize: 2,
+                  caretColor: '#7bb8ff',
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'rgba(42,51,71,0.4) transparent',
+                }}
+              />
+            </div>
+
+            {/* Word goal bar */}
+            {activeNote && (
+              <div
+                className="shrink-0"
+                style={{ height: 3, background: 'rgba(42,51,71,0.3)' }}
+                title={`${wordCount} / ${WORD_GOAL} words`}
+              >
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${goalProgress * 100}%`,
+                    background: goalReached ? '#3fb950' : '#e3a246',
+                    transition: 'width 0.4s ease, background 0.4s ease',
+                    borderRadius: '0 2px 2px 0',
+                  }}
+                />
+              </div>
+            )}
+
             <EditorStatusBar
               wordCount={wordCount}
               charCount={editorContent.length}
               lineCount={editorContent.split('\n').length}
+              wordGoal={WORD_GOAL}
+              goalReached={goalReached}
             />
           </div>
         )}
