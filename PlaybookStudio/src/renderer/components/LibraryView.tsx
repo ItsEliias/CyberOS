@@ -82,7 +82,6 @@ const VAPT_METHODOLOGIES: VaptMethodology[] = [
 ]
 
 function buildVaptPlaybook(methodology: VaptMethodology): Omit<Playbook, 'id' | 'createdAt' | 'updatedAt'> {
-  const now = new Date().toISOString()
   return {
     name: methodology.name,
     description: methodology.description,
@@ -114,17 +113,47 @@ function ImportPreviewModal({
   onCancel: () => void
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.75)' }}>
-      <div className="rounded-xl p-5 flex flex-col gap-4" style={{ width: 400, background: 'var(--panel)', border: '1px solid var(--border)', boxShadow: '0 24px 64px rgba(0,0,0,0.6)' }}>
-        <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Import Playbook Preview</h2>
-        <div className="rounded-lg p-3 flex flex-col gap-2" style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
-          <div className="text-xs font-medium" style={{ color: 'var(--text)' }}>{playbook.name ?? 'Untitled'}</div>
-          {playbook.description && <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{playbook.description}</div>}
-          <div className="text-xs" style={{ color: 'var(--accent)' }}>{playbook.steps?.length ?? 0} steps · {playbook.category}</div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.8)' }}>
+      <div
+        className="rounded-xl p-5 flex flex-col gap-4"
+        style={{
+          width: 400,
+          background: '#0d0e18',
+          border: '1px solid rgba(42,51,71,0.75)',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.65)',
+        }}
+      >
+        <div>
+          <h2 className="text-sm font-semibold" style={{ color: '#e6edf3' }}>Import Playbook</h2>
+          <p className="text-xs mt-0.5" style={{ color: '#484f58' }}>Review before importing</p>
+        </div>
+        <div
+          className="rounded-lg p-3 flex flex-col gap-2"
+          style={{ background: '#07080f', border: '1px solid rgba(42,51,71,0.5)' }}
+        >
+          <div className="text-xs font-medium" style={{ color: '#e6edf3' }}>{playbook.name ?? 'Untitled'}</div>
+          {playbook.description && (
+            <div className="text-xs" style={{ color: '#8b949e' }}>{playbook.description}</div>
+          )}
+          <div className="text-xs font-mono" style={{ color: '#2dd4bf' }}>
+            {playbook.steps?.length ?? 0} steps · {playbook.category}
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={onCancel} className="flex-1 text-xs py-2 rounded" style={{ background: 'var(--border)', color: 'var(--text-dim)' }}>Cancel</button>
-          <button onClick={onConfirm} className="flex-1 text-xs py-2 rounded font-semibold" style={{ background: 'var(--accent)', color: '#fff' }}>Import</button>
+          <button
+            onClick={onCancel}
+            className="flex-1 text-xs py-2 rounded"
+            style={{ background: 'rgba(42,51,71,0.4)', color: '#8b949e', border: '1px solid rgba(42,51,71,0.5)' }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 text-xs py-2 rounded font-semibold"
+            style={{ background: 'rgba(45,212,191,0.15)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.30)' }}
+          >
+            Import
+          </button>
         </div>
       </div>
     </div>
@@ -180,7 +209,7 @@ function PlaybookCard({ pb }: { pb: Playbook }) {
     setExporting(false)
   }
 
-  const catColor    = CAT_COLORS[pb.category] ?? 'var(--text-muted)'
+  const catColor    = CAT_COLORS[pb.category] ?? '#8b949e'
   const lastRun     = runs
     .filter(r => r.playbookId === pb.id && (r.status === 'completed' || r.status === 'abandoned'))
     .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())[0]
@@ -189,43 +218,98 @@ function PlaybookCard({ pb }: { pb: Playbook }) {
 
   return (
     <div
-      className="rounded-lg p-4 flex flex-col gap-2 transition-colors"
-      style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}
+      className="rounded-lg p-4 flex flex-col gap-3 transition-all group"
+      style={{
+        background: '#0d0e18',
+        border: '1px solid rgba(42,51,71,0.6)',
+      }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(45,212,191,0.18)' }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,51,71,0.6)' }}
     >
+      {/* Header row */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className="text-xs px-2 py-0.5 rounded font-medium" style={{ background: `${catColor}22`, color: catColor }}>
+          <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+            <span
+              className="text-xs px-2 py-0.5 rounded font-medium"
+              style={{ background: `${catColor}18`, color: catColor, border: `1px solid ${catColor}30` }}
+            >
               {pb.category}
             </span>
             {pb.isBuiltIn && (
-              <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}>
+              <span
+                className="text-xs px-1.5 py-0.5 rounded"
+                style={{ background: 'rgba(45,212,191,0.08)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.18)' }}
+              >
                 built-in
               </span>
             )}
             {mitreTactics.slice(0, 2).map(t => (
-              <span key={t} className="text-xs px-1.5 py-0.5 rounded font-mono" style={{ background: 'rgba(188,140,255,0.1)', color: '#bc8cff' }}>{t}</span>
+              <span
+                key={t}
+                className="text-xs px-1.5 py-0.5 rounded font-mono"
+                style={{ background: 'rgba(188,140,255,0.08)', color: '#bc8cff', border: '1px solid rgba(188,140,255,0.2)' }}
+              >
+                {t}
+              </span>
             ))}
           </div>
-          <div className="font-medium text-sm" style={{ color: 'var(--text)' }}>{pb.name}</div>
-          <div className="text-xs mt-0.5 line-clamp-2" style={{ color: 'var(--text-dim)' }}>{pb.description}</div>
+          <div className="font-medium text-sm" style={{ color: '#e6edf3' }}>{pb.name}</div>
+          <div className="text-xs mt-0.5 line-clamp-2" style={{ color: '#8b949e' }}>{pb.description}</div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between mt-1">
-        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-          {pb.steps.length} steps{lastRunLabel ? ` · last run ${lastRunLabel}` : ''}
-        </span>
-        <div className="flex items-center gap-1 flex-wrap">
-          <button onClick={handleRun} className="no-drag text-xs px-2 py-1 rounded font-medium transition-colors" style={{ background: 'var(--accent)', color: '#fff' }}>Run</button>
-          <button onClick={handleClone} className="no-drag text-xs px-2 py-1 rounded font-medium transition-colors" style={{ background: 'var(--border)', color: 'var(--text-dim)' }}>Clone</button>
-          <button onClick={handleExportBundle} disabled={exporting} className="no-drag text-xs px-2 py-1 rounded font-medium transition-colors" style={{ background: 'var(--border)', color: 'var(--text-dim)' }}>
+      {/* Footer row */}
+      <div className="flex items-center justify-between pt-1" style={{ borderTop: '1px solid rgba(42,51,71,0.35)' }}>
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-mono" style={{ color: '#484f58' }}>
+            {pb.steps.length} steps
+          </span>
+          {lastRunLabel && (
+            <span className="text-xs" style={{ color: '#484f58' }}>
+              last run {lastRunLabel}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleRun}
+            className="no-drag text-xs px-2.5 py-1 rounded font-semibold transition-colors"
+            style={{ background: 'rgba(45,212,191,0.12)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.25)' }}
+          >
+            Run
+          </button>
+          <button
+            onClick={handleClone}
+            className="no-drag text-xs px-2 py-1 rounded transition-colors"
+            style={{ background: 'rgba(42,51,71,0.3)', color: '#8b949e', border: '1px solid rgba(42,51,71,0.5)' }}
+          >
+            Clone
+          </button>
+          <button
+            onClick={handleExportBundle}
+            disabled={exporting}
+            className="no-drag text-xs px-2 py-1 rounded transition-colors"
+            style={{ background: 'rgba(42,51,71,0.3)', color: '#8b949e', border: '1px solid rgba(42,51,71,0.5)' }}
+          >
             {exporting ? '…' : 'Export'}
           </button>
           {!pb.isBuiltIn && (
             <>
-              <button onClick={handleEdit} className="no-drag text-xs px-2 py-1 rounded font-medium transition-colors" style={{ background: 'var(--border)', color: 'var(--text-dim)' }}>Edit</button>
-              <button onClick={handleDelete} className="no-drag text-xs px-2 py-1 rounded font-medium transition-colors" style={{ background: 'rgba(248,81,73,0.15)', color: 'var(--error)' }}>Delete</button>
+              <button
+                onClick={handleEdit}
+                className="no-drag text-xs px-2 py-1 rounded transition-colors"
+                style={{ background: 'rgba(42,51,71,0.3)', color: '#8b949e', border: '1px solid rgba(42,51,71,0.5)' }}
+              >
+                Edit
+              </button>
+              <button
+                onClick={handleDelete}
+                className="no-drag text-xs px-2 py-1 rounded transition-colors"
+                style={{ background: 'rgba(248,81,73,0.08)', color: '#f85149', border: '1px solid rgba(248,81,73,0.2)' }}
+              >
+                Delete
+              </button>
             </>
           )}
         </div>
@@ -277,18 +361,14 @@ export default function LibraryView() {
   async function handleImportFile() {
     const res = await window.electronAPI.importFile()
     if (!res.ok || !res.content) { setImportStatus(res.error ?? 'Import cancelled'); return }
-
     try {
       let parsed: Partial<Playbook>
       if (res.ext === '.yaml' || res.ext === '.yml') {
-        // Dynamic import for js-yaml
         const yaml = await import('js-yaml')
         parsed = yaml.load(res.content) as Partial<Playbook>
       } else {
         parsed = JSON.parse(res.content) as Partial<Playbook>
       }
-
-      // Handle array (bundle format) or single playbook
       const candidate = Array.isArray(parsed) ? (parsed as Partial<Playbook>[])[0] : parsed
       if (!candidate?.name) throw new Error('Invalid playbook format')
       setImportPreview({ ...candidate, isBuiltIn: false })
@@ -345,48 +425,71 @@ export default function LibraryView() {
     <div className="flex flex-col h-full">
       {/* Toolbar */}
       <div
-        className="flex items-center justify-between px-4 py-3 flex-shrink-0 gap-3"
-        style={{ borderBottom: '1px solid var(--border)' }}
+        className="flex items-center justify-between px-4 py-2.5 flex-shrink-0 gap-3"
+        style={{ borderBottom: '1px solid rgba(42,51,71,0.5)', background: 'rgba(13,14,24,0.6)' }}
       >
         {/* Category filter chips */}
         <div className="flex items-center gap-1 overflow-x-auto no-drag flex-1 min-w-0">
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat.id}
-              onClick={() => setCategoryFilter(cat.id)}
-              className="flex-shrink-0 text-xs px-2.5 py-1 rounded-full transition-colors"
-              style={{
-                background: categoryFilter === cat.id ? 'var(--accent)' : 'var(--panel)',
-                color:      categoryFilter === cat.id ? '#fff' : 'var(--text-dim)',
-                border:     `1px solid ${categoryFilter === cat.id ? 'var(--accent)' : 'var(--border)'}`,
-              }}
-            >
-              {cat.label}
-            </button>
-          ))}
+          {CATEGORIES.map(cat => {
+            const isActive = categoryFilter === cat.id
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setCategoryFilter(cat.id)}
+                className="flex-shrink-0 text-xs px-2.5 py-1 rounded-full transition-all"
+                style={{
+                  background: isActive ? 'rgba(45,212,191,0.12)' : 'rgba(42,51,71,0.2)',
+                  color:      isActive ? '#2dd4bf' : '#484f58',
+                  border:     `1px solid ${isActive ? 'rgba(45,212,191,0.28)' : 'rgba(42,51,71,0.4)'}`,
+                }}
+              >
+                {cat.label}
+              </button>
+            )
+          })}
         </div>
         <div className="flex-shrink-0 flex items-center gap-1.5">
-          <input value={mitreFilter} onChange={e => setMitreFilter(e.target.value)}
-            placeholder="MITRE filter…" className="no-drag text-xs rounded px-2 py-1.5 w-32"
-            style={{ background: 'var(--panel)', border: '1px solid var(--border)', color: 'var(--text)' }} />
+          <input
+            value={mitreFilter}
+            onChange={e => setMitreFilter(e.target.value)}
+            placeholder="MITRE filter…"
+            className="no-drag text-xs rounded px-2.5 py-1.5 w-32 font-mono"
+            style={{
+              background: '#07080f',
+              border: '1px solid rgba(42,51,71,0.6)',
+              color: '#e6edf3',
+            }}
+          />
           <button
             onClick={handleImportFile}
             className="no-drag text-xs px-2.5 py-1.5 rounded font-medium transition-colors"
-            style={{ background: 'var(--panel)', border: '1px solid var(--border)', color: 'var(--text-dim)' }}
+            style={{
+              background: 'rgba(42,51,71,0.3)',
+              border: '1px solid rgba(42,51,71,0.5)',
+              color: '#8b949e',
+            }}
           >
             Import
           </button>
           <button
             onClick={() => setShowVapt(v => !v)}
             className="no-drag text-xs px-2.5 py-1.5 rounded font-medium transition-colors"
-            style={{ background: showVapt ? 'rgba(74,158,255,0.15)' : 'var(--panel)', border: '1px solid var(--border)', color: showVapt ? 'var(--accent)' : 'var(--text-dim)' }}
+            style={{
+              background: showVapt ? 'rgba(45,212,191,0.10)' : 'rgba(42,51,71,0.3)',
+              border: `1px solid ${showVapt ? 'rgba(45,212,191,0.25)' : 'rgba(42,51,71,0.5)'}`,
+              color: showVapt ? '#2dd4bf' : '#8b949e',
+            }}
           >
             VAPT Methods
           </button>
           <button
             onClick={handleNew}
-            className="no-drag text-xs px-3 py-1.5 rounded font-medium transition-colors"
-            style={{ background: 'var(--accent)', color: '#fff' }}
+            className="no-drag text-xs px-3 py-1.5 rounded font-semibold transition-colors"
+            style={{
+              background: 'rgba(45,212,191,0.14)',
+              color: '#2dd4bf',
+              border: '1px solid rgba(45,212,191,0.30)',
+            }}
           >
             + New Playbook
           </button>
@@ -397,9 +500,13 @@ export default function LibraryView() {
       {showVapt && (
         <div
           className="px-4 py-3 flex-shrink-0 flex flex-col gap-2"
-          style={{ background: 'rgba(74,158,255,0.04)', borderBottom: '1px solid var(--border)' }}
+          style={{ background: 'rgba(45,212,191,0.03)', borderBottom: '1px solid rgba(45,212,191,0.12)' }}
         >
-          <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--accent)' }}>
+          <div
+            className="text-xs font-semibold uppercase tracking-widest mb-1 flex items-center gap-2"
+            style={{ color: '#2dd4bf' }}
+          >
+            <div className="w-px h-3 rounded-full" style={{ background: '#2dd4bf' }} />
             Import VAPT Methodology
           </div>
           <div className="flex flex-wrap gap-2">
@@ -408,14 +515,18 @@ export default function LibraryView() {
                 key={m.id}
                 onClick={() => importVapt(m)}
                 className="text-xs px-3 py-1.5 rounded transition-colors"
-                style={{ background: 'var(--panel)', border: '1px solid var(--border)', color: 'var(--text-dim)' }}
+                style={{
+                  background: '#07080f',
+                  border: '1px solid rgba(42,51,71,0.6)',
+                  color: '#8b949e',
+                }}
                 title={m.description}
               >
                 {m.name}
               </button>
             ))}
           </div>
-          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+          <div className="text-xs" style={{ color: '#484f58' }}>
             Each phase becomes a step. Imports as a custom playbook you can edit.
           </div>
         </div>
@@ -423,13 +534,17 @@ export default function LibraryView() {
 
       {importStatus && (
         <div
-          className="px-4 py-2 text-xs flex-shrink-0"
+          className="px-4 py-2 text-xs flex-shrink-0 flex items-center gap-2"
           style={{
-            background: importStatus.startsWith('Parse') ? 'rgba(248,81,73,0.08)' : 'rgba(63,185,80,0.08)',
-            color: importStatus.startsWith('Parse') ? 'var(--error)' : 'var(--success)',
-            borderBottom: '1px solid var(--border)',
+            background: importStatus.startsWith('Parse') ? 'rgba(248,81,73,0.06)' : 'rgba(45,212,191,0.06)',
+            color: importStatus.startsWith('Parse') ? '#f85149' : '#2dd4bf',
+            borderBottom: '1px solid rgba(42,51,71,0.4)',
           }}
         >
+          <span
+            className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+            style={{ background: importStatus.startsWith('Parse') ? '#f85149' : '#2dd4bf' }}
+          />
           {importStatus}
         </div>
       )}
@@ -437,8 +552,12 @@ export default function LibraryView() {
       {/* Playbook grid */}
       <div className="flex-1 overflow-y-auto p-4">
         {filtered.length === 0 ? (
-          <div className="flex items-center justify-center h-40">
-            <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
+          <div className="flex flex-col items-center justify-center h-40 gap-3">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style={{ color: '#2d3548' }}>
+              <rect x="3" y="6" width="26" height="20" rx="3" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M8 12h16M8 17h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            <span className="text-sm" style={{ color: '#484f58' }}>
               No playbooks in this category.
             </span>
           </div>
