@@ -12,6 +12,15 @@ const LEVEL_COLORS: Record<string, string> = {
   Beginner: '#8b949e',
 }
 
+function getPercentile(points: number): string {
+  if (points >= 95) return 'Top 5%'
+  if (points >= 85) return 'Top 15%'
+  if (points >= 70) return 'Top 30%'
+  if (points >= 55) return 'Top 45%'
+  if (points >= 40) return 'Top 60%'
+  return 'Top 75%'
+}
+
 function getSkillLevel(points: number): string {
   if (points >= 80) return 'Expert'
   if (points >= 60) return 'Advanced'
@@ -83,16 +92,21 @@ export default function SkillRadarLarge() {
               <span className="text-[11px] text-text-primary font-mono w-7 text-right tabular-nums shrink-0">
                 {value}
               </span>
-              <span
-                className="text-[9px] font-semibold w-20 shrink-0 px-1.5 py-0.5 rounded text-center"
-                style={{
-                  color: levelColor,
-                  background: `${levelColor}12`,
-                  border: `1px solid ${levelColor}28`,
-                }}
-              >
-                {level}
-              </span>
+              <div className="flex flex-col items-center gap-0.5 w-20 shrink-0">
+                <span
+                  className="text-[9px] font-semibold w-full px-1.5 py-0.5 rounded text-center"
+                  style={{
+                    color: levelColor,
+                    background: `${levelColor}12`,
+                    border: `1px solid ${levelColor}28`,
+                  }}
+                >
+                  {level}
+                </span>
+                <span className="text-[8px] text-text-muted font-mono tabular-nums">
+                  {getPercentile(value)}
+                </span>
+              </div>
             </div>
           )
         })}

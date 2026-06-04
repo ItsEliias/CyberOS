@@ -19,6 +19,7 @@ export default function MetricCard({ label, value, icon, delta, deltaUp, accentC
   const displayRef = useRef<HTMLSpanElement>(null)
   const hasAnimated = useRef(false)
   const [hovered, setHovered] = useState(false)
+  const [shimmerPlaying, setShimmerPlaying] = useState(true)
 
   useEffect(() => {
     if (!hasAnimated.current) {
@@ -37,6 +38,12 @@ export default function MetricCard({ label, value, icon, delta, deltaUp, accentC
     return unsub
   }, [rounded])
 
+  // Play shimmer once on mount, then stop
+  useEffect(() => {
+    const id = setTimeout(() => setShimmerPlaying(false), 1200)
+    return () => clearTimeout(id)
+  }, [])
+
   return (
     <div
       onMouseEnter={() => setHovered(true)}
@@ -47,7 +54,9 @@ export default function MetricCard({ label, value, icon, delta, deltaUp, accentC
         border: `1px solid ${hovered ? accentColor + '40' : accentColor + '22'}`,
         boxShadow: hovered
           ? `var(--elevation-2), 0 0 20px ${accentColor}18`
-          : 'var(--elevation-1)',
+          : shimmerPlaying
+            ? `var(--elevation-1), 0 0 18px ${accentColor}2a`
+            : 'var(--elevation-1)',
         transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
         transition: 'transform 180ms cubic-bezier(0.2,0.8,0.2,1), box-shadow 180ms, background 180ms, border-color 180ms',
       }}
@@ -61,6 +70,20 @@ export default function MetricCard({ label, value, icon, delta, deltaUp, accentC
           transition: 'background 180ms',
         }}
       />
+
+      {/* Mount shimmer sweep — plays once on initial render */}
+      {shimmerPlaying && (
+        <motion.div
+          className="absolute inset-0 pointer-events-none"
+          initial={{ x: '-100%', opacity: 0.7 }}
+          animate={{ x: '200%', opacity: 0 }}
+          transition={{ duration: 0.9, ease: 'easeInOut' }}
+          style={{
+            background: `linear-gradient(105deg, transparent 30%, ${accentColor}28 50%, transparent 70%)`,
+            zIndex: 10,
+          }}
+        />
+      )}
 
       <div className="flex items-center justify-between mb-3 relative">
         <span className="text-[10px] text-text-muted font-semibold uppercase tracking-widest">{label}</span>

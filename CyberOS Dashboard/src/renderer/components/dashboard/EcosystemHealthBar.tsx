@@ -1,10 +1,37 @@
 // CyberOS Dashboard — Ecosystem Health Bar
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useDashboardStore } from '../../stores/useDashboardStore'
 import { buildAppCards } from '../../utils/configParser'
 import { timeAgo } from '../../utils/timeAgo'
+
+function useCountUp(target: number, duration = 800): number {
+  const [current, setCurrent] = useState(0)
+  const rafRef = useRef<number | null>(null)
+  const startRef = useRef<number | null>(null)
+  const fromRef = useRef(0)
+
+  useEffect(() => {
+    fromRef.current = current
+    startRef.current = null
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+
+    const step = (now: number) => {
+      if (startRef.current === null) startRef.current = now
+      const elapsed = now - startRef.current
+      const progress = Math.min(elapsed / duration, 1)
+      const eased = 1 - Math.pow(1 - progress, 3) // ease-out cubic
+      setCurrent(Math.round(fromRef.current + (target - fromRef.current) * eased))
+      if (progress < 1) rafRef.current = requestAnimationFrame(step)
+    }
+    rafRef.current = requestAnimationFrame(step)
+    return () => { if (rafRef.current !== null) cancelAnimationFrame(rafRef.current) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target, duration])
+
+  return current
+}
 
 // Number of segments in the progress bar
 const SEGMENTS = 20
@@ -17,6 +44,9 @@ export default function EcosystemHealthBar() {
   const activeCount = cards.filter((c) => c.active).length
   const healthPct = cards.length > 0 ? Math.round((activeCount / cards.length) * 100) : 0
   const healthColor = healthPct >= 75 ? '#3fb950' : healthPct >= 40 ? '#d29922' : '#f85149'
+
+  // Animated count-up for the online count
+  const animatedActive = useCountUp(activeCount, 700)
 
   // How many segments should be filled
   const filledSegments = Math.round((healthPct / 100) * SEGMENTS)
@@ -45,7 +75,7 @@ export default function EcosystemHealthBar() {
             {healthPct}%
           </span>
           <span className="text-[10px] font-mono tabular-nums text-text-muted">
-            {activeCount}/{cards.length}
+            {animatedActive}/{cards.length}
           </span>
         </div>
       </div>

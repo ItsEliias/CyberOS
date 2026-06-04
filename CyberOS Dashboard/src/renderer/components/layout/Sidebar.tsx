@@ -104,10 +104,10 @@ export default function Sidebar() {
               >
                 {isActive && (
                   <motion.div
-                    layoutId="sidebar-active"
+                    layoutId="sidebar-pill"
                     className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
                     style={{ background: 'var(--accent)', boxShadow: '0 0 10px rgba(74,158,255,0.5)' }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                    transition={{ type: 'spring', stiffness: 380, damping: 28, mass: 0.8 }}
                   />
                 )}
                 <span style={{ color: isActive ? 'var(--accent)' : 'inherit', transition: 'color 180ms' }}>{item.icon}</span>
@@ -137,9 +137,9 @@ export default function Sidebar() {
               onMouseLeave={(e) => { if (!isDS) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' } }}
             >
               {isDS && (
-                <motion.div layoutId="sidebar-active" className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
+                <motion.div layoutId="sidebar-pill" className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
                   style={{ background: 'var(--accent)', boxShadow: '0 0 10px rgba(74,158,255,0.5)' }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                  transition={{ type: 'spring', stiffness: 380, damping: 28, mass: 0.8 }}
                 />
               )}
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"

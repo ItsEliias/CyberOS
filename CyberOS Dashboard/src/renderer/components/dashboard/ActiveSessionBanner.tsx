@@ -1,8 +1,39 @@
 // CyberOS Dashboard — Active Session Banner
 
+import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useDashboardStore } from '../../stores/useDashboardStore'
 import { timeAgo } from '../../utils/timeAgo'
+
+// Formats seconds into HH:MM:SS
+function formatElapsed(seconds: number): string {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
+function ElapsedTimer() {
+  const startRef = useRef(Date.now())
+  const [elapsed, setElapsed] = useState(0)
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startRef.current) / 1000))
+    }, 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  return (
+    <div className="shrink-0 relative">
+      <div className="text-[9px] text-text-muted uppercase tracking-wider mb-0.5">Elapsed</div>
+      <div className="text-xs font-mono font-semibold tabular-nums" style={{ color: 'var(--sev-critical)' }}>
+        {formatElapsed(elapsed)}
+      </div>
+    </div>
+  )
+}
 
 export default function ActiveSessionBanner() {
   const config = useDashboardStore((s) => s.config)
@@ -55,6 +86,12 @@ export default function ActiveSessionBanner() {
           )}
           {ctx.activePlaybook && <InfoField label="Playbook" value={ctx.activePlaybook} />}
         </div>
+
+        {/* Elapsed timer */}
+        <ElapsedTimer />
+
+        {/* Divider */}
+        <div className="w-px h-5 bg-border-subtle/60 shrink-0" />
 
         {/* Timestamp */}
         {ctx.lastUpdated && (

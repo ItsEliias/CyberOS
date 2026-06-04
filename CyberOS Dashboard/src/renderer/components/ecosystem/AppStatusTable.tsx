@@ -1,19 +1,41 @@
 // CyberOS Dashboard — App Status Table (full ecosystem table)
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useDashboardStore } from '../../stores/useDashboardStore'
 import { buildAppCards } from '../../utils/configParser'
+import { normalizeEvents, humanizeEventType } from '../../utils/eventParser'
 import { timeAgo } from '../../utils/timeAgo'
 
 export default function AppStatusTable() {
   const config = useDashboardStore((s) => s.config)
+  const events = useDashboardStore((s) => s.events)
   const cards = buildAppCards(config)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const getRegistration = (id: string) => {
     const key = id === 'vaultcore' ? 'vaultscraper' : id
     return (config as Record<string, unknown>)[key] ?? {}
+  }
+
+  // Build a map of appId -> most recent event type
+  const lastEventMap = useMemo(() => {
+    const normalized = normalizeEvents(events)
+    const map: Record<string, string> = {}
+    // Events are ordered newest-first or we take the last occurrence
+    for (const e of normalized) {
+      const appKey = e.app.toLowerCase().replace(/\s+/g, '')
+      if (!map[appKey]) map[appKey] = humanizeEventType(e.event)
+    }
+    return map
+  }, [events])
+
+  const getLastEvent = (id: string): string => {
+    // Try direct id, then strip spaces from card name
+    const card = cards.find((c) => c.id === id)
+    if (!card) return '—'
+    const key = card.name.toLowerCase().replace(/\s+/g, '')
+    return lastEventMap[key] ?? lastEventMap[id] ?? '—'
   }
 
   return (
@@ -48,7 +70,7 @@ export default function AppStatusTable() {
         <table className="w-full text-xs">
           <thead>
             <tr style={{ borderBottom: '1px solid rgba(42,51,71,0.25)' }}>
-              {['App', 'Status', 'Last Active', 'Version', 'Exec Path', 'Key Metric'].map((h) => (
+              {['App', 'Status', 'Last Active', 'Version', 'Exec Path', 'Key Metric', 'Last Event'].map((h) => (
                 <th key={h} className="text-left px-4 py-2 font-medium text-text-muted">{h}</th>
               ))}
             </tr>
@@ -113,12 +135,15 @@ export default function AppStatusTable() {
                         <span className="text-text-muted ml-1">{card.metrics[0].label}</span>
                       )}
                     </td>
+                    <td className="px-4 py-2 text-text-muted max-w-[140px] truncate" title={getLastEvent(card.id)}>
+                      {getLastEvent(card.id)}
+                    </td>
                   </tr>
 
                   <AnimatePresence>
                     {isExpanded && (
                       <tr key={`${card.id}-expanded`}>
-                        <td colSpan={6} className="px-4 py-0">
+                        <td colSpan={7} className="px-4 py-0">
                           <motion.div
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
