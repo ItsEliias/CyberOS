@@ -111,6 +111,7 @@ export default function FindingsTable() {
   const [pushing, setPushing] = useState<string | null>(null);
   const [pushed, setPushed] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [csvState, setCsvState] = useState<'idle' | 'progress' | 'done'>('idle');
 
   function toggleSelect(id: string) {
     setSelected(prev => {
@@ -180,6 +181,26 @@ export default function FindingsTable() {
     await navigator.clipboard.writeText(value);
   }
 
+  function exportCsv() {
+    if (csvState !== 'idle') return;
+    setCsvState('progress');
+    const rows = [
+      ['Type', 'Value', 'CVSS', 'Severity', 'Time'].join(','),
+      ...filtered.map(f => {
+        const cvss = getMockCvss(f.category, f.value);
+        const sev = getSeverityBucket(f.category, f.value);
+        const time = new Date(f.addedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
+        return [esc(f.category), esc(f.value), cvss !== null ? cvss.toFixed(1) : '', sev, time].join(',');
+      }),
+    ].join('\n');
+    setTimeout(() => {
+      navigator.clipboard.writeText(rows).catch(() => {});
+      setCsvState('done');
+      setTimeout(() => setCsvState('idle'), 2400);
+    }, 1200);
+  }
+
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--surface-0)' }}>
       {/* Toolbar */}
@@ -194,9 +215,33 @@ export default function FindingsTable() {
         />
         <div className="flex-1" />
         {filtered.length > 0 && (
-          <button className="btn-accent text-xs px-3 py-1.5" onClick={pushAll}>
-            Send All → ReconDesk
-          </button>
+          <>
+            <button
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md transition-all"
+              style={{
+                background: csvState === 'done' ? 'rgba(63,185,80,0.1)' : csvState === 'progress' ? 'rgba(180,79,255,0.07)' : 'rgba(42,51,71,0.3)',
+                border: `1px solid ${csvState === 'done' ? 'rgba(63,185,80,0.3)' : 'rgba(42,51,71,0.5)'}`,
+                color: csvState === 'done' ? '#3fb950' : csvState === 'progress' ? '#b44fff' : '#8b949e',
+                cursor: csvState !== 'idle' ? 'default' : 'pointer',
+              }}
+              onClick={exportCsv}
+              disabled={csvState !== 'idle'}
+              title="Export findings to CSV (copies to clipboard)"
+            >
+              {csvState === 'progress' && <span className="w-3 h-3 border border-current/40 border-t-current rounded-full animate-spin" />}
+              {csvState === 'progress' ? 'Exporting…' : csvState === 'done' ? 'Done ✓' : (
+                <>
+                  <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path d="M2 12v2h12v-2M8 2v8M5 7l3 3 3-3" />
+                  </svg>
+                  Export CSV
+                </>
+              )}
+            </button>
+            <button className="btn-accent text-xs px-3 py-1.5" onClick={pushAll}>
+              Send All → ReconDesk
+            </button>
+          </>
         )}
       </div>
 

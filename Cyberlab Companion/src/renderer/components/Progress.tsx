@@ -381,44 +381,81 @@ export default function Progress() {
                 {xpBarWidth}%
               </span>
             </div>
-            <div
-              className="h-2.5 rounded-full overflow-hidden relative group/xpbar cursor-help"
-              style={{ background: 'rgba(42,51,71,0.4)' }}
-              title={`${levelInfo.currentXp.toLocaleString()} / ${levelInfo.nextXp.toLocaleString()} XP to next level`}
-            >
+            {/* XP bar with milestone ticks */}
+            <div className="relative" style={{ paddingBottom: '18px' }}>
+              {/* Level tick marks above bar */}
+              {XP_THRESHOLDS.slice(1).map((xpThreshold, idx) => {
+                const base = XP_THRESHOLDS[Math.max(0, idx)];
+                const next = XP_THRESHOLDS[Math.min(idx + 1, XP_THRESHOLDS.length - 1)];
+                const levelNum = idx + 2;
+                // Position as % within the full 0→maxXP range
+                const maxXP = XP_THRESHOLDS[XP_THRESHOLDS.length - 1];
+                const pctPos = (xpThreshold / maxXP) * 100;
+                const isPassed = levelInfo.currentXp >= xpThreshold;
+                if (pctPos >= 100) return null;
+                return (
+                  <div
+                    key={xpThreshold}
+                    className="absolute flex flex-col items-center"
+                    style={{ left: `${pctPos}%`, bottom: 0, transform: 'translateX(-50%)', pointerEvents: 'none' }}
+                    title={`Level ${levelNum} — ${xpThreshold.toLocaleString()} XP`}
+                  >
+                    <span
+                      className="text-[9px] font-mono mb-0.5"
+                      style={{ color: isPassed ? '#b44fff' : '#484f58', lineHeight: 1 }}
+                    >
+                      {levelNum}
+                    </span>
+                    <span
+                      style={{
+                        display: 'block',
+                        width: '1px',
+                        height: '6px',
+                        background: isPassed ? 'rgba(180,79,255,0.6)' : 'rgba(42,51,71,0.7)',
+                      }}
+                    />
+                  </div>
+                );
+              })}
               <div
-                className="h-full rounded-full"
-                style={{
-                  width: `${xpBarWidth}%`,
-                  background: 'linear-gradient(90deg, #b44fff, #cb80ff)',
-                  boxShadow: '0 0 10px rgba(180,79,255,0.5)',
-                  transition: 'width 1s cubic-bezier(0.2,0.8,0.2,1)',
-                }}
-              />
-              {/* Tooltip */}
-              <div
-                className="absolute bottom-full left-1/2 mb-2 pointer-events-none opacity-0 group-hover/xpbar:opacity-100 transition-opacity duration-150 whitespace-nowrap z-10"
-                style={{ transform: 'translateX(-50%)' }}
+                className="h-2.5 rounded-full overflow-hidden relative group/xpbar cursor-help"
+                style={{ background: 'rgba(42,51,71,0.4)' }}
+                title={`${levelInfo.currentXp.toLocaleString()} / ${levelInfo.nextXp.toLocaleString()} XP to next level`}
               >
                 <div
-                  className="text-[11px] font-mono px-2 py-1 rounded"
+                  className="h-full rounded-full"
                   style={{
-                    background: 'rgba(7,8,15,0.96)',
-                    border: '1px solid rgba(180,79,255,0.35)',
-                    color: '#cb80ff',
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
-                  }}
-                >
-                  {levelInfo.currentXp.toLocaleString()} / {levelInfo.nextXp.toLocaleString()} XP to next level
-                </div>
-                <div
-                  style={{
-                    position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
-                    width: 0, height: 0,
-                    borderLeft: '5px solid transparent', borderRight: '5px solid transparent',
-                    borderTop: '5px solid rgba(180,79,255,0.35)',
+                    width: `${xpBarWidth}%`,
+                    background: 'linear-gradient(90deg, #b44fff, #cb80ff)',
+                    boxShadow: '0 0 10px rgba(180,79,255,0.5)',
+                    transition: 'width 1s cubic-bezier(0.2,0.8,0.2,1)',
                   }}
                 />
+                {/* Tooltip */}
+                <div
+                  className="absolute bottom-full left-1/2 mb-2 pointer-events-none opacity-0 group-hover/xpbar:opacity-100 transition-opacity duration-150 whitespace-nowrap z-10"
+                  style={{ transform: 'translateX(-50%)' }}
+                >
+                  <div
+                    className="text-[11px] font-mono px-2 py-1 rounded"
+                    style={{
+                      background: 'rgba(7,8,15,0.96)',
+                      border: '1px solid rgba(180,79,255,0.35)',
+                      color: '#cb80ff',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
+                    }}
+                  >
+                    {levelInfo.currentXp.toLocaleString()} / {levelInfo.nextXp.toLocaleString()} XP to next level
+                  </div>
+                  <div
+                    style={{
+                      position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
+                      width: 0, height: 0,
+                      borderLeft: '5px solid transparent', borderRight: '5px solid transparent',
+                      borderTop: '5px solid rgba(180,79,255,0.35)',
+                    }}
+                  />
+                </div>
               </div>
             </div>
             <div className="text-[10px] mt-1.5 text-right" style={{ color: 'var(--text-muted)' }}>

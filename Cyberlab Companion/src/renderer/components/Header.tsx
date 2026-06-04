@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store';
 import type { AppConfig } from '@shared/types';
 
@@ -12,12 +12,36 @@ interface HeaderProps {
   onHelp?: () => void
 }
 
+function useTimeInLab(startedAt: string | undefined): string {
+  const [elapsed, setElapsed] = useState('');
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (!startedAt) { setElapsed(''); return; }
+    function update() {
+      const diffMs = Date.now() - new Date(startedAt!).getTime();
+      if (diffMs < 0) { setElapsed(''); return; }
+      const totalMins = Math.floor(diffMs / 60000);
+      const hrs = Math.floor(totalMins / 60);
+      const mins = totalMins % 60;
+      setElapsed(hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`);
+    }
+    update();
+    timerRef.current = setInterval(update, 60000);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [startedAt]);
+
+  return elapsed;
+}
+
 export default function Header({ onHelp }: HeaderProps) {
   const { vpnStatus, tabs, activeTabId, config, setConfig } = useStore();
   const [showAiMenu, setShowAiMenu] = useState(false);
 
   const activeTab = tabs.find(t => t.id === activeTabId);
   const session = activeTab?.session;
+  const hasSession = session?.labName && session.labName !== 'New Session';
+  const timeInLab = useTimeInLab(hasSession ? session.createdAt : undefined);
 
   const aiProvider = config?.aiProvider || 'claude';
   const claudeModel = config?.claudeModel || 'claude-sonnet-4-6';
@@ -46,8 +70,6 @@ export default function Header({ onHelp }: HeaderProps) {
   function handleFullscreen() {
     try { (window.electronAPI as Record<string, Function>).toggleFullscreen?.(); } catch {}
   }
-
-  const hasSession = session?.labName && session.labName !== 'New Session';
 
   return (
     <div
@@ -128,6 +150,22 @@ export default function Header({ onHelp }: HeaderProps) {
             <span className="text-[10px] font-mono tabular-nums" style={{ color: '#484f58' }}>
               {flagRate}/hr
             </span>
+            {timeInLab && (
+              <>
+                <span style={{ color: 'rgba(42,51,71,0.6)', fontSize: 9 }}>|</span>
+                <span
+                  className="flex items-center gap-1 text-[10px] font-mono tabular-nums"
+                  style={{ color: '#8b949e' }}
+                  title="Time elapsed since lab start"
+                >
+                  <svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <circle cx="8" cy="8" r="6.5" />
+                    <path d="M8 4.5V8l2.5 2" />
+                  </svg>
+                  {timeInLab}
+                </span>
+              </>
+            )}
           </div>
         );
       })()}

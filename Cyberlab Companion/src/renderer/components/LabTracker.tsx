@@ -1,11 +1,71 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import {
-  load, getByColumn, getById, add, update, remove, moveToColumn,
+  load, getByColumn, getById, add, remove, moveToColumn,
   searchLabs, serialize, type Lab, type LabColumn,
 } from '../lib/labtracker';
 import Badge from './ui/Badge';
+
+// ── ProgressArc: 32×32 SVG arc showing task completion ratio ──────────────────
+
+const ARC_R = 12;
+const ARC_CIRC = 2 * Math.PI * ARC_R;
+
+function columnToRatio(col: LabColumn): number {
+  if (col === 'completed') return 1;
+  if (col === 'inprogress') return 0.5;
+  return 0;
+}
+
+function ProgressArc({ column }: { column: LabColumn }) {
+  const ratio = columnToRatio(column);
+  const [animatedRatio, setAnimatedRatio] = useState(0);
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      requestAnimationFrame(() => setAnimatedRatio(ratio));
+    } else {
+      setAnimatedRatio(ratio);
+    }
+  }, [ratio]);
+
+  const offset = ARC_CIRC * (1 - animatedRatio);
+  const color =
+    column === 'completed' ? '#3fb950' :
+    column === 'inprogress' ? '#d29922' : '#484f58';
+
+  return (
+    <svg width="32" height="32" viewBox="0 0 32 32" style={{ flexShrink: 0 }}>
+      {/* Track */}
+      <circle
+        cx="16" cy="16" r={ARC_R}
+        fill="none"
+        stroke="rgba(42,51,71,0.5)"
+        strokeWidth="3"
+      />
+      {/* Progress arc */}
+      <circle
+        cx="16" cy="16" r={ARC_R}
+        fill="none"
+        stroke={color}
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeDasharray={ARC_CIRC}
+        strokeDashoffset={offset}
+        transform="rotate(-90 16 16)"
+        style={{
+          transition: 'stroke-dashoffset 0.7s cubic-bezier(0.2,0.8,0.2,1)',
+          filter: ratio > 0 ? `drop-shadow(0 0 3px ${color}88)` : 'none',
+        }}
+      />
+      {/* Center dot */}
+      <circle cx="16" cy="16" r="2.5" fill={ratio > 0 ? color : '#484f58'} style={{ opacity: ratio > 0 ? 0.9 : 0.4 }} />
+    </svg>
+  );
+}
 
 const COLUMNS: Array<{ id: LabColumn; label: string; color: string; rgb: string }> = [
   { id: 'todo',       label: 'To Do',       color: '#484f58', rgb: '72,79,88'   },
@@ -290,7 +350,8 @@ function LabCard({
       onClick={() => setExpanded(e => !e)}
     >
       <div className="p-3">
-        <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2">
+          <ProgressArc column={lab.column} />
           <div className="flex-1 min-w-0">
             <div className="text-xs font-semibold truncate" style={{ color: '#e6edf3' }}>
               {lab.name}
