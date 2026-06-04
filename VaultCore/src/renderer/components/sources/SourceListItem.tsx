@@ -24,13 +24,24 @@ export default function SourceListItem({ source, selected, onClick }: Props) {
   return (
     <button
       onClick={onClick}
-      className="w-full text-left px-4 py-3 border-b transition-colors"
+      className="w-full text-left px-4 py-3 border-b group"
       style={{
         background: selected
-          ? 'color-mix(in srgb, var(--accent) 8%, var(--bg2))'
+          ? 'color-mix(in srgb, var(--accent) 10%, var(--bg2))'
           : 'var(--bg2)',
         borderColor: 'var(--border)',
         borderLeft: selected ? '2px solid var(--accent)' : '2px solid transparent',
+        transition: 'background 200ms var(--ease), border-color 200ms var(--ease)',
+      }}
+      onMouseEnter={(e) => {
+        if (!selected) {
+          (e.currentTarget as HTMLElement).style.background = 'rgba(42,51,71,0.25)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!selected) {
+          (e.currentTarget as HTMLElement).style.background = 'var(--bg2)';
+        }
       }}
     >
       <div className="flex items-start gap-2">
@@ -46,6 +57,9 @@ export default function SourceListItem({ source, selected, onClick }: Props) {
             {source.type} · {source.interval}
           </div>
         </div>
+        {selected && (
+          <span className="shrink-0 mt-1 opacity-70" style={{ color: 'var(--accent)' }}>›</span>
+        )}
       </div>
     </button>
   );

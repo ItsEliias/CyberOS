@@ -152,9 +152,30 @@ export default function LastRunSummary({ runs, onViewDiff }: Props) {
         <div className="text-[10px] uppercase tracking-widest mb-2" style={{ color: 'var(--text-dim)' }}>
           Last Run Summary
         </div>
-        <div className="rounded-lg border p-6 text-center" style={{ background: 'var(--bg2)', borderColor: 'var(--border)' }}>
-          <div className="text-sm" style={{ color: 'var(--text-dim)' }}>No scrape runs yet</div>
-          <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>Start a scrape to see results here</div>
+        <div
+          className="rounded-xl border p-6 text-center flex flex-col items-center gap-3"
+          style={{
+            background: 'linear-gradient(135deg, var(--surface-glass), rgba(13,14,24,0.5))',
+            borderColor: 'var(--border-glass)',
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          {/* Illustrated SVG — data pipeline icon */}
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none" style={{ opacity: 0.5 }}>
+            <rect x="4" y="12" width="12" height="8" rx="2" stroke="#3fb950" strokeWidth="1.5" fill="rgba(63,185,80,0.06)"/>
+            <rect x="4" y="28" width="12" height="8" rx="2" stroke="#8b949e" strokeWidth="1.5" fill="none"/>
+            <path d="M16 16h8M16 32h8" stroke="#484f58" strokeWidth="1.5" strokeDasharray="2 2"/>
+            <rect x="24" y="20" width="12" height="8" rx="2" stroke="#3fb950" strokeWidth="1.5" fill="rgba(63,185,80,0.08)"/>
+            <path d="M36 24h5" stroke="#3fb950" strokeWidth="1.5"/>
+            <circle cx="44" cy="24" r="2" fill="#3fb950" style={{ opacity: 0.6 }}/>
+            <path d="M16 16c0 0 4-4 8 0" stroke="#3fb950" strokeWidth="1" strokeDasharray="2 2" fill="none" opacity="0.4"/>
+          </svg>
+          <div>
+            <div className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>No scrape runs yet</div>
+            <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
+              Hit <span style={{ color: 'var(--accent)' }}>▶ Scrape All</span> to populate your vault
+            </div>
+          </div>
         </div>
       </div>
     );

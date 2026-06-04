@@ -171,17 +171,26 @@ export default function DashboardView() {
         {/* No vault prompt */}
         {noVault && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="rounded-lg p-6 text-center border-2 border-dashed"
-            style={{ borderColor: 'rgba(63,185,80,0.30)', background: 'rgba(63,185,80,0.04)' }}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25 }}
+            className="rounded-xl p-6 text-center border-2 border-dashed flex flex-col items-center gap-3"
+            style={{ borderColor: 'rgba(63,185,80,0.25)', background: 'rgba(63,185,80,0.04)' }}
           >
-            <div className="text-2xl mb-2">🗂</div>
-            <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-              No Obsidian vault configured
-            </div>
-            <div className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>
-              Go to Settings to select your vault path
+            <svg width="44" height="44" viewBox="0 0 44 44" fill="none" style={{ opacity: 0.6 }}>
+              <rect x="6" y="12" width="32" height="24" rx="3" stroke="#3fb950" strokeWidth="1.5" fill="rgba(63,185,80,0.07)"/>
+              <path d="M6 18h32" stroke="#3fb950" strokeWidth="1" opacity="0.5"/>
+              <rect x="12" y="22" width="8" height="2" rx="1" fill="rgba(63,185,80,0.4)"/>
+              <rect x="12" y="26" width="14" height="2" rx="1" fill="rgba(42,51,71,0.5)"/>
+              <path d="M32 8L22 12L12 8" stroke="#3fb950" strokeWidth="1.5" strokeLinejoin="round" fill="none" opacity="0.7"/>
+            </svg>
+            <div>
+              <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                No Obsidian vault configured
+              </div>
+              <div className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>
+                Go to <span style={{ color: 'var(--accent)' }}>Settings</span> to select your vault path
+              </div>
             </div>
           </motion.div>
         )}

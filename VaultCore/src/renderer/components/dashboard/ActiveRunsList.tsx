@@ -34,9 +34,18 @@ export default function ActiveRunsList({ runs, onCancel }: Props) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, height: 0, marginBottom: 0 }}
               transition={{ duration: 0.2 }}
-              className="rounded-lg p-3 border"
-              style={{ background: 'var(--bg2)', borderColor: 'var(--border)' }}
+              className="rounded-xl p-3 border relative overflow-hidden"
+              style={{
+                background: 'linear-gradient(135deg, rgba(63,185,80,0.06) 0%, var(--bg2) 60%)',
+                borderColor: 'rgba(63,185,80,0.22)',
+                boxShadow: '0 0 16px rgba(63,185,80,0.06)',
+              }}
             >
+              {/* Subtle top glow line */}
+              <div
+                className="absolute top-0 left-0 right-0 h-px pointer-events-none"
+                style={{ background: 'linear-gradient(90deg, transparent, rgba(63,185,80,0.4), transparent)' }}
+              />
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <span
@@ -53,23 +62,27 @@ export default function ActiveRunsList({ runs, onCancel }: Props) {
                   </span>
                   <button
                     onClick={() => onCancel(run.id)}
-                    className="text-[10px] px-2 py-0.5 rounded border transition-all hover:bg-red-500/10"
+                    className="text-[10px] px-2 py-0.5 rounded-md border transition-all hover:bg-red-500/10"
                     style={{ borderColor: '#f85149', color: '#f85149' }}
                   >
                     Cancel
                   </button>
                 </div>
               </div>
-              {/* Indeterminate progress bar */}
+              {/* Indeterminate shimmer progress bar */}
               <div
                 className="h-1.5 rounded-full overflow-hidden"
-                style={{ background: 'var(--border)' }}
+                style={{ background: 'rgba(42,51,71,0.5)' }}
               >
                 <motion.div
                   className="h-full rounded-full"
-                  style={{ background: '#3fb950', width: '40%' }}
-                  animate={{ x: ['0%', '160%', '0%'] }}
-                  transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                  style={{
+                    background: 'linear-gradient(90deg, #1a7a30, #3fb950, #70d48a, #3fb950, #1a7a30)',
+                    backgroundSize: '200% 100%',
+                    width: '45%',
+                  }}
+                  animate={{ x: ['-10%', '180%'] }}
+                  transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
                 />
               </div>
             </motion.div>

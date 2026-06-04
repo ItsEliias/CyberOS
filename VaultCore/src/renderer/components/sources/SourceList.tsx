@@ -27,11 +27,17 @@ export default function SourceList({ sources, selectedId, onSelect, onAdd }: Pro
       {/* List */}
       <div className="flex-1 overflow-auto">
         {sources.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full py-12 px-4 text-center">
-            <div className="text-3xl mb-3">📋</div>
-            <div className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>No sources yet</div>
-            <div className="text-[10px] mt-1" style={{ color: 'var(--text-dim)' }}>
-              Add a source to get started
+          <div className="flex flex-col items-center justify-center h-full py-12 px-4 text-center gap-3">
+            <svg width="44" height="44" viewBox="0 0 44 44" fill="none" style={{ opacity: 0.4 }}>
+              <circle cx="22" cy="22" r="14" stroke="#8b949e" strokeWidth="1.5" fill="none"/>
+              <line x1="22" y1="15" x2="22" y2="29" stroke="#3fb950" strokeWidth="1.5" strokeLinecap="round"/>
+              <line x1="15" y1="22" x2="29" y2="22" stroke="#3fb950" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            <div>
+              <div className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>No sources yet</div>
+              <div className="text-[10px] mt-1" style={{ color: 'var(--text-dim)' }}>
+                Add a source to get started
+              </div>
             </div>
           </div>
         ) : (
@@ -50,8 +56,16 @@ export default function SourceList({ sources, selectedId, onSelect, onAdd }: Pro
       <div className="p-3 border-t shrink-0" style={{ borderColor: 'var(--border)' }}>
         <button
           onClick={onAdd}
-          className="w-full py-2 rounded-lg text-xs font-semibold transition-all"
-          style={{ background: 'var(--accent)', color: '#fff' }}
+          className="w-full py-2 rounded-xl text-xs font-semibold transition-all"
+          style={{ background: 'var(--accent)', color: '#fff', boxShadow: '0 2px 8px rgba(63,185,80,0.2)' }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(63,185,80,0.35)';
+            (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(63,185,80,0.2)';
+            (e.currentTarget as HTMLElement).style.transform = '';
+          }}
         >
           + Add Source
         </button>

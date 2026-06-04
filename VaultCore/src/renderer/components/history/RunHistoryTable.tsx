@@ -173,10 +173,27 @@ export default function RunHistoryTable() {
       {/* Table */}
       <div className="flex-1 overflow-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: 'var(--border) transparent' }}>
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full py-20 text-center">
-            <div className="text-3xl mb-3">📜</div>
-            <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              {runs.length === 0 ? 'No runs yet' : 'No runs match filters'}
+          <div className="flex flex-col items-center justify-center h-full py-20 text-center gap-3">
+            {/* Illustrated table/log SVG */}
+            <svg width="52" height="52" viewBox="0 0 52 52" fill="none" style={{ opacity: 0.4 }}>
+              <rect x="4" y="8" width="44" height="36" rx="4" stroke="#8b949e" strokeWidth="1.5" fill="none"/>
+              <line x1="4" y1="18" x2="48" y2="18" stroke="#484f58" strokeWidth="1"/>
+              <line x1="4" y1="28" x2="48" y2="28" stroke="#484f58" strokeWidth="1"/>
+              <line x1="4" y1="38" x2="48" y2="38" stroke="#484f58" strokeWidth="1"/>
+              <line x1="18" y1="18" x2="18" y2="44" stroke="#484f58" strokeWidth="1"/>
+              <rect x="8" y="21" width="6" height="4" rx="1" fill="rgba(63,185,80,0.3)" stroke="#3fb950" strokeWidth="0.5"/>
+              <rect x="22" y="21" width="14" height="4" rx="1" fill="rgba(42,51,71,0.4)"/>
+              <rect x="22" y="31" width="10" height="4" rx="1" fill="rgba(42,51,71,0.3)"/>
+            </svg>
+            <div>
+              <div className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
+                {runs.length === 0 ? 'No runs yet' : 'No runs match filters'}
+              </div>
+              {runs.length === 0 && (
+                <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
+                  Run a scrape to populate this log
+                </div>
+              )}
             </div>
           </div>
         ) : (

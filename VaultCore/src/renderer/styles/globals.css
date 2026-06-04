@@ -210,3 +210,51 @@ button, a, input, select {
   background: var(--accent);
   transition: width 0.4s ease-out;
 }
+
+/* ─── Skeleton Loader ─────────────────────────────────────────────────────── */
+
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 25%,
+    var(--surface-3) 50%,
+    var(--surface-2) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.6s infinite linear;
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Card hover lift ─────────────────────────────────────────────────────── */
+
+.card-hover {
+  transition: transform var(--motion-fast) var(--ease),
+              box-shadow var(--motion-fast) var(--ease);
+}
+
+.card-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--elevation-2);
+}
+
+/* ─── Accent button glow ──────────────────────────────────────────────────── */
+
+.btn-accent-glow:hover {
+  box-shadow: 0 0 14px rgba(63, 185, 80, 0.25);
+}
+
+/* ─── Panel enter animation ───────────────────────────────────────────────── */
+
+@keyframes panelFadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.panel-enter {
+  animation: panelFadeUp var(--motion-base) var(--ease) both;
+}

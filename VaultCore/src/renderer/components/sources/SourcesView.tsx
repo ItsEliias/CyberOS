@@ -148,13 +148,26 @@ export default function SourcesView() {
             scraping={scrapingId === selectedSource.id}
           />
         ) : (
-          <div className="h-full flex flex-col items-center justify-center text-center px-8">
-            <div className="text-4xl mb-4">📋</div>
-            <div className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
-              Select a source to view details
-            </div>
-            <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
-              or add a new source with the button below
+          <div className="h-full flex flex-col items-center justify-center text-center px-8 gap-4">
+            {/* Illustrated source network icon */}
+            <svg width="56" height="56" viewBox="0 0 56 56" fill="none" style={{ opacity: 0.4 }}>
+              <circle cx="28" cy="28" r="5" stroke="#3fb950" strokeWidth="1.5" fill="rgba(63,185,80,0.1)"/>
+              <circle cx="10" cy="16" r="4" stroke="#8b949e" strokeWidth="1.5" fill="none"/>
+              <circle cx="46" cy="16" r="4" stroke="#8b949e" strokeWidth="1.5" fill="none"/>
+              <circle cx="10" cy="40" r="4" stroke="#8b949e" strokeWidth="1.5" fill="none"/>
+              <circle cx="46" cy="40" r="4" stroke="#8b949e" strokeWidth="1.5" fill="none"/>
+              <line x1="14" y1="18" x2="23" y2="25" stroke="#484f58" strokeWidth="1" strokeDasharray="3 2"/>
+              <line x1="42" y1="18" x2="33" y2="25" stroke="#484f58" strokeWidth="1" strokeDasharray="3 2"/>
+              <line x1="14" y1="38" x2="23" y2="31" stroke="#484f58" strokeWidth="1" strokeDasharray="3 2"/>
+              <line x1="42" y1="38" x2="33" y2="31" stroke="#484f58" strokeWidth="1" strokeDasharray="3 2"/>
+            </svg>
+            <div>
+              <div className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
+                Select a source to view details
+              </div>
+              <div className="text-[11px] mt-1.5" style={{ color: 'var(--text-dim)' }}>
+                or add a new source with the <span style={{ color: 'var(--accent)' }}>+ Add Source</span> button
+              </div>
             </div>
           </div>
         )}

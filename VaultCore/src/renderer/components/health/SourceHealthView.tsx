@@ -244,10 +244,22 @@ export default function SourceHealthView() {
         style={{ scrollbarWidth: 'thin', scrollbarColor: 'var(--border) transparent' }}
       >
         {sources.length === 0 && (
-          <div className="flex flex-col items-center py-20 text-center">
-            <div className="text-4xl mb-4">🏥</div>
-            <div className="text-sm" style={{ color: 'var(--text-muted)' }}>No sources configured</div>
-            <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>Add sources in the Sources view</div>
+          <div className="flex flex-col items-center py-16 text-center gap-4">
+            {/* Illustrated health/monitor SVG */}
+            <svg width="60" height="60" viewBox="0 0 60 60" fill="none" style={{ opacity: 0.45 }}>
+              <rect x="6" y="10" width="48" height="32" rx="4" stroke="#8b949e" strokeWidth="1.5" fill="rgba(13,14,24,0.8)"/>
+              <polyline points="10,30 18,20 24,28 32,16 40,26 48,22" stroke="#3fb950" strokeWidth="1.5" strokeLinejoin="round" fill="none"/>
+              <line x1="18" y1="42" x2="42" y2="42" stroke="#8b949e" strokeWidth="1.5"/>
+              <line x1="30" y1="42" x2="30" y2="50" stroke="#8b949e" strokeWidth="1.5"/>
+              <line x1="22" y1="50" x2="38" y2="50" stroke="#8b949e" strokeWidth="1.5"/>
+              <circle cx="32" cy="16" r="2" fill="rgba(63,185,80,0.3)" stroke="#3fb950" strokeWidth="1"/>
+            </svg>
+            <div>
+              <div className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>No sources configured</div>
+              <div className="text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
+                Add sources in the <span style={{ color: 'var(--accent)' }}>Sources</span> view to monitor their health
+              </div>
+            </div>
           </div>
         )}
 

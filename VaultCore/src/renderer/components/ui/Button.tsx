@@ -37,9 +37,9 @@ const VARIANT_STYLES: Record<ButtonVariant, { bg: string; border: string; color:
 }
 
 const SIZES: Record<ButtonSize, string> = {
-  xs: 'px-2 py-0.5 text-[10px] rounded',
-  sm: 'px-3 py-1 text-xs rounded',
-  md: 'px-4 py-1.5 text-sm rounded-md',
+  xs: 'px-2 py-0.5 text-[10px] rounded-lg',
+  sm: 'px-3 py-1 text-xs rounded-lg',
+  md: 'px-4 py-1.5 text-sm rounded-xl',
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -52,6 +52,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         className={`
           inline-flex items-center gap-1.5 font-medium border transition-all cursor-pointer
           disabled:opacity-40 disabled:cursor-not-allowed
+          hover:-translate-y-px active:translate-y-0
           ${SIZES[size]} ${className}
         `}
         style={{
@@ -59,7 +60,22 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           borderColor: vs.border,
           color: vs.color,
           fontFamily: 'var(--font-display)',
+          transitionDuration: '150ms',
           ...style,
+        }}
+        onMouseEnter={(e) => {
+          const el = e.currentTarget;
+          el.style.background = vs.hoverBg;
+          el.style.boxShadow = variant === 'primary'
+            ? '0 0 12px rgba(63,185,80,0.20)'
+            : variant === 'danger'
+            ? '0 0 10px rgba(248,81,73,0.15)'
+            : '';
+        }}
+        onMouseLeave={(e) => {
+          const el = e.currentTarget;
+          el.style.background = vs.bg;
+          el.style.boxShadow = '';
         }}
         {...rest}
       >

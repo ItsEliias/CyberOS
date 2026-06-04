@@ -129,15 +129,30 @@ export default function Sidebar() {
                   <button
                     key={item.id}
                     onClick={() => setActiveView(item.id)}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-all text-left"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-left"
                     style={{
                       background  : isActive ? 'rgba(63,185,80,0.10)' : 'transparent',
                       color       : isActive ? '#3fb950' : 'var(--text-muted)',
                       borderLeft  : isActive ? '2px solid #3fb950' : '2px solid transparent',
                       fontFamily  : 'var(--font-display)',
+                      transition  : 'background 180ms var(--ease), color 180ms var(--ease), border-color 180ms var(--ease)',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive) {
+                        const el = e.currentTarget as HTMLElement;
+                        el.style.background = 'rgba(255,255,255,0.04)';
+                        el.style.color = 'var(--text-secondary)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) {
+                        const el = e.currentTarget as HTMLElement;
+                        el.style.background = 'transparent';
+                        el.style.color = 'var(--text-muted)';
+                      }
                     }}
                   >
-                    <span className="text-[11px] font-mono">{item.icon}</span>
+                    <span className="text-[11px] font-mono" style={{ opacity: isActive ? 1 : 0.7 }}>{item.icon}</span>
                     <span>{item.label}</span>
                     {getBadge(item.id)}
                   </button>
