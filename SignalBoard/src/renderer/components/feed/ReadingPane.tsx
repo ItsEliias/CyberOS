@@ -292,21 +292,32 @@ export default function ReadingPane() {
           <div className="flex items-center gap-2 no-drag flex-wrap">
             <button
               onClick={() => window.electronAPI.openUrl(item.url)}
-              className="text-xs px-2.5 py-1 rounded-lg border transition-colors"
+              className="text-xs px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1.5"
               style={{ background: 'rgba(255,107,107,0.15)', borderColor: 'rgba(255,107,107,0.3)', color: '#ff6b6b', borderRadius: '8px' }}
             >
-              Open →
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              Open
             </button>
             <button
               onClick={() => { navigator.clipboard.writeText(item.url); setCopyToast(true); setTimeout(() => setCopyToast(false), 1800) }}
-              className="text-xs px-2.5 py-1 border transition-colors"
+              className="text-xs px-2.5 py-1 border transition-colors flex items-center gap-1.5"
               style={{ background: copyToast ? 'rgba(63,185,80,0.12)' : readerMode ? '#f9fafb' : 'rgba(22,27,39,0.6)', borderColor: copyToast ? 'rgba(63,185,80,0.3)' : readerMode ? '#d1d5db' : 'rgba(42,51,71,0.5)', color: copyToast ? '#3fb950' : readerMode ? '#374151' : '#8b949e', borderRadius: '8px' }}
             >
-              {copyToast ? '✓ Copied' : '⎘ Copy Link'}
+              {copyToast ? (
+                <>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Copied
+                </>
+              ) : (
+                <>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+                  Copy Link
+                </>
+              )}
             </button>
             <button
               onClick={handleToggleBookmark}
-              className="text-xs px-2.5 py-1 border transition-colors"
+              className="text-xs px-2.5 py-1 border transition-colors flex items-center gap-1.5"
               style={{
                 background: isBookmarked ? 'rgba(210,153,34,0.15)' : readerMode ? '#f9fafb' : 'rgba(22,27,39,0.6)',
                 borderColor: isBookmarked ? 'rgba(210,153,34,0.3)' : readerMode ? '#d1d5db' : 'rgba(42,51,71,0.5)',
@@ -318,11 +329,12 @@ export default function ReadingPane() {
             </button>
             <button
               onClick={() => { items.filter(i => !i.read).forEach(i => { window.electronAPI.markRead(i.id); patchItem(i.id, { read: true }) }) }}
-              className="text-xs px-2.5 py-1 border transition-colors"
+              className="text-xs px-2.5 py-1 border transition-colors flex items-center gap-1.5"
               style={{ background: readerMode ? '#f9fafb' : 'rgba(22,27,39,0.6)', borderColor: readerMode ? '#d1d5db' : 'rgba(42,51,71,0.5)', color: readerMode ? '#374151' : '#8b949e', borderRadius: '8px' }}
               title="Mark all feed items as read"
             >
-              ✓ Mark all read
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              Mark all read
             </button>
             <button
               onClick={handleSaveToVault}
@@ -440,13 +452,13 @@ export default function ReadingPane() {
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: readerMode ? '#9ca3af' : '#4a5568' }}>Full Content</p>
             <div
-              className="max-w-[68ch] mx-auto"
+              style={{ maxWidth: 680, margin: '0 auto' }}
             >
               <p
                 className="prose-drop-cap text-[13.5px] whitespace-pre-wrap"
                 style={{
                   color: readerMode ? '#1f2937' : 'rgba(226,232,240,0.82)',
-                  lineHeight: '1.8',
+                  lineHeight: '1.75',
                   letterSpacing: '0.01em',
                   fontFamily: readerMode ? "'Georgia', 'Times New Roman', serif" : 'inherit',
                 }}
