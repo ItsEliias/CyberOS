@@ -12,8 +12,8 @@ interface Props {
 }
 
 const SESSION_COLORS = [
-  '#00ff41', '#ff4444', '#4a9eff', '#e3b341',
-  '#b44fff', '#56d4dd', '#ff8c00', '#ffffff',
+  '#00ff41', '#f85149', '#4a9eff', '#d29922',
+  '#b44fff', '#56d4dd', '#ff8c42', '#c8ffc8',
 ];
 
 interface CtxMenu { id: string; x: number; y: number }
@@ -21,9 +21,9 @@ interface CtxMenu { id: string; x: number; y: number }
 export default function TabBar({
   sessions, activeSessionId, onSelect, onNew, onClose, onRename, onColorChange,
 }: Props) {
-  const [editingId, setEditingId]   = useState<string | null>(null);
-  const [editValue, setEditValue]   = useState('');
-  const [ctxMenu,   setCtxMenu]     = useState<CtxMenu | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [ctxMenu,   setCtxMenu]   = useState<CtxMenu | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const startRename = useCallback((id: string, name: string) => {
@@ -45,18 +45,19 @@ export default function TabBar({
   return (
     <>
       <div style={{
-        height: 30,
+        height: 32,
         display: 'flex',
         alignItems: 'stretch',
-        background: 'var(--bg)',
-        borderBottom: '1px solid var(--border)',
+        background: 'rgba(7,12,5,0.95)',
+        borderBottom: '1px solid rgba(0,255,65,0.1)',
         overflowX: 'auto',
         flexShrink: 0,
         scrollbarWidth: 'none',
+        fontFamily: 'var(--font-mono)',
       }}>
         {sessions.map(sess => {
           const isActive = sess.id === activeSessionId;
-          const color    = sess.color ?? 'var(--accent)';
+          const color    = sess.color ?? '#00ff41';
           return (
             <div
               key={sess.id}
@@ -70,23 +71,25 @@ export default function TabBar({
                 gap: 5,
                 padding: '0 10px',
                 cursor: 'pointer',
-                borderRight: '1px solid var(--border)',
-                borderBottom: isActive ? `2px solid ${color}` : '2px solid transparent',
-                background: isActive ? 'rgba(255,255,255,0.04)' : 'transparent',
+                borderRight: '1px solid rgba(0,255,65,0.07)',
+                borderBottom: isActive
+                  ? `2px solid ${color}`
+                  : '2px solid transparent',
+                background: isActive
+                  ? 'rgba(0,255,65,0.06)'
+                  : 'transparent',
                 flexShrink: 0,
-                minWidth: 80,
+                minWidth: 90,
                 maxWidth: 160,
                 position: 'relative',
                 userSelect: 'none',
+                transition: 'background 0.1s ease',
               }}
             >
               <span style={{
-                width: 6,
-                height: 6,
-                borderRadius: '50%',
-                background: color,
-                flexShrink: 0,
-                boxShadow: isActive ? `0 0 5px ${color}` : 'none',
+                width: 5, height: 5, borderRadius: '50%',
+                background: color, flexShrink: 0,
+                boxShadow: isActive ? `0 0 6px ${color}` : 'none',
               }} />
 
               {editingId === sess.id ? (
@@ -101,26 +104,23 @@ export default function TabBar({
                   }}
                   onClick={e => e.stopPropagation()}
                   style={{
-                    flex: 1,
-                    minWidth: 0,
-                    fontSize: 10,
-                    background: 'var(--bg)',
+                    flex: 1, minWidth: 0, fontSize: 10,
+                    background: 'rgba(0,255,65,0.05)',
                     border: `1px solid ${color}`,
                     borderRadius: 2,
-                    color: 'var(--text)',
+                    color: '#c8ffc8',
                     padding: '1px 4px',
-                    fontFamily: 'inherit',
+                    fontFamily: 'var(--font-mono)',
                     outline: 'none',
                   }}
                 />
               ) : (
                 <span style={{
-                  flex: 1,
-                  fontSize: 10,
-                  color: isActive ? 'var(--text)' : 'var(--text-dim)',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
+                  flex: 1, fontSize: 10,
+                  color: isActive ? '#c8ffc8' : 'rgba(0,255,65,0.4)',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  fontWeight: isActive ? 500 : 400,
+                  letterSpacing: '0.03em',
                 }}>
                   {sess.name}
                 </span>
@@ -131,14 +131,11 @@ export default function TabBar({
                 title="Close tab"
                 style={{
                   fontSize: 9,
-                  color: 'var(--text-muted)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '0 2px',
-                  lineHeight: 1,
-                  flexShrink: 0,
-                  opacity: 0.6,
+                  color: 'rgba(0,255,65,0.3)',
+                  background: 'none', border: 'none',
+                  cursor: 'pointer', padding: '0 2px',
+                  lineHeight: 1, flexShrink: 0, opacity: 0.7,
+                  fontFamily: 'var(--font-mono)',
                 }}
               >
                 ✕
@@ -147,19 +144,16 @@ export default function TabBar({
           );
         })}
 
-        {/* New tab button */}
+        {/* New tab */}
         <button
           onClick={onNew}
           title="New session (Cmd+T)"
           style={{
-            padding: '0 10px',
-            fontSize: 14,
-            color: 'var(--text-muted)',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            flexShrink: 0,
-            lineHeight: 1,
+            padding: '0 12px', fontSize: 16,
+            color: 'rgba(0,255,65,0.35)',
+            background: 'none', border: 'none',
+            cursor: 'pointer', flexShrink: 0, lineHeight: 1,
+            fontFamily: 'var(--font-mono)',
           }}
         >
           +
@@ -171,16 +165,13 @@ export default function TabBar({
         <div
           onMouseLeave={() => setCtxMenu(null)}
           style={{
-            position: 'fixed',
-            top: ctxMenu.y,
-            left: ctxMenu.x,
+            position: 'fixed', top: ctxMenu.y, left: ctxMenu.x,
             zIndex: 9999,
-            background: 'var(--panel)',
-            border: '1px solid var(--border)',
-            borderRadius: 4,
-            minWidth: 160,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-            fontSize: 11,
+            background: '#0d1208',
+            border: '1px solid rgba(0,255,65,0.2)',
+            borderRadius: 4, minWidth: 160,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+            fontSize: 11, fontFamily: 'var(--font-mono)',
           }}
         >
           <CtxItem label="Rename" onClick={() => {
@@ -188,7 +179,9 @@ export default function TabBar({
             if (sess) startRename(ctxMenu.id, sess.name);
             setCtxMenu(null);
           }} />
-          <div style={{ padding: '6px 10px 4px', fontSize: 10, color: 'var(--text-muted)' }}>Color</div>
+          <div style={{ padding: '6px 10px 4px', fontSize: 9, color: 'rgba(0,255,65,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            Color
+          </div>
           <div style={{ display: 'flex', gap: 5, padding: '2px 10px 8px' }}>
             {SESSION_COLORS.map(c => (
               <div
@@ -198,12 +191,12 @@ export default function TabBar({
                 style={{
                   width: 14, height: 14, borderRadius: '50%',
                   background: c, cursor: 'pointer',
-                  border: '1px solid rgba(255,255,255,0.2)',
+                  border: '1px solid rgba(255,255,255,0.15)',
                 }}
               />
             ))}
           </div>
-          <div style={{ borderTop: '1px solid var(--border)' }} />
+          <div style={{ borderTop: '1px solid rgba(0,255,65,0.1)' }} />
           <CtxItem label="Close" danger onClick={() => { onClose(ctxMenu.id); setCtxMenu(null); }} />
         </div>
       )}
@@ -216,11 +209,10 @@ function CtxItem({ label, onClick, danger }: { label: string; onClick: () => voi
     <div
       onClick={onClick}
       style={{
-        padding: '7px 12px',
-        cursor: 'pointer',
-        color: danger ? 'var(--error)' : 'var(--text-dim)',
+        padding: '7px 12px', cursor: 'pointer',
+        color: danger ? '#f85149' : '#7abf7a',
       }}
-      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,255,65,0.06)')}
       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
     >
       {label}

@@ -21,13 +21,7 @@ interface Props {
 }
 
 // ─── Simple virtual list ──────────────────────────────────────────────────────
-function VirtualList({
-  items,
-  query,
-}: {
-  items: CommandEntry[];
-  query: string;
-}) {
+function VirtualList({ items, query }: { items: CommandEntry[]; query: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [height, setHeight] = useState(400);
@@ -35,17 +29,15 @@ function VirtualList({
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(([entry]) => {
-      setHeight(entry.contentRect.height);
-    });
+    const ro = new ResizeObserver(([entry]) => setHeight(entry.contentRect.height));
     ro.observe(el);
     setHeight(el.clientHeight);
     return () => ro.disconnect();
   }, []);
 
-  const totalHeight = items.length * ESTIMATED_ROW_HEIGHT;
-  const startIdx    = Math.max(0, Math.floor(scrollTop / ESTIMATED_ROW_HEIGHT) - OVERSCAN);
-  const endIdx      = Math.min(items.length, Math.ceil((scrollTop + height) / ESTIMATED_ROW_HEIGHT) + OVERSCAN);
+  const totalHeight  = items.length * ESTIMATED_ROW_HEIGHT;
+  const startIdx     = Math.max(0, Math.floor(scrollTop / ESTIMATED_ROW_HEIGHT) - OVERSCAN);
+  const endIdx       = Math.min(items.length, Math.ceil((scrollTop + height) / ESTIMATED_ROW_HEIGHT) + OVERSCAN);
   const visibleItems = items.slice(startIdx, endIdx);
 
   return (
@@ -54,9 +46,7 @@ function VirtualList({
       onScroll={e => setScrollTop((e.target as HTMLDivElement).scrollTop)}
       style={{ flex: 1, overflowY: 'auto', position: 'relative' }}
     >
-      {/* Total height spacer */}
       <div style={{ height: totalHeight, position: 'relative' }}>
-        {/* Rendered rows, offset to correct position */}
         <div style={{ position: 'absolute', top: startIdx * ESTIMATED_ROW_HEIGHT, left: 0, right: 0 }}>
           {visibleItems.map(entry => (
             <CommandEntryRow key={entry.id} entry={entry} query={query} />
@@ -68,21 +58,16 @@ function VirtualList({
 }
 
 // ─── Non-virtual list (< 500 entries) ────────────────────────────────────────
-function PlainList({
-  items,
-  query,
-}: {
-  items: CommandEntry[];
-  query: string;
-}) {
+function PlainList({ items, query }: { items: CommandEntry[]; query: string }) {
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
       {items.length === 0 && (
         <div style={{
           padding: 12,
-          color: 'var(--text-muted)',
-          fontSize: 11,
+          color: 'rgba(0,255,65,0.3)',
+          fontSize: 10,
           textAlign: 'center',
+          fontFamily: 'var(--font-mono)',
         }}>
           {query ? 'No matches' : 'No commands yet'}
         </div>
@@ -102,7 +87,6 @@ export default function HistoryPanel({ commands, onClear }: Props) {
   const panelRef  = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Newest first, filtered by query
   const filtered = useMemo(() => {
     const q      = query.toLowerCase().trim();
     const sorted = [...commands].reverse();
@@ -110,7 +94,6 @@ export default function HistoryPanel({ commands, onClear }: Props) {
     return sorted.filter(c => c.command.toLowerCase().includes(q));
   }, [commands, query]);
 
-  // Cmd+F / Ctrl+F focuses search when panel is focused
   const handlePanelKeyDown = useCallback((e: React.KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
       e.preventDefault();
@@ -123,13 +106,11 @@ export default function HistoryPanel({ commands, onClear }: Props) {
       `[${c.timestamp}] [${c.pane}] ${c.command}${c.outputSnippet ? `\n  > ${c.outputSnippet}` : ''}`
     ).join('\n');
 
-    // Try native save dialog first; fall back to browser download
     try {
       const result = await window.electronAPI.exportHistory(text);
       if (result && result.success) return;
     } catch { /* fall through */ }
 
-    // Browser fallback
     const blob = new Blob([text], { type: 'text/plain' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
@@ -153,41 +134,32 @@ export default function HistoryPanel({ commands, onClear }: Props) {
       tabIndex={-1}
       onKeyDown={handlePanelKeyDown}
       style={{
-        width: 300,
-        display: 'flex',
-        flexDirection: 'column',
-        background: 'var(--panel)',
-        borderLeft: '1px solid var(--border)',
-        overflow: 'hidden',
-        flexShrink: 0,
-        outline: 'none',
+        width: 300, display: 'flex', flexDirection: 'column',
+        background: 'rgba(7,12,5,0.98)',
+        borderLeft: '1px solid rgba(0,255,65,0.1)',
+        overflow: 'hidden', flexShrink: 0, outline: 'none',
+        fontFamily: 'var(--font-mono)',
       }}
     >
       {/* Header */}
       <div style={{
         padding: '8px 10px',
-        borderBottom: '1px solid var(--border)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 6,
-        flexShrink: 0,
+        borderBottom: '1px solid rgba(0,255,65,0.1)',
+        display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0,
+        background: 'rgba(7,12,5,0.8)',
       }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 6,
-        }}>
-          <span style={{
-            fontSize: 11,
-            color: 'var(--text-dim)',
-            textTransform: 'uppercase',
-            letterSpacing: 1,
-          }}>
-            {replayMode ? 'Replay' : 'History'}
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ width: 2, height: 12, background: '#00ff41', borderRadius: 1 }} />
+            <span style={{
+              fontSize: 9, color: '#7abf7a',
+              textTransform: 'uppercase', letterSpacing: 1.5, fontWeight: 700,
+            }}>
+              {replayMode ? 'Replay' : 'History'}
+            </span>
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+            <span style={{ fontSize: 9, color: 'rgba(0,255,65,0.35)' }}>
               {commands.length} cmd{commands.length !== 1 ? 's' : ''}
             </span>
             <button
@@ -195,14 +167,13 @@ export default function HistoryPanel({ commands, onClear }: Props) {
               disabled={commands.length === 0}
               title="Replay session commands"
               style={{
-                fontSize: 10,
-                padding: '2px 6px',
-                borderRadius: 3,
-                background: replayMode ? 'var(--accent-dim)' : 'var(--bg)',
-                border: `1px solid ${replayMode ? 'var(--accent)' : 'var(--border)'}`,
-                color: replayMode ? 'var(--accent)' : 'var(--text-dim)',
+                fontSize: 9, padding: '2px 7px', borderRadius: 2,
+                background: replayMode ? 'rgba(0,255,65,0.12)' : 'rgba(0,255,65,0.04)',
+                border: `1px solid ${replayMode ? 'rgba(0,255,65,0.4)' : 'rgba(0,255,65,0.15)'}`,
+                color: replayMode ? '#00ff41' : 'rgba(0,255,65,0.5)',
                 opacity: commands.length === 0 ? 0.4 : 1,
                 cursor: commands.length === 0 ? 'default' : 'pointer',
+                fontFamily: 'var(--font-mono)', fontWeight: 600,
               }}
             >
               {replayMode ? '■ List' : '▶ Replay'}
@@ -210,7 +181,6 @@ export default function HistoryPanel({ commands, onClear }: Props) {
           </div>
         </div>
 
-        {/* Search (list mode only) */}
         {!replayMode && (
           <HistorySearch
             query={query}
@@ -223,21 +193,13 @@ export default function HistoryPanel({ commands, onClear }: Props) {
 
       {/* Body */}
       {replayMode ? (
-        <ReplayView
-          commands={commands}
-          onExit={() => setReplayMode(false)}
-        />
+        <ReplayView commands={commands} onExit={() => setReplayMode(false)} />
       ) : (
         <>
-          {/* Virtual or plain list */}
           {filtered.length === 0 ? (
             <div style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--text-muted)',
-              fontSize: 11,
+              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'rgba(0,255,65,0.3)', fontSize: 10,
             }}>
               {query ? 'No matches' : 'No commands yet'}
             </div>
@@ -250,24 +212,19 @@ export default function HistoryPanel({ commands, onClear }: Props) {
           {/* Footer */}
           <div style={{
             padding: '6px 10px',
-            borderTop: '1px solid var(--border)',
-            display: 'flex',
-            gap: 6,
-            flexShrink: 0,
+            borderTop: '1px solid rgba(0,255,65,0.1)',
+            display: 'flex', gap: 6, flexShrink: 0,
           }}>
             <button
               onClick={handleExport}
               disabled={commands.length === 0}
               style={{
-                flex: 1,
-                padding: '5px 0',
-                fontSize: 11,
-                borderRadius: 3,
-                background: 'var(--accent-dim)',
-                border: '1px solid var(--accent)',
-                color: 'var(--accent)',
+                flex: 1, padding: '5px 0', fontSize: 10, borderRadius: 3,
+                background: 'rgba(0,255,65,0.1)', border: '1px solid rgba(0,255,65,0.3)',
+                color: '#00ff41',
                 opacity: commands.length === 0 ? 0.4 : 1,
                 cursor: commands.length === 0 ? 'default' : 'pointer',
+                fontFamily: 'var(--font-mono)', fontWeight: 600, letterSpacing: '0.05em',
               }}
             >
               Export
@@ -276,15 +233,13 @@ export default function HistoryPanel({ commands, onClear }: Props) {
               onClick={handleClear}
               disabled={commands.length === 0}
               style={{
-                flex: 1,
-                padding: '5px 0',
-                fontSize: 11,
-                borderRadius: 3,
-                background: clearPending ? 'rgba(255,68,68,0.2)' : 'var(--bg)',
-                border: `1px solid ${clearPending ? 'var(--error)' : 'var(--border)'}`,
-                color: clearPending ? 'var(--error)' : 'var(--text-dim)',
+                flex: 1, padding: '5px 0', fontSize: 10, borderRadius: 3,
+                background: clearPending ? 'rgba(248,81,73,0.15)' : 'rgba(0,255,65,0.04)',
+                border: `1px solid ${clearPending ? 'rgba(248,81,73,0.4)' : 'rgba(0,255,65,0.12)'}`,
+                color: clearPending ? '#f85149' : 'rgba(0,255,65,0.4)',
                 opacity: commands.length === 0 ? 0.4 : 1,
                 cursor: commands.length === 0 ? 'default' : 'pointer',
+                fontFamily: 'var(--font-mono)', letterSpacing: '0.05em',
               }}
             >
               {clearPending ? 'Confirm' : 'Clear'}
