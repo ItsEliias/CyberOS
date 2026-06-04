@@ -32,6 +32,7 @@ function ErrorCard({ source, onRetry, onDisable, retrying }: {
   onDisable: () => void;
   retrying: boolean;
 }) {
+  const score = healthScore(source);
   return (
     <motion.div
       initial={{ opacity: 0, y: 4 }}
@@ -44,7 +45,7 @@ function ErrorCard({ source, onRetry, onDisable, retrying }: {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-sm shrink-0" style={{ color: '#f85149' }}>✕</span>
+          <HealthRing score={score} size={30} />
           <span className="text-sm font-medium truncate" style={{ color: 'var(--text)' }}>{source.name}</span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -83,6 +84,7 @@ function WarningCard({ source, onRetry, retrying }: {
   onRetry: () => void;
   retrying: boolean;
 }) {
+  const score = healthScore(source);
   return (
     <motion.div
       initial={{ opacity: 0, y: 4 }}
@@ -95,7 +97,7 @@ function WarningCard({ source, onRetry, retrying }: {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-sm shrink-0" style={{ color: '#d29922' }}>⚠</span>
+          <HealthRing score={score} size={30} />
           <span className="text-sm font-medium truncate" style={{ color: 'var(--text)' }}>{source.name}</span>
         </div>
         <button
@@ -120,13 +122,51 @@ function WarningCard({ source, onRetry, retrying }: {
   );
 }
 
+function healthScore(source: ScrapingSource): number {
+  if (source.health === 'error') return Math.max(0, 30 - source.consecutiveFailures * 10);
+  if (source.health === 'warning') return Math.max(40, 70 - source.consecutiveFailures * 8);
+  return 100;
+}
+
+function HealthRing({ score, size = 32 }: { score: number; size?: number }) {
+  const r = (size / 2) - 4;
+  const circ = 2 * Math.PI * r;
+  const dash = (score / 100) * circ;
+  const gap = circ - dash;
+  const color = score >= 80 ? '#3fb950' : score >= 50 ? '#d29922' : '#f85149';
+  return (
+    <svg width={size} height={size} className="shrink-0">
+      <circle
+        cx={size / 2} cy={size / 2} r={r}
+        className="health-ring-track"
+      />
+      <circle
+        cx={size / 2} cy={size / 2} r={r}
+        className="health-ring-fill"
+        stroke={color}
+        strokeDasharray={`${dash} ${gap}`}
+        strokeDashoffset={0}
+        style={{ transformOrigin: `${size / 2}px ${size / 2}px` }}
+      />
+      <text
+        x={size / 2} y={size / 2 + 3}
+        textAnchor="middle"
+        style={{ fontSize: 8, fontFamily: 'var(--font-mono)', fill: color, fontWeight: 600 }}
+      >
+        {score}
+      </text>
+    </svg>
+  );
+}
+
 function HealthyRow({ source }: { source: ScrapingSource }) {
+  const score = healthScore(source);
   return (
     <div
       className="flex items-center gap-4 px-4 py-2.5 rounded-lg border"
       style={{ background: 'var(--bg2)', borderColor: 'var(--border)' }}
     >
-      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: '#3fb950' }} />
+      <HealthRing score={score} />
       <span className="text-sm flex-1 truncate" style={{ color: 'var(--text)' }}>{source.name}</span>
       <span className="text-[10px] font-mono shrink-0" style={{ color: 'var(--text-dim)' }}>
         {source.lastSuccessAt ? `Last: ${timeAgo(source.lastSuccessAt)}` : 'Never run'}

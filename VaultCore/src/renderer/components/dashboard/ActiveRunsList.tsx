@@ -34,7 +34,7 @@ export default function ActiveRunsList({ runs, onCancel }: Props) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, height: 0, marginBottom: 0 }}
               transition={{ duration: 0.2 }}
-              className="rounded-xl p-3 border relative overflow-hidden"
+              className="rounded-xl p-3 border relative overflow-hidden run-card-active"
               style={{
                 background: 'linear-gradient(135deg, rgba(63,185,80,0.06) 0%, var(--bg2) 60%)',
                 borderColor: 'rgba(63,185,80,0.22)',

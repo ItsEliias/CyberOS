@@ -258,3 +258,56 @@ button, a, input, select {
 .panel-enter {
   animation: panelFadeUp var(--motion-base) var(--ease) both;
 }
+
+/* ─── Log Panel Syntax Highlighting ──────────────────────────────────────── */
+
+.log-timestamp {
+  color: #3fb950;
+  font-weight: 500;
+}
+
+.log-url {
+  color: #4a9eff;
+  text-decoration: underline;
+  text-decoration-color: rgba(74, 158, 255, 0.4);
+  cursor: pointer;
+}
+
+/* ─── Running Card Pulse Edge ─────────────────────────────────────────────── */
+
+@keyframes runEdgePulse {
+  0%, 100% { opacity: 0.5; box-shadow: inset 3px 0 0 #3fb950; }
+  50%       { opacity: 1;   box-shadow: inset 3px 0 0 #3fb950, 0 0 10px rgba(63,185,80,0.35); }
+}
+
+.run-card-active {
+  animation: runEdgePulse 2s ease-in-out infinite;
+}
+
+/* ─── Health Score Ring ───────────────────────────────────────────────────── */
+
+@keyframes ringDraw {
+  from { stroke-dashoffset: 157; }
+}
+
+.health-ring-track {
+  fill: none;
+  stroke: rgba(42, 51, 71, 0.5);
+  stroke-width: 3;
+}
+
+.health-ring-fill {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: center;
+  animation: ringDraw 0.8s ease-out backwards;
+}
+
+/* ─── Countdown Timer ─────────────────────────────────────────────────────── */
+
+.countdown-timer {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}

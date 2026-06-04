@@ -2,6 +2,47 @@ import { useEffect, useRef } from 'react';
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import type { ScrapingSource } from '../../types/vaultcore';
 
+// Mock 7-day trend data per card (units vary per metric)
+const MOCK_TRENDS: Record<string, number[]> = {
+  sources:  [3, 3, 4, 4, 5, 5, 5],
+  lastRun:  [1, 2, 1, 3, 2, 1, 2],
+  notes:    [120, 135, 148, 162, 170, 175, 180],
+  added:    [2, 5, 3, 8, 4, 6, 7],
+};
+
+function Sparkline({ data, accent = false }: { data: number[]; accent?: boolean }) {
+  if (!data || data.length < 2) return null;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const W = 56; const H = 20;
+  const step = W / (data.length - 1);
+  const pts = data
+    .map((v, i) => `${i * step},${H - ((v - min) / range) * (H - 2) - 1}`)
+    .join(' ');
+  const color = accent ? '#3fb950' : 'rgba(139,148,158,0.6)';
+  return (
+    <svg width={W} height={H} className="shrink-0" style={{ overflow: 'visible' }}>
+      <polyline
+        points={pts}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        opacity={0.8}
+      />
+      {/* last-point dot */}
+      <circle
+        cx={(data.length - 1) * step}
+        cy={H - ((data[data.length - 1] - min) / range) * (H - 2) - 1}
+        r="2"
+        fill={color}
+      />
+    </svg>
+  );
+}
+
 interface VaultStatsCompact {
   totalNotes: number;
   addedToday: number;
@@ -37,15 +78,17 @@ function AnimatedNumber({ value }: { value: number }) {
 }
 
 function MetricCard({
-  label, value, sub, accent = false, index,
+  label, value, sub, accent = false, index, trendKey,
 }: {
   label: string;
   value: string | number;
   sub?: string;
   accent?: boolean;
   index: number;
+  trendKey?: string;
 }) {
   const numericValue = typeof value === 'number' ? value : null;
+  const trendData = trendKey ? MOCK_TRENDS[trendKey] : undefined;
 
   return (
     <motion.div
@@ -72,14 +115,21 @@ function MetricCard({
           style={{ background: 'linear-gradient(90deg, transparent, rgba(63,185,80,0.5), transparent)' }}
         />
       )}
-      <div
-        className="text-2xl font-bold font-mono tabular-nums"
-        style={{
-          color: accent ? 'var(--accent)' : 'var(--text)',
-          textShadow: accent ? '0 0 20px rgba(63,185,80,0.35)' : undefined,
-        }}
-      >
-        {numericValue !== null ? <AnimatedNumber value={numericValue} /> : value}
+      <div className="flex items-start justify-between gap-2">
+        <div
+          className="text-2xl font-bold font-mono tabular-nums"
+          style={{
+            color: accent ? 'var(--accent)' : 'var(--text)',
+            textShadow: accent ? '0 0 20px rgba(63,185,80,0.35)' : undefined,
+          }}
+        >
+          {numericValue !== null ? <AnimatedNumber value={numericValue} /> : value}
+        </div>
+        {trendData && (
+          <div className="mt-1">
+            <Sparkline data={trendData} accent={accent} />
+          </div>
+        )}
       </div>
       <div className="text-[11px] uppercase tracking-wider mt-1" style={{ color: 'var(--text-dim)' }}>
         {label}
@@ -106,18 +156,21 @@ export default function MetricCards({ sources, vaultStats, lastRunAgo }: Props) 
         value={activeSources}
         sub={`${healthySources} healthy${errorSources > 0 ? ` · ${errorSources} error` : ''}`}
         accent
+        trendKey="sources"
       />
       <MetricCard
         index={1}
         label="Last Run"
         value={lastRunAgo ?? '—'}
         sub="most recent scrape"
+        trendKey="lastRun"
       />
       <MetricCard
         index={2}
         label="Vault Notes"
         value={vaultStats?.totalNotes.toLocaleString() ?? '—'}
         sub="markdown files"
+        trendKey="notes"
       />
       <MetricCard
         index={3}
@@ -125,6 +178,7 @@ export default function MetricCards({ sources, vaultStats, lastRunAgo }: Props) 
         value={vaultStats?.addedToday ?? '—'}
         sub="new notes"
         accent={!!(vaultStats && vaultStats.addedToday > 0)}
+        trendKey="added"
       />
     </div>
   );

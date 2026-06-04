@@ -37,9 +37,9 @@ const VARIANT_STYLES: Record<ButtonVariant, { bg: string; border: string; color:
 }
 
 const SIZES: Record<ButtonSize, string> = {
-  xs: 'px-2 py-0.5 text-[10px] rounded-lg',
-  sm: 'px-3 py-1 text-xs rounded-lg',
-  md: 'px-4 py-1.5 text-sm rounded-xl',
+  xs: 'px-2 py-0.5 text-[10px]',
+  sm: 'px-3 py-1 text-xs',
+  md: 'px-4 py-1.5 text-sm',
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -61,6 +61,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           color: vs.color,
           fontFamily: 'var(--font-display)',
           transitionDuration: '150ms',
+          borderRadius: 8,
           ...style,
         }}
         onMouseEnter={(e) => {

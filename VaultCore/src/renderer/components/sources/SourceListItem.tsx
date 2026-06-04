@@ -6,6 +6,17 @@ interface Props {
   onClick: () => void;
 }
 
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
 function HealthDot({ health }: { health: ScrapingSource['health'] }) {
   const map = {
     healthy: { color: '#3fb950', icon: '●' },
@@ -53,8 +64,21 @@ export default function SourceListItem({ source, selected, onClick }: Props) {
           >
             {source.name}
           </div>
-          <div className="text-[10px] mt-0.5" style={{ color: 'var(--text-dim)' }}>
-            {source.type} · {source.interval}
+          <div className="text-[10px] mt-0.5 flex items-center gap-1.5 flex-wrap" style={{ color: 'var(--text-dim)' }}>
+            <span>{source.type} · {source.interval}</span>
+            {source.lastScrapeAt && (
+              <span
+                className="px-1 rounded"
+                style={{
+                  background: 'rgba(63,185,80,0.08)',
+                  border: '1px solid rgba(63,185,80,0.18)',
+                  color: 'rgba(63,185,80,0.7)',
+                  fontSize: 9,
+                }}
+              >
+                {timeAgo(source.lastScrapeAt)}
+              </span>
+            )}
           </div>
         </div>
         {selected && (

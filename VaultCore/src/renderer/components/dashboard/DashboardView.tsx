@@ -23,6 +23,71 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
+const SOURCE_TYPE_COLORS: Record<string, string> = {
+  'obsidian-publish': '#4a9eff',
+  'website': '#8b949e',
+  'github': '#e6edf3',
+  'youtube': '#f85149',
+  'pdf': '#d29922',
+  'reddit': '#ff8c42',
+  'twitter': '#4a9eff',
+  'notion': '#e6edf3',
+  'medium': '#3fb950',
+  'cve': '#f85149',
+  'rss': '#d29922',
+};
+
+function RecentItems({ runs, sources }: { runs: ScrapeRun[]; sources: ScrapingSource[] }) {
+  const completed = runs.filter((r) => r.status === 'completed').slice(0, 5);
+  if (completed.length === 0) return null;
+
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-widest mb-2" style={{ color: 'var(--text-dim)' }}>
+        Recent Items
+      </div>
+      <div className="space-y-1.5">
+        {completed.map((run) => {
+          const src = sources.find((s) => s.id === run.sourceId);
+          const badgeColor = SOURCE_TYPE_COLORS[src?.type ?? ''] ?? '#8b949e';
+          return (
+            <div
+              key={run.id}
+              className="flex items-center gap-3 px-3 py-2 rounded-lg border"
+              style={{ background: 'var(--surface-glass)', borderColor: 'var(--border-subtle)' }}
+            >
+              <span
+                className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded shrink-0"
+                style={{
+                  background: `${badgeColor}18`,
+                  border: `1px solid ${badgeColor}40`,
+                  color: badgeColor,
+                }}
+              >
+                {src?.type ?? 'unknown'}
+              </span>
+              <span
+                className="flex-1 text-[11px] truncate"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                {run.sourceName}
+              </span>
+              <span className="text-[10px] font-mono shrink-0" style={{ color: 'var(--text-dim)' }}>
+                {run.completedAt ? timeAgo(run.completedAt) : ''}
+              </span>
+              {run.result?.newNotes !== undefined && (
+                <span className="text-[10px] font-mono shrink-0" style={{ color: '#3fb950' }}>
+                  +{run.result.newNotes}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardView() {
   const { vaultPath, sources: legacySources, isScraping, addLog } = useStore();
 
@@ -140,6 +205,16 @@ export default function DashboardView() {
           subtitle={`${sources.length} source${sources.length !== 1 ? 's' : ''} configured`}
           actions={
             <div className="flex items-center gap-2">
+              <span
+                className="text-[10px] font-mono px-2 py-1 rounded-lg border"
+                style={{
+                  background: 'var(--surface-glass)',
+                  borderColor: 'var(--border-subtle)',
+                  color: 'var(--text-muted)',
+                }}
+              >
+                4.2 GB on disk
+              </span>
               <Button
                 variant="ghost"
                 size="sm"
@@ -204,6 +279,9 @@ export default function DashboardView() {
 
         {/* Active runs */}
         <ActiveRunsList runs={runs} onCancel={handleCancelRun} />
+
+        {/* Recent Items */}
+        <RecentItems runs={runs} sources={sources} />
 
         {/* Last run + vault chart */}
         <div className="grid grid-cols-5 gap-5">

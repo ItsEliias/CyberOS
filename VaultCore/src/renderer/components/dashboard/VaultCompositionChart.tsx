@@ -56,25 +56,28 @@ export default function VaultCompositionChart({ byFolder, onFolderClick }: Props
                 {f.folder}
               </span>
               <div
-                className="flex-1 h-1.5 rounded-full overflow-hidden"
+                className="flex-1 relative h-1.5 rounded-full overflow-visible"
                 style={{ background: 'rgba(42,51,71,0.4)' }}
               >
-                <motion.div
-                  className="h-full rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${pct}%` }}
-                  transition={{ duration: 0.55, delay: i * 0.05, ease: [0.2, 0.8, 0.2, 1] }}
-                  style={{
-                    background: `linear-gradient(90deg, color-mix(in srgb, #3fb950 ${brightness}%, #1a7a30), color-mix(in srgb, #3fb950 ${brightness + 15}%, #2a9e40))`,
-                    boxShadow: i === 0 ? '0 0 6px rgba(63,185,80,0.35)' : undefined,
-                  }}
-                />
+                <div className="h-full rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${pct}%` }}
+                    transition={{ duration: 0.55, delay: i * 0.05, ease: [0.2, 0.8, 0.2, 1] }}
+                    style={{
+                      background: `linear-gradient(90deg, color-mix(in srgb, #3fb950 ${brightness}%, #1a7a30), color-mix(in srgb, #3fb950 ${brightness + 15}%, #2a9e40))`,
+                      boxShadow: i === 0 ? '0 0 6px rgba(63,185,80,0.35)' : undefined,
+                    }}
+                  />
+                </div>
               </div>
               <span
-                className="text-[10px] font-mono w-8 text-right shrink-0 tabular-nums"
+                className="text-[10px] font-mono w-10 text-right shrink-0 tabular-nums"
                 style={{ color: 'var(--accent)' }}
               >
                 <CountUp target={f.count} delay={i * 0.05} />
+                <span style={{ color: 'var(--text-dim)', fontSize: 9 }}> f</span>
               </span>
             </div>
           );

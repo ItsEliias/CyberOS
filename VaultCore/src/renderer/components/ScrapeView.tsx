@@ -135,6 +135,26 @@ export default function ScrapeView() {
     info: 'var(--text-secondary)', success: '#3fb950', error: '#f85149', warn: '#d29922',
   };
 
+  function LogMessage({ message }: { message: string }) {
+    // Split the message into highlighted tokens
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts: React.ReactNode[] = [];
+    let lastIdx = 0;
+    let match: RegExpExecArray | null;
+    urlRegex.lastIndex = 0;
+    while ((match = urlRegex.exec(message)) !== null) {
+      if (match.index > lastIdx) {
+        parts.push(message.slice(lastIdx, match.index));
+      }
+      parts.push(
+        <span key={match.index} className="log-url">{match[0]}</span>
+      );
+      lastIdx = match.index + match[0].length;
+    }
+    if (lastIdx < message.length) parts.push(message.slice(lastIdx));
+    return <>{parts}</>;
+  }
+
   return (
     <div className="flex h-full overflow-hidden">
       {/* Config panel */}
@@ -369,8 +389,8 @@ export default function ScrapeView() {
             )}
             {logEntries.map((entry, i) => (
               <div key={i} style={{ color: LOG_COLORS[entry.type] ?? 'var(--text-secondary)' }}>
-                <span style={{ color: 'var(--text-muted)' }}>[{entry.time}] </span>
-                {entry.message}
+                <span className="log-timestamp">[{entry.time}]</span>{' '}
+                <LogMessage message={entry.message} />
               </div>
             ))}
           </div>
