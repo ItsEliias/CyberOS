@@ -2,6 +2,16 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useDashboardStore } from '../../stores/useDashboardStore'
+import type { ViewId } from '../../types/ecosystem'
+
+const VIEW_LABELS: Record<ViewId, string> = {
+  dashboard:      'Dashboard',
+  profile:        'Operator Profile',
+  ecosystem:      'Ecosystem Status',
+  apps:           'App Details',
+  settings:       'Settings',
+  'design-system': 'Design System',
+}
 
 /** Simulate latency: drifts around a base value with small random variation */
 function simulateLatency(base: number): number {
@@ -18,10 +28,14 @@ export default function StatusBar() {
   const alerts = useDashboardStore((s) => s.alerts)
   const dismissedIds = useDashboardStore((s) => s.dismissedAlertIds)
   const events = useDashboardStore((s) => s.events)
+  const activeView = useDashboardStore((s) => s.activeView)
   const [utcTime, setUtcTime] = useState(getUTC())
   const [newEventFlash, setNewEventFlash] = useState(false)
   const [latencyMs, setLatencyMs] = useState(() => simulateLatency(28))
   const prevEventCountRef = useRef(events.length)
+
+  const sectionLabel = VIEW_LABELS[activeView] ?? activeView
+  const isOnDashboard = activeView === 'dashboard'
 
   useEffect(() => {
     const interval = setInterval(() => setUtcTime(getUTC()), 1000)
@@ -53,6 +67,20 @@ export default function StatusBar() {
       className="h-6 flex items-center px-4 shrink-0 text-[11px]"
       style={{ background: 'rgba(7, 8, 15, 0.98)', borderTop: '1px solid rgba(255,255,255,0.04)' }}
     >
+      {/* Breadcrumb nav — Dashboard > Section Name */}
+      {!isOnDashboard && (
+        <>
+          <div className="flex items-center gap-1 text-text-muted font-mono">
+            <span>Dashboard</span>
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+            <span style={{ color: 'var(--text-secondary)' }}>{sectionLabel}</span>
+          </div>
+          <span className="mx-2.5 text-text-muted/30 select-none">|</span>
+        </>
+      )}
+
       {/* Ecosystem status */}
       <div className="flex items-center gap-1.5">
         <span

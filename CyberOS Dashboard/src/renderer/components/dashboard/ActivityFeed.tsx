@@ -1,11 +1,22 @@
 // CyberOS Dashboard — Activity Feed
 // Right panel — live ecosystem events, deduped, newest first
 
-import { useRef, useEffect, useState, useMemo } from 'react'
+import { useRef, useEffect, useState, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useDashboardStore } from '../../stores/useDashboardStore'
 import { normalizeEvents, humanizeEventType, getAppAccentColor } from '../../utils/eventParser'
 import { timeAgo } from '../../utils/timeAgo'
+
+// ─── Live ticking timestamp ───────────────────────────────────────────────────
+
+function useLiveTick(intervalMs = 60_000): number {
+  const [tick, setTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setTick((n) => n + 1), intervalMs)
+    return () => clearInterval(id)
+  }, [intervalMs])
+  return tick
+}
 
 // ─── Event type classification ───────────────────────────────────────────────
 
@@ -79,6 +90,8 @@ export default function ActivityFeed() {
   const settings = useDashboardStore((s) => s.settings)
   const scrollRef = useRef<HTMLDivElement>(null)
   const [showFilterDropdown, setShowFilterDropdown] = useState(false)
+  // Tick every 60s so relative timestamps re-render
+  const _tick = useLiveTick(60_000)
 
   const normalized = normalizeEvents(events)
   const filtered = feedFilter
