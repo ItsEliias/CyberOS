@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { ScrapeRun } from '../../types/vaultcore';
 
@@ -13,6 +14,38 @@ function timeAgo(iso: string): string {
   const m = Math.floor(s / 60);
   if (m < 60) return `${m}m`;
   return `${Math.floor(m / 60)}h ${m % 60}m`;
+}
+
+/** Live throughput counter — ticks every second showing items/sec */
+function ThroughputCounter({ startedAt, itemsSaved }: { startedAt: string; itemsSaved: number }) {
+  const [rate, setRate] = useState<number>(0);
+
+  useEffect(() => {
+    const tick = () => {
+      const elapsedSec = Math.max(1, (Date.now() - new Date(startedAt).getTime()) / 1000);
+      setRate(itemsSaved / elapsedSec);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [startedAt, itemsSaved]);
+
+  return (
+    <motion.span
+      key={Math.round(rate * 10)}
+      initial={{ opacity: 0.5, y: -2 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      className="font-mono tabular-nums text-[10px] shrink-0 px-1.5 py-0.5 rounded"
+      style={{
+        background: 'rgba(63,185,80,0.08)',
+        border: '1px solid rgba(63,185,80,0.2)',
+        color: '#3fb950',
+      }}
+    >
+      {rate.toFixed(1)}/s
+    </motion.span>
+  );
 }
 
 export default function ActiveRunsList({ runs, onCancel }: Props) {
@@ -47,7 +80,7 @@ export default function ActiveRunsList({ runs, onCancel }: Props) {
                 style={{ background: 'linear-gradient(90deg, transparent, rgba(63,185,80,0.4), transparent)' }}
               />
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                   <span
                     className="w-2 h-2 rounded-full status-dot-pulse shrink-0"
                     style={{ background: '#3fb950', ['--pulse-color' as string]: 'rgba(63,185,80,0.4)' }}
@@ -56,7 +89,11 @@ export default function ActiveRunsList({ runs, onCancel }: Props) {
                     {run.sourceName}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
+                  <ThroughputCounter
+                    startedAt={run.startedAt}
+                    itemsSaved={run.result?.newNotes ?? 0}
+                  />
                   <span className="text-[10px]" style={{ color: 'var(--text-dim)' }}>
                     {timeAgo(run.startedAt)} ago
                   </span>

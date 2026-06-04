@@ -16,7 +16,7 @@ function timeAgo(d: Date): string {
 }
 
 export default function StatusBar({ lastSavedAt }: Props) {
-  const { activeReport, dirty } = useStore();
+  const { activeReport, dirty, activeSectionId } = useStore();
   const [tick, setTick] = useState(0);
   const [savedFlash, setSavedFlash] = useState(false);
   const prevSavedRef = useRef<Date | null>(null);
@@ -40,6 +40,14 @@ export default function StatusBar({ lastSavedAt }: Props) {
   const findingsCount = activeReport.findings.length;
   const status = activeReport.status ?? 'draft';
   const isDraft = status !== 'complete';
+
+  // Live word count for active section
+  const activeSection = activeSectionId
+    ? activeReport.sections.find(s => s.id === activeSectionId)
+    : null;
+  const sectionWords = activeSection?.content
+    ? activeSection.content.trim().split(/\s+/).filter(Boolean).length
+    : 0;
 
   return (
     <div
@@ -99,6 +107,16 @@ export default function StatusBar({ lastSavedAt }: Props) {
           ? 'No findings'
           : `${findingsCount} finding${findingsCount !== 1 ? 's' : ''}`}
       </span>
+
+      {/* Live word count for active section */}
+      {activeSection && activeSection.type !== 'cover' && activeSection.type !== 'signature' && activeSection.type !== 'risk-matrix' && (
+        <>
+          <Divider />
+          <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+            {sectionWords.toLocaleString()} {sectionWords === 1 ? 'word' : 'words'}
+          </span>
+        </>
+      )}
 
       <div style={{ flex: 1 }} />
 

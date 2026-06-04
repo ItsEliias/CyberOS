@@ -151,9 +151,7 @@ export default function FeedView() {
           ) : (
             <AnimatePresence mode="popLayout" initial={false}>
               {filtered.map((item, idx) => (
-                <div key={item.id} style={{ transitionDelay: `${Math.min(idx * 40, 400)}ms` }}>
-                  <FeedItemCard item={item} />
-                </div>
+                <FeedItemCard key={item.id} item={item} index={idx} />
               ))}
             </AnimatePresence>
           )}

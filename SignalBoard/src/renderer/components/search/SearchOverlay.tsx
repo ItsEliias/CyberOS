@@ -4,6 +4,17 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../../store'
 import type { FeedItem } from '../../../shared/types'
 
+const RECENT_KEY = 'signalboard-recent-searches'
+const MAX_RECENT = 8
+
+function loadRecent(): string[] {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]') } catch { return [] }
+}
+
+function saveRecent(searches: string[]) {
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(searches)) } catch { /* ignore */ }
+}
+
 const SNIPPET_RADIUS = 80
 
 function getSnippet(text: string, query: string): string {
@@ -52,6 +63,7 @@ export default function SearchOverlay({ onClose }: { onClose: () => void }) {
   const patchItem     = useStore(s => s.patchItem)
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState(0)
+  const [recentSearches, setRecentSearches] = useState<string[]>(loadRecent)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -61,6 +73,21 @@ export default function SearchOverlay({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     setSelected(0)
   }, [query])
+
+  function addRecentSearch(q: string) {
+    const clean = q.trim()
+    if (!clean || clean.length < 2) return
+    setRecentSearches(prev => {
+      const next = [clean, ...prev.filter(s => s !== clean)].slice(0, MAX_RECENT)
+      saveRecent(next)
+      return next
+    })
+  }
+
+  function clearRecentSearches() {
+    setRecentSearches([])
+    saveRecent([])
+  }
 
   const results = useMemo((): SearchResult[] => {
     const q = query.trim()
@@ -79,6 +106,7 @@ export default function SearchOverlay({ onClose }: { onClose: () => void }) {
   const flatResults = useMemo(() => grouped.flatMap(g => g.results), [grouped])
 
   function selectItem(item: FeedItem) {
+    addRecentSearch(query)
     setActiveView('feed')
     setSelectedId(item.id)
     if (!item.read) {
@@ -136,7 +164,36 @@ export default function SearchOverlay({ onClose }: { onClose: () => void }) {
             <div className="px-4 py-6 text-center text-xs text-muted/40">No results for "{query}"</div>
           )}
 
-          {query.length < 2 && (
+          {query.length < 2 && recentSearches.length > 0 && (
+            <div className="px-4 py-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[9px] font-semibold uppercase tracking-widest" style={{ color: 'rgba(139,148,158,0.4)' }}>Recent</span>
+                <button
+                  onClick={clearRecentSearches}
+                  className="text-[9px] transition-opacity hover:opacity-80"
+                  style={{ color: 'rgba(139,148,158,0.4)' }}
+                >
+                  Clear all
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {recentSearches.map(s => (
+                  <button
+                    key={s}
+                    onClick={() => setQuery(s)}
+                    className="text-[11px] px-2 py-0.5 rounded transition-colors"
+                    style={{ background: 'rgba(42,51,71,0.4)', color: 'rgba(139,148,158,0.7)', border: '1px solid rgba(42,51,71,0.6)' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(42,51,71,0.7)'; e.currentTarget.style.color = 'rgba(226,232,240,0.85)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(42,51,71,0.4)'; e.currentTarget.style.color = 'rgba(139,148,158,0.7)' }}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {query.length < 2 && recentSearches.length === 0 && (
             <div className="px-4 py-6 text-center text-xs text-muted/30">Type at least 2 characters to search</div>
           )}
 

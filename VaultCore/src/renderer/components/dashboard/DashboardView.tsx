@@ -76,7 +76,7 @@ function RecentItems({ runs, sources }: { runs: ScrapeRun[]; sources: ScrapingSo
                 {run.completedAt ? timeAgo(run.completedAt) : ''}
               </span>
               {run.result?.newNotes !== undefined && (
-                <span className="text-[10px] font-mono shrink-0" style={{ color: '#3fb950' }}>
+                <span className="text-[10px] font-mono tabular-nums shrink-0" style={{ color: '#3fb950' }}>
                   +{run.result.newNotes}
                 </span>
               )}

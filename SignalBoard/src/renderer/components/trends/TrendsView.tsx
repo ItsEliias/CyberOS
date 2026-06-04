@@ -3,6 +3,49 @@ import { useMemo, useEffect, useRef } from 'react'
 import { useStore } from '../../store'
 import type { FeedItem } from '../../../shared/types'
 
+// ── Sparkline ────────────────────────────────────────────────────────────────
+
+/** Build a 7-bucket daily sparkline from an item list for a given source */
+function buildSparkline(items: FeedItem[], sourceName: string): number[] {
+  const now = Date.now()
+  const buckets = Array<number>(7).fill(0)
+  items.forEach(item => {
+    if (item.sourceName !== sourceName) return
+    const daysAgo = Math.floor((now - new Date(item.publishedAt).getTime()) / 86400_000)
+    if (daysAgo >= 0 && daysAgo < 7) buckets[6 - daysAgo]++
+  })
+  return buckets
+}
+
+function Sparkline({ data, color }: { data: number[]; color: string }) {
+  const W = 52, H = 20
+  const max = Math.max(...data, 1)
+  const pts = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * W
+    const y = H - (v / max) * (H - 2) - 1
+    return `${x.toFixed(1)},${y.toFixed(1)}`
+  })
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ overflow: 'visible', flexShrink: 0 }}>
+      <polyline
+        points={pts.join(' ')}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        opacity={0.7}
+      />
+      {/* Area fill under sparkline */}
+      <polyline
+        points={`0,${H} ${pts.join(' ')} ${W},${H}`}
+        fill={`${color}18`}
+        stroke="none"
+      />
+    </svg>
+  )
+}
+
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 const STOP_WORDS = new Set([
@@ -161,16 +204,20 @@ function SourceActivity({ items }: { items: FeedItem[] }) {
       {data.length === 0 ? (
         <p className="text-xs text-muted/40">No activity data.</p>
       ) : (
-        <div className="space-y-2">
-          {data.map(([name, count], idx) => (
-            <div key={name} className="flex items-center gap-3">
-              <span className="text-[11px] text-muted/70 w-32 truncate">{name}</span>
-              <div className="flex-1 h-3 bg-border/30 rounded overflow-hidden">
-                <AnimatedBar pct={(count / max) * 100} color="linear-gradient(90deg, rgba(74,158,255,0.5), rgba(74,158,255,0.8))" delay={idx * 60} />
+        <div className="space-y-2.5">
+          {data.map(([name, count], idx) => {
+            const sparkData = buildSparkline(items, name)
+            return (
+              <div key={name} className="flex items-center gap-3">
+                <span className="text-[11px] text-muted/70 w-28 truncate flex-shrink-0">{name}</span>
+                <div className="flex-1 h-3 bg-border/30 rounded overflow-hidden">
+                  <AnimatedBar pct={(count / max) * 100} color="linear-gradient(90deg, rgba(74,158,255,0.5), rgba(74,158,255,0.8))" delay={idx * 60} />
+                </div>
+                <span className="text-[10px] font-mono text-muted/60 w-5 text-right tabular-nums flex-shrink-0">{count}</span>
+                <Sparkline data={sparkData} color="#4a9eff" />
               </div>
-              <span className="text-[10px] font-mono text-muted/60 w-6 text-right tabular-nums">{count}</span>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

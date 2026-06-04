@@ -109,6 +109,20 @@ export default function RunHistoryTable() {
     });
   }, [runs, statusFilter, sourceFilter]);
 
+  /** Longest run duration among filtered runs — used as 100% baseline for progress bars */
+  const maxDuration = useMemo(() => {
+    let max = 0;
+    for (const r of filtered) {
+      const d = r.duration != null
+        ? r.duration
+        : r.completedAt
+        ? new Date(r.completedAt).getTime() - new Date(r.startedAt).getTime()
+        : 0;
+      if (d > max) max = d;
+    }
+    return max || 1;
+  }, [filtered]);
+
   function handleClear() {
     if (!confirmClear) { setConfirmClear(true); return; }
     clearRuns();
@@ -238,23 +252,51 @@ export default function RunHistoryTable() {
                         <td className="px-4 py-2.5 font-mono" style={{ color: 'var(--text-muted)' }}>
                           {formatDate(run.startedAt)}
                         </td>
-                        <td className="px-4 py-2.5 font-mono" style={{ color: 'var(--text-dim)' }}>
-                          {run.duration != null
-                            ? formatDuration(run.duration)
-                            : run.completedAt
-                            ? formatDuration(new Date(run.completedAt).getTime() - new Date(run.startedAt).getTime())
-                            : '—'}
+                        <td className="px-4 py-2.5" style={{ minWidth: 100 }}>
+                          {(() => {
+                            const durationMs = run.duration != null
+                              ? run.duration
+                              : run.completedAt
+                              ? new Date(run.completedAt).getTime() - new Date(run.startedAt).getTime()
+                              : null;
+                            if (durationMs == null) return <span style={{ color: 'var(--text-dim)' }}>—</span>;
+                            const pct = Math.max(4, Math.round((durationMs / maxDuration) * 100));
+                            return (
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="font-mono tabular-nums text-[11px] shrink-0 w-10 text-right"
+                                  style={{ color: 'var(--text-dim)' }}
+                                >
+                                  {formatDuration(durationMs)}
+                                </span>
+                                <div
+                                  className="flex-1 h-1.5 rounded-full overflow-hidden"
+                                  style={{ background: 'rgba(42,51,71,0.45)', minWidth: 40 }}
+                                >
+                                  <div
+                                    className="h-full rounded-full transition-all duration-500"
+                                    style={{
+                                      width: `${pct}%`,
+                                      background: run.status === 'failed'
+                                        ? 'rgba(248,81,73,0.55)'
+                                        : 'rgba(63,185,80,0.55)',
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td className="px-4 py-2.5">
                           <StatusBadge status={run.status} />
                         </td>
-                        <td className="px-4 py-2.5 font-mono" style={{ color: r ? '#3fb950' : 'var(--text-dim)' }}>
+                        <td className="px-4 py-2.5 font-mono tabular-nums" style={{ color: r ? '#3fb950' : 'var(--text-dim)' }}>
                           {r ? r.newNotes : '—'}
                         </td>
-                        <td className="px-4 py-2.5 font-mono" style={{ color: r ? '#7bb8ff' : 'var(--text-dim)' }}>
+                        <td className="px-4 py-2.5 font-mono tabular-nums" style={{ color: r ? '#7bb8ff' : 'var(--text-dim)' }}>
                           {r ? r.updatedNotes : '—'}
                         </td>
-                        <td className="px-4 py-2.5 font-mono" style={{ color: 'var(--text-dim)' }}>
+                        <td className="px-4 py-2.5 font-mono tabular-nums" style={{ color: 'var(--text-dim)' }}>
                           {r ? r.unchangedNotes : '—'}
                         </td>
                       </motion.tr>

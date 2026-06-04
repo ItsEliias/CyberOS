@@ -78,6 +78,38 @@ function SeverityDonut({ findings }: { findings: { severity: string }[] }) {
   );
 }
 
+// ── CVSS score badge — colour-coded by score range ────────────────────────────
+function CvssBadge({ score }: { score?: string }) {
+  if (!score) {
+    return <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>—</span>;
+  }
+  const num = parseFloat(score);
+  let color = 'var(--text-muted)';
+  let bg    = 'transparent';
+  let border = 'transparent';
+  if (!isNaN(num)) {
+    if (num >= 9.0) {
+      color = '#f85149'; bg = 'rgba(248,81,73,0.12)'; border = 'rgba(248,81,73,0.30)';
+    } else if (num >= 7.0) {
+      color = '#ff8c42'; bg = 'rgba(255,140,66,0.12)'; border = 'rgba(255,140,66,0.30)';
+    } else if (num >= 4.0) {
+      color = '#d29922'; bg = 'rgba(210,153,34,0.12)'; border = 'rgba(210,153,34,0.30)';
+    } else if (num > 0) {
+      color = '#4a9eff'; bg = 'rgba(74,158,255,0.10)'; border = 'rgba(74,158,255,0.25)';
+    }
+  }
+  return (
+    <span style={{
+      fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 700,
+      padding: '2px 6px', borderRadius: 4,
+      background: bg, color, border: `1px solid ${border}`,
+      letterSpacing: '0.01em', fontVariantNumeric: 'tabular-nums',
+    }}>
+      {score}
+    </span>
+  );
+}
+
 export default function FindingsPanel() {
   const { activeReport, setActiveFindingId, activeFindingId, removeFinding } = useStore();
   const [showEditor, setShowEditor] = useState(false);
@@ -240,8 +272,8 @@ export default function FindingsPanel() {
                     <td style={{ padding: '9px 8px' }}>
                       <SeverityPill severity={f.severity as Severity} showDot={false} />
                     </td>
-                    <td style={{ padding: '9px 8px', fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
-                      {f.cvss || '—'}
+                    <td style={{ padding: '9px 8px' }}>
+                      <CvssBadge score={f.cvss} />
                     </td>
                     <td style={{ padding: '9px 8px', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
                       <button

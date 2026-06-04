@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useStore } from '../store';
 import type { SourceType, ConflictStrategy, UpdateMode, ScrapeConfig } from '@shared/types';
@@ -56,6 +56,9 @@ export default function ScrapeView() {
   const [cveIds, setCveIds]         = useState('');
   const [query, setQuery]           = useState('');
   const logRef = useRef<HTMLDivElement>(null);
+  const [isScrolledUp, setIsScrolledUp] = useState(false);
+  const [newEntryCount, setNewEntryCount] = useState(0);
+  const prevLogLengthRef = useRef(0);
 
   function selectType(type: SourceType) {
     setSourceType(type);
@@ -76,7 +79,42 @@ export default function ScrapeView() {
 
   function log(type: 'info' | 'success' | 'error' | 'warn', message: string) {
     addLog({ type, message, time: new Date().toLocaleTimeString() });
-    setTimeout(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, 50);
+    setTimeout(() => {
+      if (!logRef.current) return;
+      const el = logRef.current;
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 32;
+      if (atBottom) {
+        el.scrollTop = el.scrollHeight;
+        setIsScrolledUp(false);
+        setNewEntryCount(0);
+      } else {
+        setNewEntryCount((n) => n + 1);
+      }
+    }, 50);
+  }
+
+  useEffect(() => {
+    // Track new entries when logEntries changes and user is scrolled up
+    const newLen = logEntries.length;
+    if (newLen > prevLogLengthRef.current && isScrolledUp) {
+      setNewEntryCount((n) => n + (newLen - prevLogLengthRef.current));
+    }
+    prevLogLengthRef.current = newLen;
+  }, [logEntries.length, isScrolledUp]);
+
+  function handleLogScroll() {
+    const el = logRef.current;
+    if (!el) return;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 32;
+    setIsScrolledUp(!atBottom);
+    if (atBottom) setNewEntryCount(0);
+  }
+
+  function scrollToBottom() {
+    if (!logRef.current) return;
+    logRef.current.scrollTop = logRef.current.scrollHeight;
+    setIsScrolledUp(false);
+    setNewEntryCount(0);
   }
 
   const startScrape = useCallback(async () => {
@@ -383,20 +421,52 @@ export default function ScrapeView() {
           <div className="flex items-center justify-between px-4 py-2 border-b shrink-0 text-xs"
             style={{ borderColor: 'var(--border-default)', background: 'var(--surface-1)' }}>
             <span style={{ color: 'var(--text-muted)' }}>Output Log</span>
-            <button onClick={clearLog} className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Clear</button>
+            <button onClick={() => { clearLog(); setNewEntryCount(0); setIsScrolledUp(false); }} className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Clear</button>
           </div>
-          <div ref={logRef}
-            className="flex-1 overflow-y-auto p-3 space-y-0.5"
-            style={{ fontFamily: 'var(--font-mono)', fontSize: 11, scrollbarWidth: 'thin', scrollbarColor: 'rgba(42,51,71,0.5) transparent' }}>
-            {logEntries.length === 0 && (
-              <div style={{ color: 'var(--text-muted)' }}>No output yet. Start a scrape to see logs here.</div>
-            )}
-            {logEntries.map((entry, i) => (
-              <div key={i} style={{ color: LOG_COLORS[entry.type] ?? 'var(--text-secondary)' }}>
-                <span className="log-timestamp">[{entry.time}]</span>{' '}
-                <LogMessage message={entry.message} type={entry.type} />
-              </div>
-            ))}
+          <div className="flex-1 relative overflow-hidden">
+            <div
+              ref={logRef}
+              onScroll={handleLogScroll}
+              className="absolute inset-0 overflow-y-auto p-3 space-y-0.5"
+              style={{ fontFamily: 'var(--font-mono)', fontSize: 11, scrollbarWidth: 'thin', scrollbarColor: 'rgba(42,51,71,0.5) transparent' }}
+            >
+              {logEntries.length === 0 && (
+                <div style={{ color: 'var(--text-muted)' }}>No output yet. Start a scrape to see logs here.</div>
+              )}
+              {logEntries.map((entry, i) => (
+                <div key={i} style={{ color: LOG_COLORS[entry.type] ?? 'var(--text-secondary)' }}>
+                  <span className="log-timestamp">[{entry.time}]</span>{' '}
+                  <LogMessage message={entry.message} type={entry.type} />
+                </div>
+              ))}
+            </div>
+            {/* New entries pill — appears when user has scrolled up */}
+            <AnimatePresence>
+              {isScrolledUp && newEntryCount > 0 && (
+                <motion.button
+                  initial={{ opacity: 0, y: 8, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.9 }}
+                  transition={{ duration: 0.18 }}
+                  onClick={scrollToBottom}
+                  className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium border cursor-pointer"
+                  style={{
+                    background: 'rgba(13,14,24,0.92)',
+                    borderColor: 'rgba(63,185,80,0.35)',
+                    color: '#3fb950',
+                    backdropFilter: 'blur(6px)',
+                    boxShadow: '0 2px 12px rgba(0,0,0,0.5)',
+                    zIndex: 10,
+                  }}
+                >
+                  <span
+                    className="w-1.5 h-1.5 rounded-full status-dot-pulse"
+                    style={{ background: '#3fb950', ['--pulse-color' as string]: 'rgba(63,185,80,0.4)' }}
+                  />
+                  {newEntryCount} new entr{newEntryCount === 1 ? 'y' : 'ies'} ↓
+                </motion.button>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>

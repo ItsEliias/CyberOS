@@ -34,21 +34,41 @@ export default function ExportModal({ onExport, onCancel, exporting, defaultForm
   const [redactCredentials, setRedactCredentials] = useState(true);
   const [includeRawNmap, setIncludeRawNmap] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
+  const [exportStep, setExportStep] = useState<string>('');
 
-  // Animate progress bar when exporting
+  // Export step messages keyed to approximate progress thresholds
+  const EXPORT_STEPS: Array<{ at: number; label: string }> = [
+    { at: 0,  label: 'Compiling sections…'  },
+    { at: 28, label: 'Rendering content…'   },
+    { at: 58, label: 'Packaging assets…'    },
+    { at: 80, label: 'Finalising output…'   },
+    { at: 95, label: 'Done'                 },
+  ];
+
+  // Animate progress bar + step labels when exporting
   useEffect(() => {
-    if (!exporting) { setExportProgress(0); return; }
+    if (!exporting) { setExportProgress(0); setExportStep(''); return; }
     setExportProgress(0);
+    setExportStep(EXPORT_STEPS[0].label);
     const start = performance.now();
     const duration = 3200;
     let raf: number;
     function step(now: number) {
-      const t = Math.min((now - start) / duration, 0.92); // stops at 92% — completes when done
-      setExportProgress(t * 100);
+      const t = Math.min((now - start) / duration, 0.92);
+      const pct = t * 100;
+      setExportProgress(pct);
+      // Update step label based on progress
+      for (let i = EXPORT_STEPS.length - 1; i >= 0; i--) {
+        if (pct >= EXPORT_STEPS[i].at) {
+          setExportStep(EXPORT_STEPS[i].label);
+          break;
+        }
+      }
       if (t < 0.92) raf = requestAnimationFrame(step);
     }
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exporting]);
 
   function handleExport() {
@@ -144,16 +164,35 @@ export default function ExportModal({ onExport, onCancel, exporting, defaultForm
             </div>
           </div>
 
-          {/* Export progress bar */}
+          {/* Export progress bar + step message */}
           {exporting && (
-            <div style={{ height: 3, background: 'rgba(42,51,71,0.4)', overflow: 'hidden' }}>
-              <div style={{
-                height: '100%',
-                width: `${exportProgress}%`,
-                background: 'linear-gradient(90deg, rgba(74,158,255,0.6) 0%, #4a9eff 60%, rgba(74,158,255,0.8) 100%)',
-                transition: 'width 0.08s linear',
-                boxShadow: '0 0 8px rgba(74,158,255,0.5)',
-              }} />
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 20px 4px' }}>
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={exportStep}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.2 }}
+                    style={{ fontSize: 11, color: '#4a9eff', fontWeight: 600 }}
+                  >
+                    {exportStep}
+                  </motion.span>
+                </AnimatePresence>
+                <span style={{ fontSize: 10, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+                  {Math.round(exportProgress)}%
+                </span>
+              </div>
+              <div style={{ height: 3, background: 'rgba(42,51,71,0.4)', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${exportProgress}%`,
+                  background: 'linear-gradient(90deg, rgba(74,158,255,0.6) 0%, #4a9eff 60%, rgba(74,158,255,0.8) 100%)',
+                  transition: 'width 0.08s linear',
+                  boxShadow: '0 0 8px rgba(74,158,255,0.5)',
+                }} />
+              </div>
             </div>
           )}
 
@@ -164,7 +203,7 @@ export default function ExportModal({ onExport, onCancel, exporting, defaultForm
               {exporting ? (
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ width: 10, height: 10, borderRadius: '50%', border: '1.5px solid rgba(74,158,255,0.3)', borderTopColor: '#4a9eff', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
-                  Exporting…
+                  {exportStep || 'Exporting…'}
                 </span>
               ) : `Export ${FORMAT_PILLS.find(f => f.id === format)?.label ?? format}`}
             </button>

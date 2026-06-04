@@ -1,5 +1,5 @@
 // Sidebar — SignalBoard
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../../store'
 import AutoContextPanel from '../context/AutoContextPanel'
 import CustomKeywords from '../context/CustomKeywords'
@@ -133,14 +133,22 @@ export default function Sidebar() {
                 <span>{item.label}</span>
                 {(() => {
                   const cnt = categoryUnread[item.id] ?? 0
-                  if (cnt <= 0) return null
                   return (
-                    <span
-                      className="ml-auto min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full text-[9px] font-bold tabular-nums leading-none"
-                      style={{ background: 'rgba(255,107,107,0.18)', color: '#ff6b6b', border: '1px solid rgba(255,107,107,0.3)' }}
-                    >
-                      {cnt > 99 ? '99+' : cnt}
-                    </span>
+                    <AnimatePresence>
+                      {cnt > 0 && (
+                        <motion.span
+                          key={cnt}
+                          initial={{ scale: 0.6, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0.6, opacity: 0 }}
+                          transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                          className="ml-auto min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full text-[9px] font-bold tabular-nums leading-none"
+                          style={{ background: 'rgba(255,107,107,0.18)', color: '#ff6b6b', border: '1px solid rgba(255,107,107,0.3)' }}
+                        >
+                          {cnt > 99 ? '99+' : cnt}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
                   )
                 })()}
               </button>

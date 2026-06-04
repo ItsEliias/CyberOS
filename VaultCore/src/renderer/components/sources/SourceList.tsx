@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import type { ScrapingSource } from '../../types/vaultcore';
 import SourceListItem from './SourceListItem';
 
@@ -41,13 +42,19 @@ export default function SourceList({ sources, selectedId, onSelect, onAdd }: Pro
             </div>
           </div>
         ) : (
-          sources.map((src) => (
-            <SourceListItem
+          sources.map((src, idx) => (
+            <motion.div
               key={src.id}
-              source={src}
-              selected={src.id === selectedId}
-              onClick={() => onSelect(src.id)}
-            />
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.2, delay: idx * 0.04, ease: [0.2, 0.8, 0.2, 1] }}
+            >
+              <SourceListItem
+                source={src}
+                selected={src.id === selectedId}
+                onClick={() => onSelect(src.id)}
+              />
+            </motion.div>
           ))
         )}
       </div>

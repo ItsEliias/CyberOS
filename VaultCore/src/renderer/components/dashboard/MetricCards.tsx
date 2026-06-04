@@ -58,23 +58,24 @@ function AnimatedNumber({ value }: { value: number }) {
   const count   = useMotionValue(0);
   const rounded = useTransform(count, v => Math.round(v));
   const ref     = useRef<HTMLSpanElement>(null);
-  const once    = useRef(false);
+  const prevValue = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!once.current) {
-      const ctrl = animate(count, value, { duration: 0.8, ease: [0.2, 0.8, 0.2, 1] });
-      once.current = true;
-      return ctrl.stop;
-    } else {
-      count.set(value);
-    }
+    const from = prevValue.current ?? 0;
+    prevValue.current = value;
+    const ctrl = animate(count, value, {
+      from,
+      duration: 0.8,
+      ease: [0.2, 0.8, 0.2, 1],
+    });
+    return ctrl.stop;
   }, [value, count]);
 
   useEffect(() =>
     rounded.on('change', v => { if (ref.current) ref.current.textContent = v.toLocaleString(); }),
   [rounded]);
 
-  return <span ref={ref}>{value.toLocaleString()}</span>;
+  return <span ref={ref} className="tabular-nums">{value.toLocaleString()}</span>;
 }
 
 function MetricCard({
@@ -123,7 +124,9 @@ function MetricCard({
             textShadow: accent ? '0 0 20px rgba(63,185,80,0.35)' : undefined,
           }}
         >
-          {numericValue !== null ? <AnimatedNumber value={numericValue} /> : value}
+          {numericValue !== null
+            ? <AnimatedNumber value={numericValue} />
+            : <span className="tabular-nums">{value}</span>}
         </div>
         {trendData && (
           <div className="mt-1">
@@ -135,7 +138,7 @@ function MetricCard({
         {label}
       </div>
       {sub && (
-        <div className="text-[10px] mt-0.5" style={{ color: 'var(--text-dim)' }}>
+        <div className="text-[10px] mt-0.5 tabular-nums" style={{ color: 'var(--text-dim)' }}>
           {sub}
         </div>
       )}

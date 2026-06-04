@@ -265,8 +265,22 @@ function getReportType(platform: string): ReportTypeBadge {
   return { label: 'Pentest', color: '#ff8c42', bg: 'rgba(255,140,66,0.10)', border: 'rgba(255,140,66,0.25)' };
 }
 
+// Derive a gradient accent colour from the report type
+function getCardGradient(reportType: ReportTypeBadge): string {
+  const c = reportType.color;
+  return `linear-gradient(135deg, ${c}22 0%, ${c}0a 55%, transparent 100%)`;
+}
+
 function ReportCard({ report: r, index, onOpen, onDuplicate, onDelete }: CardProps) {
   const reportType = getReportType(r.platform || '');
+  const critCount = r.findings.filter(f => f.severity === 'critical').length;
+  const highCount = r.findings.filter(f => f.severity === 'high').length;
+
+  // Format assessment date for the card header
+  const dateLabel = r.assessmentDate
+    ? new Date(r.assessmentDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+    : timeAgoShort(r.updatedAt);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -277,11 +291,9 @@ function ReportCard({ report: r, index, onOpen, onDuplicate, onDelete }: CardPro
         background: 'var(--surface-1)',
         border: '1px solid rgba(42,51,71,0.75)',
         borderRadius: 12,
-        padding: '16px 18px',
         cursor: 'pointer',
         display: 'flex',
         flexDirection: 'column',
-        gap: 10,
         transition: 'border-color 0.2s, box-shadow 0.2s, transform 0.2s',
         position: 'relative',
         overflow: 'hidden',
@@ -296,105 +308,147 @@ function ReportCard({ report: r, index, onOpen, onDuplicate, onDelete }: CardPro
         (e.currentTarget as HTMLDivElement).style.boxShadow = 'none';
       }}
     >
-      {/* Accent glow top-right on hover */}
+      {/* ── Full-bleed gradient header ───────────────────────────────────── */}
       <div style={{
-        position: 'absolute', top: 0, right: 0, width: 60, height: 60,
-        background: 'radial-gradient(circle at top right, rgba(74,158,255,0.06) 0%, transparent 70%)',
-        pointerEvents: 'none',
-      }} />
+        background: getCardGradient(reportType),
+        borderBottom: `1px solid ${reportType.border}`,
+        padding: '12px 16px 10px',
+        position: 'relative',
+        overflow: 'hidden',
+        flexShrink: 0,
+      }}>
+        {/* Noise texture overlay */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'radial-gradient(ellipse at top right, rgba(255,255,255,0.04) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }} />
 
-      {/* Title + status */}
-      <div className="flex items-start justify-between gap-2">
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{
-            fontWeight: 700, fontSize: 13, color: 'var(--text-primary)',
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            letterSpacing: '-0.01em',
-          }}>
-            {r.title}
-          </div>
-          {r.operator && (
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>
-              by {r.operator}
-            </div>
-          )}
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-          <StatusPill status={r.status} />
+        {/* Report type + status badges */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7, position: 'relative' }}>
           <span style={{
-            fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
-            padding: '2px 6px', borderRadius: 99,
+            fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
+            padding: '2px 7px', borderRadius: 99,
             background: reportType.bg, color: reportType.color,
             border: `1px solid ${reportType.border}`,
           }}>
             {reportType.label}
           </span>
+          <StatusPill status={r.status} />
         </div>
-      </div>
 
-      {/* Meta row */}
-      <div className="flex gap-2 flex-wrap" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-        {r.platform && (
-          <span style={{
-            background: 'var(--surface-2)', border: '1px solid rgba(42,51,71,0.7)',
-            borderRadius: 4, padding: '1px 6px', fontSize: 10, fontWeight: 600,
-            textTransform: 'uppercase', letterSpacing: '0.05em',
-          }}>
-            {r.platform}
+        {/* Title */}
+        <div style={{
+          fontWeight: 700, fontSize: 13.5, color: 'var(--text-primary)',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          letterSpacing: '-0.01em', position: 'relative',
+        }}>
+          {r.title}
+        </div>
+
+        {/* Date + author sub-row */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, position: 'relative' }}>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+            {dateLabel}
           </span>
-        )}
-        {r.targetName && <span style={{ color: 'var(--text-secondary)' }}>{r.targetName}</span>}
-        {r.targetIP && (
-          <span style={{ color: '#4a9eff', fontFamily: 'var(--font-mono)', fontSize: 10 }}>{r.targetIP}</span>
+          {r.operator && (
+            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+              {r.operator}
+            </span>
+          )}
+        </div>
+
+        {/* Critical/High quick-flag */}
+        {(critCount > 0 || highCount > 0) && (
+          <div style={{ display: 'flex', gap: 4, marginTop: 6, position: 'relative' }}>
+            {critCount > 0 && (
+              <span style={{
+                fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 99,
+                background: 'rgba(248,81,73,0.18)', color: '#f85149',
+                border: '1px solid rgba(248,81,73,0.35)',
+              }}>
+                {critCount} CRIT
+              </span>
+            )}
+            {highCount > 0 && (
+              <span style={{
+                fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 99,
+                background: 'rgba(255,140,66,0.18)', color: '#ff8c42',
+                border: '1px solid rgba(255,140,66,0.35)',
+              }}>
+                {highCount} HIGH
+              </span>
+            )}
+          </div>
         )}
       </div>
 
-      {/* Severity summary */}
-      <SeveritySummary findings={r.findings} />
+      {/* ── Card body ────────────────────────────────────────────────────── */}
+      <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 9, flex: 1 }}>
+        {/* Meta row */}
+        <div className="flex gap-2 flex-wrap" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+          {r.platform && (
+            <span style={{
+              background: 'var(--surface-2)', border: '1px solid rgba(42,51,71,0.7)',
+              borderRadius: 4, padding: '1px 6px', fontSize: 10, fontWeight: 600,
+              textTransform: 'uppercase', letterSpacing: '0.05em',
+            }}>
+              {r.platform}
+            </span>
+          )}
+          {r.targetName && <span style={{ color: 'var(--text-secondary)' }}>{r.targetName}</span>}
+          {r.targetIP && (
+            <span style={{ color: '#4a9eff', fontFamily: 'var(--font-mono)', fontSize: 10 }}>{r.targetIP}</span>
+          )}
+        </div>
 
-      {/* Bottom row: finding count + last updated */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-          {r.findings.length === 0
-            ? 'No findings'
-            : `${r.findings.length} finding${r.findings.length !== 1 ? 's' : ''}`}
-        </span>
-        <span style={{ fontSize: 10, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
-          {timeAgoShort(r.updatedAt)}
-        </span>
-      </div>
+        {/* Severity summary */}
+        <SeveritySummary findings={r.findings} />
 
-      {/* Actions */}
-      <div className="flex gap-1.5 mt-0.5" onClick={e => e.stopPropagation()}>
-        <button
-          onClick={onOpen}
-          className="flex-1 h-7 text-xs font-semibold transition-all"
-          style={{ background: 'rgba(74,158,255,0.12)', color: '#4a9eff', border: '1px solid rgba(74,158,255,0.25)', borderRadius: 8 }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(74,158,255,0.22)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 10px rgba(74,158,255,0.15)'; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(74,158,255,0.12)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none'; }}
-        >
-          Open
-        </button>
-        <button
-          onClick={onDuplicate}
-          title="Duplicate report"
-          className="h-7 px-3 text-xs font-medium transition-all"
-          style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid rgba(42,51,71,0.7)', borderRadius: 8 }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-2)'; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
-        >
-          Copy
-        </button>
-        <button
-          onClick={onDelete}
-          title="Delete report"
-          className="h-7 px-2.5 text-xs transition-all"
-          style={{ background: 'rgba(248,81,73,0.08)', color: '#f85149', border: '1px solid rgba(248,81,73,0.20)', borderRadius: 8 }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(248,81,73,0.18)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(248,81,73,0.4)'; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(248,81,73,0.08)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(248,81,73,0.20)'; }}
-        >
-          ✕
-        </button>
+        {/* Bottom row: finding count + last updated */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+            {r.findings.length === 0
+              ? 'No findings'
+              : `${r.findings.length} finding${r.findings.length !== 1 ? 's' : ''}`}
+          </span>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+            {timeAgoShort(r.updatedAt)}
+          </span>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-1.5 mt-0.5" onClick={e => e.stopPropagation()}>
+          <button
+            onClick={onOpen}
+            className="flex-1 h-7 text-xs font-semibold transition-all"
+            style={{ background: 'rgba(74,158,255,0.12)', color: '#4a9eff', border: '1px solid rgba(74,158,255,0.25)', borderRadius: 8 }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(74,158,255,0.22)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 10px rgba(74,158,255,0.15)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(74,158,255,0.12)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none'; }}
+          >
+            Open
+          </button>
+          <button
+            onClick={onDuplicate}
+            title="Duplicate report"
+            className="h-7 px-3 text-xs font-medium transition-all"
+            style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid rgba(42,51,71,0.7)', borderRadius: 8 }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-2)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+          >
+            Copy
+          </button>
+          <button
+            onClick={onDelete}
+            title="Delete report"
+            className="h-7 px-2.5 text-xs transition-all"
+            style={{ background: 'rgba(248,81,73,0.08)', color: '#f85149', border: '1px solid rgba(248,81,73,0.20)', borderRadius: 8 }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(248,81,73,0.18)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(248,81,73,0.4)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(248,81,73,0.08)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(248,81,73,0.20)'; }}
+          >
+            ✕
+          </button>
+        </div>
       </div>
     </motion.div>
   );

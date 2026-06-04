@@ -4,6 +4,9 @@ import { motion } from 'framer-motion'
 import { useStore } from '../../store'
 import type { FeedItem as FeedItemType } from '../../../shared/types'
 
+// Stagger delay cap: first 10 items stagger, rest appear instantly
+const MAX_STAGGER_IDX = 10
+
 const TIER_CONFIG = {
   critical: { label: 'CRITICAL', color: '#ff6b6b', bgAlpha: '22' },
   high:     { label: 'HIGH',     color: '#f85149', bgAlpha: '22' },
@@ -40,7 +43,7 @@ function timeAgo(iso: string): string {
   return `${Math.floor(diff / 86400_000)}d ago`
 }
 
-export default function FeedItemCard({ item }: { item: FeedItemType }) {
+export default function FeedItemCard({ item, index = 0 }: { item: FeedItemType; index?: number }) {
   const setSelectedId  = useStore(s => s.setSelectedId)
   const patchItem      = useStore(s => s.patchItem)
   const selectedId     = useStore(s => s.selectedId)
@@ -106,7 +109,7 @@ export default function FeedItemCard({ item }: { item: FeedItemType }) {
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.15 }}
+      transition={{ duration: 0.15, delay: Math.min(index, MAX_STAGGER_IDX) * 0.04 }}
       whileHover={{ y: -1, boxShadow: `0 4px 16px rgba(0,0,0,0.35), 0 0 0 1px ${alertColor ? `${alertColor}30` : selected ? 'rgba(255,107,107,0.2)' : 'rgba(42,51,71,0.6)'}` }}
       onClick={handleClick}
       className="group cursor-pointer mx-3 my-1.5 rounded-lg"
@@ -220,7 +223,7 @@ export default function FeedItemCard({ item }: { item: FeedItemType }) {
           >
             Vault
           </button>
-          <span className="ml-auto text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md" style={{ color: tier.color, background: `${tier.color}12`, border: `1px solid ${tier.color}25` }}>
+          <span className="ml-auto text-[10px] font-mono font-bold tabular-nums px-1.5 py-0.5 rounded-md" style={{ color: tier.color, background: `${tier.color}12`, border: `1px solid ${tier.color}25` }}>
             {item.relevanceScore}
           </span>
         </div>

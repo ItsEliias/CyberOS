@@ -13,9 +13,11 @@ interface Props {
   onExportMd: () => void;
   onExportPdf: () => void;
   exporting: boolean;
+  metaOpen?: boolean;
+  onToggleMeta?: () => void;
 }
 
-export default function EditorHeader({ dirty, onSave, onBack, onExportMd, onExportPdf, exporting }: Props) {
+export default function EditorHeader({ dirty, onSave, onBack, onExportMd, onExportPdf, exporting, metaOpen, onToggleMeta }: Props) {
   const { activeReport, patchReportMeta, snapshotVersion } = useStore();
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
@@ -143,6 +145,25 @@ export default function EditorHeader({ dirty, onSave, onBack, onExportMd, onExpo
 
         {/* Action buttons */}
         <div style={{ display: 'flex', gap: 6, flexShrink: 0, WebkitAppRegion: 'no-drag' as never }}>
+          {/* Report metadata sidebar toggle */}
+          {onToggleMeta && (
+            <button
+              onClick={onToggleMeta}
+              title="Toggle report info panel"
+              style={{
+                height: 28, padding: '0 10px', fontSize: 11, fontWeight: 500, borderRadius: 4, cursor: 'pointer',
+                background: metaOpen ? 'rgba(74,158,255,0.12)' : 'transparent',
+                color: metaOpen ? '#4a9eff' : 'var(--text-secondary)',
+                border: `1px solid ${metaOpen ? 'rgba(74,158,255,0.30)' : 'rgba(42,51,71,0.7)'}`,
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => { if (!metaOpen) { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'; (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-2)'; } }}
+              onMouseLeave={e => { if (!metaOpen) { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; } }}
+            >
+              Info
+            </button>
+          )}
+
           <GhostBtn onClick={() => setShowVariables(true)}>
             {'{}'} Vars
           </GhostBtn>
