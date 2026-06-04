@@ -218,13 +218,24 @@ function PlaybookCard({ pb }: { pb: Playbook }) {
 
   return (
     <div
-      className="rounded-lg p-4 flex flex-col gap-3 transition-all group"
+      className="rounded-lg p-4 flex flex-col gap-3 group"
       style={{
         background: '#0d0e18',
         border: '1px solid rgba(42,51,71,0.6)',
+        transition: 'border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease',
       }}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(45,212,191,0.18)' }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,51,71,0.6)' }}
+      onMouseEnter={e => {
+        const el = e.currentTarget as HTMLElement
+        el.style.borderColor = 'rgba(45,212,191,0.28)'
+        el.style.boxShadow = '0 4px 20px rgba(45,212,191,0.07), 0 1px 4px rgba(0,0,0,0.4)'
+        el.style.transform = 'translateY(-1px)'
+      }}
+      onMouseLeave={e => {
+        const el = e.currentTarget as HTMLElement
+        el.style.borderColor = 'rgba(42,51,71,0.6)'
+        el.style.boxShadow = 'none'
+        el.style.transform = 'translateY(0)'
+      }}
     >
       {/* Header row */}
       <div className="flex items-start justify-between gap-2">
@@ -552,14 +563,23 @@ export default function LibraryView() {
       {/* Playbook grid */}
       <div className="flex-1 overflow-y-auto p-4">
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-40 gap-3">
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style={{ color: '#2d3548' }}>
-              <rect x="3" y="6" width="26" height="20" rx="3" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M8 12h16M8 17h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-            <span className="text-sm" style={{ color: '#484f58' }}>
-              No playbooks in this category.
-            </span>
+          <div className="flex flex-col items-center justify-center h-56 gap-4 anim-fade-in-up">
+            <div style={{ position: 'relative' }}>
+              <svg width="56" height="56" viewBox="0 0 56 56" fill="none" style={{ filter: 'drop-shadow(0 0 18px rgba(45,212,191,0.15))' }}>
+                <rect x="5" y="10" width="46" height="36" rx="5" stroke="rgba(45,212,191,0.25)" strokeWidth="1.5" fill="rgba(45,212,191,0.04)" />
+                <path d="M13 20h30M13 27h20M13 34h24" stroke="rgba(45,212,191,0.25)" strokeWidth="1.5" strokeLinecap="round" />
+                <circle cx="42" cy="42" r="10" fill="rgba(7,8,15,1)" stroke="rgba(45,212,191,0.30)" strokeWidth="1.5" />
+                <path d="M42 37v5l3 3" stroke="rgba(45,212,191,0.5)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-sm font-medium" style={{ color: '#6b7280' }}>
+                No playbooks found
+              </span>
+              <span className="text-xs" style={{ color: '#484f58' }}>
+                Try a different filter or create a new playbook
+              </span>
+            </div>
           </div>
         ) : (
           <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>

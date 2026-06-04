@@ -54,16 +54,17 @@ const VARIANT_INLINE: Record<ButtonVariant, React.CSSProperties> = {
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ variant = 'ghost', size = 'sm', loading, disabled, className = '', children, ...rest }, ref) => (
+  ({ variant = 'ghost', size = 'sm', loading, disabled, className = '', children, style, ...rest }, ref) => (
     <button
       ref={ref}
       disabled={disabled || loading}
       className={`
         inline-flex items-center gap-1.5 cursor-pointer
         disabled:opacity-40 disabled:cursor-not-allowed
+        ${variant === 'primary' ? 'btn-teal-glow' : ''}
         ${VARIANT_STYLES[variant].base} ${SIZES[size]} ${className}
       `}
-      style={VARIANT_INLINE[variant]}
+      style={{ ...VARIANT_INLINE[variant], ...style }}
       {...rest}
     >
       {loading ? <span className="w-3 h-3 border border-current/40 border-t-current rounded-full animate-spin" /> : null}

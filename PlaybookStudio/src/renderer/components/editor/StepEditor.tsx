@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import type { PlaybookStep, StepCategory, StepType } from '@shared/types'
 
 const STEP_CATS: StepCategory[] = ['recon', 'enum', 'exploit', 'post', 'privesc', 'loot', 'report']
@@ -67,10 +68,28 @@ export default function StepEditor({
         </span>
         {step.required && <span className="text-xs flex-shrink-0" style={{ color: 'var(--warning)' }}>req</span>}
         {step.condition && <span className="text-xs flex-shrink-0" style={{ color: '#bc8cff' }}>if</span>}
-        <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{open ? '▲' : '▼'}</span>
+        <motion.svg
+          width="12" height="12" viewBox="0 0 12 12" fill="none"
+          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          className="flex-shrink-0"
+          style={{ color: 'var(--text-muted)' }}
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
+        >
+          <path d="M2 4l4 4 4-4" />
+        </motion.svg>
       </div>
 
-      {open && (
+      <AnimatePresence initial={false}>
+        {open && (
+        <motion.div
+          key="step-body"
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
+          style={{ overflow: 'hidden' }}
+        >
         <div className="px-3 pb-3 flex flex-col gap-2" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg)' }}>
           {/* Row 1: title + type + category */}
           <div className="flex gap-2 mt-2">
@@ -198,7 +217,9 @@ export default function StepEditor({
             </div>
           </div>
         </div>
-      )}
+        </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

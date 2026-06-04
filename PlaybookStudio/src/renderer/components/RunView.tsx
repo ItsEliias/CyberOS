@@ -119,10 +119,83 @@ function ProgressBar({ done, total, runs, playbookId }: { done: number; total: n
           </span>
         </div>
       </div>
-      <div className="rounded-full h-1.5 w-full" style={{ background: 'var(--border)' }}>
-        <div className="rounded-full h-1.5 transition-all duration-500"
-          style={{ width: `${pct}%`, background: pct === 100 ? 'var(--success)' : 'var(--accent)' }} />
+      <div className="rounded-full h-1.5 w-full overflow-hidden" style={{ background: 'rgba(42,51,71,0.5)' }}>
+        <div
+          className="rounded-full h-1.5 relative overflow-hidden"
+          style={{
+            width: `${pct}%`,
+            background: pct === 100
+              ? 'linear-gradient(90deg, #3fb950, #58c464)'
+              : 'linear-gradient(90deg, #2dd4bf, #5ee7d6)',
+            transition: 'width 600ms cubic-bezier(0.2,0.8,0.2,1)',
+          }}
+        >
+          {pct > 0 && pct < 100 && (
+            <span
+              className="absolute inset-0"
+              style={{
+                background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%)',
+                animation: 'shimmerSlide 1.8s linear infinite',
+              }}
+            />
+          )}
+        </div>
       </div>
+    </div>
+  )
+}
+
+// ─── Step Dot Track ────────────────────────────────────────────────────────────
+
+function StepDotTrack({ steps, activeId }: { steps: PlaybookStep[]; activeId: string | null }) {
+  if (steps.length === 0 || steps.length > 30) return null
+  return (
+    <div
+      className="flex items-center gap-1 px-4 py-2 flex-shrink-0 overflow-x-auto"
+      style={{ borderBottom: '1px solid var(--border)', background: 'rgba(13,14,24,0.6)' }}
+    >
+      {steps.map((step, i) => {
+        const status = step.status ?? 'todo'
+        const isActive = step.id === activeId
+
+        let dotColor = 'rgba(42,51,71,0.6)'
+        let dotBg    = 'transparent'
+        if (status === 'done')        { dotColor = 'var(--success)'; dotBg = 'rgba(63,185,80,0.18)' }
+        else if (status === 'skipped'){ dotColor = 'var(--text-muted)'; dotBg = 'rgba(72,79,88,0.18)' }
+        else if (status === 'inprogress'){ dotColor = 'var(--accent)'; dotBg = 'rgba(45,212,191,0.15)' }
+        else if (isActive)            { dotColor = 'var(--accent)'; dotBg = 'rgba(45,212,191,0.10)' }
+
+        return (
+          <div key={step.id} className="flex items-center">
+            <div
+              className="step-dot-pop flex-shrink-0 flex items-center justify-center rounded-full text-[9px] font-mono font-semibold"
+              style={{
+                width: isActive ? 20 : 16,
+                height: isActive ? 20 : 16,
+                background: dotBg,
+                border: `1px solid ${dotColor}`,
+                color: dotColor,
+                transition: 'all 200ms ease',
+                boxShadow: isActive ? `0 0 0 2px rgba(45,212,191,0.18)` : 'none',
+              }}
+              title={`${step.order}. ${step.title}`}
+            >
+              {status === 'done' ? '✓' : status === 'skipped' ? '↷' : i + 1}
+            </div>
+            {i < steps.length - 1 && (
+              <div
+                className="flex-shrink-0"
+                style={{
+                  width: 8,
+                  height: 1,
+                  background: status === 'done' ? 'rgba(63,185,80,0.4)' : 'rgba(42,51,71,0.4)',
+                  margin: '0 1px',
+                }}
+              />
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -337,6 +410,7 @@ export default function RunView() {
     <div className="flex flex-col h-full">
       <SessionContextBar lab={lab} target={target} targetIP={targetIP} startedAt={activeRun.startedAt} />
       <ProgressBar done={done} total={total} runs={runs} playbookId={activeRun.playbookId} />
+      <StepDotTrack steps={steps} activeId={selectedStepId} />
 
       <div className="flex flex-1 min-h-0">
         {/* Step list */}

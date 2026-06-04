@@ -207,9 +207,18 @@ export default function HistoryView() {
   if (runs.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <p className="text-sm mb-1" style={{ color: 'var(--text-dim)' }}>No runs yet.</p>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Run a playbook from the Library to get started.</p>
+        <div className="flex flex-col items-center gap-4 anim-fade-in-up">
+          <svg width="64" height="64" viewBox="0 0 64 64" fill="none" style={{ filter: 'drop-shadow(0 0 16px rgba(45,212,191,0.12))' }}>
+            <circle cx="32" cy="32" r="26" stroke="rgba(45,212,191,0.18)" strokeWidth="1.5" fill="rgba(45,212,191,0.03)" />
+            <path d="M32 18v14l8 8" stroke="rgba(45,212,191,0.45)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M20 44h24" stroke="rgba(42,51,71,0.6)" strokeWidth="1.5" strokeLinecap="round" />
+            <circle cx="20" cy="20" r="2" fill="rgba(45,212,191,0.25)" />
+            <circle cx="44" cy="20" r="2" fill="rgba(45,212,191,0.25)" />
+          </svg>
+          <div className="flex flex-col items-center gap-1">
+            <p className="text-sm font-medium" style={{ color: '#6b7280' }}>No runs yet</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Run a playbook from the Library to get started.</p>
+          </div>
         </div>
       </div>
     )
@@ -263,19 +272,35 @@ export default function HistoryView() {
 
           return (
             <button key={run.id} onClick={e => handleRowClick(run, e)}
-              className="w-full text-left rounded-lg px-4 py-3"
+              className="w-full text-left rounded-lg px-4 py-3 group"
               style={{
-                background: inCompare ? 'rgba(74,158,255,0.12)' : 'var(--panel)',
-                border: `1px solid ${inCompare ? 'var(--accent)' : 'var(--border)'}`,
-              }}>
-              <div className="flex items-center justify-between gap-3">
+                background: inCompare ? 'rgba(45,212,191,0.07)' : 'var(--panel)',
+                border: `1px solid ${inCompare ? 'rgba(45,212,191,0.35)' : 'var(--border)'}`,
+                transition: 'border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease',
+              }}
+              onMouseEnter={e => {
+                if (!inCompare) {
+                  const el = e.currentTarget as HTMLButtonElement
+                  el.style.borderColor = 'rgba(45,212,191,0.22)'
+                  el.style.boxShadow = '0 2px 12px rgba(45,212,191,0.05)'
+                }
+              }}
+              onMouseLeave={e => {
+                if (!inCompare) {
+                  const el = e.currentTarget as HTMLButtonElement
+                  el.style.borderColor = 'var(--border)'
+                  el.style.boxShadow = 'none'
+                }
+              }}
+            >
+              <div className="flex items-center justify-between gap-3 mb-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-sm font-medium truncate" style={{ color: 'var(--text)' }}>{run.playbookName}</span>
                     <span className="text-xs px-1.5 py-0.5 rounded flex-shrink-0 font-medium" style={{ color: STATUS_COLOR[run.status], background: `${STATUS_COLOR[run.status]}22` }}>
                       {run.status}
                     </span>
-                    {inCompare && <span className="text-xs px-1.5 py-0.5 rounded flex-shrink-0" style={{ background: 'var(--accent)', color: '#fff' }}>selected</span>}
+                    {inCompare && <span className="text-xs px-1.5 py-0.5 rounded flex-shrink-0" style={{ background: 'rgba(45,212,191,0.15)', color: 'var(--accent)', border: '1px solid rgba(45,212,191,0.3)' }}>selected</span>}
                   </div>
                   <div className="flex items-center gap-3 text-xs" style={{ color: 'var(--text-muted)' }}>
                     <span>{new Date(run.startedAt).toLocaleString()}</span>
@@ -285,9 +310,20 @@ export default function HistoryView() {
                   </div>
                 </div>
                 <div className="flex-shrink-0 text-right">
-                  <div className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>{done}/{total}</div>
-                  <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{pct}%</div>
+                  <div className="text-sm font-medium tabular-nums" style={{ color: 'var(--text-dim)' }}>{done}/{total}</div>
+                  <div className="text-xs tabular-nums" style={{ color: 'var(--text-muted)' }}>{pct}%</div>
                 </div>
+              </div>
+              {/* Mini progress track */}
+              <div className="rounded-full h-1 w-full overflow-hidden" style={{ background: 'rgba(42,51,71,0.45)' }}>
+                <div
+                  className="rounded-full h-1"
+                  style={{
+                    width: `${pct}%`,
+                    background: run.status === 'abandoned' ? 'var(--error)' : pct === 100 ? 'var(--success)' : 'var(--accent)',
+                    transition: 'width 600ms cubic-bezier(0.2,0.8,0.2,1)',
+                  }}
+                />
               </div>
             </button>
           )

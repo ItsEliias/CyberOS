@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 
 const STORAGE_KEY = 'onboarding_dismissed_PlaybookStudio'
 const DOCS_PATH   = '/Users/codyliddell/Documents/Claude/Projects/CyberOS/Manus-Prompts/08_PlaybookStudio.md'
-const ACCENT      = '#4a9eff'
+const ACCENT      = '#2dd4bf'
 
 interface Props {
   onClose: () => void
@@ -91,19 +91,19 @@ export default function OnboardingModal({ onClose }: Props) {
             </h3>
             <ul className="text-sm leading-relaxed space-y-1.5" style={{ color: '#8b949e' }}>
               <li className="flex items-start gap-2">
-                <span className="text-xs px-1.5 py-0.5 rounded font-mono shrink-0" style={{ background: 'rgba(74,158,255,0.12)', color: ACCENT, border: '1px solid rgba(74,158,255,0.2)' }}>
+                <span className="text-xs px-1.5 py-0.5 rounded font-mono shrink-0" style={{ background: 'rgba(45,212,191,0.12)', color: ACCENT, border: '1px solid rgba(45,212,191,0.2)' }}>
                   CredVault
                 </span>
                 Inject stored credentials from CredVault directly into playbook step commands.
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-xs px-1.5 py-0.5 rounded font-mono shrink-0" style={{ background: 'rgba(74,158,255,0.12)', color: ACCENT, border: '1px solid rgba(74,158,255,0.2)' }}>
+                <span className="text-xs px-1.5 py-0.5 rounded font-mono shrink-0" style={{ background: 'rgba(45,212,191,0.12)', color: ACCENT, border: '1px solid rgba(45,212,191,0.2)' }}>
                   ReconDesk
                 </span>
                 Run playbooks against active targets tracked in ReconDesk.
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-xs px-1.5 py-0.5 rounded font-mono shrink-0" style={{ background: 'rgba(74,158,255,0.12)', color: ACCENT, border: '1px solid rgba(74,158,255,0.2)' }}>
+                <span className="text-xs px-1.5 py-0.5 rounded font-mono shrink-0" style={{ background: 'rgba(45,212,191,0.12)', color: ACCENT, border: '1px solid rgba(45,212,191,0.2)' }}>
                   TerminalLink
                 </span>
                 Execute terminal steps automatically in TerminalLink sessions.
