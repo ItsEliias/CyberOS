@@ -68,25 +68,33 @@ export default function App() {
             <>
               {/* Tab bar */}
               <div
-                className="flex items-center gap-0.5 px-4 flex-shrink-0 h-9"
+                className="flex items-center gap-0.5 px-3 flex-shrink-0 h-10"
                 style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
               >
                 {TABS.map(t => (
                   <button
                     key={t.id}
                     onClick={() => setActiveTab(t.id)}
-                    className="relative px-3 py-1.5 text-xs transition-colors font-medium"
-                    style={{ color: activeTab === t.id ? 'var(--text-primary)' : 'var(--text-muted)' }}
+                    className="relative px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
+                    style={{
+                      color: activeTab === t.id ? 'var(--text-primary)' : 'var(--text-muted)',
+                    }}
+                    onMouseEnter={e => {
+                      if (activeTab !== t.id) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'
+                    }}
+                    onMouseLeave={e => {
+                      if (activeTab !== t.id) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'
+                    }}
                   >
-                    {t.label}
                     {activeTab === t.id && (
                       <motion.div
-                        layoutId="tab-underline"
-                        className="absolute bottom-0 left-0 right-0 h-px"
-                        style={{ background: 'var(--accent)' }}
-                        transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+                        layoutId="tab-pill"
+                        className="absolute inset-0 rounded-md"
+                        style={{ background: 'rgba(210,153,34,0.10)', border: '1px solid rgba(210,153,34,0.18)' }}
+                        transition={{ type: 'spring', stiffness: 450, damping: 38 }}
                       />
                     )}
+                    <span className="relative z-10">{t.label}</span>
                   </button>
                 ))}
               </div>
@@ -151,16 +159,35 @@ export default function App() {
 function EmptyState() {
   return (
     <div className="flex-1 flex items-center justify-center">
-      <div className="text-center">
-        <div className="mb-5" style={{ filter: 'drop-shadow(0 0 12px rgba(210,153,34,0.25))' }}>
-          <svg width="40" height="40" viewBox="0 0 16 16" fill="none" style={{ color: '#d29922', opacity: 0.25, display: 'inline-block' }}>
-            <path d="M8 1L14.5 4.75V11.25L8 15L1.5 11.25V4.75L8 1Z" stroke="currentColor" strokeWidth="1.2" fill="none" />
-            <circle cx="8" cy="8" r="2" fill="currentColor" />
-          </svg>
+      <motion.div
+        className="text-center"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
+      >
+        {/* Illustrated icon with layered glow rings */}
+        <div className="relative inline-flex items-center justify-center mb-6">
+          <div className="absolute w-24 h-24 rounded-full" style={{ background: 'radial-gradient(circle, rgba(210,153,34,0.08) 0%, transparent 70%)' }} />
+          <motion.div
+            animate={{ scale: [1, 1.05, 1] }}
+            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            style={{ filter: 'drop-shadow(0 0 16px rgba(210,153,34,0.35))' }}
+          >
+            <svg width="52" height="52" viewBox="0 0 24 24" fill="none" style={{ color: '#d29922', opacity: 0.55 }}>
+              <path d="M12 2L20.5 7V17L12 22L3.5 17V7L12 2Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+              <circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.6" />
+              <circle cx="12" cy="12" r="1.2" fill="currentColor" />
+              <path d="M12 9V7M12 17v-2M7 12H5M19 12h-2" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity="0.4" />
+            </svg>
+          </motion.div>
         </div>
-        <p className="text-sm font-medium" style={{ color: '#8b949e' }}>Select a target to begin</p>
-        <p className="text-xs mt-1" style={{ color: '#484f58' }}>or click + to add a new target</p>
-      </div>
+
+        <p className="text-sm font-semibold mb-1.5" style={{ color: '#e6edf3' }}>No target selected</p>
+        <p className="text-xs mb-1" style={{ color: '#8b949e' }}>Select a target from the sidebar to begin</p>
+        <p className="text-xs" style={{ color: '#484f58' }}>
+          Press <kbd className="px-1 py-0.5 rounded text-[10px] font-mono" style={{ background: 'rgba(42,51,71,0.5)', border: '1px solid rgba(42,51,71,0.8)', color: '#8b949e' }}>+</kbd> to add your first target
+        </p>
+      </motion.div>
     </div>
   )
 }
