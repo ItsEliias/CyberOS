@@ -2,202 +2,35 @@ import { useState, useCallback } from 'react'
 import { useStore } from '../store'
 import type { Playbook, PlaybookStep, PlaybookCategory } from '@shared/types'
 import StepEditorRow from './editor/StepEditor'
+import { AiGenerateModal, VariablesPanel } from './editor/EditorHelpers'
 
 const PB_CATS: PlaybookCategory[] = ['web-app', 'network', 'active-directory', 'linux', 'windows', 'ctf', 'custom', 'ccna']
-const API_KEY_STORAGE = 'playbookstudio_anthropic_key'
 
 function uid() { return `step-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }
 
-// ─── AI Generate Modal ────────────────────────────────────────────────────────
-
-function AiGenerateModal({
-  onInsert, onClose,
-}: {
-  onInsert: (steps: Partial<PlaybookStep>[]) => void
-  onClose: () => void
-}) {
-  const [objective, setObjective] = useState('')
-  const [loading,   setLoading]   = useState(false)
-  const [error,     setError]     = useState('')
-  const [preview,   setPreview]   = useState<Partial<PlaybookStep>[] | null>(null)
-  const apiKey = localStorage.getItem(API_KEY_STORAGE) ?? ''
-
-  async function generate() {
-    if (!objective.trim()) { setError('Enter an objective.'); return }
-    if (!apiKey) { setError('Configure your Anthropic API key in Settings first.'); return }
-    setLoading(true); setError('')
-    const res = await window.electronAPI.generateSteps(objective.trim(), apiKey)
-    setLoading(false)
-    if (!res.ok || !res.steps) { setError(res.error ?? 'Generation failed'); return }
-    setPreview(res.steps)
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.8)' }}>
-      <div style={{
-        width: 500, maxHeight: '80vh',
-        background: '#0d0e18',
-        border: '1px solid rgba(42,51,71,0.75)',
-        borderRadius: 12,
-        boxShadow: '0 24px 64px rgba(0,0,0,0.65)',
-        display: 'flex', flexDirection: 'column', padding: 20, gap: 16, overflow: 'hidden',
-      }}>
-        <div>
-          <h2 className="text-sm font-semibold" style={{ color: '#e6edf3' }}>Generate Steps with AI</h2>
-          <p className="text-xs mt-0.5" style={{ color: '#484f58' }}>Uses Claude Haiku to generate playbook steps from an objective.</p>
-        </div>
-
-        {!apiKey && (
-          <div className="rounded px-3 py-2 text-xs" style={{ background: 'rgba(210,153,34,0.06)', border: '1px solid rgba(210,153,34,0.2)', color: '#d29922' }}>
-            No API key. Go to Settings and add your Anthropic API key.
-          </div>
-        )}
-
-        <div className="flex flex-col gap-1">
-          <label className="text-xs" style={{ color: '#8b949e' }}>Objective</label>
-          <input
-            className="w-full rounded px-2.5 py-2 text-sm"
-            style={{ background: '#07080f', border: '1px solid rgba(42,51,71,0.75)', color: '#e6edf3' }}
-            placeholder="e.g. Enumerate an Active Directory environment with BloodHound"
-            value={objective}
-            onChange={e => setObjective(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && !loading && generate()}
-            disabled={loading || !apiKey}
-            autoFocus
-          />
-        </div>
-
-        {error && <p className="text-xs" style={{ color: '#f85149' }}>{error}</p>}
-
-        {preview && (
-          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, minHeight: 0 }}>
-            <div className="text-xs font-semibold" style={{ color: '#8b949e' }}>Preview — {preview.length} steps</div>
-            {preview.map((s, i) => (
-              <div key={i} className="rounded px-3 py-2" style={{ background: '#07080f', border: '1px solid rgba(42,51,71,0.5)' }}>
-                <div className="text-xs font-medium" style={{ color: '#e6edf3' }}>{i + 1}. {s.title}</div>
-                {s.description && <div className="text-xs mt-0.5" style={{ color: '#8b949e' }}>{s.description}</div>}
-                {s.commands && s.commands.length > 0 && (
-                  <div className="text-xs font-mono mt-1" style={{ color: '#2dd4bf' }}>{s.commands[0]}</div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="flex items-center gap-2">
-          <button onClick={onClose} className="flex-1 text-xs py-2 rounded" style={{ background: 'rgba(42,51,71,0.35)', color: '#8b949e', border: '1px solid rgba(42,51,71,0.5)' }}>
-            Cancel
-          </button>
-          {!preview ? (
-            <button
-              onClick={generate}
-              disabled={loading || !apiKey}
-              className="flex-1 text-xs py-2 rounded font-semibold"
-              style={{
-                background: (loading || !apiKey) ? 'rgba(42,51,71,0.35)' : 'rgba(45,212,191,0.14)',
-                color: (loading || !apiKey) ? '#484f58' : '#2dd4bf',
-                border: `1px solid ${(loading || !apiKey) ? 'rgba(42,51,71,0.5)' : 'rgba(45,212,191,0.28)'}`,
-              }}
-            >
-              {loading ? 'Generating…' : 'Generate'}
-            </button>
-          ) : (
-            <>
-              <button onClick={() => setPreview(null)} className="text-xs py-2 px-3 rounded" style={{ background: 'rgba(42,51,71,0.35)', color: '#8b949e', border: '1px solid rgba(42,51,71,0.5)' }}>
-                Retry
-              </button>
-              <button
-                onClick={() => onInsert(preview)}
-                className="flex-1 text-xs py-2 rounded font-semibold"
-                style={{ background: 'rgba(63,185,80,0.14)', color: '#3fb950', border: '1px solid rgba(63,185,80,0.28)' }}
-              >
-                Insert {preview.length} Steps
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Variables Panel ──────────────────────────────────────────────────────────
-
-function VariablesPanel({ vars, disabled, onChange }: {
-  vars: Record<string, string>; disabled: boolean; onChange: (v: Record<string, string>) => void
-}) {
-  const [newKey, setNewKey] = useState('')
-
-  function addVar() {
-    if (!newKey.trim() || vars[newKey] !== undefined) return
-    onChange({ ...vars, [newKey.trim()]: '' })
-    setNewKey('')
-  }
-
-  return (
-    <div className="rounded-lg p-3 flex flex-col gap-2" style={{ background: '#0d0e18', border: '1px solid rgba(42,51,71,0.6)' }}>
-      <div className="flex items-center justify-between">
-        <span
-          className="text-xs font-semibold uppercase tracking-widest flex items-center gap-2"
-          style={{ color: '#2dd4bf' }}
-        >
-          <div className="w-px h-3 rounded-full" style={{ background: '#2dd4bf' }} />
-          Variables
-        </span>
-        <span className="text-xs" style={{ color: '#484f58' }}>Use {'{{key}}'} in descriptions &amp; commands</span>
-      </div>
-      {Object.entries(vars).map(([k, v]) => (
-        <div key={k} className="flex items-center gap-2">
-          <span
-            className="text-xs font-mono px-1.5 py-0.5 rounded flex-shrink-0"
-            style={{ background: 'rgba(45,212,191,0.08)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.18)', minWidth: 80 }}
-          >
-            {'{{'}{k}{'}}'}
-          </span>
-          <input
-            className="flex-1 rounded px-2 py-1 text-xs font-mono"
-            style={{ background: '#07080f', border: '1px solid rgba(42,51,71,0.6)', color: '#e6edf3' }}
-            value={v} disabled={disabled} placeholder="default value"
-            onChange={e => onChange({ ...vars, [k]: e.target.value })}
-          />
-          {!disabled && (
-            <button
-              onClick={() => { const n = { ...vars }; delete n[k]; onChange(n) }}
-              className="text-xs px-1.5 py-1 rounded flex-shrink-0"
-              style={{ background: 'rgba(248,81,73,0.08)', color: '#f85149', border: '1px solid rgba(248,81,73,0.2)' }}
-            >
-              ✕
-            </button>
-          )}
-        </div>
-      ))}
-      {!disabled && (
-        <div className="flex gap-2 pt-1" style={{ borderTop: '1px solid rgba(42,51,71,0.35)' }}>
-          <input
-            className="flex-1 rounded px-2 py-1 text-xs font-mono"
-            style={{ background: '#07080f', border: '1px solid rgba(42,51,71,0.6)', color: '#e6edf3' }}
-            placeholder="new variable name" value={newKey}
-            onChange={e => setNewKey(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && addVar()}
-          />
-          <button
-            onClick={addVar}
-            className="text-xs px-3 py-1 rounded"
-            style={{ background: 'rgba(45,212,191,0.08)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.20)' }}
-          >
-            Add
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ─── Dependency Graph ─────────────────────────────────────────────────────────
+// ─── Dependency Graph (SVG arrows) ───────────────────────────────────────────
 
 function DependencyGraph({ steps }: { steps: PlaybookStep[] }) {
   const hasDeps = steps.some(s => s.dependsOn && s.dependsOn.length > 0)
   if (!hasDeps) return null
+
+  const ROW_H = 28
+  const COL_W = 160
+  const PAD   = 12
+  const stepsWithDeps = steps.filter(s => s.dependsOn && s.dependsOn.length > 0)
+  // Build unique node list: all steps that appear as source or target of a dep
+  const nodeIds = new Set<string>()
+  stepsWithDeps.forEach(s => {
+    nodeIds.add(s.id)
+    ;(s.dependsOn ?? []).forEach(d => nodeIds.add(d))
+  })
+  const nodes = [...nodeIds].map(id => steps.find(s => s.id === id)).filter(Boolean) as PlaybookStep[]
+  nodes.sort((a, b) => a.order - b.order)
+
+  const nodeIndex = new Map(nodes.map((n, i) => [n.id, i]))
+  const svgH = nodes.length * ROW_H + PAD * 2
+  const svgW = COL_W * 2 + 80
+
   return (
     <div className="rounded-lg p-3" style={{ background: '#0d0e18', border: '1px solid rgba(42,51,71,0.6)' }}>
       <span
@@ -207,18 +40,52 @@ function DependencyGraph({ steps }: { steps: PlaybookStep[] }) {
         <div className="w-px h-3 rounded-full" style={{ background: '#8b949e' }} />
         Dependency Graph
       </span>
-      <div className="flex flex-col gap-1">
-        {steps.map(step => {
-          const deps = (step.dependsOn ?? []).map(id => steps.find(s => s.id === id)).filter(Boolean) as PlaybookStep[]
-          if (deps.length === 0) return null
-          return (
-            <div key={step.id} className="flex items-center gap-2 text-xs">
-              <span style={{ color: '#8b949e' }}>{step.order}. {step.title.slice(0, 20)}</span>
-              <span style={{ color: '#2d3548' }}>← needs</span>
-              <span style={{ color: '#2dd4bf' }}>{deps.map(d => `${d.order}. ${d.title.slice(0, 16)}`).join(', ')}</span>
-            </div>
-          )
-        })}
+      <div style={{ overflowX: 'auto' }}>
+        <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} style={{ display: 'block' }}>
+          <defs>
+            <marker id="dep-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+              <path d="M0,0 L0,7 L7,3.5 z" fill="rgba(45,212,191,0.6)" />
+            </marker>
+          </defs>
+          {/* Node labels */}
+          {nodes.map((node, i) => {
+            const y = PAD + i * ROW_H + ROW_H / 2
+            const hasDep = stepsWithDeps.some(s => s.id === node.id)
+            return (
+              <g key={node.id}>
+                <rect x={PAD} y={PAD + i * ROW_H + 2} width={COL_W - 8} height={ROW_H - 6}
+                  rx={4} fill={hasDep ? 'rgba(45,212,191,0.06)' : 'rgba(42,51,71,0.15)'}
+                  stroke={hasDep ? 'rgba(45,212,191,0.22)' : 'rgba(42,51,71,0.4)'} strokeWidth={1} />
+                <text x={PAD + 6} y={y + 1} fontSize={10} fill={hasDep ? '#2dd4bf' : '#8b949e'} dominantBaseline="central">
+                  {node.order}. {(node.title || 'Untitled').slice(0, 18)}
+                </text>
+              </g>
+            )
+          })}
+          {/* Arrows */}
+          {stepsWithDeps.map(step => {
+            const targetIdx = nodeIndex.get(step.id)
+            if (targetIdx === undefined) return null
+            return (step.dependsOn ?? []).map(depId => {
+              const srcIdx = nodeIndex.get(depId)
+              if (srcIdx === undefined) return null
+              const x1 = PAD + COL_W - 8
+              const y1 = PAD + srcIdx * ROW_H + ROW_H / 2
+              const x2 = PAD + 1
+              const y2 = PAD + targetIdx * ROW_H + ROW_H / 2
+              const cx1 = x1 + 30
+              const cx2 = x2 - 30
+              return (
+                <path key={`${step.id}-${depId}`}
+                  d={`M${x1},${y1} C${cx1},${y1} ${cx2},${y2} ${x2},${y2}`}
+                  fill="none" stroke="rgba(45,212,191,0.45)" strokeWidth={1.5}
+                  strokeDasharray="4 2"
+                  markerEnd="url(#dep-arrow)"
+                />
+              )
+            })
+          })}
+        </svg>
       </div>
     </div>
   )

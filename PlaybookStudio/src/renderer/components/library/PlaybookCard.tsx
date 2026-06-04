@@ -88,10 +88,17 @@ export default function PlaybookCard({ pb, searchTerm = '', staggerIndex = 0 }: 
   }
 
   const catColor  = CAT_COLORS[pb.category] ?? '#8b949e'
-  const lastRun   = runs
-    .filter(r => r.playbookId === pb.id && (r.status === 'completed' || r.status === 'abandoned' || r.status === 'running'))
-    .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())[0]
-  const lastRunLabel  = lastRun ? new Date(lastRun.startedAt).toLocaleDateString() : null
+  const pbRuns    = runs.filter(r => r.playbookId === pb.id && (r.status === 'completed' || r.status === 'abandoned' || r.status === 'running'))
+  const lastRun   = pbRuns.sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())[0]
+  const runCount  = pbRuns.length
+  const lastRunLabel  = (() => {
+    if (!lastRun) return null
+    const diff = Date.now() - new Date(lastRun.startedAt).getTime()
+    const days = Math.floor(diff / 86_400_000)
+    if (days === 0) return 'today'
+    if (days === 1) return '1d ago'
+    return `${days}d ago`
+  })()
   const mitreTactics  = [...new Set(pb.steps.flatMap(s => s.mitreTechniqueId ? [s.mitreTechniqueId.split('.')[0]] : []))]
 
   // Last-run result badge
@@ -190,8 +197,10 @@ export default function PlaybookCard({ pb, searchTerm = '', staggerIndex = 0 }: 
               {lastRunBadge.label}
             </span>
           )}
-          {lastRunLabel && !lastRunBadge && (
-            <span className="text-xs" style={{ color: '#484f58' }}>last run {lastRunLabel}</span>
+          {runCount > 0 && (
+            <span className="text-xs" style={{ color: '#484f58' }}>
+              Run {runCount}×{lastRunLabel ? ` · ${lastRunLabel}` : ''}
+            </span>
           )}
         </div>
         <div className="flex items-center gap-1">

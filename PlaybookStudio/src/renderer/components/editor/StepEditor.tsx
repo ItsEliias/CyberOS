@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { PlaybookStep, StepCategory, StepType } from '@shared/types'
+import ConditionEditor from './ConditionEditor'
 
 const STEP_CATS: StepCategory[] = ['recon', 'enum', 'exploit', 'post', 'privesc', 'loot', 'report']
 const STEP_TYPES: StepType[] = ['action', 'verification', 'documentation', 'command', 'decision']
@@ -239,13 +240,23 @@ export default function StepEditor({
 }: Props) {
   const [open, setOpen] = useState(false)
   const [showCondition, setShowCondition] = useState(false)
+  const [saveAttempted, setSaveAttempted] = useState(false)
+
+  const titleEmpty = step.title.trim().length === 0
+  const titleInvalid = !disabled && saveAttempted && step.required && titleEmpty
 
   const typeColor = STEP_TYPE_COLORS[step.stepType ?? 'action']
 
   return (
     <div className="rounded-lg overflow-hidden" style={{ border: `1px solid var(--border)`, borderLeft: `3px solid ${typeColor}` }}>
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-2 cursor-pointer select-none" style={{ background: 'var(--bg)' }} onClick={() => setOpen(o => !o)}>
+      <div className="flex items-center gap-2 px-3 py-2 cursor-pointer select-none" style={{ background: 'var(--bg)' }} onClick={() => {
+        if (open && step.required && titleEmpty && !disabled) {
+          setSaveAttempted(true)
+          return // prevent collapse when required title is empty
+        }
+        setOpen(o => !o)
+      }}>
         <span className="text-xs w-5 h-5 rounded flex items-center justify-center font-mono flex-shrink-0" style={{ background: 'var(--border)', color: 'var(--text-dim)' }}>
           {index + 1}
         </span>
@@ -295,9 +306,22 @@ export default function StepEditor({
           {/* Row 1: title + category */}
           <div className="flex gap-2 mt-2">
             <div className="flex-1">
-              <label className="text-xs block mb-1" style={{ color: 'var(--text-muted)' }}>Title</label>
-              <input className="w-full rounded px-2 py-1 text-sm" style={{ background: 'var(--panel)', border: '1px solid var(--border)', color: 'var(--text)' }}
-                value={step.title} disabled={disabled} onChange={e => onChange({ ...step, title: e.target.value })} />
+              <label className="text-xs block mb-1" style={{ color: titleInvalid ? '#f85149' : 'var(--text-muted)' }}>
+                Title{titleInvalid && <span style={{ marginLeft: 4, fontWeight: 700 }}>— Required</span>}
+              </label>
+              <input
+                className="w-full rounded px-2 py-1 text-sm"
+                style={{
+                  background: 'var(--panel)',
+                  border: titleInvalid ? '1.5px solid #f85149' : '1px solid var(--border)',
+                  color: 'var(--text)',
+                  boxShadow: titleInvalid ? '0 0 0 2px rgba(248,81,73,0.18)' : 'none',
+                  outline: 'none',
+                  transition: 'border-color 0.15s, box-shadow 0.15s',
+                }}
+                value={step.title} disabled={disabled}
+                onChange={e => { onChange({ ...step, title: e.target.value }); if (e.target.value.trim()) setSaveAttempted(false) }}
+              />
             </div>
             <div>
               <label className="text-xs block mb-1" style={{ color: 'var(--text-muted)' }}>Category</label>
@@ -453,59 +477,3 @@ export default function StepEditor({
   )
 }
 
-function ConditionEditor({
-  condition, allSteps, onChange, onRemove,
-}: {
-  condition?: PlaybookStep['condition']
-  allSteps: PlaybookStep[]
-  onChange: (c: PlaybookStep['condition']) => void
-  onRemove: () => void
-}) {
-  const [varKey, setVarKey]   = useState(condition?.variableKey ?? '')
-  const [op, setOp]           = useState<'equals'|'not_equals'|'contains'>(condition?.operator ?? 'equals')
-  const [val, setVal]         = useState(condition?.value ?? '')
-  const [skipIds, setSkipIds] = useState<string[]>(condition?.skipStepIds ?? [])
-
-  function handleSave() {
-    if (!varKey.trim()) return
-    onChange({ variableKey: varKey, operator: op, value: val, skipStepIds: skipIds })
-  }
-
-  return (
-    <div className="mt-2 p-2 rounded flex flex-col gap-2" style={{ background: 'var(--panel)', border: '1px solid rgba(188,140,255,0.3)' }}>
-      <div className="flex gap-2">
-        <input className="flex-1 rounded px-2 py-1 text-xs" style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
-          placeholder="variable key" value={varKey} onChange={e => setVarKey(e.target.value)} />
-        <select className="rounded px-2 py-1 text-xs" style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
-          value={op} onChange={e => setOp(e.target.value as typeof op)}>
-          <option value="equals">equals</option>
-          <option value="not_equals">not equals</option>
-          <option value="contains">contains</option>
-        </select>
-        <input className="flex-1 rounded px-2 py-1 text-xs" style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
-          placeholder="value" value={val} onChange={e => setVal(e.target.value)} />
-      </div>
-      <div>
-        <label className="text-xs block mb-1" style={{ color: 'var(--text-muted)' }}>Skip these steps if condition fails:</label>
-        <div className="flex flex-wrap gap-1">
-          {allSteps.map(s => {
-            const checked = skipIds.includes(s.id)
-            return (
-              <button key={s.id} onClick={() => setSkipIds(ids => checked ? ids.filter(i => i !== s.id) : [...ids, s.id])}
-                className="text-xs px-2 py-0.5 rounded" style={{
-                  background: checked ? 'rgba(248,81,73,0.15)' : 'var(--border)',
-                  color: checked ? 'var(--error)' : 'var(--text-muted)',
-                }}>
-                {s.order}. {s.title.slice(0, 16) || 'Untitled'}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-      <div className="flex gap-2">
-        <button onClick={handleSave} className="text-xs px-3 py-1 rounded font-medium" style={{ background: '#bc8cff', color: '#000' }}>Save</button>
-        <button onClick={onRemove} className="text-xs px-3 py-1 rounded" style={{ background: 'var(--border)', color: 'var(--error)' }}>Remove</button>
-      </div>
-    </div>
-  )
-}

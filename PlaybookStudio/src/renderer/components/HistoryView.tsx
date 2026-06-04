@@ -227,6 +227,8 @@ export default function HistoryView() {
   const [compareSet,    setCompareSet]     = useState<Set<string>>(new Set())
   const [comparing,     setComparing]      = useState<[PlaybookRun, PlaybookRun] | null>(null)
   const [resultFilter,  setResultFilter]   = useState<ResultFilter>('all')
+  const [dateFrom,      setDateFrom]       = useState('')
+  const [dateTo,        setDateTo]         = useState('')
 
   function handleRowClick(run: PlaybookRun, e: React.MouseEvent) {
     if (e.shiftKey) {
@@ -291,10 +293,20 @@ export default function HistoryView() {
   }
 
   const filteredRuns = runs.filter(run => {
-    if (resultFilter === 'all') return true
-    const r = runResult(run)
-    if (resultFilter === 'pass') return r === 'pass'
-    if (resultFilter === 'fail') return r === 'fail' || r === 'running'
+    if (resultFilter !== 'all') {
+      const r = runResult(run)
+      if (resultFilter === 'pass' && r !== 'pass') return false
+      if (resultFilter === 'fail' && r !== 'fail' && r !== 'running') return false
+    }
+    const startedMs = new Date(run.startedAt).getTime()
+    if (dateFrom) {
+      const fromMs = new Date(dateFrom).getTime()
+      if (startedMs < fromMs) return false
+    }
+    if (dateTo) {
+      const toMs = new Date(dateTo).getTime() + 86_400_000 // inclusive end of day
+      if (startedMs > toMs) return false
+    }
     return true
   })
 
@@ -302,6 +314,34 @@ export default function HistoryView() {
     <div className="flex flex-col h-full">
       <div className="px-4 py-3 flex-shrink-0 flex items-center gap-3 flex-wrap" style={{ borderBottom: '1px solid var(--border)' }}>
         <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>Run History ({runs.length})</span>
+        {/* Date range filter */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>From</span>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={e => setDateFrom(e.target.value)}
+            className="text-xs rounded px-2 py-0.5"
+            style={{ background: 'rgba(42,51,71,0.25)', border: '1px solid rgba(42,51,71,0.5)', color: 'var(--text-dim)', colorScheme: 'dark' }}
+          />
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>to</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={e => setDateTo(e.target.value)}
+            className="text-xs rounded px-2 py-0.5"
+            style={{ background: 'rgba(42,51,71,0.25)', border: '1px solid rgba(42,51,71,0.5)', color: 'var(--text-dim)', colorScheme: 'dark' }}
+          />
+          {(dateFrom || dateTo) && (
+            <button
+              onClick={() => { setDateFrom(''); setDateTo('') }}
+              className="text-xs px-1.5 py-0.5 rounded"
+              style={{ background: 'rgba(248,81,73,0.08)', color: '#f85149', border: '1px solid rgba(248,81,73,0.2)' }}
+            >
+              clear
+            </button>
+          )}
+        </div>
         {/* Result filter toggle */}
         <div className="flex items-center gap-1 p-0.5 rounded-full" style={{ background: 'rgba(42,51,71,0.25)', border: '1px solid rgba(42,51,71,0.4)' }}>
           {(['all', 'pass', 'fail'] as ResultFilter[]).map(f => {

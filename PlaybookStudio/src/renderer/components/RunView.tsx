@@ -133,6 +133,21 @@ export default function RunView() {
   const vars      = activeRun.variables ?? {}
   const done      = steps.filter(s => s.status === 'done' || s.status === 'skipped').length
   const total     = steps.length
+
+  // Estimated completion: avg ms per done step × remaining steps
+  const estDoneLabel = (() => {
+    const doneSteps = steps.filter(s => s.status === 'done' && (s as { completedAt?: string; startedAt?: string }).completedAt && (s as { startedAt?: string }).startedAt)
+    if (doneSteps.length === 0 || done >= total) return null
+    const avgMs = doneSteps.reduce((sum, s) => {
+      const st = s as { completedAt?: string; startedAt?: string }
+      return sum + (new Date(st.completedAt!).getTime() - new Date(st.startedAt!).getTime())
+    }, 0) / doneSteps.length
+    const remaining = total - done
+    const totalMs = avgMs * remaining
+    const m = Math.floor(totalMs / 60_000)
+    const sec = Math.floor((totalMs % 60_000) / 1_000)
+    return `Est. done in ${m}m ${sec}s`
+  })()
   const lab       = activeRun.labName    ?? context.activeLab
   const target    = activeRun.targetName ?? context.activeTarget
   const targetIP  = context.activeIP ?? ''
@@ -237,6 +252,15 @@ export default function RunView() {
           />
           Running for {runElapsed}
         </span>
+        {/* Estimated completion */}
+        {estDoneLabel && (
+          <span
+            className="text-xs font-mono px-2 py-0.5 rounded flex-shrink-0"
+            style={{ background: 'rgba(210,153,34,0.06)', color: '#d29922', border: '1px solid rgba(210,153,34,0.15)' }}
+          >
+            {estDoneLabel}
+          </span>
+        )}
         <div className="flex-1" />
         {activeRun.status === 'completed' && (
           <button onClick={handleExportReport} disabled={exporting} className="text-xs px-3 py-1.5 rounded font-medium"
