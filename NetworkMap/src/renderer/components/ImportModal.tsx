@@ -185,13 +185,13 @@ function FileTab({ onSave }: { onSave: (g: NetworkGraph) => void }) {
 
       {result && (
         <div style={{ fontSize: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div style={{ color: 'var(--success)' }}>✓ Found {result.nodes.length} hosts</div>
-          <div style={{ color: 'var(--success)' }}>✓ Found {result.nodes.reduce((a, n) => a + n.openPortCount, 0)} open ports</div>
+          <div style={{ color: '#3fb950' }}>✓ Found {result.nodes.length} hosts</div>
+          <div style={{ color: '#3fb950' }}>✓ Found {result.nodes.reduce((a, n) => a + n.openPortCount, 0)} open ports</div>
           {result.excluded > 0 && (
-            <div style={{ color: 'var(--text-muted)' }}>✗ {result.excluded} hosts with no open ports (excluded)</div>
+            <div style={{ color: '#d29922' }}>⚠ {result.excluded} hosts with no open ports (excluded)</div>
           )}
           {result.errors.map((err, i) => (
-            <div key={i} style={{ color: 'var(--error)' }}>✗ {err}</div>
+            <div key={i} style={{ color: '#f85149' }}>✗ {err}</div>
           ))}
         </div>
       )}
@@ -230,11 +230,14 @@ function PasteTab({ onSave }: { onSave: (g: NetworkGraph) => void }) {
         onChange={e => { setXml(e.target.value); setResult(null) }}
         placeholder="<?xml version=&quot;1.0&quot;...&#10;<nmaprun ...>"
         style={{
-          minHeight: 200, background: 'var(--bg)',
-          border: '1px solid var(--border)', borderRadius: 6,
-          padding: 12, color: 'var(--text)', fontSize: 12,
-          fontFamily: 'monospace', resize: 'vertical',
+          minHeight: 200, background: 'rgba(10,10,15,0.8)',
+          border: '1px solid rgba(42,51,71,0.6)', borderRadius: 6,
+          padding: 12, color: '#e2e8f0', fontSize: 12,
+          fontFamily: 'var(--font-mono)', resize: 'vertical',
+          outline: 'none', transition: 'border-color 150ms',
         }}
+        onFocus={e => (e.currentTarget.style.borderColor = 'rgba(210,153,34,0.5)')}
+        onBlur={e => (e.currentTarget.style.borderColor = 'rgba(42,51,71,0.6)')}
       />
 
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -382,12 +385,12 @@ export default function ImportModal({ onClose, onImport }: Props) {
               style={{
                 flex: 1, padding: '8px 4px', fontSize: 11, fontWeight: tab === t ? 600 : 400,
                 background: 'transparent', border: 'none',
-                borderBottom: `2px solid ${tab === t ? '#ff8c42' : 'transparent'}`,
-                color: tab === t ? '#ff8c42' : 'var(--text-muted)',
+                borderBottom: `2px solid ${tab === t ? '#d29922' : 'transparent'}`,
+                color: tab === t ? '#d29922' : '#8b949e',
                 cursor: 'pointer', transition: 'all 180ms var(--ease)', fontFamily: 'var(--font-display)',
               }}
-              onMouseEnter={e => { if (tab !== t) (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)' }}
-              onMouseLeave={e => { if (tab !== t) (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' }}
+              onMouseEnter={e => { if (tab !== t) (e.currentTarget as HTMLElement).style.color = '#e2e8f0' }}
+              onMouseLeave={e => { if (tab !== t) (e.currentTarget as HTMLElement).style.color = '#8b949e' }}
             >
               {TAB_LABELS[t]}
             </button>

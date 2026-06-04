@@ -5,14 +5,15 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:         #07080f;
+  --bg:         #0a0a0f;
   --panel:      #0d0e18;
   --border:     rgba(42,51,71,0.75);
-  --text:       #e6edf3;
+  --text:       #e2e8f0;
   --text-dim:   #8b949e;
-  --text-muted: #484f58;
-  --accent:     #2dd4bf;
-  --accent-dim: rgba(45,212,191,0.12);
+  --text-secondary: #8b949e;
+  --text-muted: #4a5568;
+  --accent:     #4a9eff;
+  --accent-dim: rgba(74,158,255,0.12);
   --success:    #3fb950;
   --error:      #f85149;
   --warning:    #d29922;

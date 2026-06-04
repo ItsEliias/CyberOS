@@ -1,7 +1,7 @@
 // NetworkMap — NodeDetail.tsx — Glass panel host detail (UI redesign, logic unchanged)
 import { useState } from 'react'
 import type { NetworkNode } from '@shared/types'
-import { OsIcon, ProtoBadge, HighlightText, thStyle } from './NodeDetailParts'
+import { OsIcon, ProtoBadge, HighlightText, thStyle, RiskAssessmentPanel } from './NodeDetailParts'
 import { PortTimeline, VulnsTab } from './NodeDetailTabs'
 
 interface Props {
@@ -124,8 +124,8 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate, s
           background: 'linear-gradient(90deg, transparent 0%, rgba(255,140,66,0.4) 50%, transparent 100%)',
         }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ width: 2, height: 16, borderRadius: 1, background: 'linear-gradient(180deg, #ff8c42, rgba(255,140,66,0.3))', flexShrink: 0 }} />
-          <span style={{ fontSize: 10, fontWeight: 700, color: '#ff8c42', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+          <div style={{ width: 2, height: 16, borderRadius: 1, background: 'linear-gradient(180deg, #d29922, rgba(210,153,34,0.3))', flexShrink: 0 }} />
+          <span style={{ fontSize: 10, fontWeight: 700, color: '#d29922', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
             Host Detail
           </span>
         </div>
@@ -162,14 +162,14 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate, s
               }}
               onMouseEnter={e => {
                 if (!copyFeedback) {
-                  (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,140,66,0.35)'
-                  ;(e.currentTarget as HTMLElement).style.color = '#ff8c42'
+                  (e.currentTarget as HTMLElement).style.borderColor = 'rgba(210,153,34,0.35)'
+                  ;(e.currentTarget as HTMLElement).style.color = '#d29922'
                 }
               }}
               onMouseLeave={e => {
                 if (!copyFeedback) {
                   (e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,51,71,0.6)'
-                  ;(e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'
+                  ;(e.currentTarget as HTMLElement).style.color = '#8b949e'
                 }
               }}
             >
@@ -194,12 +194,12 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate, s
           <span style={{
             fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 600,
             background: statusOnline ? 'rgba(63,185,80,0.10)' : 'rgba(72,79,88,0.18)',
-            color: statusOnline ? '#3fb950' : 'var(--text-muted)',
+            color: statusOnline ? '#3fb950' : '#8b949e',
             border: `1px solid ${statusOnline ? 'rgba(63,185,80,0.28)' : 'rgba(72,79,88,0.35)'}`,
           }}>{node.status}</span>
         </div>
         {node.hostname && (
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 2, display: 'flex', alignItems: 'center', gap: 5, overflow: 'hidden' }}>
+          <div style={{ fontSize: 12, color: '#8b949e', marginBottom: 2, display: 'flex', alignItems: 'center', gap: 5, overflow: 'hidden' }}>
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
               <HighlightText text={node.hostname} query={searchQuery} />
             </span>
@@ -214,8 +214,8 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate, s
                 transition: 'all 150ms var(--ease)', fontFamily: 'var(--font-display)',
                 display: 'flex', alignItems: 'center', gap: 2,
               }}
-              onMouseEnter={e => { if (!copyHostnameFeedback) { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,140,66,0.35)'; (e.currentTarget as HTMLElement).style.color = '#ff8c42'; } }}
-              onMouseLeave={e => { if (!copyHostnameFeedback) { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,51,71,0.6)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; } }}
+              onMouseEnter={e => { if (!copyHostnameFeedback) { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(210,153,34,0.35)'; (e.currentTarget as HTMLElement).style.color = '#d29922'; } }}
+              onMouseLeave={e => { if (!copyHostnameFeedback) { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,51,71,0.6)'; (e.currentTarget as HTMLElement).style.color = '#8b949e'; } }}
             >
               {copyHostnameFeedback ? (
                 <svg width="7" height="7" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 5l2.5 2.5L8 3" /></svg>
@@ -229,7 +229,7 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate, s
           </div>
         )}
         {node.os && (
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
+          <div style={{ fontSize: 11, color: '#8b949e', display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
             <OsIcon os={node.os} />
             <span>{node.os}{node.osAccuracy ? ` (${node.osAccuracy}%)` : ''}</span>
           </div>
@@ -246,17 +246,17 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate, s
               marginTop: 5, display: 'flex', alignItems: 'center', gap: 4,
               animation: 'badgePop 0.18s var(--ease)',
             }}>
-              <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="#ff8c42" strokeWidth="1.5">
+              <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="#d29922" strokeWidth="1.5">
                 <circle cx="4" cy="4" r="3" /><path d="M6.5 6.5l1.5 1.5" strokeLinecap="round" />
               </svg>
-              <span style={{ fontSize: 9, color: 'rgba(255,140,66,0.7)', fontWeight: 600 }}>
+              <span style={{ fontSize: 9, color: 'rgba(210,153,34,0.8)', fontWeight: 600 }}>
                 Match in {matchFields.join(', ')}
               </span>
             </div>
           )
         })()}
         {node.annotation && (
-          <div style={{ marginTop: 5, fontSize: 11, color: '#ff8c42', fontStyle: 'italic', opacity: 0.85 }}>
+          <div style={{ marginTop: 5, fontSize: 11, color: '#d29922', fontStyle: 'italic', opacity: 0.9 }}>
             {node.annotation}
           </div>
         )}
@@ -294,15 +294,15 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate, s
               flex: 1, padding: '8px 4px', fontSize: 10, fontWeight: tab === t.id ? 600 : 400,
               background: 'transparent',
               border: 'none',
-              borderBottom: `2px solid ${tab === t.id ? '#ff8c42' : 'transparent'}`,
-              color: tab === t.id ? '#ff8c42' : 'var(--text-muted)',
+              borderBottom: `2px solid ${tab === t.id ? '#d29922' : 'transparent'}`,
+              color: tab === t.id ? '#d29922' : '#8b949e',
               cursor: 'pointer',
               transition: 'all 180ms var(--ease)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
               borderRadius: 0,
             }}
-            onMouseEnter={e => { if (tab !== t.id) (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)' }}
-            onMouseLeave={e => { if (tab !== t.id) (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' }}
+            onMouseEnter={e => { if (tab !== t.id) (e.currentTarget as HTMLElement).style.color = '#e2e8f0' }}
+            onMouseLeave={e => { if (tab !== t.id) (e.currentTarget as HTMLElement).style.color = '#8b949e' }}
           >
             {t.label}
             {t.count !== undefined && t.count > 0 && (
@@ -311,8 +311,8 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate, s
                 className="badge-animate"
                 style={{
                   fontSize: 9,
-                  background: tab === t.id ? 'rgba(255,140,66,0.18)' : 'rgba(42,51,71,0.45)',
-                  color: tab === t.id ? '#ff8c42' : '#484f58',
+                  background: tab === t.id ? 'rgba(210,153,34,0.18)' : 'rgba(42,51,71,0.45)',
+                  color: tab === t.id ? '#d29922' : '#8b949e',
                   borderRadius: 5, padding: '0 5px',
                   transition: 'all 180ms var(--ease)',
                 }}
@@ -396,7 +396,10 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate, s
         {tab === 'vulns' && <VulnsTab node={node} />}
         {tab === 'recondesk' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <ActionBtn onClick={handlePushToReconDesk}>Add to ReconDesk</ActionBtn>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <PrimaryBtn onClick={handlePushToReconDesk}>Open in ReconDesk</PrimaryBtn>
+              <SecondaryBtn onClick={handleCopyIP}>{copyFeedback ? 'Copied!' : 'Copy IP'}</SecondaryBtn>
+            </div>
             {rdMsg && (
               <div style={{
                 fontSize: 11, padding: '6px 10px', borderRadius: 8,
@@ -412,61 +415,6 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate, s
   )
 }
 
-/** Risk score bar row — 0-10 scale */
-function RiskRow({ label, score }: { label: string; score: number }) {
-  const color =
-    score >= 7 ? '#f85149' :
-    score >= 4 ? '#d29922' :
-    '#3fb950'
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <span style={{ fontSize: 10, color: 'var(--text-muted)', flex: '0 0 120px', whiteSpace: 'nowrap' }}>{label}</span>
-      <div style={{ flex: 1, height: 5, background: 'rgba(42,51,71,0.45)', borderRadius: 3, overflow: 'hidden' }}>
-        <div style={{
-          height: '100%',
-          width: `${score * 10}%`,
-          background: `linear-gradient(90deg, ${color}80, ${color})`,
-          borderRadius: 3,
-          transition: 'width 0.4s ease',
-          boxShadow: `0 0 6px ${color}50`,
-        }} />
-      </div>
-      <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color, fontWeight: 600, flex: '0 0 20px', textAlign: 'right' }}>{score}</span>
-    </div>
-  )
-}
-
-/** Risk Assessment section derived from node data */
-function RiskAssessmentPanel({ node }: { node: import('@shared/types').NetworkNode }) {
-  const openCount = node.ports.filter(p => p.state === 'open').length
-  // Port risk: >10 = 9, >5 = 6, >2 = 4, else proportional
-  const portRisk = Math.min(10, openCount >= 10 ? 9 : openCount >= 5 ? 6 : openCount >= 2 ? 4 : openCount)
-  // OS vulnerability: unknown OS = higher risk; Linux/Windows known = lower
-  const osLower = (node.os ?? '').toLowerCase()
-  const osRisk = !node.os ? 7 : osLower.includes('windows') ? 5 : osLower.includes('linux') ? 3 : 4
-  // Service risk: presence of risky services
-  const riskyServices = node.ports.filter(p => p.state === 'open' && [21, 23, 139, 445, 4444, 3389].includes(p.port))
-  const serviceRisk = Math.min(10, riskyServices.length * 3 + (openCount > 0 ? 1 : 0))
-
-  return (
-    <div style={{ marginTop: 14 }}>
-      <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-        Risk Assessment
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 7, padding: '10px 12px', background: 'rgba(13,14,24,0.6)', borderRadius: 8, border: '1px solid rgba(42,51,71,0.4)' }}>
-        <RiskRow label="Open port exposure" score={portRisk} />
-        <RiskRow label="OS vulnerability"   score={osRisk} />
-        <RiskRow label="Service risk"       score={serviceRisk} />
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 2 }}>
-          <span style={{ fontSize: 9, color: 'rgba(255,140,66,0.5)' }}>
-            scores 0–10 (mock estimate)
-          </span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 function ActionBtn({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
   return (
     <button
@@ -474,11 +422,44 @@ function ActionBtn({ children, onClick }: { children: React.ReactNode; onClick: 
       style={{
         padding: '5px 10px', borderRadius: 8,
         background: '#07080f', border: '1px solid rgba(42,51,71,0.75)',
-        color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer',
+        color: '#e2e8f0', fontSize: 11, cursor: 'pointer',
         transition: 'all 150ms', fontFamily: 'var(--font-display)',
       }}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,140,66,0.35)'; (e.currentTarget as HTMLElement).style.color = '#ff8c42' }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,51,71,0.75)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)' }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(210,153,34,0.35)'; (e.currentTarget as HTMLElement).style.color = '#d29922' }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,51,71,0.75)'; (e.currentTarget as HTMLElement).style.color = '#e2e8f0' }}
+    >{children}</button>
+  )
+}
+
+function PrimaryBtn({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        height: 34, padding: '0 16px', borderRadius: 6, border: 'none',
+        background: '#d29922', color: '#0a0a0f',
+        fontSize: 13, fontWeight: 500, cursor: 'pointer',
+        transition: 'opacity 150ms', fontFamily: 'var(--font-display)',
+      }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '0.85' }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '1' }}
+    >{children}</button>
+  )
+}
+
+function SecondaryBtn({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        height: 34, padding: '0 16px', borderRadius: 6,
+        background: 'rgba(42,51,71,0.4)', color: '#e2e8f0',
+        border: '1px solid rgba(42,51,71,0.6)',
+        fontSize: 13, fontWeight: 400, cursor: 'pointer',
+        transition: 'all 150ms', fontFamily: 'var(--font-display)',
+      }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(42,51,71,0.6)' }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(42,51,71,0.4)' }}
     >{children}</button>
   )
 }

@@ -323,7 +323,7 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
                   width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0,
                   boxShadow: `0 0 5px ${color}60`,
                 }} />
-                <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{label}</span>
+                <span style={{ fontSize: 10, color: '#e2e8f0' }}>{label}</span>
               </div>
             ))}
           </div>
@@ -335,16 +335,16 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
                 onClick={() => onSwitchGraph(g.id)}
                 style={{
                   padding: '6px 12px', cursor: 'pointer', fontSize: 11,
-                  color: g.id === graph.id ? '#ff8c42' : 'var(--text-muted)',
-                  background: g.id === graph.id ? 'rgba(255,140,66,0.07)' : 'transparent',
-                  borderLeft: g.id === graph.id ? '2px solid #ff8c42' : '2px solid transparent',
+                  color: g.id === graph.id ? '#d29922' : '#e2e8f0',
+                  background: g.id === graph.id ? 'rgba(210,153,34,0.07)' : 'transparent',
+                  borderLeft: g.id === graph.id ? '2px solid #d29922' : '2px solid transparent',
                   transition: 'all 150ms var(--ease)',
                 }}
-                onMouseEnter={e => { if (g.id !== graph.id) { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)' } }}
-                onMouseLeave={e => { if (g.id !== graph.id) { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' } }}
+                onMouseEnter={e => { if (g.id !== graph.id) { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'; (e.currentTarget as HTMLElement).style.color = '#e2e8f0' } }}
+                onMouseLeave={e => { if (g.id !== graph.id) { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#e2e8f0' } }}
               >
-                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: g.id === graph.id ? 600 : 400 }}>{g.name}</div>
-                <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 1 }}>{g.nodeCount} nodes</div>
+                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: g.id === graph.id ? 600 : 400, fontSize: 12 }}>{g.name}</div>
+                <div style={{ fontSize: 9, color: '#8b949e', marginTop: 1, fontFamily: 'var(--font-mono)' }}>{g.nodeCount} nodes</div>
               </div>
             ))}
           </div>
@@ -376,20 +376,20 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
 
               {/* Zoom controls */}
               <div style={{ position: 'absolute', bottom: 16, left: 16, display: 'flex', gap: 3, alignItems: 'center' }}>
-                {([{l:'+', title:'Zoom in', f:zoomIn},{l:'−', title:'Zoom out', f:zoomOut},{l:'↺', title:'Reset view', f:resetView},{l:'⊞', title:'Fit all nodes', f:fitView}] as const).map(b => (
+                {([{l:'+', title:'Zoom in', f:zoomIn},{l:'−', title:'Zoom out', f:zoomOut},{l:'↺', title:'Reset', f:resetView},{l:'⊞', title:'Fit all nodes', f:fitView}] as const).map(b => (
                   <button
                     key={b.l}
                     onClick={b.f}
                     title={b.title}
                     style={zoomBtn}
                     onMouseEnter={e => {
-                      (e.currentTarget as HTMLElement).style.background = 'rgba(42,51,71,0.4)'
-                      ;(e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'
-                      ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,51,71,1)'
+                      (e.currentTarget as HTMLElement).style.background = 'rgba(210,153,34,0.15)'
+                      ;(e.currentTarget as HTMLElement).style.color = '#d29922'
+                      ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(210,153,34,0.4)'
                     }}
                     onMouseLeave={e => {
-                      (e.currentTarget as HTMLElement).style.background = 'rgba(13,14,24,0.92)'
-                      ;(e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'
+                      (e.currentTarget as HTMLElement).style.background = 'rgba(10,10,15,0.92)'
+                      ;(e.currentTarget as HTMLElement).style.color = '#e2e8f0'
                       ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,51,71,0.75)'
                     }}
                   >{b.l}</button>
@@ -413,15 +413,15 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
                     zIndex: 22, pointerEvents: 'none',
                     display: 'flex', alignItems: 'center', gap: 5,
                     padding: '4px 12px', borderRadius: 20,
-                    background: 'rgba(13,14,24,0.92)',
-                    border: '1px solid rgba(255,140,66,0.35)',
+                    background: 'rgba(10,10,15,0.92)',
+                    border: '1px solid rgba(210,153,34,0.35)',
                     boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-                    fontSize: 11, color: '#ff8c42', fontWeight: 600,
+                    fontSize: 11, color: '#d29922', fontWeight: 600,
                     backdropFilter: 'blur(8px)',
                     animation: 'badgePop 0.2s var(--ease)',
                   }}
                 >
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ff8c42', boxShadow: '0 0 6px rgba(255,140,66,0.6)', flexShrink: 0 }} />
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#d29922', boxShadow: '0 0 6px rgba(210,153,34,0.6)', flexShrink: 0 }} />
                   1 node selected
                 </div>
               )}
@@ -430,8 +430,8 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
               <div style={{ position: 'absolute', bottom: 220, right: 16, zIndex: 21, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
                 {([{icon:'+',title:'Zoom in',fn:zoomIn},{icon:'−',title:'Zoom out',fn:zoomOut},{icon:'⊞',title:'Fit all',fn:fitView}] as const).map(b => (
                   <button key={b.title} onClick={b.fn} title={b.title} style={zoomOverlayBtn}
-                    onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background='rgba(42,51,71,0.5)'; el.style.borderColor='rgba(255,140,66,0.4)'; el.style.color='#ff8c42' }}
-                    onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background='rgba(13,14,24,0.88)'; el.style.borderColor='rgba(42,51,71,0.7)'; el.style.color='var(--text-muted)' }}
+                    onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background='rgba(210,153,34,0.15)'; el.style.borderColor='rgba(210,153,34,0.4)'; el.style.color='#d29922' }}
+                    onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background='rgba(10,10,15,0.88)'; el.style.borderColor='rgba(42,51,71,0.7)'; el.style.color='#e2e8f0' }}
                   >{b.icon}</button>
                 ))}
                 <div style={zoomLevelBadge}>{zoomLevel}%</div>
@@ -459,42 +459,41 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
         </div>
       </div>
 
-      <div style={{ padding: '4px 16px', borderTop: '1px solid rgba(42,51,71,0.4)', fontSize: 10, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(7,8,15,0.6)' }}>
-        <span style={{ color: 'rgba(255,140,66,0.5)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', fontSize: 9 }}>NetworkMap</span>
-        <span style={{ color: 'rgba(42,51,71,0.8)' }}>·</span>
-        <span style={{ color: 'var(--text-secondary)', fontWeight: 500, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{graphName}</span>
-        <span style={{ color: 'rgba(42,51,71,0.8)' }}>·</span>
+      <div style={{ padding: '4px 16px', borderTop: '1px solid rgba(42,51,71,0.4)', fontSize: 10, color: '#8b949e', display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(7,8,15,0.6)' }}>
+        <span style={{ color: 'rgba(210,153,34,0.6)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', fontSize: 9 }}>NetworkMap</span>
+        <span style={{ color: 'rgba(42,51,71,0.7)' }}>·</span>
+        <span style={{ color: '#e2e8f0', fontWeight: 500, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{graphName}</span>
+        <span style={{ color: 'rgba(42,51,71,0.7)' }}>·</span>
         <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-          <span style={{ color: '#ff8c42' }}>{graph.nodes.length}</span>
-          <span style={{ color: 'rgba(42,51,71,0.9)', margin: '0 2px' }}>n</span>
-          <span style={{ color: 'rgba(42,51,71,0.8)', margin: '0 2px' }}>·</span>
-          <span>{graph.edges.length}</span>
-          <span style={{ color: 'rgba(42,51,71,0.9)', margin: '0 2px' }}>e</span>
+          <span style={{ color: '#d29922' }}>{graph.nodes.length}</span>
+          <span style={{ color: '#4a5568', margin: '0 2px' }}>n</span>
+          <span style={{ color: 'rgba(42,51,71,0.7)', margin: '0 2px' }}>·</span>
+          <span style={{ color: '#8b949e' }}>{graph.edges.length}</span>
+          <span style={{ color: '#4a5568', margin: '0 2px' }}>e</span>
         </span>
-        {tracedPath && (
-          <>
-            <span style={{ color: 'rgba(42,51,71,0.8)' }}>·</span>
-            <span className="badge-animate" style={{ color: '#ff8c42', fontWeight: 600 }}>{tracedPath.length - 1} hops</span>
-          </>
-        )}
+        {tracedPath && <><span style={{ color: 'rgba(42,51,71,0.7)' }}>·</span><span className="badge-animate" style={{ color: '#d29922', fontWeight: 600 }}>{tracedPath.length - 1} hops</span></>}
       </div>
     </div>
   )
 }
 
 const secLabel: React.CSSProperties = {
-  fontSize: 9, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.07em', marginBottom: 6, textTransform: 'uppercase',
+  fontSize: 9, fontWeight: 600, color: '#8b949e', letterSpacing: '0.07em', marginBottom: 6, textTransform: 'uppercase',
 }
-const zoomBtn: React.CSSProperties = { padding: '5px 9px', background: 'rgba(13,14,24,0.92)', border: '1px solid rgba(42,51,71,0.75)', borderRadius: 7, color: 'var(--text-muted)', fontSize: 12, transition: 'all 150ms var(--ease)' }
+const zoomBtn: React.CSSProperties = {
+  padding: '5px 9px', background: 'rgba(10,10,15,0.92)', border: '1px solid rgba(42,51,71,0.75)',
+  borderRadius: 7, color: '#e2e8f0', fontSize: 12, transition: 'all 150ms var(--ease)',
+  backdropFilter: 'blur(8px)',
+}
 const zoomOverlayBtn: React.CSSProperties = {
   width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: 'rgba(13,14,24,0.88)', border: '1px solid rgba(42,51,71,0.7)', borderRadius: 7,
-  color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', backdropFilter: 'blur(8px)',
+  background: 'rgba(10,10,15,0.88)', border: '1px solid rgba(42,51,71,0.7)', borderRadius: 7,
+  color: '#e2e8f0', fontSize: 13, cursor: 'pointer', backdropFilter: 'blur(8px)',
   transition: 'all 150ms var(--ease)',
 }
 const zoomLevelBadge: React.CSSProperties = {
   marginTop: 2, padding: '3px 5px', minWidth: 28, textAlign: 'center',
-  background: 'rgba(13,14,24,0.88)', border: '1px solid rgba(42,51,71,0.5)',
+  background: 'rgba(10,10,15,0.88)', border: '1px solid rgba(42,51,71,0.5)',
   borderRadius: 6, fontSize: 9, fontFamily: 'var(--font-mono)', backdropFilter: 'blur(8px)',
-  color: 'rgba(255,140,66,0.7)', fontWeight: 600, letterSpacing: '0.04em',
+  color: 'rgba(210,153,34,0.8)', fontWeight: 600, letterSpacing: '0.04em',
 }

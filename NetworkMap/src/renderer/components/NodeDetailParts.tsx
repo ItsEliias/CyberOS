@@ -1,5 +1,6 @@
 // NetworkMap — NodeDetailParts.tsx — Presentational sub-components for NodeDetail
 import type { CSSProperties } from 'react'
+import type { NetworkNode } from '@shared/types'
 
 // ─── OS SVG icons ─────────────────────────────────────────────────────────────
 export function OsIcon({ os }: { os: string | undefined }) {
@@ -92,6 +93,49 @@ export const thStyle: CSSProperties = {
 export const tdStyle: CSSProperties = {
   padding: '3px 4px', fontSize: 10, color: 'var(--text-secondary)',
   textAlign: 'center', borderBottom: '1px solid rgba(42,51,71,0.25)',
+}
+
+// ─── Risk score bar row ───────────────────────────────────────────────────────
+function RiskRow({ label, score }: { label: string; score: number }) {
+  const color = score >= 7 ? '#f85149' : score >= 4 ? '#d29922' : '#3fb950'
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span style={{ fontSize: 10, color: '#8b949e', flex: '0 0 120px', whiteSpace: 'nowrap' }}>{label}</span>
+      <div style={{ flex: 1, height: 5, background: 'rgba(42,51,71,0.45)', borderRadius: 3, overflow: 'hidden' }}>
+        <div style={{
+          height: '100%', width: `${score * 10}%`,
+          background: `linear-gradient(90deg, ${color}80, ${color})`,
+          borderRadius: 3, transition: 'width 0.4s ease', boxShadow: `0 0 6px ${color}50`,
+        }} />
+      </div>
+      <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color, fontWeight: 600, flex: '0 0 20px', textAlign: 'right' }}>{score}</span>
+    </div>
+  )
+}
+
+// ─── Risk Assessment panel ────────────────────────────────────────────────────
+export function RiskAssessmentPanel({ node }: { node: NetworkNode }) {
+  const openCount = node.ports.filter(p => p.state === 'open').length
+  const portRisk = Math.min(10, openCount >= 10 ? 9 : openCount >= 5 ? 6 : openCount >= 2 ? 4 : openCount)
+  const osLower = (node.os ?? '').toLowerCase()
+  const osRisk = !node.os ? 7 : osLower.includes('windows') ? 5 : osLower.includes('linux') ? 3 : 4
+  const riskyServices = node.ports.filter(p => p.state === 'open' && [21, 23, 139, 445, 4444, 3389].includes(p.port))
+  const serviceRisk = Math.min(10, riskyServices.length * 3 + (openCount > 0 ? 1 : 0))
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div style={{ fontSize: 9, fontWeight: 700, color: '#8b949e', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+        Risk Assessment
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7, padding: '10px 12px', background: 'rgba(13,14,24,0.6)', borderRadius: 8, border: '1px solid rgba(42,51,71,0.4)' }}>
+        <RiskRow label="Open port exposure" score={portRisk} />
+        <RiskRow label="OS vulnerability"   score={osRisk} />
+        <RiskRow label="Service risk"       score={serviceRisk} />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 2 }}>
+          <span style={{ fontSize: 9, color: 'rgba(210,153,34,0.5)' }}>scores 0–10 (mock estimate)</span>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 // ─── Highlight match in text ──────────────────────────────────────────────────

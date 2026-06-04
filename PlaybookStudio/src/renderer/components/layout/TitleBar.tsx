@@ -37,11 +37,11 @@ export default function TitleBar({ activeRunName, onHelp }: TitleBarProps) {
         borderBottom: '1px solid rgba(255,255,255,0.04)',
       }}
     >
-      {/* Teal accent underline */}
+      {/* Accent underline */}
       <div
         className="absolute bottom-0 left-0 right-0 h-px pointer-events-none"
         style={{
-          background: 'linear-gradient(90deg, transparent 0%, rgba(45,212,191,0.22) 40%, rgba(45,212,191,0.22) 60%, transparent 100%)',
+          background: 'linear-gradient(90deg, transparent 0%, rgba(74,158,255,0.22) 40%, rgba(74,158,255,0.22) 60%, transparent 100%)',
         }}
       />
 
@@ -50,8 +50,8 @@ export default function TitleBar({ activeRunName, onHelp }: TitleBarProps) {
 
       {/* Brand */}
       <div className="flex items-center gap-2 no-drag">
-        <div style={{ filter: 'drop-shadow(0 0 5px rgba(45,212,191,0.5))' }}>
-          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ color: '#2dd4bf' }}>
+        <div style={{ filter: 'drop-shadow(0 0 5px rgba(74,158,255,0.5))' }}>
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ color: '#4a9eff' }}>
             <path d="M2 4h12M2 6.5h8M2 9h10M2 11.5h6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
             <rect x="1" y="2" width="14" height="12" rx="2" stroke="currentColor" strokeWidth="1.2" fill="none" />
           </svg>
@@ -72,9 +72,9 @@ export default function TitleBar({ activeRunName, onHelp }: TitleBarProps) {
       <span
         className="flex items-center gap-1 text-[9px] font-semibold tracking-widest uppercase px-2 py-0.5 rounded-full no-drag mr-2"
         style={{
-          background: 'rgba(45,212,191,0.06)',
+          background: 'rgba(74,158,255,0.06)',
           color: '#484f58',
-          border: '1px solid rgba(45,212,191,0.14)',
+          border: '1px solid rgba(74,158,255,0.14)',
         }}
       >
         <span>⬡</span>
@@ -103,9 +103,9 @@ export default function TitleBar({ activeRunName, onHelp }: TitleBarProps) {
             onClick={handleNewPlaybook}
             className="flex items-center gap-1.5 h-7 px-3 rounded text-xs font-medium transition-colors"
             style={{
-              background: 'rgba(45,212,191,0.10)',
-              color: '#2dd4bf',
-              border: '1px solid rgba(45,212,191,0.25)',
+              background: 'rgba(74,158,255,0.10)',
+              color: '#e2e8f0',
+              border: '1px solid rgba(74,158,255,0.30)',
             }}
           >
             <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">

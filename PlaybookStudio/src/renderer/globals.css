@@ -24,9 +24,13 @@
   --sev-critical: #f85149; --sev-high: #ff8c42; --sev-medium: #d29922;
   --sev-low: #4a9eff; --sev-info: #8b949e;
   --state-online: #3fb950; --state-offline: #484f58; --state-blocked: #f85149;
-  --accent: #2dd4bf; --accent-rgb: 45,212,191;
-  --accent-tint: rgba(45,212,191,0.08); --accent-tint2: rgba(45,212,191,0.15);
-  --accent-glow: rgba(45,212,191,0.28); --accent-border: rgba(45,212,191,0.30);
+  --accent: #4a9eff; --accent-rgb: 74,158,255;
+  --accent-tint: rgba(74,158,255,0.08); --accent-tint2: rgba(74,158,255,0.15);
+  --accent-glow: rgba(74,158,255,0.28); --accent-border: rgba(74,158,255,0.30);
+  /* Per-app theme CSS vars (overridden by ThemeProvider) */
+  --app-accent: #4a9eff;
+  --app-bg: #0a0a0f;
+  --app-text: #e2e8f0;
   --font-display: 'Geist Sans', 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
   --radius-xs: 4px; --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px;
@@ -36,9 +40,11 @@
   --border: rgba(42,51,71,0.75);
   --panel: #0d0e18;
   --bg: #07080f;
-  --text: #e6edf3;
+  --text: #e2e8f0;
   --text-dim: #8b949e;
-  --accent-dim: rgba(45,212,191,0.12);
+  --text-secondary: #8b949e;
+  --text-muted: #4a5568;
+  --accent-dim: rgba(74,158,255,0.12);
   --success: #3fb950;
   --error: #f85149;
   --warning: #d29922;
@@ -50,8 +56,8 @@ html, body, #root {
   height: 100%;
   min-height: 100vh;
   overflow: hidden;
-  background: radial-gradient(ellipse at 18% 0%, rgba(45,212,191,0.04) 0%, transparent 55%), #07080f;
-  color: var(--text-primary);
+  background: var(--app-bg, #0a0a0f);
+  color: var(--app-text, #e2e8f0);
   font-family: var(--font-display);
   font-size: 14px;
   line-height: 1.5;
@@ -99,7 +105,7 @@ input, textarea, select, button {
 /* ─── Focus Styles ────────────────────────────────────────────────────────── */
 
 *:focus-visible {
-  outline: 1px solid rgba(45, 212, 191, 0.45);
+  outline: 1px solid rgba(74, 158, 255, 0.45);
   outline-offset: 1px;
   border-radius: 4px;
 }

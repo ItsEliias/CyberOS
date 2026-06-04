@@ -197,9 +197,9 @@ export default function RunView() {
               title={scrollLock ? 'Scroll lock on — click to disable' : 'Scroll lock off — click to enable'}
               className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded transition-all"
               style={{
-                background: scrollLock ? 'rgba(45,212,191,0.1)' : 'rgba(42,51,71,0.2)',
+                background: scrollLock ? 'rgba(74,158,255,0.1)' : 'rgba(42,51,71,0.2)',
                 color: scrollLock ? '#2dd4bf' : '#484f58',
-                border: `1px solid ${scrollLock ? 'rgba(45,212,191,0.25)' : 'rgba(42,51,71,0.4)'}`,
+                border: `1px solid ${scrollLock ? 'rgba(74,158,255,0.25)' : 'rgba(42,51,71,0.4)'}`,
               }}
             >
               {/* Pin icon */}
@@ -244,7 +244,7 @@ export default function RunView() {
         {/* Elapsed timer */}
         <span
           className="text-xs font-mono px-2 py-0.5 rounded flex items-center gap-1.5 flex-shrink-0"
-          style={{ background: 'rgba(45,212,191,0.06)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.15)' }}
+          style={{ background: 'rgba(74,158,255,0.08)', color: '#4a9eff', border: '1px solid rgba(74,158,255,0.2)' }}
         >
           <span
             className="w-1.5 h-1.5 rounded-full flex-shrink-0"
@@ -274,15 +274,15 @@ export default function RunView() {
           onClick={() => setPaused(p => !p)}
           className="text-xs px-3 py-1.5 rounded font-medium flex-shrink-0"
           style={{
-            background: 'transparent',
-            color: '#2dd4bf',
-            border: '1px solid rgba(45,212,191,0.35)',
+            background: 'rgba(42,51,71,0.4)',
+            color: '#e2e8f0',
+            border: '1px solid rgba(42,51,71,0.6)',
           }}
         >
           {paused ? '▶ Resume' : '⏸ Pause'}
         </button>
         <button onClick={() => setShowModal(true)} className="text-xs px-4 py-1.5 rounded font-semibold"
-          style={{ background: done === total ? 'var(--success)' : 'var(--accent)', color: done === total ? '#000' : '#fff' }}>
+          style={{ background: done === total ? '#3fb950' : '#4a9eff', color: '#0a0a0f' }}>
           {done === total ? '✓ Complete Run' : 'End Run'}
         </button>
       </div>

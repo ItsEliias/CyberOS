@@ -117,15 +117,17 @@ export default function PlaybookCard({ pb, searchTerm = '', staggerIndex = 0 }: 
     <div
       className="rounded-lg p-4 flex flex-col gap-3 group library-card-enter"
       style={{
-        background: '#0d0e18',
+        background: 'rgba(22,27,39,0.75)',
+        backdropFilter: 'blur(8px)',
         border: '1px solid rgba(42,51,71,0.6)',
+        borderRadius: 8,
         transition: 'border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease',
         animationDelay: `${staggerIndex * 40}ms`,
       }}
       onMouseEnter={e => {
         const el = e.currentTarget as HTMLElement
-        el.style.borderColor = 'rgba(45,212,191,0.28)'
-        el.style.boxShadow = '0 4px 20px rgba(45,212,191,0.07), 0 1px 4px rgba(0,0,0,0.4)'
+        el.style.borderColor = 'rgba(74,158,255,0.4)'
+        el.style.boxShadow = '0 4px 20px rgba(74,158,255,0.08), 0 1px 4px rgba(0,0,0,0.4)'
         el.style.transform = 'translateY(-1px)'
       }}
       onMouseLeave={e => {
@@ -146,7 +148,7 @@ export default function PlaybookCard({ pb, searchTerm = '', staggerIndex = 0 }: 
               {pb.category}
             </span>
             {pb.isBuiltIn && (
-              <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(45,212,191,0.08)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.18)' }}>
+              <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(74,158,255,0.08)', color: '#4a9eff', border: '1px solid rgba(74,158,255,0.18)' }}>
                 built-in
               </span>
             )}
@@ -156,7 +158,7 @@ export default function PlaybookCard({ pb, searchTerm = '', staggerIndex = 0 }: 
               </span>
             ))}
           </div>
-          <div className="font-medium text-sm" style={{ color: '#e6edf3' }}>
+          <div className="font-semibold text-sm" style={{ color: '#e2e8f0' }}>
             <HighlightMatch text={pb.name} term={searchTerm} />
           </div>
           <div className="text-xs mt-0.5 line-clamp-2" style={{ color: '#8b949e' }}>{pb.description}</div>
@@ -182,10 +184,10 @@ export default function PlaybookCard({ pb, searchTerm = '', staggerIndex = 0 }: 
       {/* Footer row */}
       <div className="flex items-center justify-between pt-1" style={{ borderTop: '1px solid rgba(42,51,71,0.35)' }}>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs px-2 py-0.5 rounded-full font-mono" style={{ background: 'rgba(45,212,191,0.07)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.18)' }}>
+          <span className="text-xs px-2 py-0.5 rounded-full font-mono" style={{ background: 'rgba(74,158,255,0.08)', color: '#4a9eff', border: '1px solid rgba(74,158,255,0.2)' }}>
             {pb.steps.length} steps
           </span>
-          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(42,51,71,0.25)', color: '#484f58', border: '1px solid rgba(42,51,71,0.4)' }}>
+          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(42,51,71,0.25)', color: '#8b949e', border: '1px solid rgba(42,51,71,0.4)' }}>
             {estimatedTime(pb.steps.length)}
           </span>
           {lastRunBadge && (
@@ -198,35 +200,35 @@ export default function PlaybookCard({ pb, searchTerm = '', staggerIndex = 0 }: 
             </span>
           )}
           {runCount > 0 && (
-            <span className="text-xs" style={{ color: '#484f58' }}>
-              Run {runCount}×{lastRunLabel ? ` · ${lastRunLabel}` : ''}
+            <span className="text-xs" style={{ color: '#8b949e' }}>
+              Run {runCount}x{lastRunLabel ? ` · ${lastRunLabel}` : ''}
             </span>
           )}
         </div>
         <div className="flex items-center gap-1">
           <button onClick={handleRun} className="no-drag text-xs px-2.5 py-1 rounded font-semibold transition-colors"
-            style={{ background: 'rgba(45,212,191,0.12)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.25)' }}>
+            style={{ background: '#4a9eff', color: '#0a0a0f', border: '1px solid #4a9eff', height: 28 }}>
             Run
           </button>
+          {!pb.isBuiltIn && (
+            <button onClick={handleEdit} className="no-drag text-xs px-2 py-1 rounded transition-colors"
+              style={{ background: 'rgba(42,51,71,0.4)', color: '#e2e8f0', border: '1px solid rgba(42,51,71,0.6)', height: 28 }}>
+              Edit
+            </button>
+          )}
           <button onClick={handleClone} className="no-drag text-xs px-2 py-1 rounded transition-colors"
-            style={{ background: 'rgba(42,51,71,0.3)', color: '#8b949e', border: '1px solid rgba(42,51,71,0.5)' }}>
+            style={{ background: 'rgba(42,51,71,0.4)', color: '#e2e8f0', border: '1px solid rgba(42,51,71,0.6)', height: 28 }}>
             Clone
           </button>
           <button onClick={handleExportBundle} disabled={exporting} className="no-drag text-xs px-2 py-1 rounded transition-colors"
-            style={{ background: 'rgba(42,51,71,0.3)', color: '#8b949e', border: '1px solid rgba(42,51,71,0.5)' }}>
+            style={{ background: 'rgba(42,51,71,0.4)', color: '#e2e8f0', border: '1px solid rgba(42,51,71,0.6)', height: 28 }}>
             {exporting ? '…' : 'Export'}
           </button>
           {!pb.isBuiltIn && (
-            <>
-              <button onClick={handleEdit} className="no-drag text-xs px-2 py-1 rounded transition-colors"
-                style={{ background: 'rgba(42,51,71,0.3)', color: '#8b949e', border: '1px solid rgba(42,51,71,0.5)' }}>
-                Edit
-              </button>
-              <button onClick={handleDelete} className="no-drag text-xs px-2 py-1 rounded transition-colors"
-                style={{ background: 'rgba(248,81,73,0.08)', color: '#f85149', border: '1px solid rgba(248,81,73,0.2)' }}>
-                Delete
-              </button>
-            </>
+            <button onClick={handleDelete} className="no-drag text-xs px-2 py-1 rounded transition-colors"
+              style={{ background: 'rgba(248,81,73,0.08)', color: '#f85149', border: '1px solid rgba(248,81,73,0.2)', height: 28 }}>
+              Del
+            </button>
           )}
         </div>
       </div>

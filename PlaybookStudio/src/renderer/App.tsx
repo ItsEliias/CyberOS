@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { useStore, type View } from './store'
+import { useStore, applyTheme, type View } from './store'
 import TitleBar from './components/layout/TitleBar'
 import StatusBar from './components/layout/StatusBar'
 import LibraryView from './components/LibraryView'
@@ -56,9 +56,11 @@ function Sidebar() {
   const setView   = useStore(s => s.setView)
   const activeRun = useStore(s => s.activeRun)
   const playbooks = useStore(s => s.playbooks)
+  const theme     = useStore(s => s.theme)
 
   const builtInCount = playbooks.filter(p => p.isBuiltIn).length
   const customCount  = playbooks.filter(p => !p.isBuiltIn).length
+  const accent = theme.accentColor
 
   return (
     <div
@@ -76,7 +78,7 @@ function Sidebar() {
                 <motion.div
                   layoutId="sidebar-active"
                   className="absolute inset-0 rounded"
-                  style={{ background: 'rgba(45,212,191,0.10)', borderLeft: '2px solid #2dd4bf' }}
+                  style={{ background: `${accent}18`, borderLeft: `2px solid ${accent}` }}
                   transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                 />
               )}
@@ -84,9 +86,8 @@ function Sidebar() {
                 onClick={() => setView(item.id)}
                 className="relative w-full flex items-center gap-2.5 px-2.5 py-2 rounded text-xs font-medium transition-all"
                 style={{
-                  color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
+                  color: isActive ? accent : '#8b949e',
                   paddingLeft: isActive ? 14 : 10,
-                  textShadow: isActive ? '0 0 8px rgba(45,212,191,0.35)' : 'none',
                 }}
               >
                 {item.icon}
@@ -109,10 +110,10 @@ function Sidebar() {
 
       {/* Footer info */}
       <div className="p-3 flex flex-col gap-0.5" style={{ borderTop: '1px solid var(--border)' }}>
-        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+        <span className="text-xs" style={{ color: '#4a5568' }}>
           {builtInCount} built-in
         </span>
-        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+        <span className="text-xs" style={{ color: '#4a5568' }}>
           {customCount} custom
         </span>
       </div>
@@ -130,6 +131,10 @@ export default function App() {
   const setContext   = useStore(s => s.setContext)
   const setActiveRun = useStore(s => s.setActiveRun)
   const activeRun    = useStore(s => s.activeRun)
+  const theme        = useStore(s => s.theme)
+
+  // Apply theme on mount
+  useEffect(() => { applyTheme(theme) }, [])
 
   useEffect(() => {
     window.electronAPI.getState().then(state => {
