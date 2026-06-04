@@ -48,6 +48,13 @@ export default function SettingsView() {
   const [impMsg, setImpMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [impLoading, setImpLoading] = useState(false)
 
+  // Save confirmation toast (inline, 2s)
+  const [saveToast, setSaveToast] = useState<string | null>(null)
+  function showSaveToast(msg: string) {
+    setSaveToast(msg)
+    setTimeout(() => setSaveToast(null), 2000)
+  }
+
   // Password audit
   const credentials       = useStore(s => s.credentials)
   const [auditReport, setAuditReport] = useState<AuditReport | null>(null)
@@ -66,6 +73,7 @@ export default function SettingsView() {
     if (res.ok) {
       setPwMsg({ ok: true, text: 'Password changed successfully' })
       setCurPw(''); setNewPw(''); setConfPw('')
+      showSaveToast('Password changed')
     } else {
       setPwMsg({ ok: false, text: res.error ?? 'Failed to change password' })
     }
@@ -81,6 +89,7 @@ export default function SettingsView() {
     if (res.ok) {
       setExpMsg({ ok: true, text: 'Backup exported successfully' })
       setExpPw(''); setExpConf('')
+      showSaveToast('Backup exported')
     } else {
       setExpMsg({ ok: false, text: res.error ?? 'Export failed' })
     }
@@ -109,6 +118,24 @@ export default function SettingsView() {
 
   return (
     <div style={{ padding: 24, maxWidth: 640, display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+      {/* Inline save confirmation toast */}
+      {saveToast && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 999,
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500,
+          background: 'rgba(13,14,24,0.96)',
+          border: '1px solid rgba(63,185,80,0.35)',
+          color: '#3fb950',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+          pointerEvents: 'none',
+        }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+          {saveToast}
+        </div>
+      )}
+
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 4 }}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f78166" strokeWidth="2" strokeLinecap="round">
           <circle cx="12" cy="12" r="3" />

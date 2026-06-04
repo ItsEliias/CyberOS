@@ -117,6 +117,9 @@ export default function LockScreen({ needsSetup }: Props) {
   const [touchIdAvailable, setTouchIdAvailable] = useState(false)
   const [touchIdLoading, setTouchIdLoading]     = useState(false)
   const [showHint, setShowHint]   = useState(false)
+  // Visual-only attempt counter — counts up on each password failure
+  const [failCount, setFailCount] = useState(0)
+  const MAX_ATTEMPTS = 5
 
   useEffect(() => {
     if (!needsSetup) {
@@ -159,6 +162,7 @@ export default function LockScreen({ needsSetup }: Props) {
       if (res.lockoutSeconds) setCountdown(res.lockoutSeconds)
       setError(res.error ?? 'Unlock failed')
       setPw('')
+      setFailCount(c => c + 1)
       triggerShake()
     }
   }
@@ -319,6 +323,16 @@ export default function LockScreen({ needsSetup }: Props) {
           {error && !isLocked && (
             <div style={{ fontSize: 12, color: '#f85149', padding: '8px 12px', borderRadius: 8, background: 'rgba(248,81,73,0.06)', border: '1px solid rgba(248,81,73,0.2)' }}>
               {error}
+            </div>
+          )}
+
+          {/* Visual-only attempt counter — shown after first failure */}
+          {!needsSetup && failCount > 0 && !isLocked && (
+            <div style={{
+              fontSize: 11, textAlign: 'center',
+              color: failCount >= MAX_ATTEMPTS - 1 ? '#f85149' : '#d29922',
+            }}>
+              {Math.max(0, MAX_ATTEMPTS - failCount)} attempt{Math.max(0, MAX_ATTEMPTS - failCount) !== 1 ? 's' : ''} remaining
             </div>
           )}
 

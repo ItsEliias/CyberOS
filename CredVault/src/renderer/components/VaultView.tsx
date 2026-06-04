@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useStore, type SortOrder } from '../store'
 import CredentialRow from './CredentialRow'
 import CredentialModal from './CredentialModal'
@@ -6,6 +6,24 @@ import type { Credential, BreachCheckResult } from '@shared/types'
 import { fuzzyMatch } from '../utils/fuzzySearch'
 import { scorePassword } from '../utils/passwordStrength'
 import { COL_HEADERS, SkeletonRows, FilterChip, Empty, NoResults } from './VaultViewStates'
+
+// ─── Column visibility toggle ──────────────────────────────────────────────────
+
+const ALL_COL_KEYS = ['Service', 'Category', 'Username', 'IP / Port', 'Tags', 'Source', 'Date', 'Status', 'Age'] as const
+type ColKey = typeof ALL_COL_KEYS[number]
+
+function loadColVisibility(): Record<ColKey, boolean> {
+  try {
+    const raw = localStorage.getItem('cv_col_visibility')
+    if (raw) {
+      const parsed = JSON.parse(raw) as Record<string, boolean>
+      // Ensure all keys present with defaults
+      const defaults: Record<ColKey, boolean> = Object.fromEntries(ALL_COL_KEYS.map(k => [k, true])) as Record<ColKey, boolean>
+      return { ...defaults, ...parsed }
+    }
+  } catch {}
+  return Object.fromEntries(ALL_COL_KEYS.map(k => [k, true])) as Record<ColKey, boolean>
+}
 
 const CATEGORY_BADGE_COLORS: Record<string, string> = {
   'Login':       '#38bdf8',   // blue
@@ -74,6 +92,32 @@ export default function VaultView() {
       return () => clearTimeout(t)
     }
   }, [])
+
+  // Column visibility toggle with localStorage persistence
+  const [colVis, setColVis] = useState<Record<ColKey, boolean>>(loadColVisibility)
+  const [showColMenu, setShowColMenu] = useState(false)
+  const colMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!showColMenu) return
+    function onClickOutside(e: MouseEvent) {
+      if (colMenuRef.current && !colMenuRef.current.contains(e.target as Node)) {
+        setShowColMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [showColMenu])
+
+  function toggleCol(key: ColKey) {
+    setColVis(prev => {
+      const next = { ...prev, [key]: !prev[key] }
+      localStorage.setItem('cv_col_visibility', JSON.stringify(next))
+      return next
+    })
+  }
+
+  const visibleHeaders = COL_HEADERS.filter(col => colVis[col.label as ColKey] !== false)
 
   const allTags       = useMemo(() => [...new Set(credentials.flatMap(c => c.tags))].sort(), [credentials])
   const allSources    = useMemo(() => [...new Set(credentials.map(c => c.source))].sort(), [credentials])
@@ -274,6 +318,48 @@ export default function VaultView() {
               : 'HIBP Check'}
         </button>
 
+        {/* Column visibility gear */}
+        <div style={{ position: 'relative' }} ref={colMenuRef}>
+          <button
+            className="btn btn-ghost"
+            style={{ fontSize: 11, padding: '3px 8px', color: showColMenu ? '#f78166' : '#8b949e' }}
+            onClick={() => setShowColMenu(s => !s)}
+            title="Toggle columns"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68 1.65 1.65 0 0 0 9 3V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </button>
+          {showColMenu && (
+            <div style={{
+              position: 'absolute', right: 0, top: '100%', marginTop: 4, zIndex: 50,
+              background: 'rgba(13,14,24,0.97)', border: '1px solid rgba(42,51,71,0.6)',
+              borderRadius: 8, padding: '6px 0', minWidth: 150,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+            }}>
+              <div style={{ fontSize: 9, fontWeight: 600, color: '#484f58', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '4px 12px 6px' }}>
+                Columns
+              </div>
+              {ALL_COL_KEYS.map(key => (
+                <label key={key} style={{
+                  display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px',
+                  cursor: 'pointer', fontSize: 12, color: colVis[key] ? '#c9d1d9' : '#484f58',
+                  userSelect: 'none',
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={colVis[key]}
+                    onChange={() => toggleCol(key)}
+                    style={{ width: 12, height: 12, cursor: 'pointer' }}
+                  />
+                  {key}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
         <button
           className="btn btn-accent"
           style={{ fontSize: 12, background: '#f78166', color: '#07080f', border: 'none', fontWeight: 600 }}
@@ -347,7 +433,7 @@ export default function VaultView() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                {COL_HEADERS.map(col => {
+                {visibleHeaders.map(col => {
                   const isActive = col.sortKey && sortOrder === col.sortKey
                   return (
                     <th key={col.label} className={`table-sticky-head${col.sortKey ? ' sortable-th' : ''}`} style={{
@@ -374,6 +460,7 @@ export default function VaultView() {
                   searchQuery={searchQuery}
                   breached={breachMap[c.id]?.ok && (breachMap[c.id].breachCount ?? 0) > 0}
                   staggerIndex={idx}
+                  colVis={colVis}
                   onEdit={setEditCred}
                   onDelete={handleDelete}
                   onRotate={handleRotate}

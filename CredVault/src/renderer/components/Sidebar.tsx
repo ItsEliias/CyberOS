@@ -283,10 +283,10 @@ export default function Sidebar() {
                       textAlign: 'left',
                     }}
                   >
-                    {/* Pass 3: category icon instead of dot */}
+                    {/* category icon — always tinted with category color */}
                     <span
                       className="cat-icon-wrap"
-                      style={{ background: active ? `${color}18` : 'rgba(42,51,71,0.25)', color: active ? color : '#484f58', borderRadius: 4 }}
+                      style={{ background: `${color}18`, color, borderRadius: 4 }}
                     >
                       <CategoryIcon cat={cat} />
                     </span>

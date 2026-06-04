@@ -187,6 +187,7 @@ export default function CredentialModal({ initial, onSave, onClose }: Props) {
   const [showGen, setShowGen]       = useState(false)
   const [showTemplates, setShowTemplates] = useState(false)
   const [error, setError]           = useState('')
+  const [submitAttempted, setSubmitAttempted] = useState(false)
 
   // Password generator state
   const [genLen, setGenLen]       = useState(20)
@@ -212,6 +213,7 @@ export default function CredentialModal({ initial, onSave, onClose }: Props) {
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    setSubmitAttempted(true)
     if (type === 'credential' && !username.trim()) { setError('Username is required'); return }
     if (!service.trim())                           { setError('Service/title is required'); return }
 
@@ -374,7 +376,14 @@ export default function CredentialModal({ initial, onSave, onClose }: Props) {
           {type === 'credential' ? (
             <>
               <Row label="Username *">
-                <input value={username} onChange={e => setUsername(e.target.value)} placeholder="admin" autoFocus />
+                <ValidatedInput
+                  value={username}
+                  onChange={setUsername}
+                  placeholder="admin"
+                  required
+                  submitAttempted={submitAttempted}
+                  autoFocus
+                />
               </Row>
 
               {/* Password with strength meter + generator */}
@@ -474,9 +483,12 @@ export default function CredentialModal({ initial, onSave, onClose }: Props) {
             <>
               <SectionLabel>Context</SectionLabel>
               <Row label="Service *">
-                <select value={service} onChange={e => setService(e.target.value)}>
-                  {SERVICE_OPTS.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <select value={service} onChange={e => setService(e.target.value)} style={{ flex: 1 }}>
+                    {SERVICE_OPTS.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <ValidationIcon valid={!!service.trim()} touched={submitAttempted} />
+                </div>
               </Row>
               <Row label="URL">
                 <div style={{ position: 'relative' }}>
@@ -595,6 +607,44 @@ export default function CredentialModal({ initial, onSave, onClose }: Props) {
         </form>
       </motion.div>
     </motion.div>
+  )
+}
+
+// ─── Validation helpers ───────────────────────────────────────────────────────
+
+function ValidationIcon({ valid, touched }: { valid: boolean; touched: boolean }) {
+  if (!touched) return null
+  return valid ? (
+    <span style={{ position: 'absolute', right: 8, color: '#3fb950', fontSize: 12, pointerEvents: 'none', lineHeight: 1 }}>✓</span>
+  ) : (
+    <span style={{ position: 'absolute', right: 8, color: '#f85149', fontSize: 12, pointerEvents: 'none', lineHeight: 1 }}>✕</span>
+  )
+}
+
+function ValidatedInput({
+  value, onChange, placeholder, required, submitAttempted, autoFocus,
+}: {
+  value: string; onChange: (v: string) => void; placeholder?: string
+  required?: boolean; submitAttempted?: boolean; autoFocus?: boolean
+}) {
+  const touched = submitAttempted ?? false
+  const isValid = !required || value.trim().length > 0
+  return (
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        autoFocus={autoFocus}
+        style={{
+          flex: 1,
+          paddingRight: touched ? 28 : undefined,
+          borderColor: touched && !isValid ? 'rgba(248,81,73,0.6)' : undefined,
+          boxShadow: touched && !isValid ? '0 0 0 1px rgba(248,81,73,0.25)' : undefined,
+        }}
+      />
+      <ValidationIcon valid={isValid} touched={touched} />
+    </div>
   )
 }
 

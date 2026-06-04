@@ -86,6 +86,55 @@ function credAge(createdAt: string): { label: string; color: string; stale: bool
   return       { label: `${Math.floor(d)}d ago`,        color: '#f85149', stale: true  }
 }
 
+// ─── Username cell with masking for long values ───────────────────────────────
+
+const MAX_USERNAME_DISPLAY = 12
+
+function UsernameCell({ username, searchQuery, rowHovered, onCopy }: {
+  username: string; searchQuery: string; rowHovered: boolean; onCopy: () => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const isLong = username.length > MAX_USERNAME_DISPLAY
+  const display = isLong && !expanded ? username.slice(0, MAX_USERNAME_DISPLAY) : username
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <HighlightText text={display} query={searchQuery} />
+      {isLong && !expanded && (
+        <button
+          onClick={e => { e.stopPropagation(); setExpanded(true) }}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+            fontSize: 10, color: '#484f58', lineHeight: 1,
+          }}
+          title="Show full username"
+        >
+          …
+        </button>
+      )}
+      {isLong && expanded && (
+        <button
+          onClick={e => { e.stopPropagation(); setExpanded(false) }}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+            fontSize: 10, color: '#484f58', lineHeight: 1,
+          }}
+          title="Collapse"
+        >
+          ‹
+        </button>
+      )}
+      {rowHovered && (
+        <button
+          onClick={e => { e.stopPropagation(); onCopy() }}
+          style={{ padding: '1px 5px', fontSize: 10, borderRadius: 3, background: 'rgba(13,14,24,0.9)', border: '1px solid rgba(42,51,71,0.6)', color: '#484f58', cursor: 'pointer' }}
+        >
+          copy
+        </button>
+      )}
+    </div>
+  )
+}
+
 const STATUS_COLORS: Record<Credential['status'], string> = {
   active:  '#3fb950',
   rotated: '#d29922',
@@ -98,12 +147,14 @@ interface Props {
   breached?:    boolean
   breachCount?: number
   staggerIndex?: number
+  colVis?:      Record<string, boolean>
   onEdit:       (c: Credential) => void
   onDelete:     (id: string) => void
   onRotate?:    (id: string) => void
 }
 
-export default function CredentialRow({ cred, searchQuery = '', breached, staggerIndex = 0, onEdit, onDelete, onRotate }: Props) {
+export default function CredentialRow({ cred, searchQuery = '', breached, staggerIndex = 0, colVis, onEdit, onDelete, onRotate }: Props) {
+  const col = (key: string) => colVis == null || colVis[key] !== false
   const clipboardClearMs = useStore(s => s.clipboardClearMs)
   const [expanded, setExpanded]     = useState(false)
   const [copyMsg, setCopyMsg]       = useState<string | null>(null)
@@ -153,7 +204,7 @@ export default function CredentialRow({ cred, searchQuery = '', breached, stagge
         onMouseLeave={() => setRowHovered(false)}
         style={{ cursor: 'pointer', background: rowBg, animationDelay: `${Math.min(staggerIndex, 12) * 40}ms` }}
       >
-        {/* Service */}
+        {/* Service — always visible */}
         <td style={{ padding: '9px 14px', fontSize: 12, color: '#8b949e' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
             <CredTypeIcon category={cred.category} />
@@ -182,85 +233,83 @@ export default function CredentialRow({ cred, searchQuery = '', breached, stagge
           </div>
         </td>
 
-        {/* Category */}
-        <td style={{ padding: '9px 14px' }}>
-          {cred.category ? (
-            <span style={{
-              fontSize: 9, fontWeight: 600, padding: '2px 7px', borderRadius: 8,
-              border: `1px solid ${CATEGORY_COLORS[cred.category]}40`,
-              background: `${CATEGORY_COLORS[cred.category]}14`,
-              color: CATEGORY_COLORS[cred.category],
-              letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap',
-            }}>
-              {cred.category}
-            </span>
-          ) : (
-            <span style={{ color: '#484f58', fontSize: 11 }}>—</span>
-          )}
-        </td>
-
-        {/* Username */}
-        <td style={{ padding: '9px 14px', fontSize: 12, fontFamily: 'JetBrains Mono, monospace', color: '#c9d1d9' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <HighlightText text={cred.username} query={searchQuery} />
-            {rowHovered && (
-              <button
-                onClick={e => { e.stopPropagation(); copyValue(cred.username, 'Username') }}
-                style={{ padding: '1px 5px', fontSize: 10, borderRadius: 3, background: 'rgba(13,14,24,0.9)', border: '1px solid rgba(42,51,71,0.6)', color: '#484f58', cursor: 'pointer' }}
-              >
-                copy
-              </button>
+        {col('Category') && (
+          <td style={{ padding: '9px 14px' }}>
+            {cred.category ? (
+              <span style={{
+                fontSize: 9, fontWeight: 600, padding: '2px 7px', borderRadius: 8,
+                border: `1px solid ${CATEGORY_COLORS[cred.category]}40`,
+                background: `${CATEGORY_COLORS[cred.category]}14`,
+                color: CATEGORY_COLORS[cred.category],
+                letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap',
+              }}>
+                {cred.category}
+              </span>
+            ) : (
+              <span style={{ color: '#484f58', fontSize: 11 }}>—</span>
             )}
-          </div>
-        </td>
+          </td>
+        )}
 
-        {/* IP / Port */}
-        <td style={{ padding: '9px 14px', fontSize: 11, color: '#484f58', fontFamily: 'JetBrains Mono, monospace' }}>
-          {cred.ip ? `${cred.ip}${cred.port ? ':' + cred.port : ''}` : '—'}
-        </td>
+        {col('Username') && (
+          <td style={{ padding: '9px 14px', fontSize: 12, fontFamily: 'JetBrains Mono, monospace', color: '#c9d1d9' }}>
+            <UsernameCell username={cred.username} searchQuery={searchQuery} rowHovered={rowHovered} onCopy={() => copyValue(cred.username, 'Username')} />
+          </td>
+        )}
 
-        {/* Tags */}
-        <td style={{ padding: '9px 14px' }}>
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-            {cred.tags.slice(0, 3).map(t => <span key={t} className="tag-chip">{t}</span>)}
-            {cred.tags.length > 3 && <span style={{ fontSize: 10, color: '#484f58' }}>+{cred.tags.length - 3}</span>}
-          </div>
-        </td>
+        {col('IP / Port') && (
+          <td style={{ padding: '9px 14px', fontSize: 11, color: '#484f58', fontFamily: 'JetBrains Mono, monospace' }}>
+            {cred.ip ? `${cred.ip}${cred.port ? ':' + cred.port : ''}` : '—'}
+          </td>
+        )}
 
-        {/* Source */}
-        <td style={{ padding: '9px 14px', fontSize: 11, color: '#484f58' }}>{cred.source}</td>
+        {col('Tags') && (
+          <td style={{ padding: '9px 14px' }}>
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              {cred.tags.slice(0, 3).map(t => <span key={t} className="tag-chip">{t}</span>)}
+              {cred.tags.length > 3 && <span style={{ fontSize: 10, color: '#484f58' }}>+{cred.tags.length - 3}</span>}
+            </div>
+          </td>
+        )}
 
-        {/* Date */}
-        <td style={{ padding: '9px 14px', fontSize: 11, color: '#484f58', fontFamily: 'JetBrains Mono, monospace' }}>
-          {new Date(cred.createdAt).toLocaleDateString()}
-        </td>
+        {col('Source') && (
+          <td style={{ padding: '9px 14px', fontSize: 11, color: '#484f58' }}>{cred.source}</td>
+        )}
 
-        {/* Status */}
-        <td style={{ padding: '9px 14px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: STATUS_COLORS[cred.status], flexShrink: 0 }} />
-            <span style={{ fontSize: 11, color: STATUS_COLORS[cred.status] }}>{cred.status}</span>
-            {cred.verified && <span style={{ fontSize: 10, color: '#3fb950' }}>✓</span>}
-            {cred.expiresAt && <ExpiryBadge expiresAt={cred.expiresAt} />}
-          </div>
-        </td>
+        {col('Date') && (
+          <td style={{ padding: '9px 14px', fontSize: 11, color: '#484f58', fontFamily: 'JetBrains Mono, monospace' }}>
+            {new Date(cred.createdAt).toLocaleDateString()}
+          </td>
+        )}
 
-        {/* Age */}
-        <td style={{ padding: '9px 14px', whiteSpace: 'nowrap' }}>
-          <span style={{ fontSize: 10, color: age.color, fontFamily: 'JetBrains Mono, monospace' }}>{age.label}</span>
-          {age.stale && (
-            <span style={{ display: 'inline-block', marginLeft: 4, fontSize: 9, color: '#f85149', opacity: 0.8, border: '1px solid rgba(248,81,73,0.4)', borderRadius: 3, padding: '0 3px', lineHeight: '14px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-              stale
-            </span>
-          )}
-        </td>
+        {col('Status') && (
+          <td style={{ padding: '9px 14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: STATUS_COLORS[cred.status], flexShrink: 0 }} />
+              <span style={{ fontSize: 11, color: STATUS_COLORS[cred.status] }}>{cred.status}</span>
+              {cred.verified && <span style={{ fontSize: 10, color: '#3fb950' }}>✓</span>}
+              {cred.expiresAt && <ExpiryBadge expiresAt={cred.expiresAt} />}
+            </div>
+          </td>
+        )}
+
+        {col('Age') && (
+          <td style={{ padding: '9px 14px', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 10, color: age.color, fontFamily: 'JetBrains Mono, monospace' }}>{age.label}</span>
+            {age.stale && (
+              <span style={{ display: 'inline-block', marginLeft: 4, fontSize: 9, color: '#f85149', opacity: 0.8, border: '1px solid rgba(248,81,73,0.4)', borderRadius: 3, padding: '0 3px', lineHeight: '14px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                stale
+              </span>
+            )}
+          </td>
+        )}
       </tr>
 
       {/* Expanded detail row */}
       <AnimatePresence>
         {expanded && (
           <tr>
-            <td colSpan={9} style={{ padding: 0 }}>
+            <td colSpan={colVis ? Object.values(colVis).filter(Boolean).length + 1 : 9} style={{ padding: 0 }}>
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
