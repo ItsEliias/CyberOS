@@ -800,7 +800,14 @@ function findBuiltApp(dir: string): boolean {
 function findAppBundle(dir: string, depth: number): string | null {
   if (depth < 0) return null;
   try {
-    for (const entry of fs.readdirSync(dir)) {
+    const entries = fs.readdirSync(dir);
+    // Prefer arm64 over x64 — sort so mac-arm64 comes before mac
+    entries.sort((a, b) => {
+      const aArm = a.includes('arm64') ? -1 : 0;
+      const bArm = b.includes('arm64') ? -1 : 0;
+      return aArm - bArm;
+    });
+    for (const entry of entries) {
       const full = path.join(dir, entry);
       if (entry.endsWith('.app')) return full;
       try {

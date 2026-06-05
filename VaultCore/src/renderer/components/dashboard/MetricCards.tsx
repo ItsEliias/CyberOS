@@ -193,7 +193,7 @@ export default function MetricCards({ sources, vaultStats, lastRunAgo }: Props) 
       <MetricCard
         index={2}
         label="Vault Notes"
-        value={vaultStats?.totalNotes.toLocaleString() ?? '—'}
+        value={vaultStats?.totalNotes?.toLocaleString() ?? '—'}
         sub="markdown files"
         trendKey="notes"
       />
