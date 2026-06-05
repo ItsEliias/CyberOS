@@ -11,6 +11,7 @@ import ActivityFeed from './components/ActivityFeed';
 import UpdateBanner from './components/UpdateBanner';
 import SettingsPanel from './components/SettingsPanel';
 import CustomSlotModal from './components/CustomSlotModal';
+import AppManager from './components/AppManager';
 import Footer from './components/Footer';
 import type { CustomSlot } from '@shared/types';
 
@@ -128,7 +129,7 @@ export default function App() {
 
           {/* Tab bar */}
           <div className="flex border-b" style={{ borderColor: 'var(--border)' }}>
-            {(['tools', 'activity'] as const).map(tab => (
+            {(['tools', 'activity', 'apps'] as const).map(tab => (
               <button key={tab}
                 onClick={() => setActiveTab(tab)}
                 className="flex-1 py-2 text-[11px] uppercase tracking-wider font-medium capitalize relative transition-colors"
@@ -205,6 +206,10 @@ export default function App() {
                   setConfig(refreshed);
                 }}
               />
+            )}
+
+            {activeTab === 'apps' && (
+              <AppManager />
             )}
           </div>
 

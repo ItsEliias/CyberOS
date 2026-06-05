@@ -237,3 +237,13 @@ export interface SearchResult {
   subtitle: string;
   score: number;
 }
+
+export interface AppStatus {
+  id: string;
+  name: string;
+  description: string;
+  dir: string;
+  installed: boolean;
+  built: boolean;
+  hasNodeModules: boolean;
+}

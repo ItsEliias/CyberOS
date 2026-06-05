@@ -742,6 +742,161 @@ function isNewerVersion(latest: string, current: string): boolean {
   return false;
 }
 
+// ─── App Manager ──────────────────────────────────────────────────────────────
+
+interface AppStatus {
+  id: string;
+  name: string;
+  description: string;
+  dir: string;
+  installed: boolean;
+  built: boolean;
+  hasNodeModules: boolean;
+}
+
+const APP_MANAGER_APPS: Array<{ id: string; description: string }> = [
+  { id: 'CredVault',      description: 'Encrypted credential & secret storage' },
+  { id: 'VaultCore',      description: 'Core vault management & key derivation' },
+  { id: 'GhostVault',     description: 'Stealth file vault with plausible deniability' },
+  { id: 'SignalBoard',    description: 'Real-time signal monitoring & alerts' },
+  { id: 'NetworkMap',     description: 'Network topology visualization' },
+  { id: 'PlaybookStudio', description: 'Security playbook builder & runner' },
+  { id: 'TerminalLink',   description: 'Persistent terminal sessions & multiplexer' },
+  { id: 'NetLab',         description: 'Network lab environment manager' },
+  { id: 'ReconDesk',      description: 'Recon workflow & OSINT aggregator' },
+  { id: 'ReportForge',    description: 'Security report generation' },
+];
+
+const CYBERTOOLS_BASE = path.join(
+  os.homedir(), 'Documents', 'Claude', 'Projects', 'CyberOS'
+);
+
+function getAppDir(id: string): string {
+  return path.join(CYBERTOOLS_BASE, id);
+}
+
+function readProductName(dir: string, id: string): string {
+  try {
+    const pkgPath = path.join(dir, 'package.json');
+    if (!fs.existsSync(pkgPath)) return id;
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8')) as Record<string, unknown>;
+    return (pkg.build as Record<string, unknown>)?.productName as string
+      || pkg.productName as string
+      || id;
+  } catch { return id; }
+}
+
+function findBuiltApp(dir: string): boolean {
+  for (const sub of ['dist', 'release']) {
+    const base = path.join(dir, sub);
+    if (!fs.existsSync(base)) continue;
+    const found = findAppBundle(base, 3);
+    if (found) return true;
+  }
+  return false;
+}
+
+function findAppBundle(dir: string, depth: number): string | null {
+  if (depth < 0) return null;
+  try {
+    for (const entry of fs.readdirSync(dir)) {
+      const full = path.join(dir, entry);
+      if (entry.endsWith('.app')) return full;
+      try {
+        if (fs.statSync(full).isDirectory()) {
+          const found = findAppBundle(full, depth - 1);
+          if (found) return found;
+        }
+      } catch { /* skip */ }
+    }
+  } catch { /* skip */ }
+  return null;
+}
+
+function getAppStatuses(): AppStatus[] {
+  return APP_MANAGER_APPS.map(({ id, description }) => {
+    const dir         = getAppDir(id);
+    const productName = readProductName(dir, id);
+    const installed   = fs.existsSync(`/Applications/${productName}.app`);
+    const built       = findBuiltApp(dir);
+    const hasNodeModules = fs.existsSync(path.join(dir, 'node_modules'));
+    return { id, name: productName, description, dir, installed, built, hasNodeModules };
+  });
+}
+
+function spawnAsync(
+  cmd: string,
+  args: string[],
+  cwd: string,
+  onStdout?: (line: string) => void
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(cmd, args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] });
+    child.stdout?.on('data', (d: Buffer) => onStdout?.(d.toString().trim()));
+    child.stderr?.on('data', (d: Buffer) => onStdout?.(d.toString().trim()));
+    child.on('close', code => code === 0 ? resolve() : reject(new Error(`exit ${code}`)));
+    child.on('error', reject);
+  });
+}
+
+function setupAppManagerIPC(): void {
+  ipcMain.handle('app-manager:get-status', () => getAppStatuses());
+
+  ipcMain.handle('app-manager:install', async (event, { id }: { id: string }) => {
+    const entry = APP_MANAGER_APPS.find(a => a.id === id);
+    if (!entry) return { success: false, error: 'Unknown app' };
+
+    const dir         = getAppDir(id);
+    const productName = readProductName(dir, id);
+    const send        = (msg: string) => event.sender.send('app-manager:progress', { id, message: msg });
+
+    try {
+      if (!fs.existsSync(path.join(dir, 'node_modules'))) {
+        send('Installing dependencies...');
+        await spawnAsync('npm', ['install'], dir, (l) => send(l.slice(0, 120)));
+      }
+
+      send('Building app bundle...');
+      await spawnAsync('npm', ['run', 'build:mac'], dir, (l) => send(l.slice(0, 120)));
+
+      const appBundle = findAppBundle(path.join(dir, 'dist'), 4)
+        ?? findAppBundle(path.join(dir, 'release'), 4);
+      if (!appBundle) return { success: false, error: 'Build succeeded but no .app bundle found' };
+
+      send(`Copying ${path.basename(appBundle)} to /Applications/...`);
+      await spawnAsync('cp', ['-R', appBundle, `/Applications/${productName}.app`], '/', send);
+
+      send('Installed successfully.');
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: (err as Error).message };
+    }
+  });
+
+  ipcMain.handle('app-manager:uninstall', async (_e, { productName }: { id: string; productName: string }) => {
+    try {
+      const target = `/Applications/${productName}.app`;
+      if (fs.existsSync(target)) {
+        await spawnAsync('rm', ['-rf', target], '/');
+      }
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: (err as Error).message };
+    }
+  });
+
+  ipcMain.handle('app-manager:open', async (_e, { productName }: { productName: string }) => {
+    try {
+      const child = spawn('open', [`/Applications/${productName}.app`], { detached: true, stdio: 'ignore' });
+      child.on('error', (err) => console.error('[app-manager:open]', err.message));
+      child.unref();
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: (err as Error).message };
+    }
+  });
+}
+
 // ─── IPC handlers ─────────────────────────────────────────────────────────────
 
 function setupIPC(): void {
@@ -875,6 +1030,7 @@ app.whenReady().then(() => {
   createSearchWindow();
   setupIPC();
   setupSearchIPC();
+  setupAppManagerIPC();
 
   globalShortcut.register('CommandOrControl+Shift+F', () => showSearchWindow());
 

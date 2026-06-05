@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { CyberToolsConfig, VpnStatus, UpdateInfo, EcosystemEvent } from '@shared/types';
 
-export type ActiveTab = 'tools' | 'activity';
+export type ActiveTab = 'tools' | 'activity' | 'apps';
 
 interface LauncherStore {
   config: CyberToolsConfig | null;
