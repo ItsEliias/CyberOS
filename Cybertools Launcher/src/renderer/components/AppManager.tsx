@@ -5,16 +5,19 @@ import type { AppStatus } from '@shared/types';
 // ─── Category colors per app ──────────────────────────────────────────────────
 
 const APP_CATEGORY: Record<string, { border: string; avatar: string; label: string }> = {
-  CredVault      : { border: '#d29922', avatar: 'rgba(210,153,34,0.15)',  label: 'CV' },
-  VaultCore      : { border: '#d29922', avatar: 'rgba(210,153,34,0.15)',  label: 'VC' },
-  GhostVault     : { border: '#d29922', avatar: 'rgba(210,153,34,0.15)',  label: 'GV' },
-  NetworkMap     : { border: '#4a9eff', avatar: 'rgba(74,158,255,0.15)',  label: 'NM' },
-  NetLab         : { border: '#4a9eff', avatar: 'rgba(74,158,255,0.15)',  label: 'NL' },
-  SignalBoard    : { border: '#4a9eff', avatar: 'rgba(74,158,255,0.15)',  label: 'SB' },
-  TerminalLink   : { border: '#3fb950', avatar: 'rgba(63,185,80,0.15)',   label: 'TL' },
-  ReconDesk      : { border: '#a371f7', avatar: 'rgba(163,113,247,0.15)', label: 'RD' },
-  PlaybookStudio : { border: '#a371f7', avatar: 'rgba(163,113,247,0.15)', label: 'PS' },
-  ReportForge    : { border: '#a371f7', avatar: 'rgba(163,113,247,0.15)', label: 'RF' },
+  'CredVault'          : { border: '#d29922', avatar: 'rgba(210,153,34,0.15)',  label: 'CV' },
+  'VAULTCORE'          : { border: '#22d3ee', avatar: 'rgba(34,211,238,0.15)',  label: 'VC' },
+  'VaultCore'          : { border: '#22d3ee', avatar: 'rgba(34,211,238,0.15)',  label: 'VC' },
+  'GhostVault'         : { border: '#6366f1', avatar: 'rgba(99,102,241,0.15)',  label: 'GV' },
+  'SignalBoard'        : { border: '#4a9eff', avatar: 'rgba(74,158,255,0.15)',  label: 'SB' },
+  'NetworkMap'         : { border: '#3fb950', avatar: 'rgba(63,185,80,0.15)',   label: 'NM' },
+  'PlaybookStudio'     : { border: '#a371f7', avatar: 'rgba(163,113,247,0.15)', label: 'PS' },
+  'TerminalLink'       : { border: '#f97316', avatar: 'rgba(249,115,22,0.15)',  label: 'TL' },
+  'NetLab'             : { border: '#06b6d4', avatar: 'rgba(6,182,212,0.15)',   label: 'NL' },
+  'ReconDesk'          : { border: '#f85149', avatar: 'rgba(248,81,73,0.15)',   label: 'RD' },
+  'ReportForge'        : { border: '#ec4899', avatar: 'rgba(236,72,153,0.15)',  label: 'RF' },
+  'Cyberlab Companion' : { border: '#10b981', avatar: 'rgba(16,185,129,0.15)',  label: 'CL' },
+  'CYBERLAB COMPANION' : { border: '#10b981', avatar: 'rgba(16,185,129,0.15)',  label: 'CL' },
 };
 
 function getCategory(name: string) {

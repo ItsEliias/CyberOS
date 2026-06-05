@@ -393,8 +393,8 @@ function setupSearchIPC(): void {
 function setupTray(): void {
   tray = new Tray(createTrayIcon());
   tray.setToolTip('CyberTools Launcher — ItsEliias');
-  tray.on('click', () => togglePanel(tray!.getBounds()));
-  tray.on('double-click', () => { if (!isPanelVisible) showPanel(tray!.getBounds()); });
+  tray.on('click', () => tray!.popUpContextMenu());
+  tray.on('double-click', () => tray!.popUpContextMenu());
   refreshContextMenu();
 }
 
@@ -755,16 +755,17 @@ interface AppStatus {
 }
 
 const APP_MANAGER_APPS: Array<{ id: string; description: string }> = [
-  { id: 'CredVault',      description: 'Encrypted credential & secret storage' },
-  { id: 'VaultCore',      description: 'Core vault management & key derivation' },
-  { id: 'GhostVault',     description: 'Stealth file vault with plausible deniability' },
-  { id: 'SignalBoard',    description: 'Real-time signal monitoring & alerts' },
-  { id: 'NetworkMap',     description: 'Network topology visualization' },
-  { id: 'PlaybookStudio', description: 'Security playbook builder & runner' },
-  { id: 'TerminalLink',   description: 'Persistent terminal sessions & multiplexer' },
-  { id: 'NetLab',         description: 'Network lab environment manager' },
-  { id: 'ReconDesk',      description: 'Recon workflow & OSINT aggregator' },
-  { id: 'ReportForge',    description: 'Security report generation' },
+  { id: 'CredVault',         description: 'Encrypted credential & secret storage' },
+  { id: 'VaultCore',         description: 'Core vault management & key derivation' },
+  { id: 'GhostVault',        description: 'Stealth file vault with plausible deniability' },
+  { id: 'SignalBoard',       description: 'Real-time signal monitoring & alerts' },
+  { id: 'NetworkMap',        description: 'Network topology visualization' },
+  { id: 'PlaybookStudio',    description: 'Security playbook builder & runner' },
+  { id: 'TerminalLink',      description: 'Persistent terminal sessions & multiplexer' },
+  { id: 'NetLab',            description: 'Network lab environment manager' },
+  { id: 'ReconDesk',         description: 'Recon workflow & OSINT aggregator' },
+  { id: 'ReportForge',       description: 'Security report generation' },
+  { id: 'Cyberlab Companion', description: 'HTB / CTF lab companion & flag tracker' },
 ];
 
 const CYBERTOOLS_BASE = path.join(
