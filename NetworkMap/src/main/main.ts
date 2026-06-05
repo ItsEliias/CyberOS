@@ -417,7 +417,7 @@ if (!gotLock) {
   app.on('window-all-closed', () => {
     writeNetworkMapStatus({ running: false })
     emitEvent('NetworkMap', 'app:closed', {})
-    if (process.platform !== 'darwin') app.quit()
+    app.quit()
   })
 
   app.on('activate', () => {

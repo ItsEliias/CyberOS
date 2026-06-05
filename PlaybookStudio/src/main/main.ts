@@ -161,7 +161,7 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (contextTimer) clearInterval(contextTimer)
   emitEvent('PlaybookStudio', 'app:closed', {})
-  if (process.platform !== 'darwin') app.quit()
+  app.quit()
 })
 
 app.on('activate', () => {

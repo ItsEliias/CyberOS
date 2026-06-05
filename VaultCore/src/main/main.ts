@@ -58,17 +58,6 @@ function createWindow() {
 
   mainWindow.once('ready-to-show', () => { mainWindow!.show(); });
 
-  mainWindow.on('close', (e) => {
-    const cfg = launcher.readConfig() || {};
-    if (cfg.minimiseToTray !== false && tray) {
-      e.preventDefault();
-      mainWindow!.hide();
-      if (process.platform !== 'darwin') {
-        new Notification({ title: 'VAULTCORE', body: 'Running in background. Right-click tray to open.' }).show();
-      }
-    }
-  });
-
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 
@@ -249,7 +238,7 @@ app.whenReady().then(async () => {
 });
 
 app.on('second-instance', () => { if (mainWindow) { mainWindow.show(); mainWindow.focus(); } });
-app.on('window-all-closed', () => { /* Keep in tray */ });
+app.on('window-all-closed', () => { app.quit(); });
 app.on('before-quit', () => { launcher.stopStatusWriter(); stopAllSchedules(); });
 
 // ─── IPC Handlers ─────────────────────────────────────────────────────────────

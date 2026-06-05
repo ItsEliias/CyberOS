@@ -102,7 +102,7 @@ if (!app.requestSingleInstanceLock()) {
     if (statusInterval)  clearInterval(statusInterval)
     if (pendingInterval) clearInterval(pendingInterval)
     if (mainWindow && !mainWindow.isDestroyed()) lockVault('app closed')
-    if (process.platform !== 'darwin') app.quit()
+    app.quit()
   })
 
   app.on('before-quit', () => { configWatcher?.close() })

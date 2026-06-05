@@ -510,7 +510,7 @@ app.whenReady().then(async () => {
 app.on('window-all-closed', () => {
   if (vpnCheckInterval) clearInterval(vpnCheckInterval);
   if (autosaveInterval) clearInterval(autosaveInterval);
-  if (process.platform !== 'darwin') app.quit();
+  app.quit();
 });
 
 app.on('before-quit', () => {

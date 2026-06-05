@@ -398,7 +398,7 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (statusInterval) clearInterval(statusInterval)
   emitEvent('ReconDesk', 'app:closed', {})
-  if (process.platform !== 'darwin') app.quit()
+  app.quit()
 })
 
 app.on('before-quit', () => { configWatcher?.close() })

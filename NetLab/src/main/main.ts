@@ -208,7 +208,7 @@ if (!gotLock) {
 
   app.on('window-all-closed', () => {
     emitEvent('NetLab', 'app:closed', {})
-    if (process.platform !== 'darwin') app.quit()
+    app.quit()
   })
 
   app.on('activate', () => {

@@ -677,7 +677,7 @@ app.on('window-all-closed', () => {
   perSourceTimers.forEach(t => clearInterval(t))
   writeStatus(cachedItems, new Date().toISOString())
   emitEvent('SignalBoard', 'app:closed', {})
-  if (process.platform !== 'darwin') app.quit()
+  app.quit()
 })
 
 app.on('activate', () => {
