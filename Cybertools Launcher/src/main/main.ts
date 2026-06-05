@@ -839,6 +839,18 @@ function spawnAsync(
   });
 }
 
+function detectBuildScript(dir: string): string {
+  try {
+    const pkgPath = path.join(dir, 'package.json');
+    if (!fs.existsSync(pkgPath)) return 'build:mac';
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8')) as Record<string, unknown>;
+    const scripts = (pkg.scripts || {}) as Record<string, unknown>;
+    if (scripts['build:mac'])   return 'build:mac';
+    if (scripts['package:mac']) return 'package:mac';
+    return 'build';
+  } catch { return 'build:mac'; }
+}
+
 function setupAppManagerIPC(): void {
   ipcMain.handle('app-manager:get-status', () => getAppStatuses());
 
@@ -857,7 +869,8 @@ function setupAppManagerIPC(): void {
       }
 
       send('Building app bundle...');
-      await spawnAsync('npm', ['run', 'build:mac'], dir, (l) => send(l.slice(0, 120)));
+      const buildScript = detectBuildScript(dir);
+      await spawnAsync('npm', ['run', buildScript], dir, (l) => send(l.slice(0, 120)));
 
       const appBundle = findAppBundle(path.join(dir, 'dist'), 4)
         ?? findAppBundle(path.join(dir, 'release'), 4);
