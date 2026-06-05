@@ -14,10 +14,12 @@ export default function Header({ onSettingsClick }: Props) {
         borderColor    : 'rgba(42,51,71,0.6)',
         background     : 'rgba(10,12,20,0.95)',
         backdropFilter : 'blur(12px)',
-      }}>
+        WebkitAppRegion: 'drag',
+        cursor         : 'grab',
+      } as React.CSSProperties}>
 
       {/* Logo */}
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-2.5" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
         <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0"
           style={{ background: 'rgba(210,153,34,0.15)', border: '1px solid rgba(210,153,34,0.3)' }}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -39,7 +41,7 @@ export default function Header({ onSettingsClick }: Props) {
       </div>
 
       {/* Right: VPN status + settings */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
         <div className="flex items-center gap-1.5 px-2 py-1 rounded"
           style={{ background: 'rgba(22,27,39,0.6)', border: '1px solid rgba(42,51,71,0.6)' }}>
           <div className="w-1.5 h-1.5 rounded-full flex-shrink-0"

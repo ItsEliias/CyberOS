@@ -262,7 +262,7 @@ export default function AppManager() {
       {loading ? (
         <FullSpinner />
       ) : (
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {apps.map(app => (
             <AppManagerCard
               key={app.id}

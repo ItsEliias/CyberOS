@@ -117,7 +117,7 @@ function createTrayIcon(): Electron.NativeImage {
     if (process.platform === 'darwin') img.setTemplateImage(false);
     return img;
   }
-  const buf = generateFallbackPNG(32, 13,13,26, 180,79,255);
+  const buf = generateFallbackPNG(32, 13,13,26, 210,153,34);
   return nativeImage.createFromBuffer(buf, { scaleFactor: 1 });
 }
 
@@ -165,12 +165,12 @@ function getPanelPosition(trayBounds: Electron.Rectangle): { x: number; y: numbe
 
 function createPanelWindow(): void {
   panelWindow = new BrowserWindow({
-    width       : 480,
-    height      : 620,
+    width       : 620,
+    height      : 700,
     show        : false,
     frame       : false,
     resizable   : false,
-    movable     : false,
+    movable     : true,
     minimizable : false,
     maximizable : false,
     skipTaskbar : true,
@@ -868,9 +868,9 @@ function setupAppManagerIPC(): void {
         await spawnAsync('npm', ['install'], dir, (l) => send(l.slice(0, 120)));
       }
 
-      send('Building app bundle...');
+      send('Building app bundle (arm64)...');
       const buildScript = detectBuildScript(dir);
-      await spawnAsync('npm', ['run', buildScript], dir, (l) => send(l.slice(0, 120)));
+      await spawnAsync('npm', ['run', buildScript, '--', '--arm64'], dir, (l) => send(l.slice(0, 120)));
 
       const appBundle = findAppBundle(path.join(dir, 'dist'), 4)
         ?? findAppBundle(path.join(dir, 'release'), 4);
