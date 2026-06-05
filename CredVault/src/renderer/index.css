@@ -10,6 +10,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Per-app theme CSS variables (set by App.tsx on root wrapper) ─────────── */
+/* Defaults; overridden inline by the theme store. */
+:root {
+  --app-accent: #f78166;
+  --app-bg:     #0a0a0f;
+  --app-text:   #e2e8f0;
+}
+
 /* ─── CyberOS Design Bible — CSS Custom Properties ───────────────────────── */
 
 :root {

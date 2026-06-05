@@ -247,7 +247,7 @@ app.whenReady().then(() => {
 });
 
 app.on('before-quit', () => stopStatusWriter());
-app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+app.on('window-all-closed', () => { app.quit(); });
 
 // ─── IPC ──────────────────────────────────────────────────────────────────────
 ipcMain.handle('get-version', () => APP_VERSION);

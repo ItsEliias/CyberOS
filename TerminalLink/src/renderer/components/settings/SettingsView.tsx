@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { TerminalSettings, OutputAlertRule, KeybindingMap } from '../../types/terminallink';
+import { APP_THEME_PRESETS, ACCENT_SWATCHES } from '../../types/terminallink';
 import SshManager from '../SshManager';
 import { useTerminalLinkStore } from '../../stores/useTerminalLinkStore';
 
@@ -47,7 +48,7 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
 function AlertRules({ rules, onChange }: { rules: OutputAlertRule[]; onChange: (r: OutputAlertRule[]) => void }) {
   function toggle(id: string) { onChange(rules.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r)); }
   function remove(id: string) { onChange(rules.filter(r => r.id !== id)); }
-  function add()             { onChange([...rules, { id: `rule-${Date.now()}`, pattern: '', label: 'Alert', notificationType: 'visual', enabled: true }]); }
+  function add()              { onChange([...rules, { id: `rule-${Date.now()}`, pattern: '', label: 'Alert', notificationType: 'visual', enabled: true }]); }
   function update(id: string, field: keyof OutputAlertRule, value: string | boolean) {
     onChange(rules.map(r => r.id === id ? { ...r, [field]: value } : r));
   }
@@ -57,7 +58,7 @@ function AlertRules({ rules, onChange }: { rules: OutputAlertRule[]; onChange: (
         <div key={r.id} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <input type="checkbox" checked={r.enabled} onChange={() => toggle(r.id)} style={{ accentColor: 'var(--accent)', flexShrink: 0 }} />
           <input value={r.pattern} onChange={e => update(r.id, 'pattern', e.target.value)} placeholder="Regex" style={{ ...INPUT, flex: 2, padding: '4px 6px' }} />
-          <input value={r.label} onChange={e => update(r.id, 'label', e.target.value)} placeholder="Label" style={{ ...INPUT, flex: 1, padding: '4px 6px' }} />
+          <input value={r.label}   onChange={e => update(r.id, 'label',   e.target.value)} placeholder="Label" style={{ ...INPUT, flex: 1, padding: '4px 6px' }} />
           <button onClick={() => remove(r.id)} style={{ fontSize: 10, color: 'var(--error)', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}>✕</button>
         </div>
       ))}
@@ -109,6 +110,147 @@ function KeybindingsTable({ kb, onChange }: { kb: KeybindingMap; onChange: (k: K
   );
 }
 
+// ─── Theme Section ────────────────────────────────────────────────────────────
+function ThemeSection({ settings, onUpdate }: Props) {
+  const theme = settings.appTheme ?? { accentColor: '#00ff41', bgColor: '#0a0a0f', textColor: '#e2e8f0' };
+
+  function setAccent(color: string) {
+    onUpdate({ appTheme: { ...theme, accentColor: color } });
+  }
+
+  function setBg(bgColor: string) {
+    onUpdate({ appTheme: { ...theme, bgColor } });
+  }
+
+  function setTextBrightness(hex: string) {
+    onUpdate({ appTheme: { ...theme, textColor: hex } });
+  }
+
+  function resetToDefaults() {
+    onUpdate({ appTheme: { accentColor: '#00ff41', bgColor: '#0a0a0f', textColor: '#e2e8f0' } });
+  }
+
+  const bgPresets = [
+    { label: 'Dark',     value: '#0a0a0f'  },
+    { label: 'Graphite', value: '#111218'  },
+    { label: 'Navy',     value: '#0a0f1a'  },
+    { label: 'OLED',     value: '#000000'  },
+  ];
+
+  return (
+    <Section title="Appearance">
+      <Field label="Accent color">
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          {ACCENT_SWATCHES.map(color => (
+            <button
+              key={color}
+              onClick={() => setAccent(color)}
+              title={color}
+              style={{
+                width: 24, height: 24, borderRadius: '50%', background: color,
+                border: theme.accentColor === color
+                  ? '2px solid #e2e8f0'
+                  : '2px solid transparent',
+                cursor: 'pointer', padding: 0, flexShrink: 0,
+                boxShadow: theme.accentColor === color ? `0 0 8px ${color}60` : 'none',
+                transition: 'all 0.15s ease',
+              }}
+            />
+          ))}
+        </div>
+      </Field>
+
+      <Field label="Background">
+        <div style={{ display: 'flex', gap: 8 }}>
+          {bgPresets.map(preset => (
+            <button
+              key={preset.value}
+              onClick={() => setBg(preset.value)}
+              style={{
+                padding: '4px 10px', borderRadius: 6, fontSize: 11,
+                background: preset.value,
+                border: theme.bgColor === preset.value
+                  ? '1px solid #e2e8f0'
+                  : '1px solid rgba(42,51,71,0.6)',
+                color: '#e2e8f0',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+      </Field>
+
+      <Field label={`Text brightness`}>
+        <input
+          type="range"
+          min={180}
+          max={255}
+          value={parseInt(theme.textColor.slice(1, 3), 16)}
+          onChange={e => {
+            const v = Number(e.target.value).toString(16).padStart(2, '0');
+            setTextBrightness(`#${v}${v}${v}`);
+          }}
+          style={{ width: '100%', accentColor: 'var(--accent)' }}
+        />
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#4a5568', marginTop: 2 }}>
+          <span>Dim</span>
+          <span style={{ color: '#e2e8f0', fontFamily: 'var(--font-mono)', fontSize: 10 }}>{theme.textColor}</span>
+          <span>Bright</span>
+        </div>
+      </Field>
+
+      {/* Live preview */}
+      <div style={{
+        padding: 12,
+        background: 'rgba(22,27,39,0.75)',
+        backdropFilter: 'blur(8px)',
+        border: '1px solid rgba(42,51,71,0.6)',
+        borderRadius: 8,
+        display: 'flex', flexDirection: 'column', gap: 6,
+      }}>
+        <span style={{ fontSize: 10, color: '#4a5568', marginBottom: 4 }}>Preview</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: theme.accentColor, boxShadow: `0 0 6px ${theme.accentColor}80` }} />
+          <span style={{ fontSize: 12, color: theme.textColor, fontFamily: 'var(--font-mono)' }}>TerminalLink</span>
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button style={{
+            padding: '4px 10px', borderRadius: 6, fontSize: 11, height: 28,
+            background: theme.accentColor, color: '#0a0a0f', border: 'none', cursor: 'default',
+            fontWeight: 500,
+          }}>
+            Primary
+          </button>
+          <button style={{
+            padding: '4px 10px', borderRadius: 6, fontSize: 11, height: 28,
+            background: 'rgba(42,51,71,0.4)', color: theme.textColor,
+            border: '1px solid rgba(42,51,71,0.6)', cursor: 'default',
+          }}>
+            Secondary
+          </button>
+        </div>
+        <span style={{ fontSize: 11, color: '#8b949e' }}>Secondary text sample</span>
+        <span style={{ fontSize: 11, color: '#4a5568' }}>Muted text sample</span>
+      </div>
+
+      <button
+        onClick={resetToDefaults}
+        style={{
+          padding: '6px 14px', borderRadius: 6, fontSize: 12, height: 34,
+          background: 'rgba(42,51,71,0.4)', color: '#e2e8f0',
+          border: '1px solid rgba(42,51,71,0.6)', cursor: 'pointer', alignSelf: 'flex-start',
+        }}
+      >
+        Reset to defaults
+      </button>
+    </Section>
+  );
+}
+
+// ─── SettingsView ─────────────────────────────────────────────────────────────
 export default function SettingsView({ settings, onUpdate }: Props) {
   const { sshProfiles, addSshProfile, removeSshProfile } = useTerminalLinkStore();
 
@@ -117,6 +259,8 @@ export default function SettingsView({ settings, onUpdate }: Props) {
       <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 20, letterSpacing: 0.5 }}>
         Settings
       </div>
+
+      <ThemeSection settings={settings} onUpdate={onUpdate} />
 
       <Section title="Terminal">
         <Field label="Shell path">
@@ -149,7 +293,7 @@ export default function SettingsView({ settings, onUpdate }: Props) {
 
       <Section title="Context">
         <Toggle checked={settings.autoInjectTarget} onChange={v => onUpdate({ autoInjectTarget: v })} label="Auto-inject $TARGET from shared_context" />
-        <Toggle checked={settings.showContextBar} onChange={v => onUpdate({ showContextBar: v })} label="Show context bar" />
+        <Toggle checked={settings.showContextBar}   onChange={v => onUpdate({ showContextBar: v })}   label="Show context bar" />
       </Section>
 
       <Section title="Output Alerts">

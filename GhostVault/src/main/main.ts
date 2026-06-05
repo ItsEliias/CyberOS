@@ -345,7 +345,7 @@ app.whenReady().then(() => {
 app.on('before-quit', () => stopStatusWriter());
 app.on('will-quit', () => { globalShortcut.unregisterAll(); });
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+  app.quit();
 });
 
 // ─── IPC ──────────────────────────────────────────────────────────────────────

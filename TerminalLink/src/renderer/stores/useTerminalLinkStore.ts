@@ -10,6 +10,7 @@ import type {
   Snippet,
   SshProfile,
   RecordedSession,
+  AppTheme,
 } from '../types/terminallink'
 
 const DEFAULT_KEYBINDINGS = {
@@ -30,6 +31,12 @@ const DEFAULT_ALERTS = [
   { id: 'error', pattern: 'Error:|FAILED|permission denied', label: 'Error Detected', notificationType: 'visual' as const, enabled: false },
 ]
 
+const DEFAULT_APP_THEME: AppTheme = {
+  accentColor: '#00ff41',
+  bgColor: '#0a0a0f',
+  textColor: '#e2e8f0',
+}
+
 const DEFAULT_SETTINGS: TerminalSettings = {
   shellPath: '/bin/zsh',
   fontSize: 13,
@@ -44,6 +51,7 @@ const DEFAULT_SETTINGS: TerminalSettings = {
   ollamaUrl: 'http://localhost:11434',
   ollamaEnabled: false,
   snippetsOpen: false,
+  appTheme: DEFAULT_APP_THEME,
 }
 
 const DEFAULT_SNIPPETS: Snippet[] = [

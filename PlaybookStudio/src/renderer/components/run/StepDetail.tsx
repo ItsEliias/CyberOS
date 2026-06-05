@@ -90,7 +90,7 @@ function CommandBlock({ cmd, vars, targetIP, playbookTitle, stepTitle }: {
 
   return (
     <div className="rounded flex items-start gap-2 px-3 py-2" style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
-      <code className="flex-1 text-xs font-mono break-all" style={{ color: 'var(--accent)' }}>
+      <code className="flex-1 text-xs font-mono break-all" style={{ color: '#e2e8f0' }}>
         {parts.map((p, i) => /^{{.+}}$/.test(p)
           ? <span key={i} style={{ color: '#2dd4bf', background: 'rgba(45,212,191,0.12)', borderRadius: 3, padding: '0 2px' }}>{p}</span>
           : <span key={i}>{p}</span>

@@ -104,6 +104,7 @@ const GraphSvg = forwardRef<SVGSVGElement, Props>((props, ref) => {
 
   return (
     <svg ref={ref} className="graph-canvas" width="100%" height="100%"
+      style={{ background: '#0a0a0f' }}
       onMouseDown={onBgMouseDown} onWheel={onWheel}
       onContextMenu={e => e.preventDefault()}
     >
@@ -146,7 +147,7 @@ const GraphSvg = forwardRef<SVGSVGElement, Props>((props, ref) => {
           if (!src || !tgt) return null
           const isPath     = pathEdgeSet.has(edge.id)
           const bothVis    = visibleSet.has(srcId) && visibleSet.has(tgtId)
-          const edgeColor  = isPath ? 'var(--accent)' : protocolColor(edge.protocol)
+          const edgeColor  = isPath ? '#d29922' : protocolColor(edge.protocol)
           const midX = (src.x + tgt.x) / 2
           const midY = (src.y + tgt.y) / 2
           const edgeLabel  = edge.protocol ?? edge.service
@@ -154,8 +155,8 @@ const GraphSvg = forwardRef<SVGSVGElement, Props>((props, ref) => {
           return (
             <g key={edge.id}>
               <line x1={src.x} y1={src.y} x2={tgt.x} y2={tgt.y}
-                stroke={edgeColor}
-                strokeWidth={isPath ? 2.5 : edge.protocol ? 2 : 1.5}
+                stroke={isPath ? edgeColor : 'rgba(42,51,71,0.8)'}
+                strokeWidth={isPath ? 2.5 : 1.5}
                 opacity={bothVis ? 1 : 0.07}
                 strokeDasharray={edge.protocol === 'VLAN' ? '4 2' : undefined}
               />
@@ -174,7 +175,7 @@ const GraphSvg = forwardRef<SVGSVGElement, Props>((props, ref) => {
         {tracedPath && tracedPath.length > 0 && (() => {
           const end = graph.nodes.find(n => n.id === tracedPath[tracedPath.length - 1])
           if (!end) return null
-          return <text x={end.x} y={end.y - 36} textAnchor="middle" fontSize={10} fill="var(--accent)" style={{ pointerEvents: 'none' }}>{`${tracedPath.length - 1} hops`}</text>
+          return <text x={end.x} y={end.y - 36} textAnchor="middle" fontSize={10} fill="#d29922" style={{ pointerEvents: 'none' }}>{`${tracedPath.length - 1} hops`}</text>
         })()}
 
         {/* Nodes */}
@@ -200,25 +201,30 @@ const GraphSvg = forwardRef<SVGSVGElement, Props>((props, ref) => {
               {(isSelected || isPathNode || isStart) && (
                 <circle r={r + 6}
                   fill={isStart ? 'rgba(88,166,255,0.1)' : 'rgba(210,153,34,0.1)'}
-                  stroke={isStart ? '#58a6ff' : 'var(--accent)'}
-                  strokeWidth={2}
+                  stroke={isStart ? '#58a6ff' : '#d29922'}
+                  strokeWidth={isSelected ? 2.5 : 2}
+                  style={isSelected ? { filter: 'drop-shadow(0 0 6px rgba(210,153,34,0.6))' } : undefined}
                 />
               )}
               {searchMatches?.has(node.id) && (
-                <circle r={r + 10} fill="none" stroke="var(--accent)" strokeWidth={1.5} opacity={0.5} />
+                <circle r={r + 10} fill="none" stroke="#d29922" strokeWidth={1.5} opacity={0.5} />
               )}
               <circle r={r} fill={fill}
-                stroke={isSelected ? 'var(--accent)' : 'rgba(255,255,255,0.15)'}
-                strokeWidth={isSelected ? 2 : 1}
+                stroke={isSelected ? '#d29922' : 'rgba(255,255,255,0.15)'}
+                strokeWidth={isSelected ? 2.5 : 1}
               />
               <text textAnchor="middle" dominantBaseline="central"
                 fontSize={r >= 20 ? 11 : 10} fontWeight={700} fill="white"
                 style={{ pointerEvents: 'none' }}>{node.openPortCount}</text>
               {em && <text x={r} y={-r + 2} fontSize={9} fill="rgba(255,255,255,0.8)" textAnchor="middle" style={{ pointerEvents: 'none' }}>{em}</text>}
-              {node.annotation && <text x={-r} y={-r + 2} fontSize={9} fill="var(--accent)" style={{ pointerEvents: 'none' }}>✎</text>}
+              {node.annotation && <text x={-r} y={-r + 2} fontSize={9} fill="#d29922" style={{ pointerEvents: 'none' }}>✎</text>}
               {node.schedule?.status === 'pending' && <circle cx={r - 2} cy={-(r - 2)} r={4} fill="#4a9eff" />}
-              <text y={r + 12} textAnchor="middle" fontSize={11} fill="var(--text-dim)" style={{ pointerEvents: 'none' }}>{lbl.primary}</text>
-              {lbl.secondary && <text y={r + 23} textAnchor="middle" fontSize={9} fill="var(--text-muted)" style={{ pointerEvents: 'none' }}>{lbl.secondary}</text>}
+              <text y={r + 18} textAnchor="middle" fontSize={11}
+                fontFamily="JetBrains Mono, monospace" fill="#e2e8f0"
+                style={{ pointerEvents: 'none' }}>{lbl.primary}</text>
+              {lbl.secondary && <text y={r + 30} textAnchor="middle" fontSize={9}
+                fontFamily="JetBrains Mono, monospace" fill="#8b949e"
+                style={{ pointerEvents: 'none' }}>{lbl.secondary}</text>}
             </g>
           )
         })}

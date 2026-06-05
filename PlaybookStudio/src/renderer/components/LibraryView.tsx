@@ -221,9 +221,9 @@ export default function LibraryView() {
                 onClick={() => setCategoryFilter(cat.id)}
                 className="flex-shrink-0 text-xs px-2.5 py-1 rounded-full transition-all"
                 style={{
-                  background: isActive ? 'rgba(45,212,191,0.12)' : 'rgba(42,51,71,0.2)',
-                  color:      isActive ? '#2dd4bf' : '#484f58',
-                  border:     `1px solid ${isActive ? 'rgba(45,212,191,0.28)' : 'rgba(42,51,71,0.4)'}`,
+                  background: isActive ? 'rgba(74,158,255,0.15)' : 'rgba(42,51,71,0.2)',
+                  color:      isActive ? '#4a9eff' : '#8b949e',
+                  border:     `1px solid ${isActive ? 'rgba(74,158,255,0.35)' : 'rgba(42,51,71,0.4)'}`,
                 }}
               >
                 {cat.label}
@@ -280,9 +280,9 @@ export default function LibraryView() {
             onClick={handleNew}
             className="no-drag text-xs px-3 py-1.5 rounded font-semibold transition-colors"
             style={{
-              background: 'rgba(45,212,191,0.14)',
-              color: '#2dd4bf',
-              border: '1px solid rgba(45,212,191,0.30)',
+              background: '#4a9eff',
+              color: '#0a0a0f',
+              border: '1px solid #4a9eff',
             }}
           >
             + New Playbook
@@ -393,16 +393,23 @@ export default function LibraryView() {
               </svg>
             </div>
             <div className="flex flex-col items-center gap-1">
-              <span className="text-sm font-medium" style={{ color: '#6b7280' }}>
+              <span className="text-sm font-medium" style={{ color: '#8b949e' }}>
                 No playbooks found
               </span>
-              <span className="text-xs" style={{ color: '#484f58' }}>
+              <span className="text-xs" style={{ color: '#8b949e' }}>
                 Try a different filter or create a new playbook
               </span>
+              <button
+                onClick={handleNew}
+                className="mt-2 text-xs px-3 py-1.5 rounded font-semibold"
+                style={{ background: '#4a9eff', color: '#0a0a0f' }}
+              >
+                + New Playbook
+              </button>
             </div>
           </div>
         ) : (
-          <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
+          <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
             {filtered.map((pb, i) => <PlaybookCard key={pb.id} pb={pb} searchTerm={searchTerm} staggerIndex={i} />)}
           </div>
         )}

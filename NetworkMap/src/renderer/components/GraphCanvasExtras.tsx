@@ -25,7 +25,7 @@ export function GraphLegend() {
         borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: 5,
       }}>
         <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255,140,66,0.5)', flexShrink: 0 }} />
-        <span style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: 'rgba(139,148,158,0.55)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+        <span style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: '#8b949e', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
           legend
         </span>
       </div>
@@ -37,7 +37,7 @@ export function GraphLegend() {
               background: e.color,
               boxShadow: e.dotGlow ? `0 0 5px ${e.color}70` : 'none',
             }} />
-            <span style={{ fontSize: 9, color: 'rgba(139,148,158,0.65)', lineHeight: 1 }}>{e.label}</span>
+            <span style={{ fontSize: 9, color: '#e2e8f0', lineHeight: 1 }}>{e.label}</span>
           </div>
         ))}
       </div>

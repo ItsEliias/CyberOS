@@ -112,8 +112,8 @@ export default function VaultHealthView() {
       {/* Stats cards */}
       {vaultStats && (
         <div className="grid grid-cols-4 gap-3 px-5 py-3 border-b shrink-0" style={{ borderColor: 'var(--border)' }}>
-          <StatCard label="Notes"    value={vaultStats.noteCount.toLocaleString()} />
-          <StatCard label="Folders"  value={vaultStats.folderCount.toLocaleString()} />
+          <StatCard label="Notes"    value={(vaultStats.noteCount ?? 0).toLocaleString()} />
+          <StatCard label="Folders"  value={(vaultStats.folderCount ?? 0).toLocaleString()} />
           <StatCard label="Duplicates" value={totalDupeFiles.toString()} highlight={totalDupeFiles > 0} />
           <StatCard label="Dead Links" value={deadLinks.length.toString()} highlight={deadLinks.length > 0} />
         </div>

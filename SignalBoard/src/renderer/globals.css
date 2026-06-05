@@ -32,6 +32,11 @@
   --radius-xs: 4px; --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px;
   --motion-fast: 150ms; --motion-base: 250ms; --motion-slow: 400ms;
   --ease: cubic-bezier(0.2,0.8,0.2,1);
+
+  /* Per-app theme CSS variables — controlled by ThemeStore */
+  --app-accent: #ff6b6b;
+  --app-bg:     #0a0a0f;
+  --app-text:   #e2e8f0;
 }
 
 /* ─── CyberOS Design Bible — Global Styles ────────────────────────────────── */
@@ -121,11 +126,12 @@ button, a, input, select {
 /* ─── Glassmorphism Card ──────────────────────────────────────────────────── */
 
 .glass-card {
-  background: var(--surface-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--border-glass);
-  border-radius: var(--radius-md);
+  background: rgba(22, 27, 39, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(42, 51, 71, 0.6);
+  border-radius: 8px;
+  padding: 16px;
 }
 
 /* ─── Status Pulse Glow Animation ─────────────────────────────────────────── */

@@ -1,13 +1,171 @@
 import { useState } from 'react'
-import { useStore } from '../store'
+import { useStore, DEFAULT_THEME, type AppTheme } from '../store'
 import type { Playbook } from '@shared/types'
 
 const API_KEY_STORAGE = 'playbookstudio_anthropic_key'
+
+// ─── Theme section ────────────────────────────────────────────────────────────
+
+const ACCENT_SWATCHES = [
+  { color: '#4a9eff', label: 'Blue (default)' },
+  { color: '#2dd4bf', label: 'Teal' },
+  { color: '#3fb950', label: 'Green' },
+  { color: '#d29922', label: 'Amber' },
+  { color: '#b44fff', label: 'Purple' },
+  { color: '#f78166', label: 'Coral' },
+]
+
+const BG_PRESETS = [
+  { color: '#0a0a0f', label: 'Dark' },
+  { color: '#131520', label: 'Graphite' },
+  { color: '#0d1117', label: 'Navy' },
+  { color: '#000000', label: 'OLED' },
+]
+
+function ThemeSection() {
+  const theme    = useStore(s => s.theme)
+  const setTheme = useStore(s => s.setTheme)
+  const [preview, setPreview] = useState<AppTheme>(theme)
+
+  function commit(partial: Partial<AppTheme>) {
+    const next = { ...theme, ...partial }
+    setPreview(next)
+    setTheme(next)
+  }
+
+  function handleTextSlider(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = parseInt(e.target.value, 10)
+    // 0=darkest (#8b949e) to 100=brightest (#ffffff), default at ~89%=#e2e8f0
+    const hex = Math.round(val * 2.55).toString(16).padStart(2, '0')
+    commit({ textColor: `#${hex}${hex}${hex}` })
+  }
+
+  function textSliderValue(): number {
+    const c = preview.textColor
+    if (!c.startsWith('#') || c.length < 7) return 89
+    const r = parseInt(c.slice(1, 3), 16)
+    return Math.round(r / 2.55)
+  }
+
+  function reset() {
+    setPreview(DEFAULT_THEME)
+    setTheme(DEFAULT_THEME)
+  }
+
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: preview.accentColor }}>
+        Appearance
+      </h2>
+      <div
+        className="rounded-lg p-4 flex flex-col gap-4"
+        style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}
+      >
+        {/* Accent */}
+        <div>
+          <div className="text-xs font-medium mb-2" style={{ color: '#e2e8f0' }}>Accent Color</div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {ACCENT_SWATCHES.map(s => (
+              <button
+                key={s.color}
+                onClick={() => commit({ accentColor: s.color })}
+                title={s.label}
+                className="w-7 h-7 rounded-full transition-all"
+                style={{
+                  background: s.color,
+                  border: preview.accentColor === s.color ? `3px solid #e2e8f0` : '2px solid rgba(255,255,255,0.12)',
+                  transform: preview.accentColor === s.color ? 'scale(1.15)' : 'scale(1)',
+                }}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Background */}
+        <div>
+          <div className="text-xs font-medium mb-2" style={{ color: '#e2e8f0' }}>Background</div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {BG_PRESETS.map(bg => (
+              <button
+                key={bg.color}
+                onClick={() => commit({ bgColor: bg.color })}
+                className="flex items-center gap-2 px-3 py-1.5 rounded text-xs transition-all"
+                style={{
+                  background: bg.color,
+                  border: `1px solid ${preview.bgColor === bg.color ? preview.accentColor : 'rgba(42,51,71,0.6)'}`,
+                  color: preview.bgColor === bg.color ? preview.accentColor : '#8b949e',
+                }}
+              >
+                <span
+                  className="w-3 h-3 rounded-full border"
+                  style={{ background: bg.color, borderColor: 'rgba(255,255,255,0.2)' }}
+                />
+                {bg.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Text brightness */}
+        <div>
+          <div className="text-xs font-medium mb-2" style={{ color: '#e2e8f0' }}>
+            Text Brightness
+            <span className="ml-2 font-mono text-xs" style={{ color: '#8b949e' }}>{preview.textColor}</span>
+          </div>
+          <input
+            type="range" min="50" max="100" value={textSliderValue()}
+            onChange={handleTextSlider}
+            className="w-full h-1.5 rounded-full appearance-none"
+            style={{ accentColor: preview.accentColor, background: `rgba(42,51,71,0.5)` }}
+          />
+          <div className="flex justify-between mt-1">
+            <span className="text-xs" style={{ color: '#4a5568' }}>Dim</span>
+            <span className="text-xs" style={{ color: '#4a5568' }}>Bright</span>
+          </div>
+        </div>
+
+        {/* Live preview */}
+        <div
+          className="rounded-md p-3 flex items-center gap-3"
+          style={{
+            background: preview.bgColor,
+            border: `1px solid ${preview.accentColor}44`,
+          }}
+        >
+          <span className="text-xs font-semibold" style={{ color: preview.accentColor }}>Preview</span>
+          <span className="text-sm" style={{ color: preview.textColor }}>Playbook Studio</span>
+          <span className="text-xs" style={{ color: preview.textColor, opacity: 0.6 }}>Step 3 of 8</span>
+          <button
+            className="ml-auto text-xs px-3 py-1 rounded font-medium"
+            style={{ background: preview.accentColor, color: '#0a0a0f' }}
+          >
+            Run
+          </button>
+        </div>
+
+        {/* Reset */}
+        <div className="flex justify-end">
+          <button
+            onClick={reset}
+            className="text-xs px-3 py-1.5 rounded"
+            style={{ background: 'rgba(42,51,71,0.35)', color: '#8b949e', border: '1px solid rgba(42,51,71,0.5)' }}
+          >
+            Reset to defaults
+          </button>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── SettingsView ─────────────────────────────────────────────────────────────
 
 export default function SettingsView() {
   const playbooks    = useStore(s => s.playbooks)
   const setPlaybooks = useStore(s => s.setPlaybooks)
   const context      = useStore(s => s.context)
+  const theme        = useStore(s => s.theme)
+  const accent       = theme.accentColor
 
   const [exportStatus, setExportStatus] = useState<string | null>(null)
   const [importStatus, setImportStatus] = useState<string | null>(null)
@@ -25,7 +183,6 @@ export default function SettingsView() {
     setTimeout(() => setApiKeySaved(false), 2000)
   }
 
-  // Only custom playbooks are exported/imported (built-ins are bundled)
   const customPlaybooks = playbooks.filter(p => !p.isBuiltIn)
 
   async function handleExport() {
@@ -56,7 +213,6 @@ export default function SettingsView() {
         const text = await file.text()
         const imported = JSON.parse(text) as Playbook[]
         if (!Array.isArray(imported)) throw new Error('Invalid format: expected JSON array')
-
         let count = 0
         for (const pb of imported) {
           if (!pb.id || !pb.name || !pb.steps) continue
@@ -78,20 +234,32 @@ export default function SettingsView() {
 
   const APP_DATA = `~/Library/Application Support/PlaybookStudio/`
 
+  const inputStyle: React.CSSProperties = {
+    background: 'var(--bg)',
+    border: '1px solid var(--border)',
+    color: '#e2e8f0',
+    borderRadius: 6,
+    padding: '6px 10px',
+    fontSize: 12,
+  }
+
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       <div
         className="px-4 py-3 flex-shrink-0"
         style={{ borderBottom: '1px solid var(--border)' }}
       >
-        <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>Settings</span>
+        <span className="text-sm font-medium" style={{ color: '#e2e8f0' }}>Settings</span>
       </div>
 
       <div className="flex-1 p-6 flex flex-col gap-6 max-w-2xl">
 
+        {/* Theme */}
+        <ThemeSection />
+
         {/* Playbooks section */}
         <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--accent)' }}>
+          <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: accent }}>
             Playbooks
           </h2>
 
@@ -100,26 +268,26 @@ export default function SettingsView() {
             style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}
           >
             <div>
-              <div className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Storage path</div>
+              <div className="text-xs mb-1" style={{ color: '#4a5568' }}>Storage path</div>
               <div
                 className="text-xs font-mono rounded px-3 py-2"
-                style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-dim)' }}
+                style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: '#8b949e' }}
               >
                 {APP_DATA}
               </div>
-              <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+              <div className="text-xs mt-1" style={{ color: '#4a5568' }}>
                 playbooks.json · runs.json
               </div>
             </div>
 
             <div className="flex items-center gap-3 pt-1" style={{ borderTop: '1px solid var(--border)' }}>
               <div className="flex-1">
-                <div className="text-xs font-medium mb-0.5" style={{ color: 'var(--text)' }}>Export all custom playbooks</div>
-                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                <div className="text-xs font-medium mb-0.5" style={{ color: '#e2e8f0' }}>Export all custom playbooks</div>
+                <div className="text-xs" style={{ color: '#4a5568' }}>
                   Downloads a JSON backup of your {customPlaybooks.length} custom playbook{customPlaybooks.length !== 1 ? 's' : ''}.
                 </div>
                 {exportStatus && (
-                  <div className="text-xs mt-1" style={{ color: 'var(--success)' }}>{exportStatus}</div>
+                  <div className="text-xs mt-1" style={{ color: '#3fb950' }}>{exportStatus}</div>
                 )}
               </div>
               <button
@@ -127,8 +295,9 @@ export default function SettingsView() {
                 disabled={customPlaybooks.length === 0}
                 className="flex-shrink-0 text-xs px-3 py-1.5 rounded font-medium transition-colors"
                 style={{
-                  background: customPlaybooks.length === 0 ? 'var(--border)' : 'var(--accent-dim)',
-                  color:      customPlaybooks.length === 0 ? 'var(--text-muted)' : 'var(--accent)',
+                  background: customPlaybooks.length === 0 ? 'rgba(42,51,71,0.3)' : `${accent}22`,
+                  color:      customPlaybooks.length === 0 ? '#4a5568' : accent,
+                  border:     `1px solid ${customPlaybooks.length === 0 ? 'rgba(42,51,71,0.5)' : `${accent}44`}`,
                   cursor:     customPlaybooks.length === 0 ? 'not-allowed' : 'pointer',
                 }}
               >
@@ -138,14 +307,14 @@ export default function SettingsView() {
 
             <div className="flex items-center gap-3 pt-1" style={{ borderTop: '1px solid var(--border)' }}>
               <div className="flex-1">
-                <div className="text-xs font-medium mb-0.5" style={{ color: 'var(--text)' }}>Import playbooks</div>
-                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                <div className="text-xs font-medium mb-0.5" style={{ color: '#e2e8f0' }}>Import playbooks</div>
+                <div className="text-xs" style={{ color: '#4a5568' }}>
                   Restore from a JSON backup. Built-in playbooks are never overwritten.
                 </div>
                 {importStatus && (
                   <div
                     className="text-xs mt-1"
-                    style={{ color: importStatus.startsWith('Import failed') ? 'var(--error)' : 'var(--success)' }}
+                    style={{ color: importStatus.startsWith('Import failed') ? '#f85149' : '#3fb950' }}
                   >
                     {importStatus}
                   </div>
@@ -154,7 +323,7 @@ export default function SettingsView() {
               <button
                 onClick={handleImport}
                 className="flex-shrink-0 text-xs px-3 py-1.5 rounded font-medium transition-colors"
-                style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}
+                style={{ background: `${accent}22`, color: accent, border: `1px solid ${accent}44` }}
               >
                 Import JSON
               </button>
@@ -164,7 +333,7 @@ export default function SettingsView() {
 
         {/* AI section */}
         <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--accent)' }}>
+          <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: accent }}>
             AI Step Generator
           </h2>
           <div
@@ -172,15 +341,15 @@ export default function SettingsView() {
             style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}
           >
             <div>
-              <div className="text-xs font-medium mb-0.5" style={{ color: 'var(--text)' }}>Anthropic API Key</div>
-              <div className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
-                Used for AI step generation in the editor. Stored locally only, never sent to any server.
+              <div className="text-xs font-medium mb-0.5" style={{ color: '#e2e8f0' }}>Anthropic API Key</div>
+              <div className="text-xs mb-2" style={{ color: '#4a5568' }}>
+                Used for AI step generation. Stored locally only.
               </div>
               <div className="flex items-center gap-2">
                 <input
                   type={showKey ? 'text' : 'password'}
                   className="flex-1 rounded px-2 py-1.5 text-xs font-mono"
-                  style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
+                  style={inputStyle}
                   value={apiKey}
                   onChange={e => setApiKey(e.target.value)}
                   placeholder="sk-ant-..."
@@ -189,17 +358,18 @@ export default function SettingsView() {
                 <button
                   onClick={() => setShowKey(v => !v)}
                   className="text-xs px-2 py-1.5 rounded"
-                  style={{ background: 'var(--border)', color: 'var(--text-dim)' }}
+                  style={{ background: 'rgba(42,51,71,0.3)', color: '#8b949e', border: '1px solid rgba(42,51,71,0.5)' }}
                   title={showKey ? 'Hide key' : 'Show key'}
                 >
-                  {showKey ? '🙈' : '👁'}
+                  {showKey ? 'Hide' : 'Show'}
                 </button>
                 <button
                   onClick={saveApiKey}
                   className="text-xs px-3 py-1.5 rounded font-medium"
                   style={{
-                    background: apiKeySaved ? 'rgba(63,185,80,0.15)' : 'var(--accent-dim)',
-                    color: apiKeySaved ? 'var(--success)' : 'var(--accent)',
+                    background: apiKeySaved ? 'rgba(63,185,80,0.15)' : `${accent}22`,
+                    color: apiKeySaved ? '#3fb950' : accent,
+                    border: `1px solid ${apiKeySaved ? 'rgba(63,185,80,0.3)' : `${accent}44`}`,
                   }}
                 >
                   {apiKeySaved ? 'Saved' : 'Save'}
@@ -211,27 +381,29 @@ export default function SettingsView() {
 
         {/* Integration section */}
         <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--accent)' }}>
+          <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: accent }}>
             Integration
           </h2>
-
           <div
             className="rounded-lg p-4 flex flex-col gap-3"
             style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}
           >
             <IntegrationToggle
+              accentColor={accent}
               label="Auto-read session context"
-              description="Read active lab and target IP from cybertools-config.json (shared_context)."
+              description="Read active lab and target IP from cybertools-config.json."
               defaultOn
             />
             <IntegrationToggle
+              accentColor={accent}
               label="Write active playbook to shared context"
-              description="Write shared_context.activePlaybook when a run starts so other apps know what's running."
+              description="Write shared_context.activePlaybook when a run starts."
               defaultOn
             />
             <IntegrationToggle
+              accentColor={accent}
               label="Write playbook events to ecosystem-events.json"
-              description="Emit playbook:started, step:completed, playbook:completed events for the CyberOS dashboard."
+              description="Emit playbook events for the CyberOS dashboard."
               defaultOn
             />
           </div>
@@ -240,23 +412,17 @@ export default function SettingsView() {
         {/* Current session context */}
         {(context.activeLab || context.activeTarget || context.activeIP) && (
           <section className="flex flex-col gap-3">
-            <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--accent)' }}>
+            <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: accent }}>
               Current Session Context
             </h2>
             <div
               className="rounded-lg p-4 flex flex-col gap-2"
               style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}
             >
-              {context.activeLab && (
-                <ContextRow label="Active Lab" value={context.activeLab} />
-              )}
-              {context.activeTarget && (
-                <ContextRow label="Target Name" value={context.activeTarget} />
-              )}
-              {context.activeIP && (
-                <ContextRow label="Target IP" value={context.activeIP} mono />
-              )}
-              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+              {context.activeLab    && <ContextRow label="Active Lab"   value={context.activeLab} />}
+              {context.activeTarget && <ContextRow label="Target Name"  value={context.activeTarget} />}
+              {context.activeIP     && <ContextRow label="Target IP"    value={context.activeIP} mono />}
+              <p className="text-xs mt-1" style={{ color: '#4a5568' }}>
                 Sourced from ~/cybertools-config.json · updates every 10s
               </p>
             </div>
@@ -265,7 +431,7 @@ export default function SettingsView() {
 
         {/* Playbook inventory */}
         <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--accent)' }}>
+          <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: accent }}>
             Playbook Inventory
           </h2>
           <div
@@ -284,31 +450,29 @@ export default function SettingsView() {
 }
 
 function IntegrationToggle({
-  label, description, defaultOn,
+  label, description, defaultOn, accentColor,
 }: {
   label: string
   description: string
   defaultOn?: boolean
+  accentColor: string
 }) {
   const [on, setOn] = useState(defaultOn ?? true)
   return (
     <div className="flex items-start gap-3">
       <div className="flex-1">
-        <div className="text-xs font-medium" style={{ color: 'var(--text)' }}>{label}</div>
-        <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{description}</div>
+        <div className="text-xs font-medium" style={{ color: '#e2e8f0' }}>{label}</div>
+        <div className="text-xs mt-0.5" style={{ color: '#4a5568' }}>{description}</div>
       </div>
       <button
         onClick={() => setOn(v => !v)}
         className="flex-shrink-0 mt-0.5 w-8 h-4 rounded-full transition-colors relative"
-        style={{ background: on ? 'var(--accent)' : 'var(--border)' }}
+        style={{ background: on ? accentColor : 'rgba(42,51,71,0.6)' }}
         title={on ? 'Enabled' : 'Disabled'}
       >
         <span
           className="absolute top-0.5 w-3 h-3 rounded-full transition-all"
-          style={{
-            background: '#fff',
-            left: on ? '18px' : '2px',
-          }}
+          style={{ background: '#fff', left: on ? '18px' : '2px' }}
         />
       </button>
     </div>
@@ -318,10 +482,10 @@ function IntegrationToggle({
 function ContextRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="text-xs w-28 flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
+      <span className="text-xs w-28 flex-shrink-0" style={{ color: '#4a5568' }}>{label}</span>
       <span
         className="text-xs"
-        style={{ color: 'var(--text-dim)', fontFamily: mono ? 'var(--font-mono, monospace)' : undefined }}
+        style={{ color: '#8b949e', fontFamily: mono ? 'var(--font-mono, monospace)' : undefined }}
       >
         {value}
       </span>

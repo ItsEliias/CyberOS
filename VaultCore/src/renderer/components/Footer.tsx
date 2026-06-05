@@ -60,7 +60,7 @@ export default function Footer() {
             {expiringSoon} expiring
           </span>
         )}
-        {vaultStats && (
+        {vaultStats && vaultStats.noteCount != null && (
           <span className="text-[10px] font-mono tabular-nums" style={{ color: 'var(--text-dim)' }}>
             {vaultStats.noteCount.toLocaleString()} notes
           </span>

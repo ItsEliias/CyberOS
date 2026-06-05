@@ -68,6 +68,18 @@ const api = {
     ipcRenderer.on('ecosystem-events-updated', listener);
     return () => ipcRenderer.removeListener('ecosystem-events-updated', listener);
   },
+
+  appManager: {
+    getStatus : () => ipcRenderer.invoke('app-manager:get-status') as Promise<import('../shared/types.js').AppStatus[]>,
+    install   : (id: string) => ipcRenderer.invoke('app-manager:install', { id }) as Promise<{ success: boolean; error?: string }>,
+    uninstall : (id: string, productName: string) => ipcRenderer.invoke('app-manager:uninstall', { id, productName }) as Promise<{ success: boolean; error?: string }>,
+    open      : (productName: string) => ipcRenderer.invoke('app-manager:open', { productName }) as Promise<{ success: boolean; error?: string }>,
+    onProgress: (cb: (data: { id: string; message: string }) => void) => {
+      const listener = (_e: Electron.IpcRendererEvent, data: { id: string; message: string }) => cb(data);
+      ipcRenderer.on('app-manager:progress', listener);
+      return () => ipcRenderer.removeAllListeners('app-manager:progress');
+    },
+  },
 };
 
 contextBridge.exposeInMainWorld('api', api);

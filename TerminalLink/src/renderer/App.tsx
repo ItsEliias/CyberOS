@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import TitleBar       from './components/layout/TitleBar';
 import TabBar         from './components/layout/TabBar';
@@ -50,6 +50,20 @@ export default function App() {
   const [connecting,  setConnecting]  = useState(false);
   // Ref to write into active terminal (used by snippets/palette/ssh)
   const writeToTermRef = useRef<((data: string) => void) | null>(null);
+
+  // Apply per-app theme CSS vars to :root
+  useEffect(() => {
+    const theme = settings.appTheme;
+    if (!theme) return;
+    const root = document.documentElement;
+    root.style.setProperty('--app-accent', theme.accentColor);
+    root.style.setProperty('--app-bg', theme.bgColor);
+    root.style.setProperty('--app-text', theme.textColor);
+    // Also drive the shared vars so existing components pick up changes
+    root.style.setProperty('--accent', theme.accentColor);
+    root.style.setProperty('--bg', theme.bgColor);
+    root.style.setProperty('--text', theme.textColor);
+  }, [settings.appTheme]);
 
   useEffect(() => {
     (async () => {

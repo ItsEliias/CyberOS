@@ -10,46 +10,65 @@ export default function Header({ onSettingsClick }: Props) {
 
   return (
     <div className="flex items-center justify-between px-4 py-3 border-b"
-      style={{ borderColor: 'var(--border)', background: 'var(--panel)' }}>
-      <div className="flex items-center gap-2">
-        <div className="w-7 h-7 rounded-lg flex items-center justify-center"
-          style={{ background: 'var(--accent)' }}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M2 8L8 2L14 8L8 14L2 8Z" fill="white" fillOpacity="0.9"/>
-            <path d="M5 8L8 5L11 8L8 11L5 8Z" fill="white"/>
+      style={{
+        borderColor    : 'rgba(42,51,71,0.6)',
+        background     : 'rgba(10,12,20,0.95)',
+        backdropFilter : 'blur(12px)',
+        WebkitAppRegion: 'drag',
+        cursor         : 'grab',
+      } as React.CSSProperties}>
+
+      {/* Logo */}
+      <div className="flex items-center gap-2.5" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+        <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0"
+          style={{ background: 'rgba(210,153,34,0.15)', border: '1px solid rgba(210,153,34,0.3)' }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M7 1L13 4.5V9.5L7 13L1 9.5V4.5L7 1Z"
+              stroke="#d29922" strokeWidth="1.2" fill="none" strokeLinejoin="round"/>
+            <path d="M7 4L10 6V8.5L7 10.5L4 8.5V6L7 4Z"
+              fill="#d29922" fillOpacity="0.6"/>
           </svg>
         </div>
         <div>
-          <div className="text-xs font-bold tracking-widest uppercase leading-none"
-            style={{ color: 'var(--accent)' }}>
-            CYBERTOOLS
+          <div className="text-[11px] font-bold tracking-[0.2em] uppercase leading-none font-mono"
+            style={{ color: '#d29922' }}>
+            CyberOS
           </div>
-          <div className="text-[10px] leading-none mt-0.5" style={{ color: 'var(--text-dim)' }}>
-            v{version}
+          <div className="text-[9px] leading-none mt-0.5 font-mono" style={{ color: '#4a5568' }}>
+            Launcher
           </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        {/* VPN indicator */}
-        <div className="flex items-center gap-1.5">
-          <div className={`w-1.5 h-1.5 rounded-full ${vpn.active ? 'bg-green-400' : 'bg-red-500'}`}
-            style={vpn.active ? { boxShadow: '0 0 6px #3fb950' } : {}} />
-          <span className="text-[10px] font-mono" style={{ color: 'var(--text-dim)' }}>
-            {vpn.active ? 'VPN ON' : 'VPN OFF'}
+      {/* Right: VPN status + settings */}
+      <div className="flex items-center gap-3" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+        <div className="flex items-center gap-1.5 px-2 py-1 rounded"
+          style={{ background: 'rgba(22,27,39,0.6)', border: '1px solid rgba(42,51,71,0.6)' }}>
+          <div className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+            style={{
+              background: vpn.active ? '#3fb950' : '#f85149',
+              boxShadow : vpn.active ? '0 0 6px rgba(63,185,80,0.6)' : undefined,
+            }} />
+          <span className="text-[9px] font-mono tracking-wider"
+            style={{ color: vpn.active ? '#3fb950' : '#8b949e' }}>
+            {vpn.active ? 'VPN' : 'NO VPN'}
           </span>
         </div>
 
-        {/* Settings button */}
+        <div className="text-[9px] font-mono" style={{ color: '#4a5568' }}>
+          v{version}
+        </div>
+
         <button
           onClick={onSettingsClick}
-          className="w-6 h-6 rounded flex items-center justify-center transition-colors hover:bg-white/10"
-          style={{ color: 'var(--text-muted)' }}
+          className="w-6 h-6 rounded flex items-center justify-center transition-all hover:bg-white/5"
+          style={{ color: '#4a5568' }}
+          title="Settings"
         >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.5"/>
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+            <circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.4"/>
             <path d="M7 1v1M7 12v1M1 7h1M12 7h1M2.93 2.93l.71.71M10.36 10.36l.71.71M2.93 11.07l.71-.71M10.36 3.64l.71-.71"
-              stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
           </svg>
         </button>
       </div>

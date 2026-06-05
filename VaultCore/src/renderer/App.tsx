@@ -44,6 +44,12 @@ export default function App() {
   // ── Boot ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     async function boot() {
+      if (!window.electronAPI) {
+        applyTheme('stealth', 'neutral');
+        setShowWizard(true);
+        setReady(true);
+        return;
+      }
       const [ver, configExists] = await Promise.all([
         window.electronAPI.getAppVersion(),
         window.electronAPI.configExists(),
@@ -77,7 +83,12 @@ export default function App() {
 
       setReady(true);
     }
-    boot();
+    boot().catch((err) => {
+      console.error('[VaultCore boot]', err);
+      applyTheme('stealth', 'neutral');
+      setShowWizard(true);
+      setReady(true);
+    });
   }, []);
 
   // Seed VaultCore store sources from legacy sources when loaded

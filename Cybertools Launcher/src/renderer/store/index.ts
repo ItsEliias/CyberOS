@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { CyberToolsConfig, VpnStatus, UpdateInfo, EcosystemEvent } from '@shared/types';
 
-export type ActiveTab = 'tools' | 'activity';
+export type ActiveTab = 'apps' | 'activity';
 
 interface LauncherStore {
   config: CyberToolsConfig | null;
@@ -27,7 +27,7 @@ export const useLauncherStore = create<LauncherStore>((set) => ({
   vpn            : { active: false, interface: null },
   updateInfo     : null,
   ecosystemEvents: [],
-  activeTab      : 'tools',
+  activeTab      : 'apps',
   version        : '',
   splashDone     : false,
   settingsOpen   : false,

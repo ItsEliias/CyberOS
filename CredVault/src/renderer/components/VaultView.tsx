@@ -1,55 +1,11 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useStore, type SortOrder } from '../store'
-import CredentialRow from './CredentialRow'
 import CredentialModal from './CredentialModal'
 import type { Credential, BreachCheckResult } from '@shared/types'
 import { fuzzyMatch } from '../utils/fuzzySearch'
 import { scorePassword } from '../utils/passwordStrength'
-import { COL_HEADERS, SkeletonRows, FilterChip, Empty, NoResults } from './VaultViewStates'
-
-// ─── Column visibility toggle ──────────────────────────────────────────────────
-
-const ALL_COL_KEYS = ['Service', 'Category', 'Username', 'IP / Port', 'Tags', 'Source', 'Date', 'Status', 'Age', 'Breach'] as const
-type ColKey = typeof ALL_COL_KEYS[number]
-
-function loadColVisibility(): Record<ColKey, boolean> {
-  try {
-    const raw = localStorage.getItem('cv_col_visibility')
-    if (raw) {
-      const parsed = JSON.parse(raw) as Record<string, boolean>
-      // Ensure all keys present with defaults
-      const defaults: Record<ColKey, boolean> = Object.fromEntries(ALL_COL_KEYS.map(k => [k, true])) as Record<ColKey, boolean>
-      return { ...defaults, ...parsed }
-    }
-  } catch {}
-  return Object.fromEntries(ALL_COL_KEYS.map(k => [k, true])) as Record<ColKey, boolean>
-}
-
-const CATEGORY_BADGE_COLORS: Record<string, string> = {
-  'Login':       '#38bdf8',   // blue
-  'API Key':     '#a78bfa',   // purple
-  'Certificate': '#3fb950',   // green
-  'Note':        '#d29922',   // amber
-  'SSH':         '#f78166',   // coral
-  'Web':         '#4a9eff',
-  'Database':    '#f85149',
-  'Token':       '#e879f9',
-  'Other':       '#8b949e',
-}
-
-function CategoryBadge({ category }: { category?: string }) {
-  if (!category) return <span style={{ color: '#484f58', fontSize: 11 }}>—</span>
-  const color = CATEGORY_BADGE_COLORS[category] ?? '#8b949e'
-  return (
-    <span style={{
-      fontSize: 9, fontWeight: 600, padding: '2px 7px', borderRadius: 8,
-      border: `1px solid ${color}40`, background: `${color}14`, color,
-      letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap',
-    }}>
-      {category}
-    </span>
-  )
-}
+import { FilterChip, Empty, NoResults } from './VaultViewStates'
+import CredentialDetailPanel from './CredentialDetailPanel'
 
 const SORT_OPTIONS: { value: SortOrder; label: string }[] = [
   { value: null,        label: 'Default'   },
@@ -58,6 +14,35 @@ const SORT_OPTIONS: { value: SortOrder; label: string }[] = [
   { value: 'newest',    label: 'Newest'    },
   { value: 'strength',  label: 'Strength'  },
 ]
+
+const CATEGORY_BADGE_COLORS: Record<string, string> = {
+  'Login':       '#38bdf8',
+  'API Key':     '#a78bfa',
+  'Certificate': '#3fb950',
+  'Note':        '#d29922',
+  'SSH':         '#f78166',
+  'Web':         '#4a9eff',
+  'Database':    '#f85149',
+  'Token':       '#e879f9',
+  'Other':       '#8b949e',
+}
+
+function CategoryChip({ category }: { category?: string }) {
+  if (!category) return null
+  const color = CATEGORY_BADGE_COLORS[category] ?? '#8b949e'
+  return (
+    <span style={{
+      fontSize: 9, fontWeight: 600, padding: '1px 5px', borderRadius: 6,
+      border: `1px solid ${color}40`, background: `${color}14`, color,
+      letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap',
+    }}>
+      {category}
+    </span>
+  )
+}
+
+const SCOPE_TABS = ['All', 'Logins', 'Cards', 'Notes'] as const
+type ScopeTab = typeof SCOPE_TABS[number]
 
 export default function VaultView() {
   const credentials    = useStore(s => s.credentials)
@@ -75,110 +60,52 @@ export default function VaultView() {
   const setFilterStatus= useStore(s => s.setFilterStatus)
   const setFilterSource= useStore(s => s.setFilterSource)
   const setFilterCategory = useStore(s => s.setFilterCategory)
-  const setFilterFolder   = useStore(s => s.setFilterFolder)
   const setSortOrder   = useStore(s => s.setSortOrder)
   const resetFilters   = useStore(s => s.resetFilters)
 
-  const [showModal, setShowModal] = useState(false)
-  const [editCred, setEditCred]   = useState<Credential | null>(null)
-  const [breachMap, setBreachMap] = useState<Record<string, BreachCheckResult>>({})
+  const [showModal, setShowModal]   = useState(false)
+  const [editCred, setEditCred]     = useState<Credential | null>(null)
+  const [selected, setSelected]     = useState<Credential | null>(null)
+  const [scopeTab, setScopeTab]     = useState<ScopeTab>('All')
+  const [breachMap, setBreachMap]   = useState<Record<string, BreachCheckResult>>({})
   const [breachRunning, setBreachRunning] = useState(false)
   const [breachDone, setBreachDone] = useState(false)
-  // improvement #1: skeleton loader on initial mount
   const [initialLoading, setInitialLoading] = useState(true)
+
   useEffect(() => {
-    if (credentials.length >= 0) {
-      const t = setTimeout(() => setInitialLoading(false), 400)
-      return () => clearTimeout(t)
-    }
+    const t = setTimeout(() => setInitialLoading(false), 400)
+    return () => clearTimeout(t)
   }, [])
 
-  // Column visibility toggle with localStorage persistence
-  const [colVis, setColVis] = useState<Record<ColKey, boolean>>(loadColVisibility)
-  const [showColMenu, setShowColMenu] = useState(false)
-  const colMenuRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!showColMenu) return
-    function onClickOutside(e: MouseEvent) {
-      if (colMenuRef.current && !colMenuRef.current.contains(e.target as Node)) {
-        setShowColMenu(false)
-      }
-    }
-    document.addEventListener('mousedown', onClickOutside)
-    return () => document.removeEventListener('mousedown', onClickOutside)
-  }, [showColMenu])
-
-  function toggleCol(key: ColKey) {
-    setColVis(prev => {
-      const next = { ...prev, [key]: !prev[key] }
-      localStorage.setItem('cv_col_visibility', JSON.stringify(next))
-      return next
-    })
-  }
-
-  const visibleHeaders = COL_HEADERS.filter(col => colVis[col.label as ColKey] !== false)
-
-  const allTags       = useMemo(() => [...new Set(credentials.flatMap(c => c.tags))].sort(), [credentials])
-  const allSources    = useMemo(() => [...new Set(credentials.map(c => c.source))].sort(), [credentials])
-  const allFolders    = useMemo(() => [...new Set(credentials.map(c => c.folder).filter(Boolean) as string[])].sort(), [credentials])
-  const allCategories = useMemo(() => [...new Set(credentials.map(c => c.category).filter(Boolean) as string[])].sort(), [credentials])
-  const allStatuses: Credential['status'][] = ['active', 'rotated', 'invalid']
+  const allTags     = useMemo(() => [...new Set(credentials.flatMap(c => c.tags))].sort(), [credentials])
+  const allSources  = useMemo(() => [...new Set(credentials.map(c => c.source))].sort(), [credentials])
+  const hasFilters  = searchQuery || filterTag || filterStatus || filterSource || filterCategory || (filterFolder && filterFolder !== '__notes__')
 
   const filtered = useMemo(() => {
     const q = searchQuery.toLowerCase()
     const notesSentinel = filterFolder === '__notes__'
     let result = credentials.filter(c => {
       if (notesSentinel) return (c.type ?? 'credential') === 'note'
+      if (scopeTab === 'Logins' && c.category !== 'SSH' && c.category !== 'Web' && c.type !== 'credential') return false
+      if (scopeTab === 'Cards'  && c.category !== 'API Key' && c.category !== 'Token') return false
+      if (scopeTab === 'Notes'  && c.type !== 'note') return false
       if (filterTag      && !c.tags.includes(filterTag))       return false
       if (filterStatus   && c.status !== filterStatus)          return false
       if (filterSource   && c.source !== filterSource)          return false
       if (filterCategory && c.category !== filterCategory)      return false
-      if (filterFolder   && c.folder !== filterFolder)          return false
       if (!q) return true
-      const fields = [c.service, c.username, c.ip ?? '', c.targetName ?? '', c.labName ?? '', c.source, c.notes ?? '', ...(c.tags ?? [])]
+      const fields = [c.service, c.username, c.ip ?? '', c.notes ?? '', c.source, ...(c.tags ?? [])]
       return fields.some(f => fuzzyMatch(q, f).matched)
     })
-    if (sortOrder === 'lastUsed') {
-      result = [...result].sort((a, b) => {
-        const at = a.lastUsed ? new Date(a.lastUsed).getTime() : 0
-        const bt = b.lastUsed ? new Date(b.lastUsed).getTime() : 0
-        return bt - at
-      })
-    } else if (sortOrder === 'alpha') {
-      result = [...result].sort((a, b) => a.service.localeCompare(b.service))
-    } else if (sortOrder === 'newest') {
-      result = [...result].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    } else if (sortOrder === 'strength') {
-      result = [...result].sort((a, b) => {
-        const sa = a.password ? scorePassword(a.password).score : 0
-        const sb = b.password ? scorePassword(b.password).score : 0
-        return sb - sa
-      })
-    }
+    if (sortOrder === 'lastUsed') result = [...result].sort((a, b) => (b.lastUsed ? new Date(b.lastUsed).getTime() : 0) - (a.lastUsed ? new Date(a.lastUsed).getTime() : 0))
+    else if (sortOrder === 'alpha')   result = [...result].sort((a, b) => a.service.localeCompare(b.service))
+    else if (sortOrder === 'newest')  result = [...result].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    else if (sortOrder === 'strength') result = [...result].sort((a, b) => (b.password ? scorePassword(b.password).score : 0) - (a.password ? scorePassword(a.password).score : 0))
     return result
-  }, [credentials, searchQuery, filterTag, filterStatus, filterSource, filterCategory, filterFolder, sortOrder])
-
-  const recentlyUsed = useMemo(() => {
-    return credentials
-      .filter(c => c.lastUsed)
-      .sort((a, b) => new Date(b.lastUsed!).getTime() - new Date(a.lastUsed!).getTime())
-      .slice(0, 5)
-  }, [credentials])
-
-  const recentlyAdded = useMemo(() => {
-    return [...credentials]
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 3)
-  }, [credentials])
-
-  const hasFilters = searchQuery || filterTag || filterStatus || filterSource || filterCategory || (filterFolder && filterFolder !== '__notes__')
+  }, [credentials, searchQuery, filterTag, filterStatus, filterSource, filterCategory, filterFolder, sortOrder, scopeTab])
 
   async function refreshData() {
-    const [creds, stats] = await Promise.all([
-      window.electronAPI.getCredentials(),
-      window.electronAPI.getStats(),
-    ])
+    const [creds, stats] = await Promise.all([window.electronAPI.getCredentials(), window.electronAPI.getStats()])
     setCredentials(creds)
     setStats(stats)
   }
@@ -198,6 +125,7 @@ export default function VaultView() {
 
   async function handleDelete(id: string) {
     if (!confirm('Delete this credential?')) return
+    if (selected?.id === id) setSelected(null)
     await window.electronAPI.deleteCredential(id)
     await refreshData()
   }
@@ -213,261 +141,185 @@ export default function VaultView() {
     setBreachRunning(true); setBreachDone(false)
     const results: Record<string, BreachCheckResult> = {}
     for (const c of withPasswords) {
-      try {
-        const res = await window.electronAPI.checkBreach(c.id, c.password!)
-        results[c.id] = res
-      } catch { results[c.id] = { ok: false } }
+      try { results[c.id] = await window.electronAPI.checkBreach(c.id, c.password!) }
+      catch { results[c.id] = { ok: false } }
     }
     const breached = Object.values(results).filter(r => r.ok && (r.breachCount ?? 0) > 0).length
-    if (breached > 0) {
-      import('../utils/audioNotify').then(m => m.playBreachDetected()).catch(() => {})
-    }
+    if (breached > 0) import('../utils/audioNotify').then(m => m.playBreachDetected()).catch(() => {})
     setBreachMap(results); setBreachRunning(false); setBreachDone(true)
   }, [credentials])
 
   const breachedCount = Object.values(breachMap).filter(r => r.ok && (r.breachCount ?? 0) > 0).length
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* Toolbar */}
-      <div
-        className="shrink-0 flex items-center gap-2 flex-wrap px-4 py-2.5"
-        style={{ borderBottom: '1px solid rgba(42,51,71,0.35)', background: 'rgba(7,8,15,0.6)' }}
-      >
-        {/* Search — improvement #5: focus glow ring */}
-        <div className="search-input-wrap" style={{ position: 'relative' }}>
-          <svg
-            width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-            style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#484f58', pointerEvents: 'none', zIndex: 1 }}
-          >
-            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <input
-            type="text"
-            placeholder="Fuzzy search…"
-            value={searchQuery}
-            onChange={e => setSearch(e.target.value)}
-            style={{ width: 200, paddingLeft: 30, paddingRight: searchQuery ? 36 : undefined }}
-          />
-          {searchQuery && (
-            <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#484f58', pointerEvents: 'none' }}>
-              {filtered.length}
-            </span>
-          )}
-        </div>
+    <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
 
-        {/* Filter chips */}
-        <div style={{ display: 'flex', gap: 4, flex: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-          {allStatuses.map(s => (
-            <FilterChip key={s} label={s} active={filterStatus === s} onClick={() => setFilterStatus(filterStatus === s ? null : s)} />
-          ))}
-          {allCategories.map(cat => (
-            <FilterChip key={cat} label={cat} active={filterCategory === cat} onClick={() => setFilterCategory(filterCategory === cat ? null : cat)} />
-          ))}
-          {allSources.map(src => (
-            <FilterChip key={src} label={src} active={filterSource === src} onClick={() => setFilterSource(filterSource === src ? null : src)} />
-          ))}
-          {allTags.slice(0, 6).map(t => (
-            <FilterChip key={t} label={`#${t}`} active={filterTag === t} onClick={() => setFilterTag(filterTag === t ? null : t)} />
-          ))}
-          {allFolders.filter(f => f !== '__notes__').map(f => (
-            <FilterChip key={`folder:${f}`} label={`${f}`} active={filterFolder === f} onClick={() => setFilterFolder(filterFolder === f ? null : f)} />
-          ))}
-          {hasFilters && (
-            <button
-              className="btn btn-ghost"
-              style={{ fontSize: 11, padding: '2px 8px', color: '#f78166', borderColor: 'rgba(247,129,102,0.3)' }}
-              onClick={resetFilters}
-            >
-              Clear
-            </button>
-          )}
-        </div>
+      {/* ── Left panel (260px): search + list ───────────────────────────── */}
+      <div style={{
+        width: 260, flexShrink: 0, display: 'flex', flexDirection: 'column',
+        borderRight: '1px solid rgba(42,51,71,0.35)',
+        background: 'rgba(10,10,15,0.7)',
+        overflow: 'hidden',
+      }}>
 
-        {/* Sort */}
-        <select
-          value={sortOrder ?? ''}
-          onChange={e => setSortOrder((e.target.value || null) as SortOrder)}
-          style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, border: '1px solid rgba(42,51,71,0.6)', background: 'rgba(13,14,24,0.9)', color: '#8b949e', cursor: 'pointer' }}
-          title="Sort order"
-        >
-          {SORT_OPTIONS.map(o => (
-            <option key={String(o.value)} value={o.value ?? ''}>{o.label}</option>
-          ))}
-        </select>
-
-        {/* HIBP check — improvement #9: spinner + animated result */}
-        <button
-          className="btn btn-ghost"
-          style={{
-            fontSize: 11, padding: '3px 10px',
-            color: breachedCount > 0 ? '#f85149' : breachDone ? '#3fb950' : '#8b949e',
-            borderColor: breachedCount > 0 ? 'rgba(248,81,73,0.4)' : breachDone ? 'rgba(63,185,80,0.35)' : undefined,
-            minWidth: 90, justifyContent: 'center',
-          }}
-          onClick={runBreachCheck}
-          disabled={breachRunning}
-          title="Check all passwords against HaveIBeenPwned"
-        >
-          {breachRunning
-            ? <><span className="hibp-spinner" />Scanning…</>
-            : breachDone
-              ? breachedCount > 0
-                ? `⚠ ${breachedCount} breach${breachedCount !== 1 ? 'es' : ''}`
-                : '✓ Clean'
-              : 'HIBP Check'}
-        </button>
-
-        {/* Column visibility gear */}
-        <div style={{ position: 'relative' }} ref={colMenuRef}>
-          <button
-            className="btn btn-ghost"
-            style={{ fontSize: 11, padding: '3px 8px', color: showColMenu ? '#f78166' : '#8b949e' }}
-            onClick={() => setShowColMenu(s => !s)}
-            title="Toggle columns"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68 1.65 1.65 0 0 0 9 3V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        {/* Search bar */}
+        <div style={{ padding: '10px 12px 6px', borderBottom: '1px solid rgba(42,51,71,0.25)' }}>
+          <div className="search-input-wrap" style={{ position: 'relative' }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+              style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#4a5568', pointerEvents: 'none', zIndex: 1 }}>
+              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
-          </button>
-          {showColMenu && (
-            <div style={{
-              position: 'absolute', right: 0, top: '100%', marginTop: 4, zIndex: 50,
-              background: 'rgba(13,14,24,0.97)', border: '1px solid rgba(42,51,71,0.6)',
-              borderRadius: 8, padding: '6px 0', minWidth: 150,
-              boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-            }}>
-              <div style={{ fontSize: 9, fontWeight: 600, color: '#484f58', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '4px 12px 6px' }}>
-                Columns
-              </div>
-              {ALL_COL_KEYS.map(key => (
-                <label key={key} style={{
-                  display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px',
-                  cursor: 'pointer', fontSize: 12, color: colVis[key] ? '#c9d1d9' : '#484f58',
-                  userSelect: 'none',
-                }}>
-                  <input
-                    type="checkbox"
-                    checked={colVis[key]}
-                    onChange={() => toggleCol(key)}
-                    style={{ width: 12, height: 12, cursor: 'pointer' }}
-                  />
-                  {key}
-                </label>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <button
-          className="btn btn-accent"
-          style={{ fontSize: 12, background: '#f78166', color: '#07080f', border: 'none', fontWeight: 600 }}
-          onClick={() => setShowModal(true)}
-        >
-          + Add
-        </button>
-      </div>
-
-      {/* Recently Added */}
-      {recentlyAdded.length > 0 && !searchQuery && !hasFilters && (
-        <div
-          className="shrink-0 px-4 py-2"
-          style={{ borderBottom: '1px solid rgba(42,51,71,0.25)', background: 'rgba(7,8,15,0.4)' }}
-        >
-          <div style={{ fontSize: 9, color: '#484f58', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Recently Added</div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {recentlyAdded.map(c => (
-              <div
-                key={c.id}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '4px 10px', borderRadius: 6,
-                  border: '1px solid rgba(247,129,102,0.15)', background: 'rgba(247,129,102,0.04)',
-                }}
-              >
-                <span style={{ fontSize: 11, color: '#c9d1d9', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.service}</span>
-                <span style={{ fontSize: 10, color: '#484f58' }}>·</span>
-                <span style={{ fontSize: 10, color: '#8b949e', fontFamily: 'JetBrains Mono, monospace' }}>{c.username}</span>
-                <span style={{ fontSize: 9, color: '#f78166', marginLeft: 2 }}>new</span>
-              </div>
-            ))}
+            <input
+              type="text"
+              placeholder="Fuzzy search…"
+              value={searchQuery}
+              onChange={e => setSearch(e.target.value)}
+              style={{ width: '100%', paddingLeft: 28, paddingRight: searchQuery ? 32 : undefined, fontSize: 12 }}
+            />
+            {searchQuery && (
+              <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#4a5568' }}>
+                {filtered.length}
+              </span>
+            )}
           </div>
         </div>
-      )}
 
-      {/* Recently Used */}
-      {recentlyUsed.length > 0 && !searchQuery && !hasFilters && (
-        <div
-          className="shrink-0 flex items-center gap-2 px-4 py-1.5 flex-wrap"
-          style={{ borderBottom: '1px solid rgba(42,51,71,0.25)', background: 'rgba(7,8,15,0.4)' }}
-        >
-          <span style={{ fontSize: 9, color: '#484f58', textTransform: 'uppercase', letterSpacing: '0.08em', marginRight: 2 }}>Recent</span>
-          {recentlyUsed.map(c => (
+        {/* Scope tabs (pill) */}
+        <div style={{ display: 'flex', gap: 2, padding: '6px 10px', borderBottom: '1px solid rgba(42,51,71,0.25)' }}>
+          {SCOPE_TABS.map(tab => (
             <button
-              key={c.id}
-              onClick={() => setSearch(c.service)}
+              key={tab}
+              onClick={() => setScopeTab(tab)}
               style={{
-                display: 'flex', alignItems: 'center', gap: 4,
-                fontSize: 11, padding: '2px 8px', borderRadius: 4,
-                border: '1px solid rgba(42,51,71,0.5)', background: 'transparent',
-                color: '#8b949e', cursor: 'pointer', transition: 'border-color 0.15s, color 0.15s',
+                flex: 1, fontSize: 10, padding: '3px 0', borderRadius: 20,
+                border: 'none', cursor: 'pointer',
+                background: scopeTab === tab ? 'var(--app-accent, #f78166)' : 'transparent',
+                color: scopeTab === tab ? '#0a0a0f' : '#8b949e',
+                fontWeight: scopeTab === tab ? 600 : 400,
+                transition: 'background 0.15s, color 0.15s',
               }}
-              title={`${c.service} — ${c.username}`}
             >
-              <span style={{ maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.service}</span>
+              {tab}
             </button>
           ))}
         </div>
-      )}
 
-      {/* Table — improvements #1 (skeleton), #8 (sticky gradient header) */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
-        {initialLoading ? (
-          <SkeletonRows />
-        ) : credentials.length === 0 ? (
-          <Empty />
-        ) : filtered.length === 0 ? (
-          <NoResults />
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                {visibleHeaders.map(col => {
-                  const isActive = col.sortKey && sortOrder === col.sortKey
-                  return (
-                    <th key={col.label} className={`table-sticky-head${col.sortKey ? ' sortable-th' : ''}`} style={{
-                      padding: '8px 14px', textAlign: 'left', fontSize: 10, fontWeight: 600,
-                      color: isActive ? '#f78166' : '#484f58',
-                      letterSpacing: '0.06em', textTransform: 'uppercase',
-                    }}>
-                      {col.label}
-                      {col.sortKey && (
-                        <span className="sort-arrow" style={{ color: isActive ? '#f78166' : undefined }}>
-                          {isActive ? '▲' : '⬍'}
-                        </span>
-                      )}
-                    </th>
-                  )
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((c, idx) => (
-                <CredentialRow
-                  key={c.id}
-                  cred={c}
-                  searchQuery={searchQuery}
-                  breached={breachMap[c.id]?.ok && (breachMap[c.id].breachCount ?? 0) > 0}
-                  staggerIndex={idx}
-                  colVis={colVis}
-                  onEdit={setEditCred}
-                  onDelete={handleDelete}
-                  onRotate={handleRotate}
-                />
+        {/* Filter row */}
+        {(allTags.length > 0 || allSources.length > 0) && (
+          <div style={{ padding: '4px 10px 4px', display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center', borderBottom: '1px solid rgba(42,51,71,0.2)' }}>
+            {allSources.slice(0, 3).map(src => (
+              <FilterChip key={src} label={src} active={filterSource === src} onClick={() => setFilterSource(filterSource === src ? null : src)} />
+            ))}
+            {allTags.slice(0, 4).map(t => (
+              <FilterChip key={t} label={`#${t}`} active={filterTag === t} onClick={() => setFilterTag(filterTag === t ? null : t)} />
+            ))}
+            {hasFilters && (
+              <button onClick={resetFilters} style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, border: '1px solid rgba(247,129,102,0.3)', background: 'transparent', color: '#f78166', cursor: 'pointer' }}>
+                Clear
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Sort + HIBP + Add row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderBottom: '1px solid rgba(42,51,71,0.25)' }}>
+          <select
+            value={sortOrder ?? ''}
+            onChange={e => setSortOrder((e.target.value || null) as SortOrder)}
+            style={{ flex: 1, fontSize: 10, padding: '3px 6px', borderRadius: 5, border: '1px solid rgba(42,51,71,0.6)', background: 'rgba(13,14,24,0.9)', color: '#8b949e', cursor: 'pointer' }}
+          >
+            {SORT_OPTIONS.map(o => <option key={String(o.value)} value={o.value ?? ''}>{o.label}</option>)}
+          </select>
+          <button
+            className="btn btn-ghost"
+            style={{ fontSize: 10, padding: '2px 6px', color: breachedCount > 0 ? '#f85149' : breachDone ? '#3fb950' : '#8b949e', minWidth: 52, justifyContent: 'center' }}
+            onClick={runBreachCheck}
+            disabled={breachRunning}
+            title="HIBP breach check"
+          >
+            {breachRunning ? <span className="hibp-spinner" /> : breachDone && breachedCount > 0 ? `⚠ ${breachedCount}` : 'HIBP'}
+          </button>
+          <button
+            className="btn btn-accent"
+            style={{ fontSize: 11, padding: '3px 10px', fontWeight: 600 }}
+            onClick={() => setShowModal(true)}
+          >
+            + Add
+          </button>
+        </div>
+
+        {/* Credential list */}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {initialLoading ? (
+            <div style={{ padding: 16 }}>
+              {[...Array(6)].map((_, i) => (
+                <div key={i} style={{ marginBottom: 8 }}>
+                  <div className="skeleton" style={{ height: 12, width: '70%', marginBottom: 4 }} />
+                  <div className="skeleton" style={{ height: 10, width: '45%' }} />
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          ) : credentials.length === 0 ? (
+            <Empty />
+          ) : filtered.length === 0 ? (
+            <NoResults />
+          ) : (
+            filtered.map(c => {
+              const isActive = selected?.id === c.id
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => setSelected(isActive ? null : c)}
+                  style={{
+                    width: '100%', textAlign: 'left', padding: '9px 12px',
+                    background: isActive ? 'rgba(247,129,102,0.08)' : 'transparent',
+                    borderLeft: isActive ? '2px solid var(--app-accent, #f78166)' : '2px solid transparent',
+                    border: 'none', cursor: 'pointer',
+                    borderBottom: '1px solid rgba(42,51,71,0.2)',
+                    transition: 'background 0.15s',
+                    display: 'flex', flexDirection: 'column', gap: 3,
+                  }}
+                  onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(247,129,102,0.04)' }}
+                  onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ fontSize: 13, color: '#e2e8f0', fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {c.service}
+                    </span>
+                    {breachMap[c.id]?.ok && (breachMap[c.id].breachCount ?? 0) > 0 && (
+                      <span title="Breached" style={{ fontSize: 9, color: '#f85149' }}>⚠</span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ fontSize: 11, color: '#8b949e', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'JetBrains Mono, monospace' }}>
+                      {c.username}
+                    </span>
+                    <CategoryChip category={c.category} />
+                  </div>
+                </button>
+              )
+            })
+          )}
+        </div>
+      </div>
+
+      {/* ── Right panel (flex-1): detail card ───────────────────────────── */}
+      <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: 16 }}>
+        {selected ? (
+          <CredentialDetailPanel
+            cred={selected}
+            breachResult={breachMap[selected.id]}
+            onEdit={c => setEditCred(c)}
+            onDelete={handleDelete}
+            onRotate={handleRotate}
+          />
+        ) : (
+          <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(42,51,71,0.6)" strokeWidth="1.5" strokeLinecap="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <span style={{ fontSize: 12, color: '#4a5568' }}>Select a credential to view details</span>
+          </div>
         )}
       </div>
 
@@ -476,5 +328,3 @@ export default function VaultView() {
     </div>
   )
 }
-
-// SkeletonRows, FilterChip, Empty, NoResults imported from VaultViewStates.tsx

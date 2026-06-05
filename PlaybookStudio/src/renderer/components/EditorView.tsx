@@ -44,7 +44,7 @@ function DependencyGraph({ steps }: { steps: PlaybookStep[] }) {
         <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} style={{ display: 'block' }}>
           <defs>
             <marker id="dep-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
-              <path d="M0,0 L0,7 L7,3.5 z" fill="rgba(45,212,191,0.6)" />
+              <path d="M0,0 L0,7 L7,3.5 z" fill="rgba(74,158,255,0.6)" />
             </marker>
           </defs>
           {/* Node labels */}
@@ -54,9 +54,9 @@ function DependencyGraph({ steps }: { steps: PlaybookStep[] }) {
             return (
               <g key={node.id}>
                 <rect x={PAD} y={PAD + i * ROW_H + 2} width={COL_W - 8} height={ROW_H - 6}
-                  rx={4} fill={hasDep ? 'rgba(45,212,191,0.06)' : 'rgba(42,51,71,0.15)'}
-                  stroke={hasDep ? 'rgba(45,212,191,0.22)' : 'rgba(42,51,71,0.4)'} strokeWidth={1} />
-                <text x={PAD + 6} y={y + 1} fontSize={10} fill={hasDep ? '#2dd4bf' : '#8b949e'} dominantBaseline="central">
+                  rx={4} fill={hasDep ? 'rgba(74,158,255,0.06)' : 'rgba(42,51,71,0.15)'}
+                  stroke={hasDep ? 'rgba(74,158,255,0.22)' : 'rgba(42,51,71,0.4)'} strokeWidth={1} />
+                <text x={PAD + 6} y={y + 1} fontSize={10} fill={hasDep ? '#4a9eff' : '#8b949e'} dominantBaseline="central">
                   {node.order}. {(node.title || 'Untitled').slice(0, 18)}
                 </text>
               </g>
@@ -78,7 +78,7 @@ function DependencyGraph({ steps }: { steps: PlaybookStep[] }) {
               return (
                 <path key={`${step.id}-${depId}`}
                   d={`M${x1},${y1} C${cx1},${y1} ${cx2},${y2} ${x2},${y2}`}
-                  fill="none" stroke="rgba(45,212,191,0.45)" strokeWidth={1.5}
+                  fill="none" stroke="rgba(74,158,255,0.45)" strokeWidth={1.5}
                   strokeDasharray="4 2"
                   markerEnd="url(#dep-arrow)"
                 />
@@ -127,7 +127,7 @@ function VersionsDropdown({ pb, onRestore }: { pb: Playbook; onRestore: (idx: nu
                 <button
                   onClick={() => { onRestore(i); setOpen(false) }}
                   className="text-xs px-2 py-0.5 rounded"
-                  style={{ background: 'rgba(45,212,191,0.08)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.20)' }}
+                  style={{ background: 'rgba(74,158,255,0.08)', color: '#4a9eff', border: '1px solid rgba(74,158,255,0.20)' }}
                 >
                   Restore
                 </button>
@@ -263,7 +263,7 @@ export default function EditorView() {
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <div
             className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-            style={{ background: disabled ? '#484f58' : '#2dd4bf' }}
+            style={{ background: disabled ? '#484f58' : '#4a9eff' }}
           />
           <span className="text-sm font-medium truncate" style={{ color: '#e6edf3' }}>
             {disabled ? `${pb.name} (view only)` : (pb.name || 'Untitled Playbook')}
@@ -277,9 +277,9 @@ export default function EditorView() {
             onClick={() => setShowAi(true)}
             className="text-xs px-2.5 py-1.5 rounded font-medium flex items-center gap-1"
             style={{
-              background: 'rgba(45,212,191,0.08)',
-              color: '#2dd4bf',
-              border: '1px solid rgba(45,212,191,0.20)',
+              background: 'rgba(74,158,255,0.08)',
+              color: '#4a9eff',
+              border: '1px solid rgba(74,158,255,0.20)',
             }}
           >
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -294,9 +294,9 @@ export default function EditorView() {
             disabled={saving}
             className="text-xs px-3 py-1.5 rounded font-semibold"
             style={{
-              background: saving ? 'rgba(42,51,71,0.35)' : 'rgba(45,212,191,0.14)',
-              color: saving ? '#484f58' : '#2dd4bf',
-              border: `1px solid ${saving ? 'rgba(42,51,71,0.5)' : 'rgba(45,212,191,0.28)'}`,
+              background: saving ? 'rgba(42,51,71,0.35)' : '#4a9eff',
+              color: saving ? '#484f58' : '#0a0a0f',
+              border: `1px solid ${saving ? 'rgba(42,51,71,0.5)' : '#4a9eff'}`,
               opacity: saving ? 0.7 : 1,
             }}
           >
@@ -313,8 +313,8 @@ export default function EditorView() {
             className="flex items-center gap-2 mb-1"
             style={{ borderBottom: '1px solid rgba(42,51,71,0.35)', paddingBottom: 10 }}
           >
-            <div className="w-px h-4 rounded-full" style={{ background: '#2dd4bf' }} />
-            <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#2dd4bf' }}>Playbook Details</span>
+            <div className="w-px h-4 rounded-full" style={{ background: '#4a9eff' }} />
+            <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#4a9eff' }}>Playbook Details</span>
           </div>
           <div className="flex gap-3">
             <div className="flex-1">
@@ -361,13 +361,13 @@ export default function EditorView() {
         {/* Steps section header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-px h-4 rounded-full" style={{ background: '#2dd4bf' }} />
+            <div className="w-px h-4 rounded-full" style={{ background: '#4a9eff' }} />
             <span className="text-sm font-semibold" style={{ color: '#e6edf3' }}>
               Steps
             </span>
             <span
               className="text-xs px-1.5 py-0.5 rounded font-mono tabular-nums"
-              style={{ background: 'rgba(45,212,191,0.08)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.18)' }}
+              style={{ background: 'rgba(74,158,255,0.08)', color: '#4a9eff', border: '1px solid rgba(74,158,255,0.18)' }}
             >
               {pb.steps.length}
             </span>
@@ -377,7 +377,7 @@ export default function EditorView() {
               <button
                 onClick={() => setShowAi(true)}
                 className="text-xs px-2.5 py-1 rounded font-medium flex items-center gap-1"
-                style={{ background: 'rgba(45,212,191,0.06)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.18)' }}
+                style={{ background: 'rgba(74,158,255,0.06)', color: '#4a9eff', border: '1px solid rgba(74,158,255,0.18)' }}
               >
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5">
                   <path d="M5 1l1.2 2.5L9 5 6.2 6.5 5 9 3.8 6.5 1 5l2.8-1.5z" />
@@ -387,7 +387,7 @@ export default function EditorView() {
               <button
                 onClick={addStep}
                 className="text-xs px-2.5 py-1 rounded font-medium"
-                style={{ background: 'rgba(45,212,191,0.10)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.22)' }}
+                style={{ background: 'rgba(74,158,255,0.10)', color: '#4a9eff', border: '1px solid rgba(74,158,255,0.22)' }}
               >
                 + Add Step
               </button>

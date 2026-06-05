@@ -35,8 +35,8 @@ export default function StatusBar() {
         <span
           className="w-1.5 h-1.5 rounded-full status-dot-pulse"
           style={{
-            '--pulse-rgb': '45,212,191',
-            backgroundColor: '#2dd4bf',
+            '--pulse-rgb': '74,158,255',
+            backgroundColor: '#4a9eff',
           } as React.CSSProperties}
         />
         <span style={{ color: '#8b949e' }}>PlaybookStudio</span>
@@ -57,7 +57,7 @@ export default function StatusBar() {
           <span className="mx-2.5" style={{ color: '#2d3548' }}>·</span>
           <span
             className="flex items-center gap-1.5"
-            style={{ color: '#2dd4bf', fontWeight: 500 }}
+            style={{ color: '#4a9eff', fontWeight: 500 }}
           >
             <span
               className="w-1.5 h-1.5 rounded-full"

@@ -173,7 +173,7 @@ export function ProgressBar({ done, total, runs, playbookId }: {
           className="rounded-full h-1.5 relative overflow-hidden"
           style={{
             width: `${pct}%`,
-            background: pct === 100 ? 'linear-gradient(90deg, #3fb950, #58c464)' : 'linear-gradient(90deg, #2dd4bf, #5ee7d6)',
+            background: pct === 100 ? 'linear-gradient(90deg, #3fb950, #58c464)' : 'linear-gradient(90deg, #4a9eff, #79bfff)',
             transition: 'width 600ms cubic-bezier(0.2,0.8,0.2,1)',
           }}
         >
@@ -203,12 +203,12 @@ export function StepDotTrack({ steps, activeId }: { steps: PlaybookStep[]; activ
         let dotBg    = 'transparent'
         if (status === 'done')          { dotColor = 'var(--success)';  dotBg = 'rgba(63,185,80,0.18)' }
         else if (status === 'skipped')  { dotColor = 'var(--text-muted)'; dotBg = 'rgba(72,79,88,0.18)' }
-        else if (status === 'inprogress'){ dotColor = 'var(--accent)';  dotBg = 'rgba(45,212,191,0.15)' }
-        else if (isActive)              { dotColor = 'var(--accent)';   dotBg = 'rgba(45,212,191,0.10)' }
+        else if (status === 'inprogress'){ dotColor = 'var(--accent)';  dotBg = 'rgba(74,158,255,0.15)' }
+        else if (isActive)              { dotColor = 'var(--accent)';   dotBg = 'rgba(74,158,255,0.10)' }
         return (
           <div key={step.id} className="flex items-center">
             <div className="step-dot-pop flex-shrink-0 flex items-center justify-center rounded-full text-[9px] font-mono font-semibold"
-              style={{ width: isActive ? 20 : 16, height: isActive ? 20 : 16, background: dotBg, border: `1px solid ${dotColor}`, color: dotColor, transition: 'all 200ms ease', boxShadow: isActive ? '0 0 0 2px rgba(45,212,191,0.18)' : 'none' }}
+              style={{ width: isActive ? 20 : 16, height: isActive ? 20 : 16, background: dotBg, border: `1px solid ${dotColor}`, color: dotColor, transition: 'all 200ms ease', boxShadow: isActive ? '0 0 0 2px rgba(74,158,255,0.18)' : 'none' }}
               title={`${step.order}. ${step.title}`}>
               {status === 'done' ? '✓' : status === 'skipped' ? '↷' : i + 1}
             </div>

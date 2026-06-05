@@ -76,6 +76,8 @@ export default function App() {
     }
   }, [isUnlocked, autoLockMs])
 
+  const theme = useStore(s => s.theme)
+
   if (!isUnlocked) {
     return <LockScreen needsSetup={!isSetup} />
   }
@@ -83,7 +85,12 @@ export default function App() {
   return (
     <div
       className="flex flex-col h-full"
-      style={{ background: 'radial-gradient(ellipse at 20% 0%, rgba(247,129,102,0.04) 0%, #0a0a0f 50%)' }}
+      style={{
+        '--app-accent': theme.accentColor,
+        '--app-bg':     theme.bgColor,
+        '--app-text':   theme.textColor,
+        background: `radial-gradient(ellipse at 20% 0%, ${theme.accentColor}0a 0%, ${theme.bgColor} 50%)`,
+      } as React.CSSProperties}
     >
       <TitleBar onHelp={onboarding.open} />
       <div className="flex flex-1 min-h-0">

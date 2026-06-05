@@ -7,7 +7,6 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import type { CommandEntry } from '@shared/types';
 import CommandEntryRow from './history/CommandEntryRow';
-import HistorySearch   from './history/HistorySearch';
 import ReplayView      from './ReplayView';
 
 // Virtual list constants — each row is ~60px when no output snippet, ~80px with one
@@ -64,7 +63,7 @@ function PlainList({ items, query }: { items: CommandEntry[]; query: string }) {
       {items.length === 0 && (
         <div style={{
           padding: 12,
-          color: 'rgba(0,255,65,0.3)',
+          color: '#4a5568',
           fontSize: 10,
           textAlign: 'center',
           fontFamily: 'var(--font-mono)',
@@ -135,45 +134,46 @@ export default function HistoryPanel({ commands, onClear }: Props) {
       onKeyDown={handlePanelKeyDown}
       style={{
         width: 300, display: 'flex', flexDirection: 'column',
-        background: 'rgba(7,12,5,0.98)',
-        borderLeft: '1px solid rgba(0,255,65,0.1)',
+        background: 'rgba(22,27,39,0.75)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        borderLeft: '1px solid rgba(42,51,71,0.6)',
         overflow: 'hidden', flexShrink: 0, outline: 'none',
         fontFamily: 'var(--font-mono)',
       }}
     >
       {/* Header */}
       <div style={{
-        padding: '8px 10px',
-        borderBottom: '1px solid rgba(0,255,65,0.1)',
-        display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0,
-        background: 'rgba(7,12,5,0.8)',
+        padding: '8px 12px 8px',
+        borderBottom: '1px solid rgba(42,51,71,0.6)',
+        display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0,
+        background: 'rgba(10,10,15,0.6)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+        {/* Title row */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{
+            fontSize: 13, fontWeight: 600, color: '#e2e8f0',
+          }}>
+            {replayMode ? 'Replay' : 'Command History'}
+          </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ width: 2, height: 12, background: '#00ff41', borderRadius: 1 }} />
-            <span style={{
-              fontSize: 9, color: '#7abf7a',
-              textTransform: 'uppercase', letterSpacing: 1.5, fontWeight: 700,
-            }}>
-              {replayMode ? 'Replay' : 'History'}
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ fontSize: 9, color: 'rgba(0,255,65,0.35)' }}>
-              {commands.length} cmd{commands.length !== 1 ? 's' : ''}
-            </span>
+            {commands.length > 0 && (
+              <span style={{ fontSize: 10, color: '#4a5568' }}>
+                {commands.length} cmd{commands.length !== 1 ? 's' : ''}
+              </span>
+            )}
             <button
               onClick={() => setReplayMode(r => !r)}
               disabled={commands.length === 0}
               title="Replay session commands"
               style={{
-                fontSize: 9, padding: '2px 7px', borderRadius: 2,
-                background: replayMode ? 'rgba(0,255,65,0.12)' : 'rgba(0,255,65,0.04)',
-                border: `1px solid ${replayMode ? 'rgba(0,255,65,0.4)' : 'rgba(0,255,65,0.15)'}`,
-                color: replayMode ? '#00ff41' : 'rgba(0,255,65,0.5)',
+                fontSize: 11, padding: '2px 8px', borderRadius: 4,
+                background: replayMode ? 'rgba(0,255,65,0.12)' : 'rgba(42,51,71,0.4)',
+                border: `1px solid ${replayMode ? 'rgba(42,51,71,0.6)' : 'rgba(42,51,71,0.6)'}`,
+                color: replayMode ? '#00ff41' : '#e2e8f0',
                 opacity: commands.length === 0 ? 0.4 : 1,
                 cursor: commands.length === 0 ? 'default' : 'pointer',
-                fontFamily: 'var(--font-mono)', fontWeight: 600,
+                fontFamily: 'var(--font-mono)',
               }}
             >
               {replayMode ? '■ List' : '▶ Replay'}
@@ -181,13 +181,44 @@ export default function HistoryPanel({ commands, onClear }: Props) {
           </div>
         </div>
 
+        {/* Search */}
         {!replayMode && (
-          <HistorySearch
-            query={query}
-            total={commands.length}
-            filtered={filtered.length}
-            onChange={setQuery}
-          />
+          <div style={{ position: 'relative' }}>
+            <input
+              ref={searchRef}
+              type="text"
+              placeholder="Search commands…"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              style={{
+                width: '100%',
+                background: 'rgba(10,10,15,0.8)',
+                border: '1px solid rgba(42,51,71,0.6)',
+                borderRadius: 6,
+                padding: '5px 28px 5px 10px',
+                color: '#e2e8f0',
+                fontSize: 12,
+                outline: 'none',
+                boxSizing: 'border-box',
+                fontFamily: 'var(--font-mono)',
+              }}
+            />
+            {query && (
+              <button
+                onClick={() => { setQuery(''); searchRef.current?.focus(); }}
+                style={{
+                  position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
+                  background: 'none', border: 'none', color: '#4a5568', fontSize: 12,
+                  cursor: 'pointer', padding: '0 2px', lineHeight: 1,
+                }}
+              >✕</button>
+            )}
+          </div>
+        )}
+        {query.trim() && (
+          <span style={{ fontSize: 10, color: '#4a5568' }}>
+            {filtered.length === 0 ? 'No matches' : `${filtered.length} of ${commands.length}`}
+          </span>
         )}
       </div>
 
@@ -199,7 +230,7 @@ export default function HistoryPanel({ commands, onClear }: Props) {
           {filtered.length === 0 ? (
             <div style={{
               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'rgba(0,255,65,0.3)', fontSize: 10,
+              color: '#4a5568', fontSize: 10,
             }}>
               {query ? 'No matches' : 'No commands yet'}
             </div>
@@ -211,38 +242,42 @@ export default function HistoryPanel({ commands, onClear }: Props) {
 
           {/* Footer */}
           <div style={{
-            padding: '6px 10px',
-            borderTop: '1px solid rgba(0,255,65,0.1)',
-            display: 'flex', gap: 6, flexShrink: 0,
+            padding: '8px 12px',
+            borderTop: '1px solid rgba(42,51,71,0.6)',
+            display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0,
           }}>
+            {/* Export as .txt — full width secondary button */}
             <button
               onClick={handleExport}
               disabled={commands.length === 0}
               style={{
-                flex: 1, padding: '5px 0', fontSize: 10, borderRadius: 3,
-                background: 'rgba(0,255,65,0.1)', border: '1px solid rgba(0,255,65,0.3)',
-                color: '#00ff41',
-                opacity: commands.length === 0 ? 0.4 : 1,
+                width: '100%', padding: '6px 0', fontSize: 12, borderRadius: 6,
+                background: 'rgba(42,51,71,0.4)',
+                border: '1px solid rgba(42,51,71,0.6)',
+                color: commands.length === 0 ? '#4a5568' : '#e2e8f0',
+                opacity: commands.length === 0 ? 0.5 : 1,
                 cursor: commands.length === 0 ? 'default' : 'pointer',
-                fontFamily: 'var(--font-mono)', fontWeight: 600, letterSpacing: '0.05em',
+                fontFamily: 'var(--font-mono)',
+                height: 34,
               }}
             >
-              Export
+              Export as .txt
             </button>
             <button
               onClick={handleClear}
               disabled={commands.length === 0}
               style={{
-                flex: 1, padding: '5px 0', fontSize: 10, borderRadius: 3,
-                background: clearPending ? 'rgba(248,81,73,0.15)' : 'rgba(0,255,65,0.04)',
-                border: `1px solid ${clearPending ? 'rgba(248,81,73,0.4)' : 'rgba(0,255,65,0.12)'}`,
-                color: clearPending ? '#f85149' : 'rgba(0,255,65,0.4)',
+                width: '100%', padding: '6px 0', fontSize: 12, borderRadius: 6,
+                background: clearPending ? 'rgba(248,81,73,0.15)' : 'rgba(42,51,71,0.2)',
+                border: `1px solid ${clearPending ? 'rgba(248,81,73,0.4)' : 'rgba(42,51,71,0.4)'}`,
+                color: clearPending ? '#f85149' : '#8b949e',
                 opacity: commands.length === 0 ? 0.4 : 1,
                 cursor: commands.length === 0 ? 'default' : 'pointer',
-                fontFamily: 'var(--font-mono)', letterSpacing: '0.05em',
+                fontFamily: 'var(--font-mono)',
+                height: 34,
               }}
             >
-              {clearPending ? 'Confirm' : 'Clear'}
+              {clearPending ? 'Confirm clear?' : 'Clear'}
             </button>
           </div>
         </>

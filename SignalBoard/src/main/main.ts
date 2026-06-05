@@ -296,7 +296,7 @@ function createWindow(): void {
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 16, y: 12 },
     webPreferences: {
-      preload:          path.join(__dirname, '../preload/preload.mjs'),
+      preload:          path.join(__dirname, '../preload/preload.cjs'),
       contextIsolation: true,
       nodeIntegration:  false,
       sandbox:          false,
@@ -677,7 +677,7 @@ app.on('window-all-closed', () => {
   perSourceTimers.forEach(t => clearInterval(t))
   writeStatus(cachedItems, new Date().toISOString())
   emitEvent('SignalBoard', 'app:closed', {})
-  if (process.platform !== 'darwin') app.quit()
+  app.quit()
 })
 
 app.on('activate', () => {

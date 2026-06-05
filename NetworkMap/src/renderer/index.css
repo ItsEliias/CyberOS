@@ -16,12 +16,18 @@
   --elevation-3: 0 12px 40px rgba(0,0,0,.6), 0 4px 12px rgba(0,0,0,.45);
   --border-subtle: rgba(42,51,71,0.35); --border-default: rgba(42,51,71,0.75);
   --border-glass: rgba(255,255,255,0.055);
-  --text-primary: #e6edf3; --text-secondary: #8b949e; --text-muted: #484f58;
+  --text-primary: #e2e8f0; --text-secondary: #8b949e; --text-muted: #4a5568;
   --sev-critical: #f85149; --sev-high: #ff8c42; --sev-medium: #d29922; --sev-low: #4a9eff; --sev-info: #8b949e;
   --state-online: #3fb950; --state-offline: #484f58; --state-blocked: #f85149;
-  --accent: #ff8c42; --accent-rgb: 255,140,66;
-  --accent-tint: rgba(255,140,66,0.08); --accent-tint2: rgba(255,140,66,0.15);
-  --accent-glow: rgba(255,140,66,0.28); --accent-border: rgba(255,140,66,0.30);
+
+  /* Per-app theme vars — can be overridden by JS via setProperty */
+  --app-accent: #d29922;
+  --app-bg: #0a0a0f;
+  --app-text: #e2e8f0;
+
+  --accent: var(--app-accent); --accent-rgb: 210,153,34;
+  --accent-tint: rgba(210,153,34,0.08); --accent-tint2: rgba(210,153,34,0.15);
+  --accent-glow: rgba(210,153,34,0.28); --accent-border: rgba(210,153,34,0.30);
   --font-display: 'Geist Sans', 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
   --radius-xs: 4px; --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px;
@@ -29,10 +35,10 @@
   --ease: cubic-bezier(0.2,0.8,0.2,1);
 
   /* Legacy compat */
-  --bg:         #07080f;
+  --bg:         var(--app-bg);
   --panel:      #0d0e18;
   --border:     rgba(42,51,71,0.75);
-  --text:       #e6edf3;
+  --text:       var(--app-text);
   --text-dim:   #8b949e;
   --success:    #3fb950;
   --error:      #f85149;
