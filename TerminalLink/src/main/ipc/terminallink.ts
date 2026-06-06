@@ -378,18 +378,27 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
   });
 
   // ── Vault: save text note ─────────────────────────────────────────────────
+  // Sanitize the folder segment and confirm the final path stays under the
+  // vault root. Without this a renderer can pass folder='../../../.ssh'
+  // and we'd write content outside ~/Documents/CyberOS-Vault.
   ipcMain.handle('terminallink:vault:save-text', async (_evt, {
     title, content, folder,
   }: { title: string; content: string; folder?: string }) => {
     try {
       const cfg = readConfig();
       const activeLab = ((cfg.shared_context as Record<string, unknown>)?.activeLab as string) ?? 'Captures';
-      const base = path.join(
-        os.homedir(), 'Documents', 'CyberOS-Vault', 'TerminalLink',
-        folder || activeLab
-      );
+      const sanitizeSegment = (s: string): string =>
+        s.replace(/[^a-zA-Z0-9_\- ]/g, '_').trim() || 'Captures';
+      const baseRoot  = path.join(os.homedir(), 'Documents', 'CyberOS-Vault', 'TerminalLink');
+      const base      = path.join(baseRoot, sanitizeSegment(folder || activeLab));
+      const resolvedBase = path.resolve(base);
+      const resolvedRoot = path.resolve(baseRoot);
+      const prefix = resolvedRoot.endsWith(path.sep) ? resolvedRoot : resolvedRoot + path.sep;
+      if (!resolvedBase.startsWith(prefix) && resolvedBase !== resolvedRoot) {
+        return { success: false, path: '' };
+      }
       fs.mkdirSync(base, { recursive: true });
-      const safe = (title || 'note').replace(/[^a-zA-Z0-9_\- ]/g, '_').trim();
+      const safe = (title || 'note').replace(/[^a-zA-Z0-9_\- ]/g, '_').trim() || 'note';
       const filePath = path.join(base, `${safe}-${Date.now()}.txt`);
       fs.writeFileSync(filePath, content, 'utf8');
       emitEcosystemEvent('terminallink:vault:saved', { path: filePath, title });
@@ -400,13 +409,23 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
   });
 
   // ── Recording: save ───────────────────────────────────────────────────────
+  // sessionId becomes the filename — must not be allowed to escape the
+  // recordings dir via "../" or contain NUL/slashes.
   ipcMain.handle('terminallink:recording:save', async (_evt, {
     sessionId, data,
   }: { sessionId: string; data: unknown }) => {
     try {
+      if (typeof sessionId !== 'string' || !sessionId) return { success: false };
+      // Strict allow-list — UUIDs / nanoids / timestamps all fit this.
+      if (!/^[a-zA-Z0-9_\-]{1,64}$/.test(sessionId)) return { success: false };
       const dir = path.join(SESSIONS_DIR, 'recordings');
       fs.mkdirSync(dir, { recursive: true });
       const filePath = path.join(dir, `${sessionId}.cast`);
+      // Defence-in-depth: ensure the resolved path is still under dir.
+      const resolved = path.resolve(filePath);
+      const resolvedDir = path.resolve(dir);
+      const sep = resolvedDir.endsWith(path.sep) ? resolvedDir : resolvedDir + path.sep;
+      if (!resolved.startsWith(sep)) return { success: false };
       fs.writeFileSync(filePath, JSON.stringify(data), 'utf8');
       return { success: true, path: filePath };
     } catch (e) {
