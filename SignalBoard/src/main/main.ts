@@ -455,6 +455,7 @@ ipcMain.handle('feeds:refresh-source', async (_e, id: string) => {
 })
 
 ipcMain.handle('feeds:test-source', async (_e, url: string) => {
+  if (!isSafeFeedUrl(url)) return { ok: false, error: 'Only http(s) URLs are supported.' }
   try {
     const raw   = await fetchUrlRaw(url)
     const count = (raw.match(/<item/g) ?? raw.match(/<entry/g) ?? []).length
