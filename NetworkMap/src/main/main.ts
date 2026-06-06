@@ -317,16 +317,15 @@ ipcMain.handle('app:version', () => APP_VERSION)
 // less trusted than main, and a malformed IPC payload (or a future XSS via
 // an imported nmap XML field rendered as a link) could shell-execute
 // arbitrary URI handlers via custom schemes (x-apple-*, vscode://, etc.).
-// Allow only the schemes the app actually uses: http(s) for external links,
-// file: for the bundled docs path, and mailto:. Bare absolute paths to .md
-// files are also allowed (OnboardingModal opens a docs path directly).
+// Only network-routable schemes are allowed: http(s) for external links
+// and mailto:. The previous `.md`-path / `file:` bypasses (intended for a
+// hardcoded developer docs path) let a compromised renderer point at any
+// local file (`file:///etc/passwd` → opens in default text editor).
 ipcMain.handle('open-external', (_e, url: string) => {
   if (typeof url !== 'string' || !url) return
-  // Bare absolute path to a markdown docs file — OnboardingModal does this.
-  if (url.startsWith('/') && url.endsWith('.md')) { shell.openExternal(url); return }
   try {
     const proto = new URL(url).protocol
-    if (proto !== 'http:' && proto !== 'https:' && proto !== 'file:' && proto !== 'mailto:') return
+    if (proto !== 'http:' && proto !== 'https:' && proto !== 'mailto:') return
     shell.openExternal(url)
   } catch { /* invalid URL — silently drop */ }
 })
