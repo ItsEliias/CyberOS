@@ -372,7 +372,8 @@ export function registerCredVaultHandlers(): void {
     return { display: rk.display }
   })
 
-  ipcMain.handle('vault:recovery-verify', (_e, input: string): { ok: boolean } => {
+  ipcMain.handle('vault:recovery-verify', (_e, input: unknown): { ok: boolean } => {
+    if (typeof input !== 'string' || input.length === 0) return { ok: false }
     const r = readPrefs().recovery
     if (!r) return { ok: false }
     try { return { ok: verifyRecoveryKey(input, r.hashHex, r.saltHex) } }
@@ -385,8 +386,11 @@ export function registerCredVaultHandlers(): void {
     return refreshSession(autoLockMs ?? 0)
   })
 
-  ipcMain.handle('vault:change-password', (_e, currentPassword: string, newPassword: string): UnlockResult => {
+  ipcMain.handle('vault:change-password', (_e, currentPassword: unknown, newPassword: unknown): UnlockResult => {
     if (!hasKey()) return { ok: false, error: 'Vault is locked' }
+    if (typeof currentPassword !== 'string' || typeof newPassword !== 'string') {
+      return { ok: false, error: 'Passwords must be strings' }
+    }
     if (newPassword.length < 8) return { ok: false, error: 'New password must be at least 8 characters' }
     const plaintext = decryptVaultWithPassword(currentPassword)
     if (plaintext === null) return { ok: false, error: 'Current password is incorrect' }
@@ -426,7 +430,10 @@ export function registerCredVaultHandlers(): void {
   // Enable Touch ID for an existing password. Verifies the password decrypts
   // the vault, prompts Touch ID for confirmation, then stores the password
   // encrypted via Electron safeStorage (backed by the macOS Keychain).
-  ipcMain.handle('vault:touch-id-enable', async (_e, password: string): Promise<{ ok: boolean; error?: string }> => {
+  ipcMain.handle('vault:touch-id-enable', async (_e, password: unknown): Promise<{ ok: boolean; error?: string }> => {
+    if (typeof password !== 'string' || password.length === 0) {
+      return { ok: false, error: 'Password required' }
+    }
     try {
       if (!saltExists()) return { ok: false, error: 'Vault not initialised' }
       if (decryptVaultWithPassword(password) === null) {
