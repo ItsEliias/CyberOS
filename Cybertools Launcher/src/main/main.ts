@@ -504,7 +504,11 @@ function refreshContextMenu(): void {
       label: 'Run VaultCore Update Now',
       enabled: installedKey('vaultscraper'),
       click: () => {
-        writeTrigger({ action: 'update_now' });
+        // Use the standard pending-actions queue VaultCore already handles so
+        // the action actually runs, instead of the legacy vaultscraper_trigger
+        // field that no client reads.
+        writePendingAction('vaultscraper', 'run-all-scrapes');
+        launchApp('vaultscraper');
         addActivityEntry({ type: 'launcher', text: 'VaultCore update triggered from tray menu' });
       }
     },
@@ -1375,7 +1379,14 @@ function setupIPC(): void {
   );
 
   ipcMain.handle('launch-app',     (_e, appKey: string)  => launchApp(appKey));
-  ipcMain.handle('update-now',     () => { writeTrigger({ action: 'update_now' }); addActivityEntry({ type: 'launcher', text: 'VaultCore update triggered' }); return true; });
+  ipcMain.handle('update-now',     () => {
+    // Mirrors the tray-menu path: use the pending-actions queue so VaultCore
+    // actually receives the request.
+    writePendingAction('vaultscraper', 'run-all-scrapes');
+    launchApp('vaultscraper');
+    addActivityEntry({ type: 'launcher', text: 'VaultCore update triggered' });
+    return true;
+  });
   ipcMain.handle('get-vpn-status', () => vpnStatus);
   ipcMain.handle('hide-panel',     () => { hidePanel(); return true; });
   ipcMain.on('hide-after-splash',  () => hidePanel());
