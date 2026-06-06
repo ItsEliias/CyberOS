@@ -410,9 +410,27 @@ ipcMain.handle('retry-failed',  async (_, config) => {
 });
 
 ipcMain.handle('get-sources',      ()        => sourcelibrary.getAllSources());
-ipcMain.handle('add-source',       (_, s)    => { const a = sourcelibrary.addSource(s); scheduleSource(a); return a; });
-ipcMain.handle('update-source',    (_, id, s) => { const u = sourcelibrary.updateSource(id, s); scheduleSource(u); return u; });
-ipcMain.handle('delete-source',    (_, id)   => { if (scheduledJobs[id]) { scheduledJobs[id].destroy(); delete scheduledJobs[id]; } return sourcelibrary.deleteSource(id); });
+ipcMain.handle('add-source',       (_, s)    => {
+  // sourcelibrary.addSource spreads `s` into the new record. Null / non-object
+  // payload used to throw 'Cannot convert undefined to object'. Validate at
+  // the boundary so the renderer gets a clean error instead of a crash.
+  if (s === null || typeof s !== 'object' || Array.isArray(s)) {
+    return { error: 'Invalid source payload' };
+  }
+  const a = sourcelibrary.addSource(s); scheduleSource(a); return a;
+});
+ipcMain.handle('update-source',    (_, id, s) => {
+  if (typeof id !== 'string' || id.length === 0) return { error: 'Invalid id' };
+  if (s === null || typeof s !== 'object' || Array.isArray(s)) {
+    return { error: 'Invalid source payload' };
+  }
+  const u = sourcelibrary.updateSource(id, s); scheduleSource(u); return u;
+});
+ipcMain.handle('delete-source',    (_, id)   => {
+  if (typeof id !== 'string' || id.length === 0) return false;
+  if (scheduledJobs[id]) { scheduledJobs[id].destroy(); delete scheduledJobs[id]; }
+  return sourcelibrary.deleteSource(id);
+});
 ipcMain.handle('get-source-health',()        => sourcelibrary.getHealthSummary(launcher.getVaultPath()));
 ipcMain.handle('scrape-source-now',async (_, id) => {
   const source = sourcelibrary.getSourceById(id);
