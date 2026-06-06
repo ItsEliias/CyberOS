@@ -11,6 +11,18 @@ import { consumePendingAction, installPendingActionWatcher } from './pendingActi
 
 const APP_KEY = 'vaultscraper';
 
+// Don't let an unhandled rejection (e.g. a forgotten .catch() in an IPC
+// chain, or the Playwright child rejecting late) take down the main
+// process mid-scrape. Log + swallow — every IPC handler is expected to
+// catch its own errors, so anything reaching here is a programmer bug
+// worth investigating but not worth crashing the whole app for.
+process.on('unhandledRejection', (reason) => {
+  console.error('[VaultCore] unhandled rejection:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[VaultCore] uncaught exception:', err);
+});
+
 const __dirname  = path.dirname(fileURLToPath(import.meta.url));
 const _require   = createRequire(import.meta.url);
 
