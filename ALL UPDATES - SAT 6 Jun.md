@@ -424,6 +424,111 @@ merge via PR or grant a permission rule.
 
 ---
 
+## Autonomous improvement loop — segment 4 (Sun 7 Jun, 76 commits)
+
+User asked for "every line of code" coverage via a multi-agent swarm.
+First swarm (6 Sonnet workers) hit the account's weekly Sonnet limit
+on first API call — zero work done. Second swarm (6 Opus workers)
+shipped meaningfully before hitting Opus's separate weekly limit;
+solo-on-Opus also continued running between agent rounds.
+
+Total at end of segment: **117 commits ahead of `main`** across the
+two autonomous loops + the swarm. PR opened (#2) so the whole batch
+can be reviewed and merged together.
+
+### Real bugs the swarm caught
+
+- **NetLab "streak" card was a hardcoded lie** — now computes the
+  actual day-streak from lab progress.
+- **PlaybookStudio dropped quick-note edits on step switch** — autosave
+  raced with the navigation. Persisted before nav now.
+- **ReconDesk replaced its in-memory state with external data.json
+  pushes** instead of merging — wiped concurrent edits when SignalBoard
+  or NetworkMap pushed a target.
+- **ReportForge editor with no active report** rendered a partially-
+  initialised view; now bounces to the library.
+- **PlaybookStudio `elapsed()` / ETA calc** could output NaN or Infinity
+  for unfinished runs; guarded.
+- **NetLab per-keystroke `progress.json` writes** debounced.
+- **SignalBoard `pollIntervalMinutes`** could be set to 0.0001 and busy-
+  loop a feed at 6 ms; clamped to [1 min, 24 h].
+- **SignalBoard `fetchUrl` redirect loop** — no depth cap, no scheme
+  revalidation per hop, broken relative-URL handling. Now bounded,
+  validated, normalised.
+- **SignalBoard relevance scorer** crashed the entire refresh cycle
+  when another app wrote a non-string into shared `shared_context`.
+  Coerced at the boundary.
+- **TermLink rc-file install/uninstall** non-atomic — a crash mid-write
+  would leave a torn `.zshrc` / `.bashrc`. Atomic now.
+
+### Security hardenings the swarm added
+
+- **URL scheme allowlists** in every `shell.openExternal` IPC across
+  CredVault, VaultCore, GhostVault, NetworkMap, SignalBoard. Blocks
+  `javascript:`, `file:`, `data:`, custom URI handlers.
+- **Path traversal blocks** added to:
+  - NetworkMap save/load/delete-graph (validate `graph.id` regex).
+  - SignalBoard `saveItemToVault` (resolved-path containment).
+  - GhostVault `delete-note`, `merge-notes`, `split-note`,
+    `analyse-note-headings` (vault-root containment via the same
+    pattern used for read/write-note).
+  - VaultCore `list-vault-notes`.
+  - TermLink `ghostvault:save` output paths.
+- **TermLink PTY hardening**: shell path allowlisted; `DYLD_*` and
+  `LD_PRELOAD` env stripped at spawn.
+- **TermLink `terminallink:config:write`** — only known keys accepted;
+  blocks proto pollution + arbitrary shared-config writes.
+- **CredVault `prefs:set` allowlisted** to `sortOrder` only. The old
+  handler let the renderer overwrite `totp` (disabling 2FA) or
+  `recovery` (wiping the recovery hash) via the unrestricted key
+  parameter.
+- **CredVault `open-external` scheme allowlist** (http/https only).
+- **VaultCore `export-backup` / `import-backup`** validate password
+  type at the boundary (was crashing inside scryptSync).
+- **NetworkMap `recondesk:push-node`** payload validation (block
+  null deref + cap port array iteration at 65536).
+- **SignalBoard `cve:lookup`** validates `CVE-YYYY-NNNN+` format before
+  caching or hitting the network (blocks cache pollution).
+- **SignalBoard CSV export** RFC-4180 quoting + formula-injection
+  guard (`=`, `+`, `-`, `@`, tab, CR prefix neutralised).
+- **Launcher backup-restore tar-slip** — `tar -xzf` was extracting
+  user-supplied archives into `$HOME` with no path validation. A
+  crafted archive could overwrite `~/.ssh/authorized_keys`. Now lists
+  contents first and rejects absolute paths, `..` segments, and
+  anything resolving outside `$HOME`.
+
+### Atomic-write sweep — completed across all 11 apps
+
+Every per-app pendingActions.ts, every shared-config write, every
+ecosystem-bus write, every persistence file (sessions, history,
+bookmarks, sources, cache, settings, snippets, knowledgebase, lab
+reviews, etc.) now uses tmp+rename. A crash mid-write can no longer
+leave a half-formed JSON file that fails to parse on next launch.
+
+### UX adds
+
+- **ReconDesk Cmd+N** opens the New Target modal.
+- **ReportForge Cmd+N** opens the new-report wizard from the library;
+  **Cmd+S** saves the active report from editor view; autosave skips
+  while SSO soft-lock is active.
+- **NetLab** — "Mark Step Complete" button for free-form lab steps;
+  deletable custom snippets.
+- **PlaybookStudio** — two-click confirm for step delete.
+
+### Process notes
+
+- Both Sonnet and Opus weekly quotas were exhausted by end of segment
+  (resets Jun 11 at 4 am Australia/Hobart).
+- An intermittent "ghost edit" was observed where `git status` showed
+  files modified but `git diff` returned nothing a moment later —
+  appears to be a background hook touching files momentarily.
+  Workaround: commit immediately after each Edit. Doesn't affect the
+  final tree.
+- All commits are atomic, single-line, easy to revert individually.
+- PR #2 covers the full 117-commit run.
+
+---
+
 ## Autonomous improvement loop — segment 3 (Sun 7 Jun, 17 iterations)
 
 User asked for a 6-way Sonnet swarm; all six died on the first API call
