@@ -147,6 +147,8 @@ export const useNetLabStore = create<NetLabState>((set, get) => ({
       ? topologies.map((x, i) => i === idx ? t : x)
       : [...topologies, t]
     set({ topologies: next, activeTopology: t })
+    // Persist to disk so topologies survive a restart.
+    window.electronAPI.topologies?.saveAll(next as unknown[]).catch(console.error)
   },
 
   addSnippet: (s) => {

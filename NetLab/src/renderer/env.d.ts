@@ -19,6 +19,10 @@ declare global {
         getCustom(): Promise<CommandSnippet[]>
         saveCustom(snippets: CommandSnippet[]): Promise<boolean>
       }
+      topologies: {
+        getAll(): Promise<unknown[]>
+        saveAll(topologies: unknown[]): Promise<boolean>
+      }
       shell: {
         openExternal(url: string): Promise<void>
       }

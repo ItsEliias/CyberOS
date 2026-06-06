@@ -24,6 +24,7 @@ export default function App() {
   const setLabs       = useNetLabStore(s => s.setLabs)
   const setProgress   = useNetLabStore(s => s.setProgress)
   const setSnippets   = useNetLabStore(s => s.setSnippets)
+  const setTopologies = useNetLabStore(s => s.setTopologies)
 
   const [searchOpen,   setSearchOpen]   = useState(false)
   const [paletteOpen,  setPaletteOpen]  = useState(false)
@@ -89,7 +90,14 @@ export default function App() {
         setSnippets(merged)
       }
     }).catch(console.error)
-  }, [setLabs, setProgress, setSnippets])
+
+    // Load saved network topologies.
+    window.electronAPI.topologies?.getAll().then(saved => {
+      if (Array.isArray(saved) && saved.length > 0) {
+        setTopologies(saved as Parameters<typeof setTopologies>[0])
+      }
+    }).catch(console.error)
+  }, [setLabs, setProgress, setSnippets, setTopologies])
 
   return (
     <div

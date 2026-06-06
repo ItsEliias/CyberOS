@@ -20,6 +20,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getCustom:  (): Promise<unknown[]>                          => ipcRenderer.invoke('snippets:getCustom'),
     saveCustom: (snippets: unknown[]): Promise<boolean>         => ipcRenderer.invoke('snippets:saveCustom', snippets),
   },
+  topologies: {
+    getAll:     (): Promise<unknown[]>                          => ipcRenderer.invoke('topologies:getAll'),
+    saveAll:    (topologies: unknown[]): Promise<boolean>       => ipcRenderer.invoke('topologies:saveAll', topologies),
+  },
   shell: {
     openExternal: (url: string): Promise<void>                  => ipcRenderer.invoke('shell:openExternal', url),
   },

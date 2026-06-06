@@ -19,7 +19,9 @@ const PROGRESS_FILE = path.join(DATA_DIR, 'progress.json')
 const PREFS_FILE  = path.join(DATA_DIR, 'netlab-prefs.json')
 // Custom user snippets. Only persists the user-added ones; the renderer
 // merges these with the built-in seed list on load.
-const SNIPPETS_FILE = path.join(DATA_DIR, 'snippets.json')
+const SNIPPETS_FILE   = path.join(DATA_DIR, 'snippets.json')
+// Saved network topologies — diagrams the user has built and named.
+const TOPOLOGIES_FILE = path.join(DATA_DIR, 'topologies.json')
 
 // ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -156,6 +158,23 @@ ipcMain.handle('snippets:saveCustom', (_e, snippets: unknown): boolean => {
   // can't drop a multi-MB blob into the data dir.
   if (snippets.length > 500) return false
   writeJson(SNIPPETS_FILE, snippets)
+  return true
+})
+
+// ─── IPC — Topologies ─────────────────────────────────────────────────────────
+// Network topology diagrams used to live only in zustand state and were lost
+// on each restart. Persist them to disk so the user's work survives.
+
+ipcMain.handle('topologies:getAll', (): unknown[] => {
+  return readJson<unknown[]>(TOPOLOGIES_FILE, [])
+})
+
+ipcMain.handle('topologies:saveAll', (_e, topologies: unknown): boolean => {
+  if (!Array.isArray(topologies)) return false
+  // Each topology can be moderately large (nodes + edges); cap at 100 to
+  // avoid runaway growth. A normal user has 1–10 topologies.
+  if (topologies.length > 100) return false
+  writeJson(TOPOLOGIES_FILE, topologies)
   return true
 })
 
