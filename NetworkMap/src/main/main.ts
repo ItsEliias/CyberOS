@@ -33,7 +33,11 @@ function writeCyberToolsConfig(patch: Record<string, unknown>): void {
   try {
     const existing = readCyberToolsConfig()
     const merged = { ...existing, ...patch }
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(merged, null, 2), 'utf8')
+    // Atomic: every CyberTools app polls this file. A crash mid-write would
+    // leave a truncated file that crashes the JSON.parse in every reader.
+    const tmp = `${CYBERTOOLS_CONFIG}.${process.pid}.${Date.now()}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(merged, null, 2), 'utf8')
+    fs.renameSync(tmp, CYBERTOOLS_CONFIG)
   } catch (e) {
     console.warn('[NetworkMap] config write failed:', (e as Error).message)
   }
