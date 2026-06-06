@@ -802,7 +802,22 @@ ipcMain.handle('ghostvault:config:read', () => {
   } catch { return {}; }
 });
 ipcMain.handle('ghostvault:event:emit', (_, event: { appName: string; eventType: string; data: Record<string, unknown> }) => {
-  ecosystemBus.emitEvent(event.appName || 'GhostVault', event.eventType, event.data || {});
+  // appName is ALWAYS overridden to 'GhostVault' — never trust the renderer
+  // to identify itself when the process boundary already tells us. Bound
+  // eventType + data to prevent DoS against polling sibling apps.
+  if (!event || typeof event !== 'object') return false;
+  const { eventType, data } = event;
+  if (typeof eventType !== 'string' || eventType.length === 0 || eventType.length > 128) return false;
+  if (!/^[a-zA-Z0-9_:.\-]+$/.test(eventType)) return false;
+  let safeData: Record<string, unknown> = {};
+  if (data !== undefined && data !== null) {
+    if (typeof data !== 'object' || Array.isArray(data)) return false;
+    try {
+      if (JSON.stringify(data).length > 16 * 1024) return false; // 16 KB cap
+    } catch { return false; }
+    safeData = data;
+  }
+  ecosystemBus.emitEvent('GhostVault', eventType, safeData);
   return true;
 });
 ipcMain.handle('ghostvault:clipboard:read', () => {
