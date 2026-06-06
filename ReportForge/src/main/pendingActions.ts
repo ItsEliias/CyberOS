@@ -18,6 +18,14 @@ export interface ConsumedAction {
   action: string;
 }
 
+// Atomic write — tmp + rename so a crash mid-write can't leave a
+// half-written cybertools-config.json that breaks every cooperating app.
+function writeConfigAtomic(cfg: unknown): void {
+  const tmp = `${CYBERTOOLS_CONFIG}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(cfg, null, 2), 'utf8');
+  fs.renameSync(tmp, CYBERTOOLS_CONFIG);
+}
+
 export function consumePendingAction(appKey: string): ConsumedAction | null {
   try {
     if (!fs.existsSync(CYBERTOOLS_CONFIG)) return null;
@@ -51,15 +59,15 @@ export function consumePendingAction(appKey: string): ConsumedAction | null {
       const age = Date.now() - new Date(entry.requestedAt).getTime()
       if (Number.isFinite(age) && age > STALE_MS) {
         queue.splice(idx, 1)
-        cfg.pending_actions = list
-        try { fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(cfg, null, 2), 'utf8') } catch {}
+        shared.pending_actions = queue
+        try { writeConfigAtomic(shared) } catch {}
         return null
       }
     }
     queue.splice(idx, 1);
     shared.pending_actions = queue;
 
-    try { fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8'); }
+    try { writeConfigAtomic(shared); }
     catch { /* if we can't write it back, still fall through and fire once */ }
 
     return { action: entry.action };

@@ -200,8 +200,10 @@ export function registerCredVaultHandlers(): void {
 
   ipcMain.handle('vault:needs-setup', () => !saltExists() || !vaultExists())
 
-  ipcMain.handle('vault:setup', (_e, password: string, autoLockMs?: number): UnlockResult => {
+  ipcMain.handle('vault:setup', (_e, password: unknown, autoLockMs?: unknown): UnlockResult => {
+    if (typeof password !== 'string') return { ok: false, error: 'Password must be a string' }
     if (password.length < 8) return { ok: false, error: 'Password must be at least 8 characters' }
+    const lockMs = typeof autoLockMs === 'number' ? autoLockMs : 0
     try {
       ensureAppDir()
       deriveAndStoreKeyWithNewSalt(password)
@@ -210,11 +212,11 @@ export function registerCredVaultHandlers(): void {
       writeCredVaultStatus(false, 0)
       // First-time setup → begin SSO session immediately so soft-locked apps
       // (GhostVault, VaultCore) recognise the new vault as unlocked.
-      beginSession(autoLockMs ?? 0)
+      beginSession(lockMs)
       // Arm the in-memory auto-lock timer so the vault key is cleared after
       // the configured idle window. Without this the freshly-set-up vault
       // would stay decrypted in CredVault's main process indefinitely.
-      resetLockTimer(autoLockMs ?? 0)
+      resetLockTimer(lockMs)
       emitEvent('CredVault', 'vault:unlocked', {})
       return { ok: true }
     } catch (e) {
@@ -222,7 +224,9 @@ export function registerCredVaultHandlers(): void {
     }
   })
 
-  ipcMain.handle('vault:unlock', (_e, password: string, autoLockMs?: number): UnlockResult => {
+  ipcMain.handle('vault:unlock', (_e, password: unknown, autoLockMs?: unknown): UnlockResult => {
+    if (typeof password !== 'string') return { ok: false, error: 'Password must be a string' }
+    const lockMs = typeof autoLockMs === 'number' ? autoLockMs : 0
     const now = Date.now()
     if (now < lockedUntil) {
       const secs = Math.ceil((lockedUntil - now) / 1000)
@@ -254,12 +258,12 @@ export function registerCredVaultHandlers(): void {
     // valid TOTP code via `vault:totp-verify`. Otherwise begin the SSO session
     // immediately so other apps in the ecosystem can pick up the unlock.
     if (!getTotpEnabled()) {
-      beginSession(autoLockMs ?? 0)
+      beginSession(lockMs)
     }
 
     writeCredVaultStatus(false, credCount())
     emitEvent('CredVault', 'vault:unlocked', {})
-    resetLockTimer(autoLockMs ?? 0)
+    resetLockTimer(lockMs)
     return { ok: true, twoFactorRequired: getTotpEnabled() }
   })
 

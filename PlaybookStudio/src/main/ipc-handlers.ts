@@ -26,9 +26,27 @@ export interface AppRefs {
 
 const MAX_VERSIONS = 10
 
-const REPORT_FORGE_DIR = path.join(
-  os.homedir(), 'Library', 'Application Support', 'ReportForge', 'pending'
+const REPORT_FORGE_APP_DIR = path.join(
+  os.homedir(), 'Library', 'Application Support', 'ReportForge'
 )
+const REPORT_FORGE_DIR = path.join(REPORT_FORGE_APP_DIR, 'pending')
+
+// ReportForge is considered "installed" when its userData dir exists. Electron
+// creates this on first launch, so absence means the user has never run it —
+// in which case dropping a report into ./pending is wasted work (ReportForge
+// will never come along to pick it up). Cheap stat check, no IPC.
+function isReportForgeInstalled(): boolean {
+  try { return fs.existsSync(REPORT_FORGE_APP_DIR) } catch { return false }
+}
+
+// Atomic write — sibling .tmp + rename so a crash or concurrent reader can
+// never see a half-written JSON file. Throws on failure; caller decides
+// whether to swallow.
+function atomicWriteJsonFile(filePath: string, data: unknown): void {
+  const tmp = `${filePath}.tmp`
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8')
+  fs.renameSync(tmp, filePath)
+}
 
 // ─── Playbook handlers ────────────────────────────────────────────────────────
 
