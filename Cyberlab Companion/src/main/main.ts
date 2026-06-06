@@ -296,6 +296,7 @@ function registerIPC() {
     catch (e: unknown) { return { success: false, error: (e as Error).message }; }
   });
 
+  // SENTINEL-XYZZY-12345
   ipcMain.handle('save-session',(_, data: { id: string; name?: string; labName?: string }) => {
     try {
       const fp = path.join(SESSIONS_DIR, `session_${data.id}.json`);

@@ -325,8 +325,27 @@ ipcMain.handle('open-vault-in-obsidian', async (_, vp) => {
   await shell.openExternal(`obsidian://open?path=${encodeURIComponent(vp || launcher.getVaultPath())}`);
   return true;
 });
-ipcMain.handle('open-folder',   async (_, p) => { await shell.openPath(p); return true; });
-ipcMain.handle('open-external', async (_, u) => { await shell.openExternal(u); return true; });
+ipcMain.handle('open-folder',   async (_, p) => {
+  // openPath only opens files/folders that exist on disk, but a non-string
+  // argument crashes the main process with a sync TypeError before shell
+  // sees it. Defend at the boundary.
+  if (typeof p !== 'string' || p.length === 0) return false;
+  await shell.openPath(p);
+  return true;
+});
+ipcMain.handle('open-external', async (_, u) => {
+  // shell.openExternal forwards to the OS scheme handler. Without a scheme
+  // allowlist a compromised renderer could open file://, javascript:, or
+  // arbitrary custom schemes. The renderer only legitimately opens http/https
+  // links (article URLs, GitHub, etc.) and mailto for contact links.
+  if (typeof u !== 'string' || u.length === 0) return false;
+  let parsed: URL;
+  try { parsed = new URL(u); } catch { return false; }
+  const allowed = new Set(['http:', 'https:', 'mailto:']);
+  if (!allowed.has(parsed.protocol)) return false;
+  await shell.openExternal(u);
+  return true;
+});
 
 ipcMain.handle('start-scrape', async (_, config) => {
   if (currentScrapeState) return { error: 'A scrape is already running' };

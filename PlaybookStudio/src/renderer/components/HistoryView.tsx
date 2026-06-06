@@ -229,6 +229,35 @@ export default function HistoryView() {
   const [resultFilter,  setResultFilter]   = useState<ResultFilter>('all')
   const [dateFrom,      setDateFrom]       = useState('')
   const [dateTo,        setDateTo]         = useState('')
+  const [exportToast,   setExportToast]    = useState<{ kind: 'ok' | 'warn' | 'err'; msg: string } | null>(null)
+
+  // Awaits the IPC, reports outcome inline. Without this, clicking Export
+  // Report fired the IPC and silently returned — user never knew whether
+  // it succeeded, whether ReportForge was installed, or whether the file
+  // got dropped in the pending queue. The main handler now returns
+  // reportForgeAvailable + pendingPath; surface both.
+  async function handleExportReport(run: PlaybookRun) {
+    setExportToast({ kind: 'ok', msg: 'Exporting…' })
+    const res = await window.electronAPI.exportRunReport(run.id)
+      .catch((e: unknown) => ({ ok: false, error: (e as Error).message }))
+    if (!res.ok) {
+      setExportToast({ kind: 'err', msg: `Export failed: ${res.error ?? 'unknown error'}` })
+    } else {
+      // reportForgeAvailable + pendingPath are present on the new response
+      // shape but typed loosely on the renderer side — read defensively.
+      const r       = res as { reportForgeAvailable?: boolean; pendingPath?: string | null }
+      const hasRf   = r.reportForgeAvailable === true
+      const queued  = !!r.pendingPath
+      if (hasRf && queued) {
+        setExportToast({ kind: 'ok', msg: 'Sent to ReportForge pending queue' })
+      } else if (hasRf) {
+        setExportToast({ kind: 'warn', msg: 'ReportForge install detected but queue write failed' })
+      } else {
+        setExportToast({ kind: 'warn', msg: 'ReportForge not installed — save dialog used instead' })
+      }
+    }
+    setTimeout(() => setExportToast(null), 3000)
+  }
 
   function handleRowClick(run: PlaybookRun, e: React.MouseEvent) {
     if (e.shiftKey) {
@@ -281,13 +310,34 @@ export default function HistoryView() {
             <button onClick={() => { setActiveRun(selected); setView('run') }} className="text-xs px-3 py-1 rounded font-medium" style={{ background: 'var(--warning)', color: '#000' }}>Resume</button>
           )}
           {selected.status === 'completed' && (
-            <button onClick={() => window.electronAPI.exportRunReport(selected.id)} className="text-xs px-3 py-1 rounded font-medium"
+            <button onClick={() => handleExportReport(selected)} className="text-xs px-3 py-1 rounded font-medium"
               style={{ background: 'rgba(63,185,80,0.15)', color: 'var(--success)', border: '1px solid rgba(63,185,80,0.3)' }}>
               Export Report
             </button>
           )}
         </div>
         <div className="flex-1 overflow-y-auto p-4"><RunDetail run={selected} /></div>
+        {exportToast && (
+          <div
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs px-3 py-1.5 rounded"
+            style={{
+              background: exportToast.kind === 'ok' ? 'rgba(63,185,80,0.18)'
+                : exportToast.kind === 'warn' ? 'rgba(210,153,34,0.18)'
+                : 'rgba(248,81,73,0.18)',
+              color: exportToast.kind === 'ok' ? 'var(--success)'
+                : exportToast.kind === 'warn' ? 'var(--warning)'
+                : 'var(--error)',
+              border: `1px solid ${
+                exportToast.kind === 'ok' ? 'rgba(63,185,80,0.35)'
+                : exportToast.kind === 'warn' ? 'rgba(210,153,34,0.35)'
+                : 'rgba(248,81,73,0.35)'
+              }`,
+              position: 'fixed', bottom: 24, zIndex: 50,
+            }}
+          >
+            {exportToast.msg}
+          </div>
+        )}
       </div>
     )
   }
