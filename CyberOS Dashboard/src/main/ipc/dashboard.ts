@@ -142,20 +142,31 @@ export function registerDashboardIPC(): void {
   ipcMain.handle('ecosystem:events', () => readEvents().slice(0, 50))
   ipcMain.handle('ecosystem:eventHistory', () => readEvents())
 
-  ipcMain.handle('app:launch', (_e, execPath: string) => {
-    if (!execPath || !fs.existsSync(execPath)) {
+  ipcMain.handle('app:launch', (_e, execPath: unknown) => {
+    if (typeof execPath !== 'string' || !execPath || !fs.existsSync(execPath)) {
       return { ok: false, error: 'Path not found' }
     }
     try {
       execFile(execPath, [], { detached: true })
       return { ok: true }
     } catch {
-      shell.openPath(execPath)
+      void shell.openPath(execPath)
       return { ok: true }
     }
   })
 
-  ipcMain.handle('shell:open', (_e, url: string) => shell.openExternal(url))
+  ipcMain.handle('shell:open', (_e, url: unknown) => {
+    // Tightened from "open anything" — a compromised renderer could
+    // otherwise open `javascript:`, `file:///etc/passwd`, or any custom
+    // URI handler.
+    if (typeof url !== 'string' || !url) return false
+    try {
+      const proto = new URL(url).protocol
+      if (proto !== 'http:' && proto !== 'https:' && proto !== 'mailto:') return false
+    } catch { return false }
+    void shell.openExternal(url)
+    return true
+  })
 
   ipcMain.handle('window:toggleFullscreen', () => {
     const win = BrowserWindow.getFocusedWindow()
