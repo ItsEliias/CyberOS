@@ -122,9 +122,19 @@ export function saveCache(items: FeedItem[]): void {
 
 // ─── HTTP fetch ───────────────────────────────────────────────────────────────
 
-export function fetchUrl(url: string): Promise<string> {
+// Bound redirect depth — without this, a malicious or misconfigured feed
+// host could redirect indefinitely (each hop opens a new socket + waits
+// for the timeout), holding open file handles and burning memory. Also
+// resolve the Location header against the current URL so relative
+// redirects work, and enforce http(s) only at every hop (a sneaky
+// http→file: redirect would otherwise hit a different code path).
+const MAX_REDIRECTS = 5
+export function fetchUrl(url: string, redirectsLeft: number = MAX_REDIRECTS): Promise<string> {
   return new Promise((resolve, reject) => {
-    const mod = url.startsWith('https') ? https : http
+    let proto: string
+    try { proto = new URL(url).protocol } catch { reject(new Error('invalid url')); return }
+    if (proto !== 'http:' && proto !== 'https:') { reject(new Error(`unsupported scheme ${proto}`)); return }
+    const mod = proto === 'https:' ? https : http
     const req = mod.get(url, {
       headers: {
         'User-Agent': 'SignalBoard/2.0 (CYBERTOOLS; ItsEliias)',
@@ -133,7 +143,10 @@ export function fetchUrl(url: string): Promise<string> {
       timeout: 10_000,
     }, res => {
       if ((res.statusCode === 301 || res.statusCode === 302) && res.headers.location) {
-        fetchUrl(res.headers.location).then(resolve).catch(reject)
+        if (redirectsLeft <= 0) { reject(new Error('too many redirects')); return }
+        // Resolve relative redirects against the current URL.
+        const next = new URL(res.headers.location, url).toString()
+        fetchUrl(next, redirectsLeft - 1).then(resolve).catch(reject)
         return
       }
       if (res.statusCode && res.statusCode >= 400) {
