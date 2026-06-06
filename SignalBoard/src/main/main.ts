@@ -264,7 +264,12 @@ function schedulePerSourceTimers(): void {
   perSourceTimers.clear()
   sources.forEach(source => {
     if (!source.enabled || !source.pollIntervalMinutes) return
-    const ms = source.pollIntervalMinutes * 60 * 1_000
+    // Clamp: a renderer-supplied 0.0001 would be a 6ms polling DoS, and a
+    // negative value would be coerced by Node into a 1ms interval. Enforce
+    // sensible bounds: minimum 1 minute, maximum 24 hours.
+    const minutes = Number(source.pollIntervalMinutes)
+    if (!Number.isFinite(minutes) || minutes < 1) return
+    const ms = Math.min(minutes, 24 * 60) * 60 * 1_000
     const timer = setInterval(async () => {
       push('feeds:refreshing', true)
       const ctx = getRelevanceContext()
