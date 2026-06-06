@@ -26,6 +26,14 @@ let dataWatcher: fs.FSWatcher | null = null
 // saveData() so we don't ping the renderer to re-fetch identical state.
 let suppressDataPushUntil = 0
 
+// Atomic write — tmp + rename so a crash mid-write can't leave a half-written
+// cybertools-config.json that breaks every cooperating CyberOS app.
+function writeSharedConfigAtomic(cfg: unknown): void {
+  const tmp = `${CYBERTOOLS_CONFIG}.tmp`
+  fs.writeFileSync(tmp, JSON.stringify(cfg, null, 2), 'utf8')
+  fs.renameSync(tmp, CYBERTOOLS_CONFIG)
+}
+
 function ensureDataDir(): void {
   const dir = path.dirname(DATA_FILE)
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
@@ -87,7 +95,7 @@ function updateOperatorProfile(updates: Record<string, unknown>): void {
     }
     const existing = (shared.operator_profile as Record<string, unknown>) || {}
     shared.operator_profile = { ...existing, ...updates }
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8')
+    writeSharedConfigAtomic(shared)
   } catch {}
 }
 
@@ -114,7 +122,7 @@ function writeStatus(data: ReconDeskData): void {
       lastUpdated:  new Date().toISOString(),
       updatedBy:    'ReconDesk'
     }
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8')
+    writeSharedConfigAtomic(shared)
   } catch (e) {
     console.warn('[ReconDesk] status write failed:', (e as Error).message)
   }
@@ -210,7 +218,7 @@ ipcMain.handle('recondesk:write-context', (_e, ctx: { activeTarget: string; acti
       ...existingStatus,
       activeTarget: ctx.activeTarget,
     }
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8')
+    writeSharedConfigAtomic(shared)
     return { ok: true }
   } catch (e) {
     console.warn('[ReconDesk] writeContext failed:', (e as Error).message)
@@ -359,7 +367,7 @@ ipcMain.handle('recondesk:open-in-networkmap', (_e, ip: string) => {
       try { shared = JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8')) } catch {}
     }
     shared.networkmap_focus = { ip, requestedAt: new Date().toISOString(), requestedBy: 'ReconDesk' }
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8')
+    writeSharedConfigAtomic(shared)
     emitEvent('ReconDesk', 'networkmap:focus-ip', { ip })
     return { ok: true }
   } catch (e) {
