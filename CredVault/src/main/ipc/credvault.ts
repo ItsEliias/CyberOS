@@ -351,6 +351,13 @@ export function registerCredVaultHandlers(): void {
       saveVault()
       // Issue a fresh SSO token so other apps stay in sync with the new key
       refreshSession(0)
+      // Invalidate any saved Touch ID credential — the stored password now
+      // refers to the old key and would silently fail on next biometric
+      // unlock. The user can re-enable Touch ID with the new password.
+      try {
+        const touchIdFile = path.join(APP_SUPPORT, 'touch-id.enc')
+        if (fs.existsSync(touchIdFile)) fs.unlinkSync(touchIdFile)
+      } catch { /* ignore */ }
       return { ok: true }
     } catch (e) {
       return { ok: false, error: (e as Error).message }
