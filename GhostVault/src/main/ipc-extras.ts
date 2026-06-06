@@ -98,6 +98,19 @@ export function registerExtras(ctx: ConfigAccessors) {
   ipcMain.handle('get-capture-hotkey', () => loadConfig().captureHotkey || DEFAULT_CAPTURE_HOTKEY);
 
   ipcMain.handle('set-capture-hotkey', (_, newKey: string) => {
+    // Require an Electron-style accelerator with at least one modifier
+    // (CommandOrControl, Cmd, Ctrl, Alt, Option, Shift, Super). Without
+    // this, the renderer could register the bare 'A' key as a global
+    // shortcut and swallow every 'A' the user types systemwide.
+    const MOD = /\b(CommandOrControl|CmdOrCtrl|Command|Cmd|Control|Ctrl|Alt|Option|Shift|Super|Meta)\b/i;
+    if (
+      typeof newKey !== 'string' ||
+      newKey.length === 0 ||
+      newKey.length > 64 ||
+      !MOD.test(newKey)
+    ) {
+      return { ok: false, error: 'Hotkey must include at least one modifier (Cmd/Ctrl/Alt/Shift)' };
+    }
     const oldKey = loadConfig().captureHotkey || DEFAULT_CAPTURE_HOTKEY;
     try { globalShortcut.unregister(oldKey); } catch { /* ignore */ }
     const ok = globalShortcut.register(newKey, openCapture);
