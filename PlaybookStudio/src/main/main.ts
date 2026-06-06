@@ -5,6 +5,7 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import os from 'os'
+import { sharedConfigPath } from './platform'
 import { emitEvent } from './ecosystem-bus'
 import { consumePendingAction, installPendingActionWatcher } from './pendingActions'
 import { registerAiHandlers } from './aiHandler'
@@ -15,7 +16,7 @@ const APP_VERSION       = '2.0.0'
 const APP_DATA_DIR      = userDataDir('PlaybookStudio')
 const PLAYBOOKS_FILE    = path.join(APP_DATA_DIR, 'playbooks.json')
 const RUNS_FILE         = path.join(APP_DATA_DIR, 'runs.json')
-const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')
+const CYBERTOOLS_CONFIG = sharedConfigPath()
 const CONTEXT_POLL_MS   = 10_000
 
 // ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────

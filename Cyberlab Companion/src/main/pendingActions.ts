@@ -6,7 +6,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json');
+const CYBERTOOLS_CONFIG = sharedConfigPath();
 
 interface PendingActionEntry {
   app:         string;

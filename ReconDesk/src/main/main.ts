@@ -17,7 +17,7 @@ import { launchPeerApp } from './platform'
 
 const APP_VERSION       = '1.0.0'
 const DATA_FILE         = path.join(os.homedir(), '.recondesk', 'data.json')
-const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')
+const CYBERTOOLS_CONFIG = sharedConfigPath()
 
 // ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -362,7 +362,7 @@ ipcMain.handle('recondesk:export-pdf', async (_e, payload: unknown) => {
 // ─── SSO state (read from shared cybertools-config.json) ─────────────────────
 ipcMain.handle('get-sso', () => {
   try {
-    const cfgPath = path.join(os.homedir(), 'cybertools-config.json')
+    const cfgPath = sharedConfigPath()
     if (!fs.existsSync(cfgPath)) return { unlocked: false }
     const shared = JSON.parse(fs.readFileSync(cfgPath, 'utf8')) || {}
     const sso = shared.sso as { unlocked?: boolean; expiresAt?: string | null; unlockedAt?: string | null } | undefined

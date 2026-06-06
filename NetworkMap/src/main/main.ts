@@ -12,7 +12,7 @@ import { consumePendingAction, installPendingActionWatcher } from './pendingActi
 import type { NetworkNode, NetworkPort, NetworkGraph, GraphSummary } from '../shared/types'
 
 const APP_VERSION       = '1.0.0'
-const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')
+const CYBERTOOLS_CONFIG = sharedConfigPath()
 const GRAPHS_DIR        = path.join(userDataDir('NetworkMap'), 'graphs')
 
 // ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────

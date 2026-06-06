@@ -10,7 +10,7 @@ import { consumePendingAction, installPendingActionWatcher } from './pendingActi
 import { userDataDir } from './platform'
 import type { Lab, LabProgress, NetLabPrefs } from '../shared/types'
 
-const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')
+const CYBERTOOLS_CONFIG = sharedConfigPath()
 const GHOSTVAULT_DIR    = userDataDir('GhostVault')
 
 const APP_VERSION = '1.0.0'

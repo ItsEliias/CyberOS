@@ -7,8 +7,9 @@
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
+import { sharedConfigPath } from './platform'
 
-const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')
+const CYBERTOOLS_CONFIG = sharedConfigPath()
 
 /**
  * Atomic write to ~/cybertools-config.json. Every CyberOS app reads this
