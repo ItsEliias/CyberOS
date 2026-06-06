@@ -645,6 +645,7 @@ const APP_FALLBACK_PRODUCTS: Record<string, string> = {
   reportforge:    'ReportForge',
   terminallink:   'TermLink',
   networkmap:     'NetworkMap',
+  netlab:         'NetLab',
 };
 
 // ─── App launching ────────────────────────────────────────────────────────────
@@ -688,6 +689,9 @@ function launchApp(appKey: string): boolean {
   } else if (appKey === 'networkmap') {
     execPath = (config as Record<string,{execPath?:string}>).networkmap?.execPath || '';
     appName  = 'NetworkMap';
+  } else if (appKey === 'netlab') {
+    execPath = (config as Record<string,{execPath?:string}>).netlab?.execPath || '';
+    appName  = 'NetLab';
   } else if (appKey.startsWith('custom_')) {
     const idx  = parseInt(appKey.replace('custom_', ''), 10);
     const slot = config.launcher?.customSlots?.[idx];
