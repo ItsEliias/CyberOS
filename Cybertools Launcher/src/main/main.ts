@@ -461,6 +461,33 @@ function refreshContextMenu(): void {
         addActivityEntry({ type: 'launcher', text: 'VaultCore update triggered from tray menu' });
       }
     },
+    {
+      label: 'Lock CredVault session',
+      accelerator: 'CommandOrControl+L',
+      enabled: installedKey('credvault'),
+      click: () => {
+        // Soft-lock the whole ecosystem by flipping the shared SSO state
+        // and queueing a "lock-vault" pending action so CredVault itself
+        // also wipes its in-memory key on next launch / focus.
+        try {
+          const cfgPath = path.join(os.homedir(), 'cybertools-config.json');
+          const shared = fs.existsSync(cfgPath)
+            ? JSON.parse(fs.readFileSync(cfgPath, 'utf8'))
+            : {};
+          shared.sso = {
+            unlocked:   false,
+            unlockedAt: null,
+            expiresAt:  null,
+            token:      null,
+            source:     'credvault',
+          };
+          fs.writeFileSync(cfgPath, JSON.stringify(shared, null, 2), 'utf8');
+        } catch { /* ignore */ }
+        writePendingAction('credvault', 'lock-vault');
+        ecosystemBus.emitEvent('Launcher', 'launcher.sso.locked', {});
+        addActivityEntry({ type: 'launcher', text: 'Ecosystem session locked' });
+      }
+    },
     { type: 'separator' },
     {
       label: 'Settings', accelerator: 'CommandOrControl+,',
