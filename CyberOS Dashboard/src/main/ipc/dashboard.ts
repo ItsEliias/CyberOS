@@ -109,31 +109,54 @@ export function registerDashboardIPC(): void {
     }
   })
 
-  // Start file watchers
+  // Start file watchers. Previously the IPC handler ran fs.watch every time
+  // the renderer called dashboard:watch:start (e.g. on every reload), so
+  // watchers accumulated forever until the process eventually ran out of
+  // file descriptors. Track installed watchers per-sender and dispose them
+  // before reinstalling.
+  const activeWatchers = new Map<number, fs.FSWatcher[]>()
   ipcMain.on('dashboard:watch:start', (event) => {
-    const sender = event.sender
+    const sender   = event.sender
+    const senderId = sender.id
+
+    // Dispose any watchers from a previous start call by this sender.
+    for (const w of activeWatchers.get(senderId) ?? []) {
+      try { w.close() } catch { /* already gone */ }
+    }
+    const watchers: fs.FSWatcher[] = []
 
     // Watch config file
     if (fs.existsSync(CYBERTOOLS_CONFIG)) {
       let debounce: NodeJS.Timeout | null = null
-      fs.watch(CYBERTOOLS_CONFIG, () => {
+      watchers.push(fs.watch(CYBERTOOLS_CONFIG, () => {
         if (debounce) clearTimeout(debounce)
         debounce = setTimeout(() => {
-          sender.send('dashboard:config:changed', annotateConfig(readConfig()))
+          try { sender.send('dashboard:config:changed', annotateConfig(readConfig())) }
+          catch { /* destroyed */ }
         }, 80)
-      })
+      }))
     }
 
     // Watch events file
     if (fs.existsSync(EVENTS_FILE)) {
       let debounce: NodeJS.Timeout | null = null
-      fs.watch(EVENTS_FILE, () => {
+      watchers.push(fs.watch(EVENTS_FILE, () => {
         if (debounce) clearTimeout(debounce)
         debounce = setTimeout(() => {
-          sender.send('dashboard:events:changed', readEvents())
+          try { sender.send('dashboard:events:changed', readEvents()) }
+          catch { /* destroyed */ }
         }, 80)
-      })
+      }))
     }
+
+    activeWatchers.set(senderId, watchers)
+    // Clean up when the renderer goes away.
+    sender.once('destroyed', () => {
+      for (const w of activeWatchers.get(senderId) ?? []) {
+        try { w.close() } catch { /* ignore */ }
+      }
+      activeWatchers.delete(senderId)
+    })
   })
 
   // ─── Existing IPC compatibility (preserve v1 channels) ────────────────────
