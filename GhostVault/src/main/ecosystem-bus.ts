@@ -2,9 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
-const EVENTS_PATH = path.join(
-  os.homedir(), 'Library', 'Application Support', 'CyberTools', 'ecosystem-events.json'
-);
+const EVENTS_PATH = ecosystemBusPath();
 const MAX_EVENTS = 150;
 
 interface EcosystemEvent {
