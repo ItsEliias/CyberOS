@@ -4,7 +4,14 @@ import type { PlaybookStep, StepType, PlaybookRun } from '@shared/types'
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 export function elapsed(startedAt: string): string {
-  const ms = Date.now() - new Date(startedAt).getTime()
+  // Guard:
+  //   1. NaN if startedAt isn't a valid ISO string (renders as "NaN:NaN:NaN").
+  //   2. Negative ms if the user's clock jumped backward or startedAt is in
+  //      the future (renders as "-1:-1:-1" with broken padStart on negative
+  //      numbers — the leading minus eats the pad).
+  const startMs = new Date(startedAt).getTime()
+  if (!Number.isFinite(startMs)) return '00:00:00'
+  const ms = Math.max(0, Date.now() - startMs)
   const h  = Math.floor(ms / 3_600_000)
   const m  = Math.floor((ms % 3_600_000) / 60_000)
   const s  = Math.floor((ms % 60_000) / 1_000)
@@ -146,12 +153,22 @@ export function ProgressBar({ done, total, runs, playbookId }: {
   const pct = total > 0 ? Math.round((done / total) * 100) : 0
 
   const eta = (() => {
-    const pastRuns = runs.filter(r => r.playbookId === playbookId && r.status === 'completed' && r.completedAt)
+    // Only consider completed past runs that have steps and a valid
+    // duration — empty-step playbooks produced NaN/Infinity here when
+    // we divided dur by r.steps.length === 0, which then propagated
+    // through avgStepMs and rendered the bar as "ETA: ~NaNs remaining".
+    const pastRuns = runs.filter(r =>
+      r.playbookId === playbookId &&
+      r.status === 'completed' &&
+      r.completedAt &&
+      r.steps.length > 0
+    )
     if (pastRuns.length === 0 || done === 0) return null
     const avgStepMs = pastRuns.reduce((sum, r) => {
       const dur = new Date(r.completedAt!).getTime() - new Date(r.startedAt).getTime()
       return sum + dur / r.steps.length
     }, 0) / pastRuns.length
+    if (!Number.isFinite(avgStepMs)) return null
     const remaining = total - done
     const etaMs = remaining * avgStepMs
     return etaMs > 0 ? fmtMs(etaMs) : null
