@@ -1312,6 +1312,18 @@ function setupAppManagerIPC(): void {
     const send        = (msg: string) => event.sender.send('app-manager:progress', { id, message: msg });
 
     try {
+      // Fast path: if a fresh bundle already exists in dist/ or release/, just
+      // copy it. Avoids a full rebuild when the user has already run a build
+      // and the "Install →/Apps" button is just for the copy step.
+      const existing = findAppBundle(path.join(dir, 'dist'), 4)
+        ?? findAppBundle(path.join(dir, 'release'), 4);
+      if (existing) {
+        send(`Copying existing ${path.basename(existing)} to /Applications/...`);
+        await spawnAsync('cp', ['-R', existing, `/Applications/${productName}.app`], '/', send);
+        send('Installed successfully.');
+        return { success: true };
+      }
+
       if (!fs.existsSync(path.join(dir, 'node_modules'))) {
         send('Installing dependencies...');
         await spawnAsync('npm', ['install'], dir, (l) => send(l.slice(0, 120)));
