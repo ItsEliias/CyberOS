@@ -85,8 +85,12 @@ export default function App() {
   }, [requireSSO, ssoUnlocked]);
 
   // ── Auto-save every 30s when in editor and dirty ───────────────────────────
+  // Skipped while the SSO soft-lock is active: the editor is masked, so any
+  // dirty state is stale by definition and writing it back is wasted work
+  // (and would race the user's eventual unlock-then-edit flow).
   useEffect(() => {
-    if (view !== 'editor') {
+    const blocked = requireSSO && ssoUnlocked === false;
+    if (view !== 'editor' || blocked) {
       if (autoSaveRef.current) { clearInterval(autoSaveRef.current); autoSaveRef.current = null; }
       return;
     }
@@ -103,7 +107,7 @@ export default function App() {
     return () => {
       if (autoSaveRef.current) { clearInterval(autoSaveRef.current); autoSaveRef.current = null; }
     };
-  }, [view, upsertReport, setDirty]);
+  }, [view, requireSSO, ssoUnlocked, upsertReport, setDirty]);
 
   // ── Open report ────────────────────────────────────────────────────────────
   const openReport = useCallback((r: Report) => {
