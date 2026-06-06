@@ -212,20 +212,34 @@ function registerRunHandlers(refs: AppRefs): void {
     const run = refs.runs.find(r => r.id === runId)
     if (!run) return { ok: false, error: 'Run not found' }
     const report = buildReport(run)
-    try {
-      if (!fs.existsSync(REPORT_FORGE_DIR)) fs.mkdirSync(REPORT_FORGE_DIR, { recursive: true })
-      fs.writeFileSync(path.join(REPORT_FORGE_DIR, `playbook-run-${run.id}.json`), JSON.stringify(report, null, 2), 'utf8')
-    } catch { /* non-fatal */ }
-    emitEvent('PlaybookStudio', 'run:exported', { runId, target: 'ReportForge' })
+    const reportForgeAvailable = isReportForgeInstalled()
+    let pendingPath: string | null = null
+    if (reportForgeAvailable) {
+      try {
+        if (!fs.existsSync(REPORT_FORGE_DIR)) fs.mkdirSync(REPORT_FORGE_DIR, { recursive: true })
+        pendingPath = path.join(REPORT_FORGE_DIR, `playbook-run-${run.id}.json`)
+        atomicWriteJsonFile(pendingPath, report)
+      } catch {
+        // Stat said installed but write failed (permissions?) — degrade
+        // gracefully; the save dialog below still gives the user a path.
+        pendingPath = null
+      }
+    }
+    emitEvent('PlaybookStudio', 'run:exported', {
+      runId, target: 'ReportForge', reportForgeAvailable, pendingPath,
+    })
     const win = refs.getWindow()
-    if (!win) return { ok: true, report }
+    if (!win) return { ok: true, report, reportForgeAvailable, pendingPath }
     const result = await dialog.showSaveDialog(win, {
       title: 'Export Run Report',
       defaultPath: `report-${run.playbookName.replace(/[^a-z0-9]/gi, '_')}-${run.id.slice(-6)}.json`,
       filters: [{ name: 'JSON Report', extensions: ['json'] }],
     })
-    if (!result.canceled && result.filePath) fs.writeFileSync(result.filePath, JSON.stringify(report, null, 2), 'utf8')
-    return { ok: true, report }
+    if (!result.canceled && result.filePath) {
+      try { atomicWriteJsonFile(result.filePath, report) }
+      catch (e) { return { ok: false, error: (e as Error).message, reportForgeAvailable, pendingPath } }
+    }
+    return { ok: true, report, reportForgeAvailable, pendingPath }
   })
 
   ipcMain.handle('playbook:run-command', (_e, payload: unknown) => {
