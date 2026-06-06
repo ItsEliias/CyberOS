@@ -94,14 +94,35 @@ export function setWikiLinkOpener(fn: (name: string) => void) {
 type Win = typeof window & { ghostvault?: { openExternal?: (url: string) => unknown } };
 if (typeof document !== 'undefined') {
   document.addEventListener('click', (e: MouseEvent) => {
-    const target = (e.target as HTMLElement | null)?.closest('a.md-link') as HTMLAnchorElement | null;
-    if (!target) return;
-    e.preventDefault();
-    const href = target.getAttribute('data-href') ?? target.getAttribute('href') ?? '';
-    if (!href || href === '#') return;
-    try {
-      (window as Win).ghostvault?.openExternal?.(href);
-    } catch { /* ignore */ }
+    const el = e.target as HTMLElement | null;
+    // External link → route through main, which re-validates the scheme.
+    const link = el?.closest('a.md-link') as HTMLAnchorElement | null;
+    if (link) {
+      e.preventDefault();
+      const href = link.getAttribute('data-href') ?? link.getAttribute('href') ?? '';
+      if (!href || href === '#') return;
+      try {
+        (window as Win).ghostvault?.openExternal?.(href);
+      } catch { /* ignore */ }
+      return;
+    }
+    // Wiki-link → either call the registered opener directly, or dispatch
+    // the open-note CustomEvent for components that hook into it.
+    const wiki = el?.closest('.wiki-link') as HTMLElement | null;
+    if (wiki) {
+      const page = wiki.getAttribute('data-page') ?? '';
+      if (!page) return;
+      if (_noteOpener) {
+        try { _noteOpener(page); } catch { /* ignore */ }
+      } else {
+        const root = document.querySelector('[data-wiki-root]');
+        if (root) {
+          try {
+            root.dispatchEvent(new CustomEvent('open-note', { detail: page, bubbles: true }));
+          } catch { /* ignore */ }
+        }
+      }
+    }
   });
 }
 
@@ -155,10 +176,14 @@ export function parseMarkdown(md: string, openNote?: (name: string) => void): st
     return parseTable(block);
   });
 
-  // Wiki-links [[Note Name]]
-  html = html.replace(/\[\[([^\]]+)\]\]/g, (_, page) => {
+  // Wiki-links [[Note Name]] — delegated click handler installed at module
+  // load reads the data-page attribute instead of executing inline JS. The
+  // previous inline onclick used a hand-rolled string-escape that didn't
+  // cover \n / </script> sequences and was a latent XSS gadget under any
+  // future CSP relaxation.
+  html = html.replace(/\[\[([^\]]+)\]\]/g, (_, page: string) => {
     const safePage = escHtml(page);
-    return `<span class="wiki-link" data-page="${safePage}" onclick="(function(){var e=document.querySelector('[data-wiki-root]');if(e){var ev=new CustomEvent('open-note',{detail:'${safePage.replace(/'/g, "\\'")}',bubbles:true});e.dispatchEvent(ev);}else{console.log('open:${safePage.replace(/'/g, "\\'")}');}})()">[[${safePage}]]</span>`;
+    return `<span class="wiki-link" data-page="${safePage}">[[${safePage}]]</span>`;
   });
 
   // Tags #tag
