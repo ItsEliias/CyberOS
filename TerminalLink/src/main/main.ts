@@ -319,7 +319,23 @@ ipcMain.handle('log-commands', (_evt, { commands }: { commands: CommandEntry[] }
 
 // ─── IPC: Version ─────────────────────────────────────────────────────────────
 ipcMain.handle('get-version', () => app.getVersion());
-ipcMain.handle('open-external', (_e, url: string) => shell.openExternal(url));
+ipcMain.handle('open-external', (_e, url: string) => {
+  // shell.openExternal hands the URL to the OS, which will gladly run
+  // `file://`, custom schemes (e.g. `vscode://file/…`), or any registered
+  // handler. Restrict to the two schemes a terminal app legitimately needs.
+  if (typeof url !== 'string' || !url) return;
+  try {
+    const parsed = new URL(url);
+    const scheme = parsed.protocol.toLowerCase();
+    if (scheme !== 'http:' && scheme !== 'https:') {
+      console.warn('[terminallink] open-external rejected:', scheme);
+      return;
+    }
+    shell.openExternal(url);
+  } catch {
+    // Malformed URL — silently drop.
+  }
+});
 
 // ─── IPC: SSO soft-lock (shared with the rest of CyberOS) ────────────────────
 ipcMain.handle('get-sso', () => {
