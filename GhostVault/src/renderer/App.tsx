@@ -103,6 +103,10 @@ export default function App() {
     ];
 
     function handleKey(e: KeyboardEvent) {
+      // Block all shortcuts under the SSO soft-lock so the requirement toggle
+      // and palette stay out of reach until CredVault is unlocked.
+      const cfgRequire = !!(useStore.getState() as unknown as { config?: { requireCredVaultSession?: boolean } }).config?.requireCredVaultSession;
+      if (cfgRequire && ssoUnlocked === false) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setPaletteOpen(v => !v);
@@ -129,7 +133,7 @@ export default function App() {
       window.removeEventListener('gv:new-note', onPaletteNewNote);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [ssoUnlocked]);
 
   // ── Tray-menu pending action ──────────────────────────────────────────────
   // Forward action ids queued by the Launcher. `gv:new-note` is already
@@ -504,7 +508,7 @@ export default function App() {
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
       {onboarding.show && <OnboardingModal onClose={onboarding.close} />}
-      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      <CommandPalette open={paletteOpen && !ssoBlocked} onClose={() => setPaletteOpen(false)} />
     </div>
   );
 }
