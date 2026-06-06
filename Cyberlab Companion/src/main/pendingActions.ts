@@ -18,6 +18,21 @@ export interface ConsumedAction {
   action: string;
 }
 
+// Atomic write — tmp + rename so a concurrent reader (Launcher, sibling
+// app) never sees a half-written / truncated cybertools-config.json.
+// Falls back to direct writeFileSync only if rename itself fails.
+function writeSharedAtomic(payload: Record<string, unknown>): void {
+  const json    = JSON.stringify(payload, null, 2);
+  const tmpPath = CYBERTOOLS_CONFIG + '.tmp';
+  try {
+    fs.writeFileSync(tmpPath, json, 'utf8');
+    fs.renameSync(tmpPath, CYBERTOOLS_CONFIG);
+  } catch {
+    try { fs.writeFileSync(CYBERTOOLS_CONFIG, json, 'utf8'); } catch { /* swallow */ }
+    try { if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath); } catch { /* swallow */ }
+  }
+}
+
 export function consumePendingAction(appKey: string): ConsumedAction | null {
   try {
     if (!fs.existsSync(CYBERTOOLS_CONFIG)) return null;
@@ -46,21 +61,20 @@ export function consumePendingAction(appKey: string): ConsumedAction | null {
     // Skip stale entries (>30 min) — likely the user clicked the tray
     // ages ago and no longer wants the action. Still splice it out so it
     // doesn't pile up in the queue.
-    const STALE_MS = 30 * 60 * 1000
+    const STALE_MS = 30 * 60 * 1000;
     if (entry.requestedAt) {
-      const age = Date.now() - new Date(entry.requestedAt).getTime()
+      const age = Date.now() - new Date(entry.requestedAt).getTime();
       if (Number.isFinite(age) && age > STALE_MS) {
-        queue.splice(idx, 1)
-        cfg.pending_actions = list
-        try { fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(cfg, null, 2), 'utf8') } catch {}
-        return null
+        queue.splice(idx, 1);
+        shared.pending_actions = queue;
+        writeSharedAtomic(shared);
+        return null;
       }
     }
     queue.splice(idx, 1);
     shared.pending_actions = queue;
 
-    try { fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8'); }
-    catch { /* if we can't write it back, still fall through and fire once */ }
+    writeSharedAtomic(shared);
 
     return { action: entry.action };
   } catch {

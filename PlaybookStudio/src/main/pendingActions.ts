@@ -16,6 +16,16 @@ interface PendingAction {
   requestedAt?: string
 }
 
+// Atomic write helper — writes to a sibling .tmp and renames into place so a
+// crash or concurrent write from another app can't leave a half-formed
+// ~/cybertools-config.json that fails to parse and wipes everyone's pending
+// tray actions on next read.
+function atomicWriteConfig(cfg: unknown): void {
+  const tmp = `${CYBERTOOLS_CONFIG}.tmp`
+  fs.writeFileSync(tmp, JSON.stringify(cfg, null, 2), 'utf8')
+  fs.renameSync(tmp, CYBERTOOLS_CONFIG)
+}
+
 export function consumePendingAction(appKey: string): { action: string } | null {
   try {
     if (!fs.existsSync(CYBERTOOLS_CONFIG)) return null
@@ -43,14 +53,14 @@ export function consumePendingAction(appKey: string): { action: string } | null 
       const age = Date.now() - new Date(entry.requestedAt).getTime()
       if (Number.isFinite(age) && age > STALE_MS) {
         arr.splice(idx, 1)
-        cfg['pending_actions'] = list
-        try { fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(cfg, null, 2), 'utf8') } catch {}
+        cfg['pending_actions'] = arr
+        try { atomicWriteConfig(cfg) } catch {}
         return null
       }
     }
     arr.splice(idx, 1)
     cfg['pending_actions'] = arr
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(cfg, null, 2), 'utf8')
+    atomicWriteConfig(cfg)
 
     return { action: entry.action }
   } catch {

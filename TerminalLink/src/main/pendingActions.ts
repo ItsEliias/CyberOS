@@ -15,6 +15,24 @@ interface PendingActionEntry {
 }
 
 /**
+ * Atomic write: serialize, write to tmp sibling, fsync, rename over target.
+ * Prevents readers (other CyberOS apps, this app's own watcher) from observing
+ * a torn / half-written JSON file if the process is killed mid-write.
+ */
+function writeConfigAtomic(cfg: Record<string, unknown>): void {
+  const json = JSON.stringify(cfg, null, 2);
+  const tmp  = `${CONFIG_PATH}.tmp-${process.pid}-${Date.now()}`;
+  const fd   = fs.openSync(tmp, 'w');
+  try {
+    fs.writeSync(fd, json, 0, 'utf8');
+    try { fs.fsyncSync(fd); } catch { /* fsync best-effort */ }
+  } finally {
+    try { fs.closeSync(fd); } catch { /* already closed */ }
+  }
+  fs.renameSync(tmp, CONFIG_PATH);
+}
+
+/**
  * Find the first pending_actions entry whose `app` matches the given key,
  * remove it from the array, persist the config, and return the matched entry.
  *
@@ -47,14 +65,14 @@ export function consumePendingAction(appKey: string): { action: string } | null 
       if (Number.isFinite(age) && age > STALE_MS) {
         list.splice(idx, 1)
         cfg.pending_actions = list
-        try { fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(cfg, null, 2), 'utf8') } catch {}
+        try { writeConfigAtomic(cfg) } catch {}
         return null
       }
     }
     list.splice(idx, 1);
     cfg.pending_actions = list;
 
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf8');
+    writeConfigAtomic(cfg);
     return { action: entry.action };
   } catch {
     return null;
@@ -77,8 +95,8 @@ export function installPendingActionWatcher(
   let debounce: NodeJS.Timeout | null = null
   function check() {
     try {
-      if (!fs.existsSync(CYBERTOOLS_CONFIG)) return
-      const raw = fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8')
+      if (!fs.existsSync(CONFIG_PATH)) return
+      const raw = fs.readFileSync(CONFIG_PATH, 'utf8')
       const cfg = JSON.parse(raw) as Record<string, unknown>
       const arr = (cfg as { pending_actions?: unknown }).pending_actions
       if (!Array.isArray(arr)) return
@@ -93,7 +111,7 @@ export function installPendingActionWatcher(
     } catch { /* swallow */ }
   }
   try {
-    fs.watchFile(CYBERTOOLS_CONFIG, { interval: 1500 }, () => {
+    fs.watchFile(CONFIG_PATH, { interval: 1500 }, () => {
       if (debounce) clearTimeout(debounce)
       debounce = setTimeout(check, 100)
     })
