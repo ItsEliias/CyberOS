@@ -337,11 +337,15 @@ ipcMain.handle('select-folder', async () => {
   return r.canceled ? null : r.filePaths[0];
 });
 ipcMain.handle('select-file', async (_, filters) => {
-  const r = await dialog.showOpenDialog(mainWindow!, { properties: ['openFile'], filters: filters || [] });
+  // dialog.showOpenDialog throws sync if `filters` isn't an array. Normalize
+  // here so a renderer bug passing null/object doesn't take down main.
+  const safeFilters = Array.isArray(filters) ? filters : [];
+  const r = await dialog.showOpenDialog(mainWindow!, { properties: ['openFile'], filters: safeFilters });
   return r.canceled ? null : r.filePaths[0];
 });
 ipcMain.handle('select-files', async (_, filters) => {
-  const r = await dialog.showOpenDialog(mainWindow!, { properties: ['openFile', 'multiSelections'], filters: filters || [] });
+  const safeFilters = Array.isArray(filters) ? filters : [];
+  const r = await dialog.showOpenDialog(mainWindow!, { properties: ['openFile', 'multiSelections'], filters: safeFilters });
   return r.canceled ? [] : r.filePaths;
 });
 
