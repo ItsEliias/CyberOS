@@ -474,7 +474,16 @@ ipcMain.handle('generate-knowledge-gap-report', async () => {
   const vp = launcher.getVaultPath();
   return vp ? vaulthealth.generateKnowledgeGapReport(vp) : { error: 'No vault path' };
 });
-ipcMain.handle('validate-links',    async (_, fp) => vaulthealth.validateLinks(fp || launcher.getVaultPath()));
+ipcMain.handle('validate-links',    async (_, fp) => {
+  // validateLinks walks the folder it's given. Falling through to the vault
+  // path when fp is empty is fine, but a renderer-supplied fp outside the
+  // vault would walk + read arbitrary directories (info disclosure of any
+  // .md files on disk). Pin to the vault root.
+  const vp = launcher.getVaultPath();
+  if (!fp) return vaulthealth.validateLinks(vp);
+  if (!isUnderVault(fp)) return { error: 'Path outside vault' };
+  return vaulthealth.validateLinks(fp);
+});
 ipcMain.handle('generate-canvas',   async (_, sn, of_) => processor.generateCanvas(sn, of_, launcher.getVaultPath()));
 
 // Confine renderer file IPCs to the configured vault root. Without this a
