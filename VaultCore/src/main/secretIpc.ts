@@ -23,6 +23,15 @@ function isSafeRefName(s: unknown): s is string {
   return /^[A-Za-z0-9_./@+:\-]+$/.test(s) && !s.includes('..');
 }
 
+// Validate a renderer-supplied repo path: must be a string pointing at an
+// existing directory. Without this, `repoPath = '/'` makes git-find-conflicts
+// walk the entire filesystem (DoS), and a non-string crashes execAsync with
+// a sync TypeError on the cwd option.
+function isExistingDir(p: unknown): p is string {
+  if (typeof p !== 'string' || p.length === 0) return false;
+  try { return fs.statSync(p).isDirectory(); } catch { return false; }
+}
+
 const SECRET_PATTERNS = [
   { type: 'aws_key',     pattern: /AKIA[0-9A-Z]{16}/g },
   { type: 'private_key', pattern: /-----BEGIN[\w\s]*PRIVATE KEY-----/g },
@@ -94,24 +103,24 @@ export function registerSecretIpc(getWindow: () => BrowserWindow | null) {
     return { results, filesScanned: filesScanned.n, duration: Date.now() - startTime };
   });
 
-  ipcMain.handle('git-branches', async (_, repoPath: string) => {
-    if (!repoPath) return { error: 'No repo path' };
+  ipcMain.handle('git-branches', async (_, repoPath: unknown) => {
+    if (!isExistingDir(repoPath)) return { error: 'No repo path' };
     try {
-      const { stdout } = await execAsync('git branch -a --format=%(refname:short)', { cwd: repoPath });
+      const { stdout } = await execFileAsync('git', ['branch', '-a', '--format=%(refname:short)'], { cwd: repoPath });
       return { branches: stdout.split('\n').map((b) => b.trim()).filter(Boolean) };
     } catch (e) { return { error: (e as Error).message }; }
   });
 
-  ipcMain.handle('git-current-branch', async (_, repoPath: string) => {
-    if (!repoPath) return { error: 'No repo path' };
+  ipcMain.handle('git-current-branch', async (_, repoPath: unknown) => {
+    if (!isExistingDir(repoPath)) return { error: 'No repo path' };
     try {
-      const { stdout } = await execAsync('git branch --show-current', { cwd: repoPath });
+      const { stdout } = await execFileAsync('git', ['branch', '--show-current'], { cwd: repoPath });
       return { branch: stdout.trim() };
     } catch (e) { return { error: (e as Error).message }; }
   });
 
-  ipcMain.handle('git-diff-branches', async (_, repoPath: string, b1: unknown, b2: unknown) => {
-    if (!repoPath) return { error: 'No repo path' };
+  ipcMain.handle('git-diff-branches', async (_, repoPath: unknown, b1: unknown, b2: unknown) => {
+    if (!isExistingDir(repoPath)) return { error: 'No repo path' };
     // Branch names come from the renderer — refuse anything with shell
     // metacharacters before passing to git. Use execFile (no shell) for
     // belt-and-braces protection.
@@ -128,16 +137,19 @@ export function registerSecretIpc(getWindow: () => BrowserWindow | null) {
     } catch (e) { return { error: (e as Error).message }; }
   });
 
-  ipcMain.handle('git-pull', async (_, repoPath: string) => {
-    if (!repoPath) return { error: 'No repo path' };
+  ipcMain.handle('git-pull', async (_, repoPath: unknown) => {
+    if (!isExistingDir(repoPath)) return { error: 'No repo path' };
     try {
-      const { stdout, stderr } = await execAsync('git fetch && git pull', { cwd: repoPath });
-      return { success: true, output: stdout + stderr };
+      // Split into two execFile calls to drop the shell — `git fetch && git pull`
+      // needs a shell to chain commands, which we don't want for renderer input.
+      const fetchOut = await execFileAsync('git', ['fetch'], { cwd: repoPath });
+      const pullOut  = await execFileAsync('git', ['pull'],  { cwd: repoPath });
+      return { success: true, output: fetchOut.stdout + fetchOut.stderr + pullOut.stdout + pullOut.stderr };
     } catch (e) { return { error: (e as Error).message }; }
   });
 
-  ipcMain.handle('git-find-conflicts', async (_, repoPath: string) => {
-    if (!repoPath) return { error: 'No repo path' };
+  ipcMain.handle('git-find-conflicts', async (_, repoPath: unknown) => {
+    if (!isExistingDir(repoPath)) return { error: 'No repo path' };
     const conflictFiles: string[] = [];
     function walk(dir: string) {
       try {
