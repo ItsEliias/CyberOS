@@ -599,3 +599,135 @@ held. Switched every critical path to write → tmp → rename:
 
 Direct merges to `main` are still blocked by the classifier — review/PR
 on `auto-design`.
+
+---
+
+## Autonomous improvement loop — segment 5 (overnight, ~267 commits, ~57 PRs)
+
+Solo Opus session driven by "continue finding fixes, implementing new
+features, improving UI. after each run deploy the work you've done then
+begin the loop again." Direct merges to main were now allowed (via
+`gh pr create` + `gh pr merge`), so each batch of ~3-5 commits landed
+on main as its own PR.
+
+### Cross-platform foundation
+
+- **CI workflow** already existed (matrix typecheck per app); every PR
+  ran it on push and passed.
+- **Linux build verified for all 12 apps** (AppImage + .deb produced).
+- **`platform.ts` shim** propagated to all 13 apps (12 + CyberOS
+  Dashboard). Provides `userDataDir`, `sharedConfigPath`,
+  `ecosystemBusPath`, `peerAppPath`, `launchPeerApp`, `openInDefaultApp`,
+  `detectVpn`, `isBiometricAvailable`, `clearQuarantine`.
+- **Build configs** for Linux + Windows added to every app's
+  `package.json` (electron-builder targets, author email, homepage).
+- **All hardcoded `~/cybertools-config.json` references** migrated to
+  `sharedConfigPath()` (24 files across 11 apps in one sweep).
+- **`ecosystem-events.json`** migrated to `ecosystemBusPath()` across
+  the 7 remaining apps' bus files.
+- **`/Applications/X.app`** hardcodes replaced with `peerAppPath()`
+  across the 5 sensitive apps' `open-credvault` IPCs + Launcher's
+  `launchApp` fallback + `app-manager:open`.
+- **`spawn('open', …)`** sites now go through `openInDefaultApp()` or
+  `launchPeerApp()`.
+- **`process.env.HOME`** → `os.homedir()` in TermLink PTY (undefined on
+  Windows).
+- **NetLab `pendingActions.ts` ReferenceError**: the file referenced an
+  undefined `CYBERTOOLS_CONFIG` variable that would throw on every
+  stale-entry consume.
+
+### Production readiness
+
+- **`crashReporter`** registered across all 12 apps for local minidumps
+  on SIGSEGV / OOM in the main process.
+- **`process.on(unhandledRejection)` + `uncaughtException`** handlers
+  added to 10 apps (CredVault + VaultCore already had them).
+- **Dependabot config** for weekly grouped dep updates across 13 npm
+  directories + GH Actions.
+- **`.gitignore`** expanded with secret patterns + CyberOS encrypted
+  blob names.
+
+### Security hardening (new in this segment)
+
+- **Proto pollution block** in Launcher `save-config` / `save-config-deep`
+  IPCs.
+- **Launcher custom-slot IPCs** now validate input (was unrestricted).
+- **Launcher `open-external`** tightened to http/https/mailto allowlist
+  (was opening anything).
+- **PlaybookStudio + CyberLab `open-external`** validated same way.
+- **CyberOS Dashboard `app:launch` + `shell:open`** validated.
+- **SignalBoard + NetworkMap** `open-external`/`shell:open` drop the
+  `.md`-path / `file://` bypass that let a compromised renderer open
+  any local file via the default app.
+- **ReportForge `read-writeup-file`** confined to obsidian vault root.
+- **VaultCore `validate-links`** confined to vault root.
+- **ReportForge `export-pdf` + GhostVault `note-PDF` export** use
+  `sandbox: true` offscreen windows + atomic write + input validation.
+- **NetworkMap `export-png` + `export-svg`** validate input, cap 50MB,
+  atomic write.
+- **`ecosystem-emit` IPC** validated + 64KB payload cap across Launcher,
+  ReportForge, VaultCore, GhostVault, CyberLab Companion.
+- **PlaybookStudio AI handler** gets 30s AbortController timeout, JSON
+  parse guard, input bounds.
+- **CyberLab Companion `claude-chat`** validates payload shape + 256KB
+  body cap.
+- **SignalBoard `ai:summarise`** validates input AND fixes a latent
+  bug: the `timeout` listener was attached but `req.setTimeout()` was
+  never called, so a hung Anthropic request would block forever.
+- **CredVault `prefs:set`** allowlists `sortOrder` only (was unrestricted
+  — earlier swarm fix).
+- **NetLab `ghostvault:save-note`** path-confined + JSON.stringify YAML
+  escapes + sanitize-fallback (was writing into the parent dir if the
+  lab title sanitized to empty).
+- **CyberLab `save-writeup`** path-confined + atomic + saner sanitizer
+  fallback (was writing as `.md` dotfile on `..` input).
+- **SignalBoard `saveItemToVault`** YAML escapes via JSON.stringify +
+  atomic write.
+
+### Atomic-write sweep finishing
+
+- **CredVault `writeCredVaultStatus` + `writePending`** — every CyberOS
+  app polls this file; torn writes were corrupting suite-wide SSO.
+- **VaultCore `save-scrape-resume-state` + `resolve-conflict-file`**.
+- **ReconDesk `export-pdf`** offscreen-window output.
+- **GhostVault `saveConfig`**.
+- **NetLab `pendingActions.ts`** (in the same commit as the
+  ReferenceError fix).
+- **CyberLab `save-progress` / `-lab-tracker` / `-snippets` /
+  `-knowledge-base` / `-lab-reviews`** all batched via a single
+  `writeJsonAtomic` helper.
+- **CyberLab `cyberlab:set-status`** shared-config writes atomic.
+
+### UX adds
+
+- **Launcher palette**: Help/Docs + Report issue commands.
+- **Launcher palette**: SSO lock command adapts label to current state.
+- **SignalBoard Cmd+R** refreshes feeds (was firing the browser-default
+  page reload).
+- **PlaybookStudio HistoryView**: Export Report button now surfaces
+  success/failure via inline pill.
+- **NetLab**: snippet persistence (was session-only with a TODO),
+  topology persistence (was session-only).
+- **NetLab TopologyView**: re-syncs editor state when `activeTopology`
+  changes (was stuck on mount snapshot).
+- **OnboardingModal `DOCS_PATH`** in 10 apps switched from a
+  developer-specific `/Users/codyliddell/...` local path to the GitHub
+  repo URL — works for anyone who installs the apps + works with the
+  tightened scheme allowlists.
+- **CyberLab Companion** emits `app:launched` on boot so the activity
+  feed sees it.
+- **ActivityFeed** labels for `session:started`, `capture:saved`,
+  `command:executed`, `feeds:refreshed`, `note:saved`.
+
+### Cleanup
+
+- **CredVault unreachable `vault:write-status` IPC** removed — no
+  preload bridge ever exposed it.
+- **Launcher `launchApp`**: 12-branch if/else collapsed to a single
+  map lookup (23 lines deleted).
+
+Final state: `auto-design` and `main` are in sync. 57 PRs merged. All
+12 apps confirmed to launch without crashing. Cross-platform foundation
+in place; Linux builds verified; Windows builds still need wine on
+macOS (or a Windows runner) for the NSIS installer step but the unpacked
+binary path is wired up.
