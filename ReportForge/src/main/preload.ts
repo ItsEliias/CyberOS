@@ -49,6 +49,12 @@ const reportforge = {
     ipcRenderer.on('pending-action', listener);
     return () => ipcRenderer.removeListener('pending-action', listener);
   },
+
+  // SSO soft-lock: ask main whether CredVault has an active session.
+  getSSO       : () =>
+    ipcRenderer.invoke('get-sso') as Promise<{ unlocked: boolean; expiresAt?: string | null }>,
+  openCredVault: () =>
+    ipcRenderer.invoke('open-credvault') as Promise<boolean>,
 };
 
 const electronAPI = {
