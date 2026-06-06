@@ -188,7 +188,11 @@ export function registerSecretIpc(getWindow: () => BrowserWindow | null) {
       if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
         return { error: 'Target file does not exist' };
       }
-      fs.writeFileSync(filePath, resolvedContent, 'utf8');
+      // Atomic — partial conflict-resolved content would leave a corrupted
+      // merge artifact behind in the git working tree.
+      const tmp = `${filePath}.tmp`;
+      fs.writeFileSync(tmp, resolvedContent, 'utf8');
+      fs.renameSync(tmp, filePath);
       await execFileAsync('git', ['add', '--', filePath], {
         cwd: path.dirname(filePath)
       }).catch(() => {});
