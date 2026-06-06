@@ -191,22 +191,37 @@ ipcMain.handle('ghostvault:save-note', (_e, { labTitle, vendor, tags, content }:
     const cfg = readCyberToolsConfig()
     const vaultPath = (cfg['ghostvault_status'] as Record<string, unknown>)?.['vaultPath'] as string | undefined
     const baseDir   = vaultPath ?? path.join(os.homedir(), 'GhostVault')
-    const labDir    = path.join(baseDir, 'NetLab', labTitle.replace(/[^a-zA-Z0-9 _-]/g, '').trim())
+    // Sanitize lab title. If everything gets stripped (e.g. labTitle was
+    // "...") fall back to 'Untitled' so we don't end up writing into
+    // baseDir/NetLab/ itself (no leaf = silent EISDIR on writeFileSync).
+    const safeLab = labTitle.replace(/[^a-zA-Z0-9 _-]/g, '').trim() || 'Untitled'
+    const labDir  = path.join(baseDir, 'NetLab', safeLab)
+    // Path-confine: refuse to escape baseDir even if a future sanitize
+    // change lets `..` through.
+    const baseResolved = path.resolve(baseDir, 'NetLab') + path.sep
+    const labResolved  = path.resolve(labDir)
+    if (!labResolved.startsWith(baseResolved)) {
+      return { ok: false, reason: 'Lab path escapes vault directory' }
+    }
     ensureDataDir()
     if (!fs.existsSync(labDir)) fs.mkdirSync(labDir, { recursive: true })
     const ts       = new Date().toISOString().replace(/[:.]/g, '-')
     const filePath = path.join(labDir, `notes-${ts}.md`)
     const frontmatter = [
       '---',
-      `lab: NetLab/${labTitle}`,
-      `vendor: ${vendor}`,
-      `tags: [${tags.map(t => `"${t}"`).join(', ')}]`,
+      `lab: NetLab/${safeLab}`,
+      // JSON.stringify handles every escape edge case in YAML quoted strings.
+      `vendor: ${JSON.stringify(vendor)}`,
+      `tags: [${tags.map(t => JSON.stringify(t)).join(', ')}]`,
       `savedAt: ${new Date().toISOString()}`,
       '---',
       '',
     ].join('\n')
-    fs.writeFileSync(filePath, frontmatter + content, 'utf8')
-    emitEvent('NetLab', 'ghostvault:note-saved', { labTitle, filePath })
+    // Atomic — partial markdown on crash leaves a broken note in the vault.
+    const tmp = `${filePath}.tmp`
+    fs.writeFileSync(tmp, frontmatter + content, 'utf8')
+    fs.renameSync(tmp, filePath)
+    emitEvent('NetLab', 'ghostvault:note-saved', { labTitle: safeLab, filePath })
     return { ok: true }
   } catch (e) {
     return { ok: false, reason: (e as Error).message }
