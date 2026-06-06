@@ -1,0 +1,17 @@
+{
+  "id": "session-1780725180519",
+  "startedAt": "2026-06-06T05:53:00.519Z",
+  "cwd": "/Users/codyliddell/Documents/Claude/Projects/CyberOS",
+  "context": {
+    "lastMatchedPatterns": [
+      "insight-1780725056825-opxb"
+    ]
+  },
+  "metrics": {
+    "edits": 107,
+    "commands": 0,
+    "tasks": 0,
+    "errors": 0
+  },
+  "updatedAt": "2026-06-06T08:55:35.802Z"
+}

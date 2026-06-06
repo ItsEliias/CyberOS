@@ -1,0 +1,23 @@
+{
+  "id": "session-1780612241582",
+  "startedAt": "2026-06-04T22:30:41.582Z",
+  "cwd": "/Users/codyliddell/Documents/Claude/Projects/CyberOS",
+  "context": {
+    "lastMatchedPatterns": [
+      "insight-1780594672890-rfc0",
+      "insight-1780612108186-ckns",
+      "insight-1780592161979-snhm",
+      "insight-1780592645196-ajmv",
+      "insight-1780592645196-vrwl"
+    ]
+  },
+  "metrics": {
+    "edits": 375,
+    "commands": 0,
+    "tasks": 0,
+    "errors": 0
+  },
+  "updatedAt": "2026-06-06T05:10:13.446Z",
+  "endedAt": "2026-06-06T05:50:56.865Z",
+  "duration": 112815284
+}

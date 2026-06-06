@@ -1,0 +1,14 @@
+{
+  "id": "session-1780579849369",
+  "startedAt": "2026-06-04T13:30:49.370Z",
+  "cwd": "/Users/codyliddell/Documents/Claude/Projects/CyberOS",
+  "context": {},
+  "metrics": {
+    "edits": 552,
+    "commands": 0,
+    "tasks": 0,
+    "errors": 0
+  },
+  "endedAt": "2026-06-04T16:56:02.027Z",
+  "duration": 12312658
+}
