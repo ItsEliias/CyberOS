@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import type { NoteFile } from '@shared/types';
 import { VaultStatRing, VaultWordSpark } from './ui/VaultStats';
+import HelpTip from './ui/HelpTip';
 
 interface TreeNode {
   name: string;
@@ -275,7 +276,13 @@ export default function VaultView({ onOpenNote }: Props) {
       <div className="px-6 py-4 border-b shrink-0 flex items-center justify-between"
         style={{ borderColor: 'var(--border)', background: 'var(--bg2)' }}>
         <div>
-          <div className="text-lg font-bold" style={{ color: 'var(--text)' }}>Browse Vault</div>
+          <div className="flex items-center gap-2">
+            <div className="text-lg font-bold" style={{ color: 'var(--text)' }}>Browse Vault</div>
+            <HelpTip
+              title="Browse Vault"
+              body="Full filesystem view of the configured vault folder. Click files to open, right-click for rename / delete / reveal. Use Reveal in Finder to open the folder in your OS file manager."
+            />
+          </div>
           <div className="text-xs mt-0.5 font-mono truncate max-w-xs" style={{ color: 'var(--text-dim)' }}>
             {vaultPath}
           </div>

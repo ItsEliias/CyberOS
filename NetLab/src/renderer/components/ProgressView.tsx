@@ -2,6 +2,7 @@
 
 import { useNetLabStore } from '../store'
 import type { LabCategory } from '@shared/types'
+import HelpTip from './ui/HelpTip'
 
 const CATEGORIES: LabCategory[] = ['CCNA', 'CCNP', 'Linux', 'FortiGate', 'EVE-NG', 'GNS3']
 
@@ -144,9 +145,15 @@ export default function ProgressView() {
         <div className="grid grid-cols-2 gap-8 mb-8">
           {/* Category progress */}
           <div>
-            <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-4">
-              Category Progress
-            </h3>
+            <div className="flex items-center gap-2 mb-4">
+              <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                Category Progress
+              </h3>
+              <HelpTip
+                title="Category Progress"
+                body="Completion ratio per vendor track (CCNA, CCNP, FortiGate, etc.). Hit 100% to clear a category."
+              />
+            </div>
             {catStats.length === 0 ? (
               <p className="text-sm text-text-muted">No labs loaded yet.</p>
             ) : (

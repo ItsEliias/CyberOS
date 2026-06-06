@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import HelpTip from './ui/HelpTip';
 import type { CoreTheme, PersonalityTheme, ThemeConfig } from '@shared/types';
 
 const CORES:         CoreTheme[]        = ['stealth', 'graphite', 'frost', 'oled'];
@@ -40,7 +41,13 @@ export default function SetupWizard({ onComplete }: Props) {
         👻
       </div>
       <div className="text-center">
-        <div className="text-2xl font-bold" style={{ color: 'var(--text)' }}>Welcome to GhostVault</div>
+        <div className="inline-flex items-center gap-2">
+          <div className="text-2xl font-bold" style={{ color: 'var(--text)' }}>Welcome to GhostVault</div>
+          <HelpTip
+            title="Setup wizard"
+            body="Three steps: pick a theme, point GhostVault at a vault folder, and launch. You can change all of these later under Settings."
+          />
+        </div>
         <div className="text-sm mt-2" style={{ color: 'var(--text-muted)' }}>
           Your AI-powered note capture and markdown vault workspace.
         </div>
@@ -58,7 +65,10 @@ export default function SetupWizard({ onComplete }: Props) {
     // ── Step 1: Theme ────────────────────────────────────────────────────────
     <motion.div key="theme" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="flex flex-col gap-5">
       <div>
-        <div className="text-[10px] uppercase tracking-wider mb-2" style={{ color: 'var(--text-dim)' }}>Core Theme</div>
+        <div className="text-[10px] uppercase tracking-wider mb-2 flex items-center gap-1.5" style={{ color: 'var(--text-dim)' }}>
+          Core Theme
+          <HelpTip body="Sets the surface palette: stealth (deep navy), graphite (warm dark), frost (cool gray), or oled (true black). Combine with a personality for the final look." />
+        </div>
         <div className="grid grid-cols-4 gap-2">
           {CORES.map(c => (
             <button key={c}
@@ -75,7 +85,10 @@ export default function SetupWizard({ onComplete }: Props) {
         </div>
       </div>
       <div>
-        <div className="text-[10px] uppercase tracking-wider mb-2" style={{ color: 'var(--text-dim)' }}>Personality</div>
+        <div className="text-[10px] uppercase tracking-wider mb-2 flex items-center gap-1.5" style={{ color: 'var(--text-dim)' }}>
+          Personality
+          <HelpTip body="Accent color and motion vibe layered on top of the core theme. Pick neutral for muted, cyberpunk / terminal / threat for louder palettes." />
+        </div>
         <div className="grid grid-cols-4 gap-2">
           {PERSONALITIES.map(p => (
             <button key={p}
@@ -102,7 +115,10 @@ export default function SetupWizard({ onComplete }: Props) {
     // ── Step 2: Vault ────────────────────────────────────────────────────────
     <motion.div key="vault" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="flex flex-col gap-5">
       <div>
-        <div className="text-[10px] uppercase tracking-wider mb-2" style={{ color: 'var(--text-dim)' }}>Vault Directory</div>
+        <div className="text-[10px] uppercase tracking-wider mb-2 flex items-center gap-1.5" style={{ color: 'var(--text-dim)' }}>
+          Vault Directory
+          <HelpTip body="The folder GhostVault reads and writes your notes into. Pick a fresh folder for a new vault, or an existing folder you already keep markdown notes in." />
+        </div>
         <div className="flex gap-2">
           <div className="flex-1 px-3 py-2 rounded-lg border text-sm truncate"
             style={{ background: 'var(--bg3)', borderColor: 'var(--border)', color: vaultPath ? 'var(--text)' : 'var(--text-dim)' }}>

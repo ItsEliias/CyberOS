@@ -7,6 +7,7 @@ import {
   Card, SettingRow, Toggle, VaultHealthRing, AuditIssueBadge, ThemeSection,
 } from './SettingsViewParts'
 import SecuritySection from './SecuritySection'
+import HelpTip from './ui/HelpTip'
 
 const AUTO_LOCK_OPTIONS = [
   { label: 'Never',    ms: 0 },
@@ -142,7 +143,10 @@ export default function SettingsView() {
       <ThemeSection />
 
       {/* ── Security ──────────────────────────────────────────────────────── */}
-      <Card title="Security">
+      <Card
+        title="Security"
+        help={<HelpTip title="Security" body="Control how aggressively the vault auto-locks when you're idle and whether hiding the window forces a re-unlock." />}
+      >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <SettingRow label="Auto-lock timeout" description="Lock the vault after this period of idle time">
             <div style={{ display: 'flex', gap: 6 }}>
@@ -168,7 +172,10 @@ export default function SettingsView() {
       <SecuritySection />
 
       {/* ── Clipboard ─────────────────────────────────────────────────────── */}
-      <Card title="Clipboard">
+      <Card
+        title="Clipboard"
+        help={<HelpTip title="Clipboard" body="Automatically overwrite the system clipboard a few seconds after you copy a password or hash, so secrets don't linger if you paste somewhere unexpected." />}
+      >
         <SettingRow label="Clipboard clear timer" description="Overwrite the clipboard after copying a password or hash">
           <div style={{ display: 'flex', gap: 6 }}>
             {CLIPBOARD_CLEAR_OPTIONS.map(opt => (

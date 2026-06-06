@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
+import HelpTip from './ui/HelpTip';
 import type { NoteFile } from '@shared/types';
 
 interface SearchMatch {
@@ -112,6 +113,15 @@ export default function SearchView({ onOpenNote }: Props) {
     <div className="flex flex-col h-full">
       {/* Search bar */}
       <div className="px-6 py-4 border-b shrink-0" style={{ borderColor: 'var(--border)', background: 'var(--bg2)' }}>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: 'var(--text-dim)' }}>
+            Search
+          </span>
+          <HelpTip
+            title="Search"
+            body="Full-text search across every note in your vault. Matches against note titles and body content; use #tag to bias toward tag matches. Results group by location."
+          />
+        </div>
         <div className="relative">
           <svg
             className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"

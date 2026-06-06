@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useNetLabStore } from '../store'
+import HelpTip from './ui/HelpTip'
 
 export default function StatusBar() {
   const activeLab       = useNetLabStore(s => s.activeLab)
@@ -46,6 +47,10 @@ export default function StatusBar() {
             <>
               <span className="text-border-default">|</span>
               <span>Elapsed: {formatElapsed(elapsed)}</span>
+              <HelpTip
+                title="Lab Progress & Timer"
+                body="Live timer for the current lab attempt. Your best time per lab is tracked in the Progress view once you finish."
+              />
             </>
           )}
         </>

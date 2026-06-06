@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { useNetLabStore } from '../store'
 import type { Lab, LabCategory } from '@shared/types'
 import LabStepView from './LabStepView'
+import HelpTip from './ui/HelpTip'
 
 const CATEGORIES: LabCategory[] = ['CCNA', 'CCNP', 'Linux', 'FortiGate', 'EVE-NG', 'GNS3']
 const DIFF_LABELS = ['', '★', '★★', '★★★', '★★★★', '★★★★★']
@@ -90,6 +91,13 @@ export default function LabsView() {
       <div className="w-80 shrink-0 flex flex-col border-r border-border-subtle">
         {/* Search */}
         <div className="p-3 border-b border-border-subtle">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <span className="text-2xs text-text-muted uppercase tracking-wider">Labs</span>
+            <HelpTip
+              title="Labs List"
+              body="Filter labs by category, difficulty, or keyword. Click any card to preview its objective on the right, then hit Start Lab."
+            />
+          </div>
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -169,7 +177,13 @@ function LabDetail({ lab, progress, onStart }: { lab: Lab; progress?: import('@s
       <div className="max-w-2xl">
         <div className="flex items-start gap-3 mb-4">
           <div className="flex-1">
-            <h2 className="text-xl font-semibold text-text-primary">{lab.title}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-semibold text-text-primary">{lab.title}</h2>
+              <HelpTip
+                title="Lab Detail"
+                body="Review the lab's objective, target topology, and prerequisite tags before starting. Hit Start Lab to begin stepping through the exercise."
+              />
+            </div>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-2xs px-2 py-0.5 rounded" style={{ background: 'rgba(94,196,255,0.1)', color: '#5ec4ff' }}>
                 {lab.category}
@@ -218,9 +232,15 @@ function LabDetail({ lab, progress, onStart }: { lab: Lab; progress?: import('@s
 
         {/* Step list */}
         <div>
-          <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">
-            Steps ({lab.steps.length})
-          </p>
+          <div className="flex items-center gap-2 mb-3">
+            <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
+              Steps ({lab.steps.length})
+            </p>
+            <HelpTip
+              title="Step List"
+              body="Each step has a command, expected output, and hints. Completing every step in order marks the lab done — green check icons indicate verified steps."
+            />
+          </div>
           <div className="flex flex-col gap-2">
             {lab.steps.map(step => {
               const result = progress?.stepResults[step.id]

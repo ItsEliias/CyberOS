@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store';
+import HelpTip from './ui/HelpTip';
 import type { CoreTheme, PersonalityTheme, AiCtx } from '@shared/types';
 
 const CORES:         CoreTheme[]        = ['stealth', 'graphite', 'frost', 'oled'];
@@ -124,7 +125,10 @@ export default function SettingsView({ ollamaModels, onOllamaRefresh }: Props) {
 
       {/* Vault */}
       <section>
-        <h3 className="text-[10px] uppercase tracking-widest font-semibold mb-3" style={{ color: 'var(--text-dim)' }}>Vault</h3>
+        <h3 className="text-[10px] uppercase tracking-widest font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
+          Vault
+          <HelpTip body="The on-disk folder that stores every note. Change Vault opens a picker to point GhostVault at a different directory; the app reloads after switching." />
+        </h3>
         <div className="space-y-2">
           <div className="px-3 py-2.5 rounded-lg border text-sm font-mono truncate"
             style={{ background: 'var(--bg3)', borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
@@ -140,7 +144,10 @@ export default function SettingsView({ ollamaModels, onOllamaRefresh }: Props) {
 
       {/* Capture Hotkey */}
       <section>
-        <h3 className="text-[10px] uppercase tracking-widest font-semibold mb-3" style={{ color: 'var(--text-dim)' }}>Capture Hotkey</h3>
+        <h3 className="text-[10px] uppercase tracking-widest font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
+          Capture Hotkey
+          <HelpTip body="Global keyboard shortcut that opens the Quick Capture window from anywhere in your OS. Click the field, press a combo, then Save." />
+        </h3>
         <div className="space-y-2">
           <div className="text-[11px] mb-1" style={{ color: 'var(--text-dim)' }}>
             Global shortcut to open the capture window from any app.
@@ -180,7 +187,10 @@ export default function SettingsView({ ollamaModels, onOllamaRefresh }: Props) {
 
       {/* Theme */}
       <section>
-        <h3 className="text-[10px] uppercase tracking-widest font-semibold mb-3" style={{ color: 'var(--text-dim)' }}>Theme</h3>
+        <h3 className="text-[10px] uppercase tracking-widest font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
+          Theme
+          <HelpTip body="Visual mode pairs: a Core surface palette (stealth, graphite, frost, oled) plus a Personality accent (neutral, cyberpunk, terminal, threat). Changes apply instantly." />
+        </h3>
         <div className="space-y-3">
           <div>
             <div className="text-[10px] uppercase tracking-wider mb-2" style={{ color: 'var(--text-dim)' }}>Core</div>
@@ -221,7 +231,10 @@ export default function SettingsView({ ollamaModels, onOllamaRefresh }: Props) {
 
       {/* Editor */}
       <section>
-        <h3 className="text-[10px] uppercase tracking-widest font-semibold mb-3" style={{ color: 'var(--text-dim)' }}>Editor</h3>
+        <h3 className="text-[10px] uppercase tracking-widest font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
+          Editor
+          <HelpTip body="Editor behaviour toggles. Autosave writes 2s after you stop typing; Always on Top pins the window above other apps for quick reference." />
+        </h3>
         <div className="space-y-3">
           <label className="flex items-center gap-3 cursor-pointer">
             <input type="checkbox" defaultChecked={config?.autosave !== false}
@@ -243,7 +256,10 @@ export default function SettingsView({ ollamaModels, onOllamaRefresh }: Props) {
 
       {/* AI */}
       <section>
-        <h3 className="text-[10px] uppercase tracking-widest font-semibold mb-3" style={{ color: 'var(--text-dim)' }}>AI</h3>
+        <h3 className="text-[10px] uppercase tracking-widest font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
+          AI
+          <HelpTip body="Pick the Ollama model used by the AI Assistant and the inline / commands, plus a context bias (work, cyber, personal) that primes the assistant's tone." />
+        </h3>
         <div className="space-y-3">
           <div>
             <div className="text-[10px] uppercase tracking-wider mb-2" style={{ color: 'var(--text-dim)' }}>Context Mode</div>
@@ -291,7 +307,10 @@ export default function SettingsView({ ollamaModels, onOllamaRefresh }: Props) {
 
       {/* Academic Mode */}
       <section>
-        <h3 className="text-[10px] uppercase tracking-widest font-semibold mb-3" style={{ color: 'var(--text-dim)' }}>Academic Mode</h3>
+        <h3 className="text-[10px] uppercase tracking-widest font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
+          Academic Mode
+          <HelpTip body="Coursework workflow: scaffolds Courses / Labs / Week XX folders and gives you a one-click new Lab Report stub stamped with today's date and your author name." />
+        </h3>
         <div className="space-y-3">
           <label className="flex items-center gap-3 cursor-pointer">
             <input type="checkbox" checked={academicMode}

@@ -4,6 +4,7 @@ import { useRecondeskStore } from '../../stores/useRecondeskStore'
 import NewTargetModal from '../target/NewTargetModal'
 import CsvImportModal from '../target/CsvImportModal'
 import EngagementScopePanel from '../engagement/EngagementScopePanel'
+import HelpTip from '../ui/HelpTip'
 import type { Target, TargetStatus, Platform } from '../../types/recondesk'
 
 // ─── Live elapsed timer ───────────────────────────────────────────────────────
@@ -209,8 +210,12 @@ export default function Sidebar() {
         className="flex items-center justify-between px-3 py-2.5"
         style={{ borderBottom: '1px solid rgba(42,51,71,0.4)' }}
       >
-        <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: '#484f58' }}>
+        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest" style={{ color: '#484f58' }}>
           Targets <span style={{ color: '#8b949e' }}>({targets.length})</span>
+          <HelpTip
+            title="Target list"
+            body="Every box, network, or engagement target you're tracking. Click a row to load its tabs; right indicator shows status, platform, and stale / flagged state. Use + to add a new target."
+          />
         </span>
         <div className="flex items-center gap-1">
           <button

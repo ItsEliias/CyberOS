@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { PlaybookStep } from '@shared/types'
+import HelpTip from '../ui/HelpTip'
 
 const API_KEY_STORAGE = 'playbookstudio_anthropic_key'
 
@@ -138,6 +139,11 @@ export function VariablesPanel({ vars, disabled, onChange }: {
         >
           <div className="w-px h-3 rounded-full" style={{ background: '#2dd4bf' }} />
           Variables
+          <HelpTip
+            title="Variables panel"
+            body="Define reusable values like target IPs or domains. Reference them as {{key}} inside step descriptions and commands — they're substituted at run time."
+            accent="#2dd4bf"
+          />
         </span>
         <span className="text-xs" style={{ color: '#484f58' }}>Use {'{{key}}'} in descriptions &amp; commands</span>
       </div>

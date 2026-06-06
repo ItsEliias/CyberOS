@@ -2,6 +2,7 @@
 
 import type { EditorMode, NoteFile } from '@shared/types';
 import { ToolBtn, ToolDivider, formatRelTime, tagHue } from './EditorToolbar';
+import HelpTip from '../ui/HelpTip';
 
 function modeLabel(m: EditorMode): string {
   return m === 'edit' ? 'Edit' : m === 'split' ? 'Split' : 'Preview';
@@ -63,6 +64,10 @@ export default function EditorTopBar({
               <span className="text-sm font-semibold truncate" style={{ color: '#e6edf3', fontFamily: 'var(--font-display)' }}>
                 {activeNote.name}
               </span>
+              <HelpTip
+                title="Editor toolbar"
+                body="Switch between Edit, Split, and Preview modes; format text; insert links, tables, and templates; invoke AI; pin or capture the note. Most actions also have keyboard shortcuts."
+              />
               {isLocked && <span className="text-[10px]" style={{ color: '#d29922' }}>locked</span>}
             </div>
             <div className="flex items-center gap-2">
@@ -81,8 +86,12 @@ export default function EditorTopBar({
             </div>
           </div>
         ) : (
-          <span className="text-sm font-semibold" style={{ color: 'rgba(72,79,88,0.7)', fontFamily: 'var(--font-display)' }}>
+          <span className="inline-flex items-center gap-1.5 text-sm font-semibold" style={{ color: 'rgba(72,79,88,0.7)', fontFamily: 'var(--font-display)' }}>
             GhostVault
+            <HelpTip
+              title="Editor toolbar"
+              body="Open or create a note to start editing. Once a note is active, this bar exposes formatting, mode switching, AI actions, and quick capture."
+            />
           </span>
         )}
       </div>
@@ -126,7 +135,14 @@ export default function EditorTopBar({
         <ToolBtn onClick={onTemplate} title="Insert Template">🗂</ToolBtn>
         <ToolDivider />
         <ToolBtn onClick={onAiMenu} title="AI Assistant">✨</ToolBtn>
-        <ToolBtn onClick={onCapture} title="Capture Window">⚡</ToolBtn>
+        <span className="inline-flex items-center">
+          <ToolBtn onClick={onCapture} title="Capture Window">⚡</ToolBtn>
+          <HelpTip
+            className="ml-0.5"
+            title="Capture window"
+            body="Opens a lightweight scratch window for instant note capture (also bound to the global hotkey set in Settings). What you write here saves into your vault when you press Capture."
+          />
+        </span>
         <ToolDivider />
         <ToolBtn onClick={onTogglePin} title={isPinned ? 'Unpin Note' : 'Pin Note'} active={isPinned}>📌</ToolBtn>
         <ToolBtn onClick={onToggleAot} title="Toggle Always on Top" active={alwaysOnTop}>⬆</ToolBtn>

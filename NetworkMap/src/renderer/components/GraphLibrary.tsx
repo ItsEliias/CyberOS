@@ -1,6 +1,7 @@
 // NetworkMap — GraphLibrary.tsx — Orange-accent library view (UI redesign, logic unchanged)
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { GraphSummary, NetworkGraph } from '@shared/types'
+import HelpTip from './ui/HelpTip'
 
 /** Highlight substrings matching query in amber */
 function AmberHighlight({ text, query }: { text: string; query: string }) {
@@ -218,6 +219,12 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,51,71,1)' }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,51,71,0.75)' }}
         >⚙</button>
+        <span className="no-drag" style={{ marginLeft: 6 }}>
+          <HelpTip
+            title="Settings"
+            body="Configure storage paths, default layout, edge inference rules, and integrations like ReconDesk and GNS3."
+          />
+        </span>
       </div>
 
       {/* Section header */}
@@ -225,6 +232,10 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <h1 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Graph Library</h1>
+            <HelpTip
+              title="Graph Library"
+              body="All saved network topology graphs. Click a row to open it in the canvas, or use the toolbar to import a scan or start a blank graph."
+            />
             {graphs.length > 0 && (
               <span
                 key={graphs.length}
@@ -305,6 +316,10 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
           onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLElement).style.background = 'rgba(255,140,66,0.2)' }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,140,66,0.12)' }}
         >Import ▾</button>
+        <HelpTip
+          title="Import Scan"
+          body="Open the import dialog to load an nmap XML file, paste raw XML, or pull from ReconDesk or GNS3. Hosts and services become graph nodes."
+        />
         <button
           onClick={() => onOpenGraph(makeEmptyGraph())}
           style={{
@@ -316,6 +331,15 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)' }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)' }}
         >+ New Empty Graph</button>
+        <HelpTip
+          title="New Empty Graph"
+          body="Create a blank topology you can build by hand — add nodes and edges manually in the canvas without importing a scan."
+        />
+        <HelpTip
+          title="Filters & Search"
+          body="Type a name above to filter graphs in the library. Use the Sort dropdown to reorder by date, name, or node count."
+          style={{ marginLeft: 4 }}
+        />
 
         {graphs.length > 1 && (
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>

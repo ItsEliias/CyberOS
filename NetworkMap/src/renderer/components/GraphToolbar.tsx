@@ -2,6 +2,7 @@
 import { useRef, useState } from 'react'
 import type { LayoutMode } from '@shared/types'
 import type { LayerMode } from './GraphSvg'
+import HelpTip from './ui/HelpTip'
 
 interface HealthScore { score: number }
 
@@ -89,6 +90,12 @@ export default function GraphToolbar({
           </svg>
           Library
         </TbBtn>
+      </div>
+      <div className="no-drag" style={{ display: 'flex', alignItems: 'center' }}>
+        <HelpTip
+          title="Graph canvas & toolbar"
+          body="Interactive topology view. Drag nodes, scroll to zoom, right-click for actions. Toolbar controls layout, layers, search, and export."
+        />
       </div>
 
       {/* Graph name */}
@@ -210,12 +217,16 @@ export default function GraphToolbar({
       <div style={{ width: 1, height: 18, background: 'rgba(42,51,71,0.6)', flexShrink: 0 }} />
 
       {/* Feature toggles */}
-      <div className="no-drag flex gap-1">
+      <div className="no-drag flex gap-1 items-center">
         <ToggleBtn label="Subnets" active={showSubnets} onClick={onToggleSubnets} />
         <ToggleBtn label="Vulns"   active={showVulnOverlay} onClick={onToggleVulnOverlay} />
         <ToggleBtn label="Heat"    active={showHeatmap} onClick={onToggleHeatmap} />
         <ToggleBtn label="Diff"    active={compareMode} onClick={onToggleCompare} />
         <FilterToggle filterCount={filterCount} active={filterOpen} onClick={onToggleFilter} />
+        <HelpTip
+          title="Filters & search"
+          body="Search nodes by name, IP, or service. Open Filters to narrow by OS, risk, or port. Toggles control subnet bubbles, vulnerability and heat overlays, and diff mode."
+        />
       </div>
 
       {/* Layer view */}

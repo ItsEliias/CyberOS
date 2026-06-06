@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useRecondeskStore } from '../../stores/useRecondeskStore'
+import HelpTip from '../ui/HelpTip'
 import type { Platform, TargetStatus, Difficulty, AttackStage, CardStatus } from '../../types/recondesk'
 
 const PLATFORMS: Platform[] = ['HTB', 'THM', 'CTF', 'Client', 'Internal']
@@ -157,7 +158,13 @@ export default function NewTargetModal() {
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#2a3347]">
           <div>
-            <h2 className="text-sm font-semibold text-[#e2e8f0]">New Target</h2>
+            <h2 className="inline-flex items-center gap-2 text-sm font-semibold text-[#e2e8f0]">
+              New Target
+              <HelpTip
+                title="New Target"
+                body="Create a target to track. Name + IP are required; platform, OS, difficulty, tags, and a methodology template are optional but speed up setup. The target appears in the sidebar immediately."
+              />
+            </h2>
             <p className="text-[11px] text-[#4a5568] mt-0.5">Add a machine, domain, or scope to track</p>
           </div>
           <button

@@ -7,6 +7,7 @@ import SignatureEditor from './SignatureEditor';
 import RiskMatrix from './RiskMatrix';
 import SeverityChart from './SeverityChart';
 import CommentsPanel, { unresolvedCount } from './CommentsPanel';
+import HelpTip from './ui/HelpTip';
 
 type EditorMode = 'edit' | 'split' | 'preview';
 
@@ -310,12 +311,24 @@ export default function SectionEditor() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <SectionTitleBar section={section} titleVal={titleVal} setTitleVal={setTitleVal} editingTitle={editingTitle} setEditingTitle={setEditingTitle} commitTitle={commitTitle} />
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
-            Set <strong>Likelihood</strong> (1–5) and <strong>Impact Score</strong> (1–5) on findings to plot them on the matrix.
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+              Set <strong>Likelihood</strong> (1–5) and <strong>Impact Score</strong> (1–5) on findings to plot them on the matrix.
+            </p>
+            <HelpTip
+              title="Risk Matrix"
+              body="Plots each finding by likelihood × impact (1–5). Cell color codes the risk band (low → critical). Set both fields on a finding to make it appear."
+            />
+          </div>
           <RiskMatrix findings={activeReport?.findings ?? []} />
           <div style={{ marginTop: 24 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', marginBottom: 8 }}>Severity Chart</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-dim)' }}>Severity Chart</div>
+              <HelpTip
+                title="Severity Chart"
+                body="Horizontal bar chart of finding counts per severity tier. Useful as an at-a-glance summary in the Executive Summary or risk-matrix section."
+              />
+            </div>
             <SeverityChart findings={activeReport?.findings ?? []} />
           </div>
         </div>
@@ -335,6 +348,11 @@ export default function SectionEditor() {
       {/* Header row */}
       <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
         <SectionTitleInline section={section} titleVal={titleVal} setTitleVal={setTitleVal} editingTitle={editingTitle} setEditingTitle={setEditingTitle} commitTitle={commitTitle} />
+        <HelpTip
+          title="Section Editor"
+          body="Write markdown in Edit, see the rendered result in Preview, or use Split. Use {{variables}} for substitution and the Grammar toggle to spot passive voice."
+        />
+
 
         {/* Word count */}
         {!isFindingsSec && (

@@ -4,6 +4,7 @@ import { useStore } from '../store';
 import { makeBlankFinding, SEVERITIES, SEV_COLORS } from '../lib/defaults';
 import { SeveritySummary } from './SeverityBadge';
 import SeverityPill from './ui/SeverityPill';
+import HelpTip from './ui/HelpTip';
 import FindingEditor from './FindingEditor';
 import ImportFindingsModal from './ImportFindingsModal';
 import SeverityChart from './SeverityChart';
@@ -81,6 +82,10 @@ export default function FindingsPanel() {
           >
             {findings.length}
           </span>
+          <HelpTip
+            title="Findings Panel"
+            body="Catalog every vulnerability with severity, CVSS, evidence, and remediation. Group by severity, toggle the chart, or import from ReconDesk."
+          />
         </div>
 
         <div className="flex gap-1.5">

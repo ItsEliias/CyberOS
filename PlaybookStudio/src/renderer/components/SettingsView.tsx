@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useStore, DEFAULT_THEME, type AppTheme } from '../store'
 import type { Playbook } from '@shared/types'
+import HelpTip from './ui/HelpTip'
 
 const API_KEY_STORAGE = 'playbookstudio_anthropic_key'
 
@@ -54,8 +55,13 @@ function ThemeSection() {
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: preview.accentColor }}>
+      <h2 className="text-xs font-semibold uppercase tracking-widest inline-flex items-center gap-2" style={{ color: preview.accentColor }}>
         Appearance
+        <HelpTip
+          title="Appearance"
+          body="Pick an accent color, background, and text brightness. Updates apply live across the app."
+          accent={preview.accentColor}
+        />
       </h2>
       <div
         className="rounded-lg p-4 flex flex-col gap-4"
@@ -249,7 +255,13 @@ export default function SettingsView() {
         className="px-4 py-3 flex-shrink-0"
         style={{ borderBottom: '1px solid var(--border)' }}
       >
-        <span className="text-sm font-medium" style={{ color: '#e2e8f0' }}>Settings</span>
+        <span className="text-sm font-medium inline-flex items-center gap-2" style={{ color: '#e2e8f0' }}>
+          Settings
+          <HelpTip
+            title="Settings"
+            body="Configure theme, playbook storage, AI key, and CyberOS integration. Changes apply immediately."
+          />
+        </span>
       </div>
 
       <div className="flex-1 p-6 flex flex-col gap-6 max-w-2xl">
@@ -259,8 +271,13 @@ export default function SettingsView() {
 
         {/* Playbooks section */}
         <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: accent }}>
+          <h2 className="text-xs font-semibold uppercase tracking-widest inline-flex items-center gap-2" style={{ color: accent }}>
             Playbooks
+            <HelpTip
+              title="Playbooks"
+              body="See where playbooks are stored on disk, export your custom set as JSON, or import a backup. Built-ins are read-only."
+              accent={accent}
+            />
           </h2>
 
           <div
@@ -333,8 +350,13 @@ export default function SettingsView() {
 
         {/* AI section */}
         <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: accent }}>
+          <h2 className="text-xs font-semibold uppercase tracking-widest inline-flex items-center gap-2" style={{ color: accent }}>
             AI Step Generator
+            <HelpTip
+              title="AI Step Generator"
+              body="Stores your Anthropic API key locally so the editor can draft new steps for you. Leave blank to disable AI features."
+              accent={accent}
+            />
           </h2>
           <div
             className="rounded-lg p-4 flex flex-col gap-3"
@@ -381,8 +403,13 @@ export default function SettingsView() {
 
         {/* Integration section */}
         <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: accent }}>
+          <h2 className="text-xs font-semibold uppercase tracking-widest inline-flex items-center gap-2" style={{ color: accent }}>
             Integration
+            <HelpTip
+              title="Integration"
+              body="Toggle CyberOS data exchange — reading lab/target context and writing playbook events for the dashboard."
+              accent={accent}
+            />
           </h2>
           <div
             className="rounded-lg p-4 flex flex-col gap-3"

@@ -1,5 +1,6 @@
 // NetworkMap — SettingsView.tsx
 import { useState, useEffect } from 'react'
+import HelpTip from './ui/HelpTip'
 
 export interface NetworkMapSettings {
   nodeLabel: 'ip' | 'ip-hostname' | 'hostname'
@@ -156,15 +157,19 @@ export default function SettingsView({ onBack }: Props) {
         <div style={{ paddingLeft: 70, WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'] }}>
           <button onClick={onBack} style={btnStyle}>← Back</button>
         </div>
-        <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--app-text)', WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'] }}>
+        <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--app-text)', WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'], display: 'inline-flex', alignItems: 'center', gap: 8 }}>
           Settings
+          <HelpTip
+            title="Settings"
+            body="Customize NetworkMap appearance, node labels, edge inference, and import defaults. Changes apply after clicking Save."
+          />
         </span>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '24px', maxWidth: 540 }}>
 
         {/* Theme section */}
-        <Section title="Appearance">
+        <Section title="Appearance" help={{ body: 'Tune accent, background, and text brightness. Preview shows the result live before saving.' }}>
           {/* Accent color */}
           <SettingRow label="Accent color" description="Primary highlight and interactive color">
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -252,7 +257,7 @@ export default function SettingsView({ onBack }: Props) {
         </Section>
 
         {/* Display */}
-        <Section title="Display">
+        <Section title="Display" help={{ body: 'Choose what each node shows, whether inferred edges are drawn, and if the force layout animates.' }}>
           <SettingRow
             label="Node label"
             description="What to show below each node"
@@ -292,7 +297,7 @@ export default function SettingsView({ onBack }: Props) {
         </Section>
 
         {/* Import */}
-        <Section title="Import">
+        <Section title="Import" help={{ body: 'Defaults applied when importing new scans, including auto-import when ReconDesk reports a new target.' }}>
           <SettingRow
             label="Default graph name format"
             description="How to name newly imported graphs"
@@ -338,7 +343,7 @@ export default function SettingsView({ onBack }: Props) {
   )
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, help, children }: { title: string; help?: { title?: string; body: string }; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 28 }}>
       <div style={{
@@ -346,7 +351,11 @@ function Section({ title, children }: { title: string; children: React.ReactNode
         letterSpacing: '0.06em', textTransform: 'uppercase',
         marginBottom: 12, paddingBottom: 6,
         borderBottom: '1px solid rgba(42,51,71,0.6)',
-      }}>{title}</div>
+        display: 'flex', alignItems: 'center', gap: 8,
+      }}>
+        <span>{title}</span>
+        {help && <HelpTip title={help.title ?? title} body={help.body} />}
+      </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {children}
       </div>

@@ -4,6 +4,7 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '../store';
+import HelpTip from './ui/HelpTip';
 import type { NoteFile } from '@shared/types';
 
 // Stable hue bucket for a tag string (0-7)
@@ -118,7 +119,13 @@ export default function TagsView({ onOpenNote }: Props) {
   return (
     <div className="flex flex-col h-full">
       <div className="px-6 py-4 border-b shrink-0" style={{ borderColor: 'var(--border)', background: 'var(--bg2)' }}>
-        <div className="text-lg font-bold" style={{ color: 'var(--text)' }}>Tags</div>
+        <div className="flex items-center gap-2">
+          <div className="text-lg font-bold" style={{ color: 'var(--text)' }}>Tags</div>
+          <HelpTip
+            title="Tags"
+            body="Tag cloud built from #inline tags, YAML frontmatter, and folder names. Click any tag to filter the notes pane to just those notes. Click again to clear."
+          />
+        </div>
         <div className="text-xs mt-0.5" style={{ color: 'var(--text-dim)' }}>
           {tagStats.length} tag{tagStats.length !== 1 ? 's' : ''} across {notes.length} notes
         </div>

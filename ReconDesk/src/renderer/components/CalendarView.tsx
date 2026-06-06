@@ -1,6 +1,7 @@
 // ReconDesk — Engagement Calendar View (Feature 11)
 import { useState } from 'react'
 import { useRecondeskStore } from '../stores/useRecondeskStore'
+import HelpTip from './ui/HelpTip'
 import type { Target } from '../types/recondesk'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -72,8 +73,12 @@ export default function CalendarView() {
       <div className="max-w-3xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-[#e2e8f0]">
+          <h2 className="inline-flex items-center gap-2 text-sm font-semibold text-[#e2e8f0]">
             {MONTHS[month]} {year}
+            <HelpTip
+              title="Calendar"
+              body="Month grid of scheduled / due targets. Cells highlight days with engagements; red borders flag deadlines within 3 days. Click a day to see its targets, then click a target to open it."
+            />
           </h2>
           <div className="flex items-center gap-1">
             <button onClick={prevMonth} className="w-7 h-7 flex items-center justify-center text-[#8b949e] hover:text-[#e2e8f0] hover:bg-[#2a3347] rounded transition-colors text-sm">‹</button>

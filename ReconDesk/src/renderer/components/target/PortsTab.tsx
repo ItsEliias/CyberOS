@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 import { useRecondeskStore } from '../../stores/useRecondeskStore'
 import ImportNmapModal from './ImportNmapModal'
+import HelpTip from '../ui/HelpTip'
 import type { PortState } from '../../types/recondesk'
 
 // ─── Service Banner Tooltip ───────────────────────────────────────────────────
@@ -113,6 +114,10 @@ export default function PortsTab({ targetId }: { targetId: string }) {
           <span className="heading-sm" style={{ color: '#e6edf3' }}>
             Ports <span className="text-[10px] font-normal" style={{ color: '#484f58' }}>({openCount} open)</span>
           </span>
+          <HelpTip
+            title="Ports"
+            body="Open / filtered / closed ports observed on this target. Sort by column, +Add a port manually, or paste nmap XML via Import. Right-click a row for service-banner details."
+          />
           <div className="flex items-center gap-1 ml-2">
             {SORT_OPTIONS.map(s => (
               <button

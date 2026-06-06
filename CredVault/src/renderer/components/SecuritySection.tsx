@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from 'react'
 import { Card, SettingRow } from './SettingsViewParts'
+import HelpTip from './ui/HelpTip'
 
 export default function SecuritySection() {
   // ── 2FA state ───────────────────────────────────────────────────────────
@@ -93,7 +94,10 @@ export default function SecuritySection() {
 
   return (
     <>
-      <Card title="Two-Factor Authentication">
+      <Card
+        title="Two-Factor Authentication"
+        help={<HelpTip title="Two-factor authentication" body="Pair the vault with a TOTP authenticator app (Authy, 1Password, Google Authenticator). Once enabled, unlocking will require both your master password and a fresh 6-digit code." />}
+      >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
           {!twoFA.enabled && !setupSecret && (
@@ -193,7 +197,10 @@ export default function SecuritySection() {
         </div>
       </Card>
 
-      <Card title="Recovery Key">
+      <Card
+        title="Recovery Key"
+        help={<HelpTip title="Recovery key" body="A 48-character one-time key that lets you reset your master password if you forget it. Save it offline — without both the key and your password, the vault is unrecoverable." />}
+      >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
           {!rec.configured && !showRecovery && (

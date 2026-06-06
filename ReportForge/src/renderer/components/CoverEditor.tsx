@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useStore } from '../store';
+import HelpTip from './ui/HelpTip';
 import type { CoverData, ClassificationLabel, ReportSection } from '@shared/types';
 
 const CLASSIFICATIONS: ClassificationLabel[] = ['Confidential', 'Internal', 'Public'];
@@ -41,6 +42,17 @@ export default function CoverEditor({ section }: Props) {
 
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Header with help */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
+          Cover Page
+        </span>
+        <HelpTip
+          title="Cover Page"
+          body="The branded first page of the report. Set client, tester, date, classification, and optional logo — the preview updates live."
+        />
+      </div>
+
       {/* Preview */}
       <CoverPreview data={data} />
 

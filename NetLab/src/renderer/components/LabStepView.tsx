@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNetLabStore } from '../store'
+import HelpTip from './ui/HelpTip'
 
 function CommandBlock({ command }: { command: string }) {
   const [copied, setCopied] = useState(false)
@@ -161,6 +162,10 @@ export default function LabStepView() {
         </button>
         <span className="text-border-default">|</span>
         <span className="text-sm font-medium text-text-primary">{activeLab.title}</span>
+        <HelpTip
+          title="Active Lab"
+          body="You're inside a running lab. Step dots show progress: blue = current, green = passed. Use the timer in the status bar to track your attempt time."
+        />
         <div className="flex-1" />
         {/* Step progress dots */}
         <div className="flex items-center gap-1">
@@ -210,11 +215,15 @@ export default function LabStepView() {
               </div>
 
               {step.deviceName && (
-                <div className="mb-3">
+                <div className="mb-3 flex items-center gap-2">
                   <span className="text-2xs px-2 py-0.5 rounded font-mono-code"
                     style={{ background: 'rgba(94,196,255,0.08)', color: '#5ec4ff', border: '1px solid rgba(94,196,255,0.2)' }}>
                     Device: {step.deviceName}
                   </span>
+                  <HelpTip
+                    title="Target Device"
+                    body="The device this step should be run on. Switch contexts in your terminal or lab environment before pasting the command."
+                  />
                 </div>
               )}
 
@@ -293,7 +302,13 @@ export default function LabStepView() {
               {/* Notes */}
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">Notes</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">Notes</p>
+                    <HelpTip
+                      title="Notes Panel"
+                      body="Jot lab observations, gotchas, or config diffs here. They auto-save with the lab and can be pushed to GhostVault for long-term reference."
+                    />
+                  </div>
                   <button
                     onClick={saveToGhostVault}
                     className="text-2xs px-2 py-0.5 rounded transition-colors"

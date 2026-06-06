@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useRecondeskStore } from '../../stores/useRecondeskStore'
+import HelpTip from '../ui/HelpTip'
 import type { Platform } from '../../types/recondesk'
 
 const PLATFORMS: Platform[] = ['HTB', 'THM', 'CTF', 'Client', 'Internal']
@@ -58,7 +59,13 @@ export default function SettingsPanel() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-sm font-semibold text-[#e2e8f0]">Settings</h2>
+            <h2 className="inline-flex items-center gap-2 text-sm font-semibold text-[#e2e8f0]">
+              Settings
+              <HelpTip
+                title="Settings"
+                body="ReconDesk preferences: default platform for new targets, ecosystem context sharing, AI keys, wordlist defaults. Changes save instantly to local storage."
+              />
+            </h2>
             <p className="text-[10px] text-[#4a5568] mt-0.5">ReconDesk preferences</p>
           </div>
           <button

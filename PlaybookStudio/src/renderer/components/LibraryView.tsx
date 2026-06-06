@@ -3,6 +3,7 @@ import { useStore } from '../store'
 import type { Playbook } from '@shared/types'
 import { VAPT_METHODOLOGIES, buildVaptPlaybook, type VaptMethodology } from './library/vapt-data'
 import PlaybookCard from './library/PlaybookCard'
+import HelpTip from './ui/HelpTip'
 
 const CATEGORIES: { id: string; label: string }[] = [
   { id: 'all',              label: 'All' },
@@ -213,6 +214,12 @@ export default function LibraryView() {
       >
         {/* Category filter chips */}
         <div className="flex items-center gap-1 overflow-x-auto no-drag flex-1 min-w-0">
+          <span className="flex-shrink-0 mr-1">
+            <HelpTip
+              title="Playbook library"
+              body="All playbooks available — built-in templates plus your custom ones. Filter by category, tags, search, or MITRE technique. Click a card to open it."
+            />
+          </span>
           {CATEGORIES.map(cat => {
             const isActive = categoryFilter === cat.id
             return (
@@ -287,6 +294,10 @@ export default function LibraryView() {
           >
             + New Playbook
           </button>
+          <HelpTip
+            title="New Playbook"
+            body="Start a blank custom playbook. You'll land in the editor where you add steps, variables, and notes from scratch."
+          />
         </div>
       </div>
 
@@ -339,6 +350,11 @@ export default function LibraryView() {
           >
             <div className="w-px h-3 rounded-full" style={{ background: '#2dd4bf' }} />
             Import VAPT Methodology
+            <HelpTip
+              title="Templates"
+              body="Industry pentest methodologies (PTES, OSSTMM, OWASP, etc.) imported as ready-to-edit playbooks. Each phase becomes a step."
+              accent="#2dd4bf"
+            />
           </div>
           <div className="flex flex-wrap gap-2">
             {VAPT_METHODOLOGIES.map(m => (

@@ -1,5 +1,6 @@
 import { useStore } from '../store';
 import { KNOWN_VARS } from '../utils/variables';
+import HelpTip from './ui/HelpTip';
 import type { ReportVariables } from '@shared/types';
 
 const VAR_LABELS: Record<keyof ReportVariables, string> = {
@@ -41,7 +42,13 @@ export default function VariablesPanel({ onClose }: Props) {
       }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h3 style={{ fontSize: 14, fontWeight: 700 }}>Report Variables</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h3 style={{ fontSize: 14, fontWeight: 700 }}>Report Variables</h3>
+              <HelpTip
+                title="Variables Panel"
+                body="Fill once, substitute everywhere. Any {{client_name}} / {{scope}} placeholder in your sections renders these values on export."
+              />
+            </div>
             <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
               Used in templates via <code style={{ color: 'var(--accent)', background: 'rgba(63,185,80,0.1)', padding: '0 4px', borderRadius: 3 }}>{'{{variable}}'}</code>
             </p>

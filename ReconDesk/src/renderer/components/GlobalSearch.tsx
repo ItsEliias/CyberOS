@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRecondeskStore } from '../stores/useRecondeskStore'
+import HelpTip from './ui/HelpTip'
 
 export default function GlobalSearch() {
   const [open, setOpen]   = useState(false)
@@ -65,6 +66,10 @@ export default function GlobalSearch() {
                   onChange={e => runSearch(e.target.value)}
                   placeholder="Search targets, IPs, CVEs, notes, subtasks…"
                   className="flex-1 bg-transparent text-sm text-[#e2e8f0] placeholder-[#4a5568] focus:outline-none"
+                />
+                <HelpTip
+                  title="Global Search"
+                  body="Cmd / Ctrl+K from anywhere in ReconDesk. Searches every target's name, IP, ports, credentials, attack cards, and notes; results group by kind and jump straight to the right tab."
                 />
                 <span className="text-[10px] text-[#4a5568] font-mono px-1.5 py-0.5 rounded bg-[#2a3347]">ESC</span>
               </div>

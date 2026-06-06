@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { generatePassword, type GenOptions } from '../utils/passwordGenerator'
 import { scorePassword } from '../utils/passwordStrength'
+import HelpTip from './ui/HelpTip'
 
 interface Props {
   onClose:   () => void
@@ -113,7 +114,13 @@ export default function PasswordGeneratorModal({ onClose, onUse }: Props) {
             </svg>
           </div>
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: 14, color: '#e6edf3', fontWeight: 700 }}>Password Generator</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, color: '#e6edf3', fontWeight: 700 }}>
+              Password Generator
+              <HelpTip
+                title="Password generator"
+                body="Generates a cryptographically random password from the selected character classes. Adjust length and toggles, then copy it or hand it off straight to a new credential."
+              />
+            </span>
             <span style={{ fontSize: 11, color: '#8b949e' }}>Strong, random, copy-ready.</span>
           </div>
           <button onClick={onClose} aria-label="Close" style={{

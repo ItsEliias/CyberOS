@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useRecondeskStore } from '../../stores/useRecondeskStore'
+import HelpTip from '../ui/HelpTip'
 import type { AttackStage, Target } from '../../types/recondesk'
 
 const STAGES: AttackStage[] = ['recon', 'enum', 'exploit', 'post', 'privesc', 'loot']
@@ -182,7 +183,13 @@ ${target.notes ? `<h2>Notes</h2><pre>${target.notes}</pre>` : ''}
       <div className="max-w-2xl flex flex-col gap-5">
         {/* Target summary */}
         <div className="bg-[#12131a] border border-[#2a3347] rounded-lg p-4">
-          <p className="text-[10px] text-[#4a5568] uppercase tracking-widest mb-3">Export Summary</p>
+          <p className="text-[10px] text-[#4a5568] uppercase tracking-widest mb-3 inline-flex items-center gap-1.5">
+            Export Summary
+            <HelpTip
+              title="Export"
+              body="Bundle this target's data for hand-off: JSON for tools, Markdown for notes, HTML for share-ready reports. Stats above preview what's included."
+            />
+          </p>
           <div className="flex items-center gap-2 mb-3">
             <span className="text-base font-bold text-[#e2e8f0]">{target.name}</span>
             <span className="font-mono text-xs text-[#d29922]/70">{target.ip}</span>

@@ -4,6 +4,7 @@ import type { NetworkGraph, NetworkNode, NetworkEdge } from '@shared/types'
 import { parseNmapXml, type ParseResult } from '../lib/nmapParser'
 import { inferEdges } from '../lib/edgeInference'
 import { ReconDeskTab, Gns3Tab } from './ImportModalTabs'
+import HelpTip from './ui/HelpTip'
 
 interface Props {
   onClose: () => void
@@ -363,6 +364,10 @@ export default function ImportModal({ onClose, onImport }: Props) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 2, height: 16, borderRadius: 1, background: 'linear-gradient(180deg, #ff8c42, rgba(255,140,66,0.4))', flexShrink: 0 }} />
             <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>Import Scan Data</span>
+            <HelpTip
+              title="Import Scan dialog"
+              body="Bring hosts and services into NetworkMap. Pick a tab to import from an nmap XML file, raw pasted XML, ReconDesk, or a running GNS3 project."
+            />
           </div>
           <button
             onClick={onClose}
