@@ -9,6 +9,7 @@ import * as ecosystemBus from './ecosystem-bus.js';
 import { registerExtras, DEFAULT_CAPTURE_HOTKEY } from './ipc-extras.js';
 import { consumePendingAction, installPendingActionWatcher } from './pendingActions.js'
 import type { GhostVaultConfig, NoteFile, NewNoteResult, SaveCaptureResult } from '../shared/types.js';
+import { launchPeerApp } from './platform'
 
 const APP_KEY = 'ghostvault';
 
@@ -466,15 +467,7 @@ ipcMain.handle('get-sso', () => {
 });
 
 // Cross-app: open CredVault from the lock screen.
-ipcMain.handle('open-credvault', () => {
-  try {
-    const target = '/Applications/CredVault.app';
-    if (!fs.existsSync(target)) return false;
-    const { spawn } = require('child_process') as typeof import('child_process');
-    spawn('open', [target], { detached: true, stdio: 'ignore' }).unref();
-    return true;
-  } catch { return false; }
-});
+ipcMain.handle('open-credvault', () => launchPeerApp('CredVault'))
 
 ipcMain.handle('ecosystem-emit', (_, appName: string, eventType: string, data: Record<string, unknown>) => {
   ecosystemBus.emitEvent(appName, eventType, data);

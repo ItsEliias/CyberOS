@@ -8,6 +8,7 @@ import type { CommandEntry, CapturePayload, SessionContext } from '../shared/typ
 import { registerTerminalLinkIPC } from './ipc/terminallink';
 import { stopTailing } from './externalShellHook';
 import { consumePendingAction, installPendingActionWatcher } from './pendingActions'
+import { launchPeerApp } from './platform'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const _require   = createRequire(import.meta.url);
@@ -399,15 +400,7 @@ ipcMain.handle('get-sso', () => {
   } catch { return { unlocked: false }; }
 });
 
-ipcMain.handle('open-credvault', () => {
-  try {
-    const target = '/Applications/CredVault.app';
-    if (!fs.existsSync(target)) return false;
-    const { spawn } = require('child_process') as typeof import('child_process');
-    spawn('open', [target], { detached: true, stdio: 'ignore' }).unref();
-    return true;
-  } catch { return false; }
-});
+ipcMain.handle('open-credvault', () => launchPeerApp('CredVault'))
 
 // ─── IPC: Capture save ────────────────────────────────────────────────────────
 ipcMain.handle('capture:save', async (_e, payload: CapturePayload) => {

@@ -11,6 +11,7 @@ import { detectCredentialChanges } from './credential-tracker'
 import { registerNetworkHandlers } from './ipc-network-handlers'
 import { consumePendingAction, installPendingActionWatcher } from './pendingActions'
 import type { ReconDeskData, ReconDeskStatus } from '../shared/types'
+import { launchPeerApp } from './platform'
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -350,15 +351,7 @@ ipcMain.handle('get-sso', () => {
   } catch { return { unlocked: false } }
 })
 
-ipcMain.handle('open-credvault', () => {
-  try {
-    const target = '/Applications/CredVault.app'
-    if (!fs.existsSync(target)) return false
-    const { spawn } = require('child_process') as typeof import('child_process')
-    spawn('open', [target], { detached: true, stdio: 'ignore' }).unref()
-    return true
-  } catch { return false }
-})
+ipcMain.handle('open-credvault', () => launchPeerApp('CredVault'))
 
 // ─── System notification ──────────────────────────────────────────────────────
 

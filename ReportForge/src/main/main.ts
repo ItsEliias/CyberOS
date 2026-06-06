@@ -6,6 +6,7 @@ import os from 'os';
 import * as ecosystemBus from './ecosystem-bus.js';
 import { consumePendingAction, installPendingActionWatcher } from './pendingActions.js'
 import type {
+import { launchPeerApp } from './platform'
   Report, CyberToolsSharedConfig, ExportResult, WriteupFile, ReconDeskTarget
 } from '../shared/types.js';
 
@@ -293,15 +294,7 @@ ipcMain.handle('get-sso', () => {
   } catch { return { unlocked: false }; }
 });
 
-ipcMain.handle('open-credvault', () => {
-  try {
-    const target = '/Applications/CredVault.app';
-    if (!fs.existsSync(target)) return false;
-    const { spawn } = require('child_process') as typeof import('child_process');
-    spawn('open', [target], { detached: true, stdio: 'ignore' }).unref();
-    return true;
-  } catch { return false; }
-});
+ipcMain.handle('open-credvault', () => launchPeerApp('CredVault'))
 ipcMain.handle('minimize-window', () => mainWindow?.minimize());
 ipcMain.handle('close-window',    () => mainWindow?.close());
 
