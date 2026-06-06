@@ -150,6 +150,15 @@ export function registerSecretIpc(getWindow: () => BrowserWindow | null) {
     } catch (e) { return { error: (e as Error).message }; }
   });
 
+  // Encrypted backup format, written by export-backup:
+  //   [4-byte magic 'VCBK'] [1-byte version] [16-byte salt] [12-byte iv]
+  //   [16-byte GCM tag] [ciphertext]
+  // GCM gives us authenticated encryption — CBC (the previous format) had no
+  // MAC and could be silently tampered with. import-backup still accepts the
+  // legacy layout so old .enc files keep working.
+  const VC_BACKUP_MAGIC = Buffer.from('VCBK');
+  const VC_BACKUP_VERSION = 2;
+
   ipcMain.handle('export-backup', async (_, secrets: unknown[], password: string) => {
     if (!password) return { error: 'Password required' };
     const win = getWindow();
@@ -160,10 +169,14 @@ export function registerSecretIpc(getWindow: () => BrowserWindow | null) {
       const payload = JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), secrets });
       const salt = crypto.randomBytes(16);
       const key = crypto.scryptSync(password, salt, 32);
-      const iv = crypto.randomBytes(16);
-      const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+      const iv = crypto.randomBytes(12);
+      const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
       const encrypted = Buffer.concat([cipher.update(payload, 'utf8'), cipher.final()]);
-      fs.writeFileSync(r.filePath, Buffer.concat([salt, iv, encrypted]));
+      const tag = cipher.getAuthTag();
+      fs.writeFileSync(r.filePath, Buffer.concat([
+        VC_BACKUP_MAGIC, Buffer.from([VC_BACKUP_VERSION]),
+        salt, iv, tag, encrypted,
+      ]));
       return { success: true, filePath: r.filePath };
     } catch (e) { return { error: (e as Error).message }; }
   });
@@ -175,10 +188,30 @@ export function registerSecretIpc(getWindow: () => BrowserWindow | null) {
     if (r.canceled || r.filePaths.length === 0) return { canceled: true };
     try {
       const buf = fs.readFileSync(r.filePaths[0]);
-      const salt = buf.slice(0, 16), iv = buf.slice(16, 32), enc = buf.slice(32);
-      const key = crypto.scryptSync(password, salt, 32);
-      const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
-      const dec = Buffer.concat([decipher.update(enc), decipher.final()]);
+      let dec: Buffer;
+      if (buf.length >= 4 && buf.subarray(0, 4).equals(VC_BACKUP_MAGIC)) {
+        // New GCM-authenticated format
+        let off = 4;
+        const version = buf[off]; off += 1;
+        if (version !== VC_BACKUP_VERSION) return { error: `Unsupported backup version ${version}` };
+        const salt = buf.subarray(off, off + 16); off += 16;
+        const iv   = buf.subarray(off, off + 12); off += 12;
+        const tag  = buf.subarray(off, off + 16); off += 16;
+        const enc  = buf.subarray(off);
+        const key  = crypto.scryptSync(password, salt, 32);
+        const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+        decipher.setAuthTag(tag);
+        dec = Buffer.concat([decipher.update(enc), decipher.final()]);
+      } else {
+        // Legacy CBC-without-MAC format — kept readable so existing backups
+        // still import. New exports use the authenticated path above.
+        const salt = buf.subarray(0, 16);
+        const iv   = buf.subarray(16, 32);
+        const enc  = buf.subarray(32);
+        const key  = crypto.scryptSync(password, salt, 32);
+        const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+        dec = Buffer.concat([decipher.update(enc), decipher.final()]);
+      }
       return { success: true, data: JSON.parse(dec.toString('utf8')) };
     } catch { return { error: 'Decryption failed — wrong password or corrupt file' }; }
   });
