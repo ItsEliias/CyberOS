@@ -507,10 +507,19 @@ ipcMain.handle('feeds:export-bookmarks', async (_e, format: 'json' | 'csv', ids:
       const data = bookmarked.map(i => ({ ...i, bookmarkTags: tags[i.id] ?? [] }))
       fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8')
     } else {
+      // CSV: each value gets RFC-4180 quoting AND a formula-injection guard.
+      // Fields beginning with =, +, -, @, tab, or CR will execute as formulas
+      // if Excel/Numbers opens the file. RSS titles are publisher-controlled
+      // and routinely contain leading + / -, so prefix-quote them.
+      const escape = (raw: unknown): string => {
+        const s = String(raw ?? '')
+        const guarded = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s
+        return `"${guarded.replace(/"/g, '""')}"`
+      }
       const header = 'title,url,date,tags,source\n'
       const rows = bookmarked.map(i => {
         const t = (tags[i.id] ?? []).join(';')
-        return `"${i.title.replace(/"/g, '""')}","${i.url}","${i.publishedAt}","${t}","${i.sourceName}"`
+        return [i.title, i.url, i.publishedAt, t, i.sourceName].map(escape).join(',')
       })
       fs.writeFileSync(filePath, header + rows.join('\n'), 'utf8')
     }
