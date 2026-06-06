@@ -188,10 +188,34 @@ export default function CommandPalette({ open, onClose }: Props) {
         accent:   '#8b949e',
         run:      () => { /* parent toggles via onClose + setSettingsOpen */ window.dispatchEvent(new CustomEvent('cmd-palette:open-settings')); onClose(); },
       },
+      {
+        id:       'help:docs',
+        label:    'Open CyberOS documentation',
+        hint:     'github.com/ItsEliias/CyberOS',
+        group:    'Settings',
+        keywords: ['help', 'docs', 'documentation', 'github', 'readme'],
+        accent:   '#4a9eff',
+        run:      async () => {
+          await window.api.openExternal('https://github.com/ItsEliias/CyberOS');
+          onClose();
+        },
+      },
+      {
+        id:       'help:issue',
+        label:    'Report an issue',
+        hint:     'Open GitHub issues',
+        group:    'Settings',
+        keywords: ['issue', 'bug', 'report', 'feedback', 'github'],
+        accent:   '#f85149',
+        run:      async () => {
+          await window.api.openExternal('https://github.com/ItsEliias/CyberOS/issues/new');
+          onClose();
+        },
+      },
     ];
 
     return [...apps, ...actions, ...settings];
-  }, [installed, onClose]);
+  }, [installed, onClose, ssoUnlocked]);
 
   // Filter + score
   const filtered = useMemo(() => {
