@@ -59,17 +59,20 @@ export default function App() {
   }, []);
   const onboarding = useOnboarding();
 
-  // ⌘K command palette toggle
+  // ⌘K command palette toggle — disabled while soft-locked so the requirement
+  // toggle can't be flipped without an unlocked CredVault session.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        const cfgRequire = (config as { requireCredVaultSession?: boolean } | null)?.requireCredVaultSession === true;
+        if (cfgRequire && ssoUnlocked === false) return;
         e.preventDefault();
         setPaletteOpen(v => !v);
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [config, ssoUnlocked]);
 
   // ── Boot ──────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -276,7 +279,7 @@ export default function App() {
       )}
       <TagReviewModal />
       {onboarding.show && <OnboardingModal onClose={onboarding.close} />}
-      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      <CommandPalette open={paletteOpen && !ssoBlocked} onClose={() => setPaletteOpen(false)} />
     </div>
   );
 }
