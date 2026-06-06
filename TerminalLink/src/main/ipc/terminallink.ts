@@ -275,7 +275,24 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
   });
 
   // ── Event: emit ─────────────────────────────────────────────────────────────
+  // Sibling apps poll the ecosystem-events file. A malicious or buggy
+  // renderer could flood it with megabyte-sized payloads (DoS) or pollute
+  // event names with control characters. Cap both.
   ipcMain.handle('terminallink:event:emit', (_evt, event: string, data: Record<string, unknown> = {}) => {
+    if (typeof event !== 'string' || event.length === 0 || event.length > 128) return false;
+    // Allow letters, digits, colon, dot, dash, underscore — matches the
+    // convention used elsewhere in the codebase (e.g. 'history:exported').
+    if (!/^[a-zA-Z0-9_:.\-]+$/.test(event)) return false;
+    if (data !== null && typeof data === 'object') {
+      try {
+        const serialized = JSON.stringify(data);
+        if (serialized.length > 16 * 1024) return false; // 16 KB cap
+      } catch {
+        return false;
+      }
+    } else if (data !== undefined && data !== null) {
+      return false;
+    }
     emitEcosystemEvent(event, data);
     return true;
   });
