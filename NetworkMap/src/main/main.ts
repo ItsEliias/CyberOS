@@ -237,8 +237,19 @@ ipcMain.handle('import-from-recondesk', (): NetworkNode[] => {
   }
 })
 
+// Validate a graph id used as a filesystem name. The renderer normally
+// generates `graph-${Date.now()}` but a poisoned IPC payload could supply
+// `../../../foo` and escape GRAPHS_DIR. Allow only safe filename chars.
+function isSafeGraphId(id: unknown): id is string {
+  return typeof id === 'string' && id.length > 0 && id.length <= 128 && /^[a-zA-Z0-9_-]+$/.test(id)
+}
+
 ipcMain.handle('save-graph', (_e, graph: NetworkGraph): void => {
   try {
+    if (!graph || !isSafeGraphId(graph.id)) {
+      console.warn('[NetworkMap] save-graph rejected: invalid graph id')
+      return
+    }
     ensureGraphsDir()
     const file = path.join(GRAPHS_DIR, `${graph.id}.json`)
     // Atomic — a crash mid-write would leave a half-formed graph JSON that
@@ -277,6 +288,7 @@ ipcMain.handle('load-graphs', (): GraphSummary[] => {
 
 ipcMain.handle('load-graph', (_e, id: string): NetworkGraph | null => {
   try {
+    if (!isSafeGraphId(id)) return null
     const file = path.join(GRAPHS_DIR, `${id}.json`)
     if (!fs.existsSync(file)) return null
     return JSON.parse(fs.readFileSync(file, 'utf8')) as NetworkGraph
@@ -285,6 +297,7 @@ ipcMain.handle('load-graph', (_e, id: string): NetworkGraph | null => {
 
 ipcMain.handle('delete-graph', (_e, id: string): void => {
   try {
+    if (!isSafeGraphId(id)) return
     const file = path.join(GRAPHS_DIR, `${id}.json`)
     if (fs.existsSync(file)) fs.unlinkSync(file)
     emitEvent('NetworkMap', 'graph:deleted', { id })
