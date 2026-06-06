@@ -653,7 +653,15 @@ ipcMain.handle('focus-window', () => { if (mainWindow) { mainWindow.show(); main
 
 ipcMain.handle('save-scrape-resume-state', (_, state) => {
   const vp = launcher.getVaultPath(); if (!vp) return false;
-  try { fs.writeFileSync(path.join(vp, SCRAPE_STATE_FILE), JSON.stringify(state, null, 2)); return true; } catch { return false; }
+  try {
+    // Atomic — partial scrape-state write would leave the resume cursor in
+    // a bogus position; next launch would re-scrape entries already saved.
+    const fp = path.join(vp, SCRAPE_STATE_FILE);
+    const tmp = `${fp}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(state, null, 2));
+    fs.renameSync(tmp, fp);
+    return true;
+  } catch { return false; }
 });
 ipcMain.handle('load-scrape-resume-state', () => {
   const vp = launcher.getVaultPath(); if (!vp) return null;
