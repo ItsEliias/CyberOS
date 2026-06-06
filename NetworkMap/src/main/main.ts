@@ -333,16 +333,28 @@ ipcMain.handle('recondesk:push-node', (_e, node: {
   ports: Array<{ number: number; protocol: string; service?: string; version?: string; state: string }>
 }) => {
   try {
+    // Renderer-side IPC payload validation — node, node.ip, and node.ports
+    // could each be missing or malformed (or absurdly large) without this
+    // guard. data.targets and target.ports could also be missing from a
+    // partially-initialised ReconDesk data.json.
+    if (!node || typeof node.ip !== 'string' || !Array.isArray(node.ports)) {
+      return { ok: false, reason: 'Invalid node payload' }
+    }
     const dataPath = path.join(os.homedir(), '.recondesk', 'data.json')
     if (!fs.existsSync(dataPath)) return { ok: false, reason: 'ReconDesk data not found' }
     const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'))
-    const target = data.targets.find((t: any) => t.ip === node.ip)
+    if (!Array.isArray(data?.targets)) return { ok: false, reason: 'ReconDesk data.json malformed' }
+    const target = data.targets.find((t: any) => t?.ip === node.ip)
     if (!target) return { ok: false, reason: `No ReconDesk target with IP ${node.ip}` }
+    if (!Array.isArray(target.ports)) target.ports = []
 
     const now = new Date().toISOString()
     let portsAdded = 0
-    for (const port of node.ports) {
-      const exists = target.ports.find((p: any) => p.number === port.number && p.protocol === port.protocol)
+    // Cap at a sane upper bound — nmap rarely returns >65k per host, but a
+    // poisoned payload could send millions.
+    for (const port of node.ports.slice(0, 65536)) {
+      if (!port || typeof port.number !== 'number') continue
+      const exists = target.ports.find((p: any) => p?.number === port.number && p?.protocol === port.protocol)
       if (!exists) {
         target.ports.push({
           id: `${Date.now()}-${port.number}`,
