@@ -454,8 +454,21 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
   const PREFS_PATH = path.join(SESSIONS_DIR, 'prefs.json');
   ipcMain.handle('terminallink:prefs:save', (_evt, prefs: Record<string, unknown>) => {
     try {
-      fs.mkdirSync(SESSIONS_DIR, { recursive: true });
-      fs.writeFileSync(PREFS_PATH, JSON.stringify(prefs, null, 2));
+      if (!prefs || typeof prefs !== 'object' || Array.isArray(prefs)) {
+        return { success: false };
+      }
+      // Strip prototype-pollution sentinels; bound the serialized size to
+      // keep one bad render from filling the disk with a multi-MB prefs
+      // file that future loads then choke on.
+      const safe: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(prefs)) {
+        if (k === '__proto__' || k === 'prototype' || k === 'constructor') continue;
+        if (typeof k !== 'string' || k.length > 128) continue;
+        safe[k] = v;
+      }
+      const json = JSON.stringify(safe, null, 2);
+      if (json.length > 256 * 1024) return { success: false }; // 256 KB cap
+      writeFileAtomic(PREFS_PATH, json);
       return { success: true };
     } catch {
       return { success: false };
