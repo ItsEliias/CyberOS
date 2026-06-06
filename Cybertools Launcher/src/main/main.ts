@@ -391,12 +391,29 @@ function setupSearchIPC(): void {
 
 // ─── Tray setup ───────────────────────────────────────────────────────────────
 
+// Read the shared CredVault session state from cybertools-config.json so the
+// tray menu and IPC handler share one source of truth.
+function readSSOState(): { unlocked: boolean; expiresAt?: string | null } {
+  try {
+    const cfgPath = path.join(os.homedir(), 'cybertools-config.json');
+    if (!fs.existsSync(cfgPath)) return { unlocked: false };
+    const shared = JSON.parse(fs.readFileSync(cfgPath, 'utf8')) || {};
+    const sso = shared.sso as { unlocked?: boolean; expiresAt?: string | null } | undefined;
+    if (!sso?.unlocked) return { unlocked: false };
+    if (sso.expiresAt && new Date(sso.expiresAt).getTime() < Date.now()) return { unlocked: false };
+    return { unlocked: true, expiresAt: sso.expiresAt };
+  } catch { return { unlocked: false }; }
+}
+
 function setupTray(): void {
   tray = new Tray(createTrayIcon());
   tray.setToolTip('CyberTools Launcher — ItsEliias');
   tray.on('click', () => tray!.popUpContextMenu());
   tray.on('double-click', () => tray!.popUpContextMenu());
   refreshContextMenu();
+  // Re-poll SSO state every 7 s so the menu's status line stays accurate
+  // when CredVault is locked/unlocked from another app.
+  setInterval(() => { try { refreshContextMenu(); } catch { /* ignore */ } }, 7000);
 }
 
 function refreshContextMenu(): void {
@@ -461,11 +478,29 @@ function refreshContextMenu(): void {
         addActivityEntry({ type: 'launcher', text: 'VaultCore update triggered from tray menu' });
       }
     },
+    // SSO status read-out (disabled "label" item) — updates on each menu rebuild.
+    ...(installedKey('credvault') ? [
+      {
+        label: readSSOState().unlocked
+          ? 'CredVault session: active'
+          : 'CredVault session: locked',
+        enabled: false,
+      },
+    ] : []),
     {
-      label: 'Lock CredVault session',
+      // Action flips based on current state: lock when active, open CredVault when locked.
+      label: readSSOState().unlocked ? 'Lock CredVault session' : 'Unlock CredVault…',
       accelerator: 'CommandOrControl+L',
       enabled: installedKey('credvault'),
-      click: lockEcosystemSession,
+      click: () => {
+        if (readSSOState().unlocked) {
+          lockEcosystemSession();
+        } else {
+          launchApp('credvault');
+        }
+        // Reflect new state immediately rather than waiting for the next poll.
+        setTimeout(() => { try { refreshContextMenu(); } catch { /* ignore */ } }, 400);
+      },
     },
     { type: 'separator' },
     {
@@ -1321,17 +1356,7 @@ function setupIPC(): void {
 
   ipcMain.handle('lock-ecosystem', () => { lockEcosystemSession(); return true; });
 
-  ipcMain.handle('get-sso', () => {
-    try {
-      const cfgPath = path.join(os.homedir(), 'cybertools-config.json');
-      if (!fs.existsSync(cfgPath)) return { unlocked: false };
-      const shared = JSON.parse(fs.readFileSync(cfgPath, 'utf8')) || {};
-      const sso = shared.sso as { unlocked?: boolean; expiresAt?: string | null } | undefined;
-      if (!sso?.unlocked) return { unlocked: false };
-      if (sso.expiresAt && new Date(sso.expiresAt).getTime() < Date.now()) return { unlocked: false };
-      return { unlocked: true, expiresAt: sso.expiresAt };
-    } catch { return { unlocked: false }; }
-  });
+  ipcMain.handle('get-sso', () => readSSOState());
 
   ipcMain.handle('backup-import', async (_e, password?: string) => {
     return await runBackupImport(password);
