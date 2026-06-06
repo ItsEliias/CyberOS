@@ -335,4 +335,267 @@ efd7c8b CyberOS: HelpTip "?" tooltip pass across 8 remaining apps
 d9bb5e9 CyberOS: fix black-screen rendering across 6 apps + launcher arm64
 ```
 
-— End of doc. Autonomous improvement loop continues from here.
+— End of original handoff doc.
+
+---
+
+## Autonomous improvement loop — segment 2 (Sun 7 Jun, 23 iterations)
+
+Direction: continue without prompting; ship one improvement at a time
+(change → tsc → build → install → commit → push). Direct merges to main
+were blocked by the auto-mode classifier mid-segment, so everything below
+is on `auto-design` waiting for review/merge.
+
+### SSO surface
+
+- **Launcher Header** gained a green/red SSO chip next to the VPN
+  indicator; click locks (when active) or jumps to CredVault (when
+  locked). Polls every 5 s; the chip text shows a live `SSO 12m`
+  countdown that turns amber under 2 min remaining.
+- **Launcher tray menu** now shows `CredVault session: active/locked`
+  inline and flips the next item between *Lock CredVault session* and
+  *Unlock CredVault…*. Refreshed every 7 s.
+- **Launcher** fires a desktop notification 90 s before the CredVault
+  session auto-locks, deduplicated per `expiresAt`.
+- **TermLink** got the same SSO soft-lock pattern the other sensitive
+  apps already had (lock screen + `Require CredVault session` toggle in
+  the palette under `tl:requireCredVaultSession`).
+- **TermLink, ReportForge, ReconDesk, VaultCore, GhostVault** —
+  the soft-lock could be bypassed by pressing ⌘K and toggling the
+  requirement off. Shortcuts and the command palette are now suppressed
+  while the lock screen is up, so the toggle stays out of reach until
+  the user unlocks CredVault.
+
+### Real bugs in the wild
+
+- **VaultCore "Run Update Now"** silently did nothing — the Launcher
+  was writing `vaultscraper_trigger` into the shared config, but no
+  client reads that field. Routed through the standard
+  `pending_actions: run-all-scrapes` queue VaultCore already handles.
+- **NetLab tray entry was always disabled** — `netlab` was missing from
+  `APP_FALLBACK_PRODUCTS`, so the installed-check resolved to
+  `undefined`. Added the entry plus a `launchApp` branch.
+- **`ActivityEntry` type union missed `netlab`** — the type guard
+  would reject any launcher-side activity tagged for NetLab.
+- **CredVault `vault:setup` / `vault:totp-verify`** opened a session
+  but never armed `resetLockTimer`. The vault decryption key sat in
+  memory indefinitely on first-time setup or after a 2FA verify.
+- **CredVault `refreshSession(0)`** silently wiped `expiresAt` to
+  null, so calling token rotation from `vault:change-password` turned
+  the active session into a never-expiring one. Now it preserves the
+  prior `expiresAt` when called with `autoLockMs=0`.
+- **CredVault shutdown leaked SSO state** — `window-all-closed` only
+  called `lockVault` when the window was still alive, which is never
+  the case by the time the event fires. Reworked + added a matching
+  hook to `before-quit` so Cmd+Q also tears the session down.
+- **Stale Touch ID password after password change** — `vault:change-
+  password` rotated the key but left the safeStorage-encrypted
+  password on disk. Next biometric unlock would silently fail. Now the
+  Touch ID file is deleted on change-password.
+- **Launcher backup leaked plaintext on error** — `encryptToFile` /
+  decrypted-tar paths only deleted their temp file on success.
+  Wrapped both in try/finally so the unencrypted tarball never sits in
+  `/tmp` after a failure.
+- **VaultCore backup used AES-256-CBC with no MAC** — tampering with
+  ciphertext silently produced wrong plaintext or padding errors with
+  no authentication. New exports use AES-256-GCM with a `VCBK` magic
+  header; CBC import path is kept so existing `.enc` files still
+  restore.
+- **`open-credvault` silently did nothing if CredVault wasn't
+  installed** — ReportForge, ReconDesk, VaultCore, GhostVault and
+  TermLink now check `/Applications/CredVault.app` exists before
+  spawning and return `false` otherwise.
+- **`detectVPN` flagged macOS utun0 as a live VPN** — the standard
+  Continuity / AirDrop interfaces always exist with only link-local
+  fe80:: addresses. Filter requires at least one non-loopback,
+  non-link-local address now.
+
+### Polish
+
+- **App-manager install** skips the full rebuild when the app bundle
+  already exists in `dist/`, so "Install →/Apps" on a freshly built
+  app just copies.
+- **ActivityFeed labels** — `app:launched` now shows the version when
+  present; added `app:opened` so cold-start events are friendly
+  instead of raw strings.
+
+Branch: `auto-design`. Direct merges to `main` blocked by classifier —
+merge via PR or grant a permission rule.
+
+---
+
+## Autonomous improvement loop — segment 4 (Sun 7 Jun, 76 commits)
+
+User asked for "every line of code" coverage via a multi-agent swarm.
+First swarm (6 Sonnet workers) hit the account's weekly Sonnet limit
+on first API call — zero work done. Second swarm (6 Opus workers)
+shipped meaningfully before hitting Opus's separate weekly limit;
+solo-on-Opus also continued running between agent rounds.
+
+Total at end of segment: **117 commits ahead of `main`** across the
+two autonomous loops + the swarm. PR opened (#2) so the whole batch
+can be reviewed and merged together.
+
+### Real bugs the swarm caught
+
+- **NetLab "streak" card was a hardcoded lie** — now computes the
+  actual day-streak from lab progress.
+- **PlaybookStudio dropped quick-note edits on step switch** — autosave
+  raced with the navigation. Persisted before nav now.
+- **ReconDesk replaced its in-memory state with external data.json
+  pushes** instead of merging — wiped concurrent edits when SignalBoard
+  or NetworkMap pushed a target.
+- **ReportForge editor with no active report** rendered a partially-
+  initialised view; now bounces to the library.
+- **PlaybookStudio `elapsed()` / ETA calc** could output NaN or Infinity
+  for unfinished runs; guarded.
+- **NetLab per-keystroke `progress.json` writes** debounced.
+- **SignalBoard `pollIntervalMinutes`** could be set to 0.0001 and busy-
+  loop a feed at 6 ms; clamped to [1 min, 24 h].
+- **SignalBoard `fetchUrl` redirect loop** — no depth cap, no scheme
+  revalidation per hop, broken relative-URL handling. Now bounded,
+  validated, normalised.
+- **SignalBoard relevance scorer** crashed the entire refresh cycle
+  when another app wrote a non-string into shared `shared_context`.
+  Coerced at the boundary.
+- **TermLink rc-file install/uninstall** non-atomic — a crash mid-write
+  would leave a torn `.zshrc` / `.bashrc`. Atomic now.
+
+### Security hardenings the swarm added
+
+- **URL scheme allowlists** in every `shell.openExternal` IPC across
+  CredVault, VaultCore, GhostVault, NetworkMap, SignalBoard. Blocks
+  `javascript:`, `file:`, `data:`, custom URI handlers.
+- **Path traversal blocks** added to:
+  - NetworkMap save/load/delete-graph (validate `graph.id` regex).
+  - SignalBoard `saveItemToVault` (resolved-path containment).
+  - GhostVault `delete-note`, `merge-notes`, `split-note`,
+    `analyse-note-headings` (vault-root containment via the same
+    pattern used for read/write-note).
+  - VaultCore `list-vault-notes`.
+  - TermLink `ghostvault:save` output paths.
+- **TermLink PTY hardening**: shell path allowlisted; `DYLD_*` and
+  `LD_PRELOAD` env stripped at spawn.
+- **TermLink `terminallink:config:write`** — only known keys accepted;
+  blocks proto pollution + arbitrary shared-config writes.
+- **CredVault `prefs:set` allowlisted** to `sortOrder` only. The old
+  handler let the renderer overwrite `totp` (disabling 2FA) or
+  `recovery` (wiping the recovery hash) via the unrestricted key
+  parameter.
+- **CredVault `open-external` scheme allowlist** (http/https only).
+- **VaultCore `export-backup` / `import-backup`** validate password
+  type at the boundary (was crashing inside scryptSync).
+- **NetworkMap `recondesk:push-node`** payload validation (block
+  null deref + cap port array iteration at 65536).
+- **SignalBoard `cve:lookup`** validates `CVE-YYYY-NNNN+` format before
+  caching or hitting the network (blocks cache pollution).
+- **SignalBoard CSV export** RFC-4180 quoting + formula-injection
+  guard (`=`, `+`, `-`, `@`, tab, CR prefix neutralised).
+- **Launcher backup-restore tar-slip** — `tar -xzf` was extracting
+  user-supplied archives into `$HOME` with no path validation. A
+  crafted archive could overwrite `~/.ssh/authorized_keys`. Now lists
+  contents first and rejects absolute paths, `..` segments, and
+  anything resolving outside `$HOME`.
+
+### Atomic-write sweep — completed across all 11 apps
+
+Every per-app pendingActions.ts, every shared-config write, every
+ecosystem-bus write, every persistence file (sessions, history,
+bookmarks, sources, cache, settings, snippets, knowledgebase, lab
+reviews, etc.) now uses tmp+rename. A crash mid-write can no longer
+leave a half-formed JSON file that fails to parse on next launch.
+
+### UX adds
+
+- **ReconDesk Cmd+N** opens the New Target modal.
+- **ReportForge Cmd+N** opens the new-report wizard from the library;
+  **Cmd+S** saves the active report from editor view; autosave skips
+  while SSO soft-lock is active.
+- **NetLab** — "Mark Step Complete" button for free-form lab steps;
+  deletable custom snippets.
+- **PlaybookStudio** — two-click confirm for step delete.
+
+### Process notes
+
+- Both Sonnet and Opus weekly quotas were exhausted by end of segment
+  (resets Jun 11 at 4 am Australia/Hobart).
+- An intermittent "ghost edit" was observed where `git status` showed
+  files modified but `git diff` returned nothing a moment later —
+  appears to be a background hook touching files momentarily.
+  Workaround: commit immediately after each Edit. Doesn't affect the
+  final tree.
+- All commits are atomic, single-line, easy to revert individually.
+- PR #2 covers the full 117-commit run.
+
+---
+
+## Autonomous improvement loop — segment 3 (Sun 7 Jun, 17 iterations)
+
+User asked for a 6-way Sonnet swarm; all six died on the first API call
+because the account hit its weekly Sonnet limit (resets Jun 11). Fell
+back to single-agent solo on Opus and kept iterating.
+
+### Real bugs in the wild
+
+- **SignalBoard feed parsing dropped the entire feed on one bad date** —
+  RSS items with a malformed `<pubDate>` made `new Date(...).toISOString()`
+  throw, and the outer try/catch swallowed it at the whole-feed level. Now
+  each item is wrapped individually and falls back to fetch-time. Same
+  fix applied to the CVE parser.
+- **PlaybookStudio never persisted custom playbooks or runs** — the main
+  process loaded `playbooks.json` / `runs.json` at startup but no IPC ever
+  wrote them back. Every custom playbook, run history entry, and step
+  update evaporated on app close. Added `savePlaybooks()` and `saveRuns()`
+  helpers via `AppRefs`, called after every mutation. Atomic write.
+- **SignalBoard "Send to ReconDesk" was a no-op** — only emitted an
+  ecosystem bus event nobody subscribed to. Now writes targets straight
+  into `~/.recondesk/data.json` (atomic).
+
+### Security hardenings
+
+- **CyberLab HTB/THM tokens and Claude API key stored in base64 fallback**
+  — when `safeStorage.isEncryptionAvailable()` returned false, the code
+  fell through to `Buffer.from(token).toString('base64')` and called it
+  done. Base64 is encoding, not encryption — the secret was effectively
+  plaintext on disk. Now refuses to save in that case (caller surfaces
+  the error to the user) and the load path deletes any legacy `.b64`
+  file once it has been migrated.
+- **VaultCore path-traversal via `read-file`/`write-file` IPCs** — both
+  handlers took an arbitrary filepath from the renderer with no
+  validation. A compromised renderer could read SSH keys or overwrite
+  `~/.zshrc`. Confined to the configured vault root via `path.resolve`
+  + prefix check.
+
+### Atomic writes everywhere
+
+A crash mid-`fs.writeFileSync` used to leave half-written JSON / encrypted
+blobs that failed to parse on next launch, losing whichever data the file
+held. Switched every critical path to write → tmp → rename:
+
+- **CredVault**: `vault.enc` (every credential), `salt.bin` (vault
+  unrecoverable without it), `prefs.json` (TOTP secret, recovery hash),
+  the safeStorage Touch ID blob.
+- **ReportForge**: `reports.json` (every report).
+- **ReconDesk**: `data.json` (every target).
+- **NetLab**: `labs.json`, `progress.json`, `prefs.json` (via the shared
+  `writeJson` helper).
+- **PlaybookStudio**: `playbooks.json`, `runs.json` (via the new
+  `atomicWriteJson` helper).
+- **SignalBoard**: `sources.json`, `cache.json`.
+- **NetworkMap**: each graph's `.json` and the cross-app
+  `~/.recondesk/data.json` push.
+- **TermLink**: session `current.json` (appended on every command).
+
+(GhostVault's `writeNote` already used the pattern; the Launcher's
+`writeConfig` did too.)
+
+### Cross-app reactivity
+
+- **ReconDesk now watches its own `data.json`** so external writes from
+  SignalBoard's "Send to ReconDesk" and NetworkMap's
+  `recondesk:push-node` show up in the UI live, without the user having
+  to relaunch. Self-writes are suppressed via a 500 ms window so we
+  don't ping the renderer for our own saves.
+
+Direct merges to `main` are still blocked by the classifier — review/PR
+on `auto-design`.

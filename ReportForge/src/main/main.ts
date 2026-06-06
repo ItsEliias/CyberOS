@@ -34,9 +34,21 @@ function loadReports(): Report[] {
   return [];
 }
 
+// Atomic write — tmp + rename so a crash mid-write can't leave a half-written
+// cybertools-config.json that breaks every cooperating CyberOS app.
+function writeSharedConfigAtomic(cfg: unknown): void {
+  const tmp = `${CYBERTOOLS_CONFIG}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(cfg, null, 2), 'utf8');
+  fs.renameSync(tmp, CYBERTOOLS_CONFIG);
+}
+
 function saveReports(reports: Report[]): boolean {
   try {
-    fs.writeFileSync(REPORTS_FILE, JSON.stringify(reports, null, 2), 'utf8');
+    // Atomic write — a crash mid-fs.writeFileSync used to leave a half-written
+    // reports.json that failed to parse on next launch, losing every report.
+    const tmp = `${REPORTS_FILE}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(reports, null, 2), 'utf8');
+    fs.renameSync(tmp, REPORTS_FILE);
     return true;
   } catch (e) {
     console.error('[ReportForge] saveReports:', (e as Error).message);
@@ -61,7 +73,7 @@ function writeReportForgeStatus() {
       lastActive  : new Date().toISOString(),
       reportCount : reports.length
     };
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8');
+    writeSharedConfigAtomic(shared);
   } catch (e) {
     console.warn('[ReportForge] status write failed:', (e as Error).message);
   }
@@ -78,7 +90,7 @@ function stopStatusWriter() {
     if (fs.existsSync(CYBERTOOLS_CONFIG)) {
       const shared = readSharedConfig();
       if (shared.reportforge_status) (shared.reportforge_status as Record<string, unknown>).active = false;
-      fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8');
+      writeSharedConfigAtomic(shared);
     }
   } catch (_) {}
 }
@@ -283,8 +295,10 @@ ipcMain.handle('get-sso', () => {
 
 ipcMain.handle('open-credvault', () => {
   try {
+    const target = '/Applications/CredVault.app';
+    if (!fs.existsSync(target)) return false;
     const { spawn } = require('child_process') as typeof import('child_process');
-    spawn('open', ['/Applications/CredVault.app'], { detached: true, stdio: 'ignore' }).unref();
+    spawn('open', [target], { detached: true, stdio: 'ignore' }).unref();
     return true;
   } catch { return false; }
 });
@@ -427,7 +441,19 @@ ipcMain.handle('signal-print-ready', () => {
   return true;
 });
 
-ipcMain.handle('open-external', (_, url: string) => shell.openExternal(url));
+// Allowlist URL schemes — without this, a poisoned URL baked into a
+// shared_context payload or imported writeup file could fire javascript:,
+// file://, or data: URIs through shell.openExternal and trigger code or
+// disclose local files via the default handler.
+const OPEN_EXTERNAL_SCHEMES = new Set(['http:', 'https:', 'mailto:']);
+ipcMain.handle('open-external', (_, url: string) => {
+  try {
+    if (typeof url !== 'string' || url.length === 0) return;
+    const u = new URL(url);
+    if (!OPEN_EXTERNAL_SCHEMES.has(u.protocol)) return;
+    return shell.openExternal(u.toString());
+  } catch { /* malformed URL — drop silently */ }
+});
 
 // GhostVault export check
 ipcMain.handle('reportforge:check-ghostvault', (): Record<string, unknown> | null => {
@@ -442,7 +468,7 @@ ipcMain.handle('reportforge:clear-ghostvault-export', (): boolean => {
   try {
     const shared = readSharedConfig();
     delete shared.ghostvault_export;
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8');
+    writeSharedConfigAtomic(shared);
     return true;
   } catch { return false; }
 });

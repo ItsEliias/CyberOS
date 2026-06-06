@@ -90,7 +90,11 @@ function readPrefs(): Prefs {
 function writePrefs(p: Prefs): void {
   try {
     ensureAppDir()
-    fs.writeFileSync(PREFS_FILE, JSON.stringify(p, null, 2), 'utf8')
+    // Atomic — prefs holds the TOTP secret and recovery hash; a corrupt
+    // write would lock the user out of 2FA + recovery on next launch.
+    const tmp = `${PREFS_FILE}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(p, null, 2), 'utf8')
+    fs.renameSync(tmp, PREFS_FILE)
   } catch {}
 }
 
@@ -102,6 +106,28 @@ function getTotpEnabled(): boolean {
 
 function uid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+}
+
+// ─── Boundary validation ─────────────────────────────────────────────────────
+// IPC handlers accept arbitrary JSON from the renderer. A malformed payload
+// (null, array, wrong type) used to crash the main process with a TypeError
+// because handlers assumed shape without checking. These guards keep all
+// crashes inside the handler — the IPC contract returns a sane error/null
+// instead of taking the whole vault process down.
+
+function isObject(v: unknown): v is Record<string, unknown> {
+  return v !== null && typeof v === 'object' && !Array.isArray(v)
+}
+
+function isNonEmptyString(v: unknown): v is string {
+  return typeof v === 'string' && v.length > 0
+}
+
+function isCredentialInput(v: unknown): v is Omit<Credential, 'id' | 'createdAt' | 'updatedAt'> {
+  if (!isObject(v)) return false
+  // `service` + `source` are the fields the rest of the code reads
+  // unconditionally (emitEvent, stats, etc.). Other fields are optional.
+  return isNonEmptyString(v.service) && isNonEmptyString(v.source)
 }
 
 function defaultVault(): VaultData {
@@ -130,7 +156,12 @@ function writeCredVaultStatus(locked: boolean, count: number): void {
       locked,
     }
     shared.credvault_status = status
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8')
+    // Atomic — every sibling app polls this file every few seconds. A torn
+    // write (process killed mid-flush, disk full) corrupts JSON suite-wide
+    // and forces every running app back to the SSO lock screen.
+    const tmp = `${CYBERTOOLS_CONFIG}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(shared, null, 2), 'utf8')
+    fs.renameSync(tmp, CYBERTOOLS_CONFIG)
   } catch (e) {
     console.warn('[CredVault] status write failed:', (e as Error).message)
   }
@@ -153,7 +184,11 @@ function writePending(items: PendingCredential[]): void {
       try { shared = JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8')) } catch {}
     }
     shared.credvault_pending = items
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8')
+    // Atomic — see writeCredVaultStatus for the same rationale; every CyberOS
+    // app polls this file and a torn write corrupts SSO state suite-wide.
+    const tmp = `${CYBERTOOLS_CONFIG}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(shared, null, 2), 'utf8')
+    fs.renameSync(tmp, CYBERTOOLS_CONFIG)
   } catch (e) {
     console.warn('[CredVault] writePending failed:', (e as Error).message)
   }
@@ -207,6 +242,10 @@ export function registerCredVaultHandlers(): void {
       // First-time setup → begin SSO session immediately so soft-locked apps
       // (GhostVault, VaultCore) recognise the new vault as unlocked.
       beginSession(autoLockMs ?? 0)
+      // Arm the in-memory auto-lock timer so the vault key is cleared after
+      // the configured idle window. Without this the freshly-set-up vault
+      // would stay decrypted in CredVault's main process indefinitely.
+      resetLockTimer(autoLockMs ?? 0)
       emitEvent('CredVault', 'vault:unlocked', {})
       return { ok: true }
     } catch (e) {
@@ -272,8 +311,10 @@ export function registerCredVaultHandlers(): void {
     return generateTotpSecret()
   })
 
-  ipcMain.handle('vault:totp-confirm', (_e, secret: string, code: string): { ok: boolean; error?: string } => {
-    if (!secret || !code) return { ok: false, error: 'Missing secret or code' }
+  ipcMain.handle('vault:totp-confirm', (_e, secret: unknown, code: unknown): { ok: boolean; error?: string } => {
+    if (!isNonEmptyString(secret) || !isNonEmptyString(code)) {
+      return { ok: false, error: 'Missing secret or code' }
+    }
     if (!verifyTotp(secret, code)) return { ok: false, error: 'Code did not verify — check your authenticator clock' }
     const p = readPrefs()
     p.totp = { enabled: true, secret }
@@ -282,10 +323,15 @@ export function registerCredVaultHandlers(): void {
     return { ok: true }
   })
 
-  ipcMain.handle('vault:totp-disable', (_e, code: string): { ok: boolean; error?: string } => {
+  ipcMain.handle('vault:totp-disable', (_e, code: unknown): { ok: boolean; error?: string } => {
     const p = readPrefs()
     const secret = p.totp?.secret
     if (!secret) { p.totp = { enabled: false }; writePrefs(p); return { ok: true } }
+    // Before this guard, an undefined/non-string code threw inside verifyTotp
+    // and the IPC returned a confusing OpenSSL error to the user. An empty
+    // string fell through to verifyTotp returning false → "Code did not
+    // verify". Both should be the same clean "Missing code" path.
+    if (!isNonEmptyString(code)) return { ok: false, error: 'Missing code' }
     if (!verifyTotp(secret, code)) return { ok: false, error: 'Code did not verify' }
     p.totp = { enabled: false }
     writePrefs(p)
@@ -295,11 +341,17 @@ export function registerCredVaultHandlers(): void {
 
   // Called after the password unlock when twoFactorRequired was returned.
   // Completes the SSO session on success.
-  ipcMain.handle('vault:totp-verify', (_e, code: string, autoLockMs?: number): { ok: boolean; error?: string } => {
+  ipcMain.handle('vault:totp-verify', (_e, code: unknown, autoLockMs?: unknown): { ok: boolean; error?: string } => {
+    if (!isNonEmptyString(code)) return { ok: false, error: 'Missing code' }
+    const lockMs = typeof autoLockMs === 'number' ? autoLockMs : 0
     const secret = readPrefs().totp?.secret
     if (!secret) return { ok: false, error: 'TOTP not configured' }
     if (!verifyTotp(secret, code)) return { ok: false, error: 'Code did not verify' }
-    beginSession(autoLockMs ?? 0)
+    beginSession(lockMs)
+    // The matching vault:unlock path skipped resetLockTimer when 2FA was
+    // pending; arm it here once the TOTP code is verified so the in-memory
+    // vault key gets cleared on idle.
+    resetLockTimer(lockMs)
     return { ok: true }
   })
 
@@ -320,7 +372,8 @@ export function registerCredVaultHandlers(): void {
     return { display: rk.display }
   })
 
-  ipcMain.handle('vault:recovery-verify', (_e, input: string): { ok: boolean } => {
+  ipcMain.handle('vault:recovery-verify', (_e, input: unknown): { ok: boolean } => {
+    if (typeof input !== 'string' || input.length === 0) return { ok: false }
     const r = readPrefs().recovery
     if (!r) return { ok: false }
     try { return { ok: verifyRecoveryKey(input, r.hashHex, r.saltHex) } }
@@ -329,12 +382,20 @@ export function registerCredVaultHandlers(): void {
 
   // ── SSO state read (for activity feed / debugging) ────────────────────────
 
-  ipcMain.handle('sso:refresh', (_e, autoLockMs: number) => {
-    return refreshSession(autoLockMs ?? 0)
+  ipcMain.handle('sso:refresh', (_e, autoLockMs: unknown) => {
+    // Coerce non-numbers to 0 so refreshSession's expiresAt math (Date.now()
+    // + autoLockMs) never produces an Invalid Date. A renderer bug passing
+    // NaN here used to bake 'NaN' into the shared SSO state, breaking every
+    // sibling app's session-validity check.
+    const ms = typeof autoLockMs === 'number' && Number.isFinite(autoLockMs) ? autoLockMs : 0
+    return refreshSession(ms)
   })
 
-  ipcMain.handle('vault:change-password', (_e, currentPassword: string, newPassword: string): UnlockResult => {
+  ipcMain.handle('vault:change-password', (_e, currentPassword: unknown, newPassword: unknown): UnlockResult => {
     if (!hasKey()) return { ok: false, error: 'Vault is locked' }
+    if (typeof currentPassword !== 'string' || typeof newPassword !== 'string') {
+      return { ok: false, error: 'Passwords must be strings' }
+    }
     if (newPassword.length < 8) return { ok: false, error: 'New password must be at least 8 characters' }
     const plaintext = decryptVaultWithPassword(currentPassword)
     if (plaintext === null) return { ok: false, error: 'Current password is incorrect' }
@@ -343,6 +404,13 @@ export function registerCredVaultHandlers(): void {
       saveVault()
       // Issue a fresh SSO token so other apps stay in sync with the new key
       refreshSession(0)
+      // Invalidate any saved Touch ID credential — the stored password now
+      // refers to the old key and would silently fail on next biometric
+      // unlock. The user can re-enable Touch ID with the new password.
+      try {
+        const touchIdFile = path.join(APP_SUPPORT, 'touch-id.enc')
+        if (fs.existsSync(touchIdFile)) fs.unlinkSync(touchIdFile)
+      } catch { /* ignore */ }
       return { ok: true }
     } catch (e) {
       return { ok: false, error: (e as Error).message }
@@ -367,7 +435,10 @@ export function registerCredVaultHandlers(): void {
   // Enable Touch ID for an existing password. Verifies the password decrypts
   // the vault, prompts Touch ID for confirmation, then stores the password
   // encrypted via Electron safeStorage (backed by the macOS Keychain).
-  ipcMain.handle('vault:touch-id-enable', async (_e, password: string): Promise<{ ok: boolean; error?: string }> => {
+  ipcMain.handle('vault:touch-id-enable', async (_e, password: unknown): Promise<{ ok: boolean; error?: string }> => {
+    if (typeof password !== 'string' || password.length === 0) {
+      return { ok: false, error: 'Password required' }
+    }
     try {
       if (!saltExists()) return { ok: false, error: 'Vault not initialised' }
       if (decryptVaultWithPassword(password) === null) {
@@ -382,7 +453,12 @@ export function registerCredVaultHandlers(): void {
         return { ok: false, error: 'Touch ID confirmation failed or was cancelled' }
       }
       ensureAppDir()
-      fs.writeFileSync(TOUCHID_FILE, safeStorage.encryptString(password))
+      // Atomic — a corrupt safeStorage blob would silently fail to decrypt
+      // on next biometric unlock attempt, and the user would have to
+      // toggle Touch ID off + back on to recover.
+      const _touchTmp = `${TOUCHID_FILE}.tmp`
+      fs.writeFileSync(_touchTmp, safeStorage.encryptString(password))
+      fs.renameSync(_touchTmp, TOUCHID_FILE)
       return { ok: true }
     } catch (e) {
       return { ok: false, error: (e as Error).message }
@@ -441,8 +517,9 @@ export function registerCredVaultHandlers(): void {
     return vaultData.credentials
   })
 
-  ipcMain.handle('vault:add-credential', (_e, cred: Omit<Credential, 'id' | 'createdAt' | 'updatedAt'>): Credential | null => {
+  ipcMain.handle('vault:add-credential', (_e, cred: unknown): Credential | null => {
     if (!vaultData || !hasKey()) return null
+    if (!isCredentialInput(cred)) return null
     const now  = new Date().toISOString()
     const full: Credential = { ...cred, id: uid(), createdAt: now, updatedAt: now }
     vaultData.credentials.push(full)
@@ -452,17 +529,27 @@ export function registerCredVaultHandlers(): void {
     return full
   })
 
-  ipcMain.handle('vault:update-credential', (_e, id: string, patch: Partial<Credential>): boolean => {
+  ipcMain.handle('vault:update-credential', (_e, id: unknown, patch: unknown): boolean => {
     if (!vaultData || !hasKey()) return false
+    if (!isNonEmptyString(id)) return false
+    if (!isObject(patch)) return false
     const idx = vaultData.credentials.findIndex(c => c.id === id)
     if (idx === -1) return false
-    vaultData.credentials[idx] = { ...vaultData.credentials[idx], ...patch, updatedAt: new Date().toISOString() }
+    // Whitelist patch — strip id/createdAt so a malicious renderer can't
+    // overwrite identity fields or forge createdAt timestamps.
+    const { id: _stripId, createdAt: _stripCreated, ...safePatch } = patch as Partial<Credential>
+    vaultData.credentials[idx] = {
+      ...vaultData.credentials[idx],
+      ...safePatch,
+      updatedAt: new Date().toISOString()
+    }
     saveVault()
     return true
   })
 
-  ipcMain.handle('vault:delete-credential', (_e, id: string): boolean => {
+  ipcMain.handle('vault:delete-credential', (_e, id: unknown): boolean => {
     if (!vaultData || !hasKey()) return false
+    if (!isNonEmptyString(id)) return false
     const before = vaultData.credentials.length
     vaultData.credentials = vaultData.credentials.filter(c => c.id !== id)
     if (vaultData.credentials.length === before) return false
@@ -471,11 +558,13 @@ export function registerCredVaultHandlers(): void {
     return true
   })
 
-  ipcMain.handle('vault:import-credentials', (_e, creds: Omit<Credential, 'id' | 'createdAt' | 'updatedAt'>[]): number => {
+  ipcMain.handle('vault:import-credentials', (_e, creds: unknown): number => {
     if (!vaultData || !hasKey()) return 0
+    if (!Array.isArray(creds)) return 0
     const now  = new Date().toISOString()
     let added  = 0
     for (const c of creds) {
+      if (!isCredentialInput(c)) continue
       vaultData.credentials.push({ ...c, id: uid(), createdAt: now, updatedAt: now })
       added++
     }
@@ -487,8 +576,9 @@ export function registerCredVaultHandlers(): void {
 
   // ── Usage tracking ────────────────────────────────────────────────────────
 
-  ipcMain.handle('vault:record-usage', (_e, id: string): boolean => {
+  ipcMain.handle('vault:record-usage', (_e, id: unknown): boolean => {
     if (!vaultData || !hasKey()) return false
+    if (!isNonEmptyString(id)) return false
     const idx = vaultData.credentials.findIndex(c => c.id === id)
     if (idx === -1) return false
     const cred = vaultData.credentials[idx]
@@ -523,11 +613,13 @@ export function registerCredVaultHandlers(): void {
 
   // ── Clipboard ─────────────────────────────────────────────────────────────
 
-  ipcMain.handle('clipboard:copy-secure', (_e, text: string, clearAfterMs?: number): boolean => {
+  ipcMain.handle('clipboard:copy-secure', (_e, text: unknown, clearAfterMs?: unknown): boolean => {
+    if (typeof text !== 'string') return false
     try {
       clipboard.writeText(text)
-      if (clearAfterMs && clearAfterMs > 0) {
-        setTimeout(() => { clipboard.clear() }, clearAfterMs)
+      const ms = typeof clearAfterMs === 'number' ? clearAfterMs : 0
+      if (ms > 0) {
+        setTimeout(() => { clipboard.clear() }, ms)
       }
       return true
     } catch {
@@ -537,7 +629,13 @@ export function registerCredVaultHandlers(): void {
 
   // ── HIBP breach check ─────────────────────────────────────────────────────
 
-  ipcMain.handle('vault:check-breach', async (_e, credId: string, password: string): Promise<BreachCheckResult> => {
+  ipcMain.handle('vault:check-breach', async (_e, credId: unknown, password: unknown): Promise<BreachCheckResult> => {
+    // hibpCheck hashes the password with sha1 — a non-string would throw
+    // sync inside crypto. credId is used as a cache key, which would
+    // silently coerce non-strings to '[object Object]'.
+    if (!isNonEmptyString(credId) || typeof password !== 'string') {
+      return { ok: false, error: 'Invalid credential id or password' }
+    }
     const cached = breachCache.get(credId)
     // Return cache if checked within last hour
     if (cached) {
@@ -559,7 +657,15 @@ export function registerCredVaultHandlers(): void {
   // ── Prefs ─────────────────────────────────────────────────────────────────
 
   ipcMain.handle('prefs:get', (): Record<string, unknown> => readPrefs())
-  ipcMain.handle('prefs:set', (_e, key: string, value: unknown): boolean => {
+  // Renderer-writable prefs keys. The previous unrestricted prefs:set let
+  // the renderer overwrite *any* key in PREFS_FILE — including `totp`
+  // (which would disable 2FA without the code) and `recovery` (which would
+  // wipe out the recovery-key hash). It also accepted `__proto__` etc., a
+  // classic prototype-pollution sink. Whitelist only the keys the renderer
+  // legitimately controls.
+  const ALLOWED_PREFS_KEYS = new Set(['sortOrder'])
+  ipcMain.handle('prefs:set', (_e, key: unknown, value: unknown): boolean => {
+    if (typeof key !== 'string' || !ALLOWED_PREFS_KEYS.has(key)) return false
     try {
       const p = readPrefs() as Record<string, unknown>
       p[key] = value
@@ -603,8 +709,12 @@ export function registerCredVaultHandlers(): void {
 
   // ── Backup ────────────────────────────────────────────────────────────────
 
-  ipcMain.handle('vault:export-backup', async (_e, payload: ExportBackupPayload): Promise<{ ok: boolean; error?: string }> => {
+  ipcMain.handle('vault:export-backup', async (_e, payload: unknown): Promise<{ ok: boolean; error?: string }> => {
     if (!vaultData || !hasKey()) return { ok: false, error: 'Vault is locked' }
+    if (!isObject(payload) || !isNonEmptyString(payload.exportPassword)) {
+      return { ok: false, error: 'Export password required' }
+    }
+    const exportPassword = payload.exportPassword
     const win = BrowserWindow.getFocusedWindow()
     const { filePath, canceled } = await dialog.showSaveDialog(win!, {
       title: 'Export CredVault Backup',
@@ -613,7 +723,7 @@ export function registerCredVaultHandlers(): void {
     })
     if (canceled || !filePath) return { ok: false, error: 'Cancelled' }
     try {
-      const encrypted = encryptBackup(JSON.stringify(vaultData), payload.exportPassword)
+      const encrypted = encryptBackup(JSON.stringify(vaultData), exportPassword)
       fs.writeFileSync(filePath, encrypted)
       return { ok: true }
     } catch (e) {
@@ -621,7 +731,10 @@ export function registerCredVaultHandlers(): void {
     }
   })
 
-  ipcMain.handle('vault:import-backup', async (_e, importPassword: string): Promise<{ ok: boolean; count?: number; error?: string }> => {
+  ipcMain.handle('vault:import-backup', async (_e, importPassword: unknown): Promise<{ ok: boolean; count?: number; error?: string }> => {
+    if (!isNonEmptyString(importPassword)) {
+      return { ok: false, error: 'Import password required' }
+    }
     const win = BrowserWindow.getFocusedWindow()
     const { filePaths, canceled } = await dialog.showOpenDialog(win!, {
       title: 'Import CredVault Backup',
@@ -635,11 +748,17 @@ export function registerCredVaultHandlers(): void {
       if (!plaintext) return { ok: false, error: 'Incorrect backup password or corrupted file' }
       const backup = JSON.parse(plaintext) as VaultData
       if (!vaultData) return { ok: false, error: 'Vault is locked — unlock first' }
+      // A malformed backup with credentials: null/undefined used to throw
+      // 'is not iterable' inside the for-of, surfacing a confusing error.
+      if (!Array.isArray(backup?.credentials)) {
+        return { ok: false, error: 'Backup is missing a credentials array' }
+      }
       let added = 0
       const now = new Date().toISOString()
       for (const c of backup.credentials) {
-        if (!vaultData.credentials.find(x => x.id === c.id)) {
-          vaultData.credentials.push({ ...c, updatedAt: now })
+        if (!isCredentialInput(c) && !(isObject(c) && isNonEmptyString(c.id))) continue
+        if (!vaultData.credentials.find(x => x.id === (c as Credential).id)) {
+          vaultData.credentials.push({ ...(c as Credential), updatedAt: now })
           added++
         }
       }
@@ -655,7 +774,12 @@ export function registerCredVaultHandlers(): void {
 
   ipcMain.handle('pending:get', (): PendingCredential[] => readPending())
 
-  ipcMain.handle('pending:approve', (_e, index: number): PendingCredential | null => {
+  ipcMain.handle('pending:approve', (_e, index: unknown): PendingCredential | null => {
+    // `index` used to be 'number' but a renderer bug passing undefined
+    // would fall through both bounds checks (undefined < 0 === false,
+    // undefined >= n === false) and splice(undefined, 1) silently approves
+    // the first item. Be explicit at the boundary.
+    if (typeof index !== 'number' || !Number.isInteger(index)) return null
     const items = readPending()
     if (index < 0 || index >= items.length) return null
     const [approved] = items.splice(index, 1)
@@ -663,7 +787,8 @@ export function registerCredVaultHandlers(): void {
     return approved
   })
 
-  ipcMain.handle('pending:dismiss', (_e, index: number): boolean => {
+  ipcMain.handle('pending:dismiss', (_e, index: unknown): boolean => {
+    if (typeof index !== 'number' || !Number.isInteger(index)) return false
     const items = readPending()
     if (index < 0 || index >= items.length) return false
     items.splice(index, 1)
@@ -675,19 +800,30 @@ export function registerCredVaultHandlers(): void {
 
   ipcMain.handle('app:version', () => APP_VERSION)
 
-  ipcMain.handle('vault:reset-idle-timer', (_e, autoLockMs: number) => {
-    if (hasKey()) resetLockTimer(autoLockMs)
+  ipcMain.handle('vault:reset-idle-timer', (_e, autoLockMs: unknown) => {
+    // Without this guard, a non-number autoLockMs (NaN, string) would
+    // bypass resetLockTimer's `timeoutMs <= 0` check (NaN <= 0 === false)
+    // and reach setTimeout(fn, NaN), which Node coerces to 0 — the vault
+    // would lock immediately the next event-loop tick.
+    if (!hasKey()) return true
+    const ms = typeof autoLockMs === 'number' && Number.isFinite(autoLockMs) ? autoLockMs : 0
+    resetLockTimer(ms)
     return true
   })
 
   // ── Cross-app credential query ────────────────────────────────────────────
 
-  ipcMain.handle('credvault-search', (_e, query: { ip?: string; targetName?: string }): SearchResult[] => {
+  ipcMain.handle('credvault-search', (_e, query: unknown): SearchResult[] => {
     if (!vaultData) return []
+    // Sibling apps (ReconDesk, NetworkMap) call this via the ecosystem bus.
+    // A null payload used to crash on query.ip access — defend at the boundary.
+    if (!isObject(query)) return []
+    const ip         = typeof query.ip         === 'string' ? query.ip         : null
+    const targetName = typeof query.targetName === 'string' ? query.targetName : null
     return vaultData.credentials
       .filter(c => {
-        if (query.ip         && c.ip         === query.ip)         return true
-        if (query.targetName && c.targetName === query.targetName) return true
+        if (ip         && c.ip         === ip)         return true
+        if (targetName && c.targetName === targetName) return true
         return false
       })
       .map(c => ({ id: c.id, service: c.service, username: c.username, ip: c.ip, targetName: c.targetName }))
@@ -695,10 +831,16 @@ export function registerCredVaultHandlers(): void {
 
   // ── Status helpers exposed for main.ts ────────────────────────────────────
 
-  ipcMain.handle('vault:write-status', (_e, locked: boolean) => {
-    writeCredVaultStatus(locked, credCount())
+  ipcMain.handle('vault:write-status', (_e, locked: unknown) => {
+    // Coerce to a real boolean — without this a renderer call with the
+    // string "false" would mark the vault locked because of JS truthiness.
+    writeCredVaultStatus(locked === true, credCount())
     return true
   })
+}
+
+export function isVaultLocked(): boolean {
+  return vaultData === null || !hasKey()
 }
 
 export { writeCredVaultStatus, credCount, readPending, writePending }

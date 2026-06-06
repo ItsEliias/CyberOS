@@ -10,6 +10,8 @@ export default function Header({ onSettingsClick }: Props) {
   const vpn     = useLauncherStore(s => s.vpn);
   const version = useLauncherStore(s => s.version);
   const [ssoUnlocked, setSsoUnlocked] = useState<boolean | null>(null);
+  const [ssoExpiresAt, setSsoExpiresAt] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   // Poll the shared SSO state every 5 s so the indicator stays accurate
   // even when CredVault is updated outside the Launcher.
@@ -18,13 +20,39 @@ export default function Header({ onSettingsClick }: Props) {
     async function check() {
       try {
         const r = await window.api.getSSO();
-        if (!cancelled) setSsoUnlocked(!!r.unlocked);
+        if (!cancelled) {
+          setSsoUnlocked(!!r.unlocked);
+          setSsoExpiresAt(r.expiresAt ?? null);
+        }
       } catch { if (!cancelled) setSsoUnlocked(null); }
     }
     void check();
     const t = setInterval(check, 5000);
     return () => { cancelled = true; clearInterval(t); };
   }, []);
+
+  // Tick once a second so the countdown stays current between polls.
+  useEffect(() => {
+    if (!ssoUnlocked || !ssoExpiresAt) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [ssoUnlocked, ssoExpiresAt]);
+
+  const ssoCountdown = (() => {
+    if (!ssoUnlocked || !ssoExpiresAt) return null;
+    const ms = new Date(ssoExpiresAt).getTime() - now;
+    if (ms <= 0) return null;
+    const totalSec = Math.floor(ms / 1000);
+    if (totalSec >= 60) return `${Math.floor(totalSec / 60)}m`;
+    return `${totalSec}s`;
+  })();
+  const ssoExpiringSoon = ssoUnlocked && ssoExpiresAt
+    ? new Date(ssoExpiresAt).getTime() - now < 120_000
+    : false;
+  const ssoDotColor   = !ssoUnlocked ? '#f85149'
+                       : ssoExpiringSoon ? '#d29922' : '#3fb950';
+  const ssoTextColor  = !ssoUnlocked ? '#8b949e'
+                       : ssoExpiringSoon ? '#d29922' : '#3fb950';
 
   async function onSSOClick() {
     if (ssoUnlocked) {
@@ -84,15 +112,17 @@ export default function Header({ onSettingsClick }: Props) {
               ? 'CredVault session active — click to lock'
               : 'CredVault locked — click to open CredVault'}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
-            stroke={ssoUnlocked ? '#3fb950' : '#f85149'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            stroke={ssoDotColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="11" width="18" height="11" rx="2" />
             {ssoUnlocked
               ? <path d="M7 11V7a5 5 0 0 1 9.9-1" />
               : <path d="M7 11V7a5 5 0 0 1 10 0v4" />}
           </svg>
           <span className="text-[9px] font-mono tracking-wider"
-            style={{ color: ssoUnlocked ? '#3fb950' : '#8b949e' }}>
-            {ssoUnlocked ? 'SSO' : 'LOCKED'}
+            style={{ color: ssoTextColor }}>
+            {ssoUnlocked
+              ? (ssoCountdown ? `SSO ${ssoCountdown}` : 'SSO')
+              : 'LOCKED'}
           </span>
         </button>
 

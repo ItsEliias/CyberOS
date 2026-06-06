@@ -241,6 +241,17 @@ export default function StepEditor({
   const [open, setOpen] = useState(false)
   const [showCondition, setShowCondition] = useState(false)
   const [saveAttempted, setSaveAttempted] = useState(false)
+  const [deleteArmed, setDeleteArmed] = useState(false)
+
+  // Auto-disarm the delete button after 3s so a primed click can't sit
+  // there indefinitely waiting for a stray mouse click after the user
+  // moved on. Effect cleanup clears the timer if the user actually
+  // confirms or re-disarms.
+  useEffect(() => {
+    if (!deleteArmed) return
+    const t = setTimeout(() => setDeleteArmed(false), 3000)
+    return () => clearTimeout(t)
+  }, [deleteArmed])
 
   const titleEmpty = step.title.trim().length === 0
   const titleInvalid = !disabled && saveAttempted && step.required && titleEmpty
@@ -466,7 +477,22 @@ export default function StepEditor({
               <button onClick={onMoveUp} disabled={index === 0 || disabled} className="text-xs px-1.5 py-1 rounded" style={{ background: 'var(--border)', color: 'var(--text-dim)' }}>↑</button>
               <button onClick={onMoveDown} disabled={index === total - 1 || disabled} className="text-xs px-1.5 py-1 rounded" style={{ background: 'var(--border)', color: 'var(--text-dim)' }}>↓</button>
               <button onClick={onDuplicate} disabled={disabled} className="text-xs px-2 py-1 rounded" style={{ background: 'var(--border)', color: 'var(--text-dim)' }}>Dup</button>
-              <button onClick={onDelete} disabled={disabled} className="text-xs px-2 py-1 rounded" style={{ background: 'rgba(248,81,73,0.15)', color: 'var(--error)' }}>Del</button>
+              <button
+                onClick={() => {
+                  if (deleteArmed) { onDelete(); setDeleteArmed(false) }
+                  else setDeleteArmed(true)
+                }}
+                disabled={disabled}
+                title={deleteArmed ? 'Click again to confirm deletion' : 'Delete step'}
+                className="text-xs px-2 py-1 rounded transition-colors"
+                style={{
+                  background: deleteArmed ? 'var(--error)' : 'rgba(248,81,73,0.15)',
+                  color: deleteArmed ? '#0a0a0f' : 'var(--error)',
+                  fontWeight: deleteArmed ? 600 : 400,
+                }}
+              >
+                {deleteArmed ? 'Confirm Del' : 'Del'}
+              </button>
             </div>
           </div>
         </div>

@@ -9,8 +9,12 @@ const CATEGORIES: SnippetCategory[] = [
   'Cisco Routing', 'Cisco Switching', 'ACL', 'NAT', 'Linux Networking', 'FortiGate', 'Verification',
 ]
 
-function SnippetCard({ snippet }: { snippet: CommandSnippet }) {
+function SnippetCard({ snippet, onDelete }: { snippet: CommandSnippet; onDelete?: () => void }) {
   const [copied, setCopied] = useState(false)
+  // Only user-added snippets get the delete button — built-in snippets
+  // ship from BUILTIN_SNIPPETS with their own ids and would otherwise
+  // come right back on next mount.
+  const isCustom = snippet.id.startsWith('custom-')
 
   async function copy() {
     await navigator.clipboard.writeText(snippet.command)
@@ -26,15 +30,29 @@ function SnippetCard({ snippet }: { snippet: CommandSnippet }) {
     >
       <div className="flex items-start justify-between gap-2 mb-1.5">
         <p className="text-sm font-medium text-text-primary leading-tight">{snippet.title}</p>
-        <button
-          onClick={copy}
-          className="text-2xs px-2 py-0.5 rounded shrink-0 transition-colors"
-          style={copied
-            ? { background: 'rgba(63,185,80,0.2)', color: '#3fb950' }
-            : { background: '#161b27', color: '#8b949e' }}
-        >
-          {copied ? 'Copied!' : 'Copy'}
-        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          {isCustom && onDelete && (
+            <button
+              onClick={onDelete}
+              title="Delete snippet"
+              className="text-2xs px-1.5 py-0.5 rounded transition-colors"
+              style={{ background: '#161b27', color: '#8b949e' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#f85149' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#8b949e' }}
+            >
+              ✕
+            </button>
+          )}
+          <button
+            onClick={copy}
+            className="text-2xs px-2 py-0.5 rounded transition-colors"
+            style={copied
+              ? { background: 'rgba(63,185,80,0.2)', color: '#3fb950' }
+              : { background: '#161b27', color: '#8b949e' }}
+          >
+            {copied ? 'Copied!' : 'Copy'}
+          </button>
+        </div>
       </div>
 
       <pre
@@ -128,8 +146,9 @@ function AddSnippetForm({ onAdd, onCancel }: { onAdd: (s: CommandSnippet) => voi
 }
 
 export default function SnippetsView() {
-  const snippets   = useNetLabStore(s => s.snippets)
-  const addSnippet = useNetLabStore(s => s.addSnippet)
+  const snippets      = useNetLabStore(s => s.snippets)
+  const addSnippet    = useNetLabStore(s => s.addSnippet)
+  const deleteSnippet = useNetLabStore(s => s.deleteSnippet)
 
   const [category, setCategory] = useState<SnippetCategory | 'All'>('All')
   const [search, setSearch]     = useState('')
@@ -189,7 +208,11 @@ export default function SnippetsView() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
           {filtered.map(snippet => (
-            <SnippetCard key={snippet.id} snippet={snippet} />
+            <SnippetCard
+              key={snippet.id}
+              snippet={snippet}
+              onDelete={() => deleteSnippet(snippet.id)}
+            />
           ))}
           {filtered.length === 0 && (
             <p className="text-sm text-text-muted col-span-full">No snippets match your filters.</p>

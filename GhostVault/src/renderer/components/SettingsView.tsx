@@ -83,10 +83,17 @@ export default function SettingsView({ ollamaModels, onOllamaRefresh }: Props) {
 
   async function changeVault() {
     const p = await window.ghostvault.pickVaultDir();
-    if (p) {
-      await window.ghostvault.saveConfig({ vaultPath: p });
-      window.location.reload();
+    if (!p) return;
+    // saveConfig now rejects unsafe vault paths (system dirs, non-absolute,
+    // outside $HOME). Reload only on a confirmed write — otherwise the
+    // page reloads with the old vault and the user has no idea why their
+    // pick didn't stick.
+    const ok = await window.ghostvault.saveConfig({ vaultPath: p });
+    if (!ok) {
+      alert(`Cannot use "${p}" as a vault. Pick a folder inside your home directory.`);
+      return;
     }
+    window.location.reload();
   }
 
   async function toggleAcademicMode(enabled: boolean) {

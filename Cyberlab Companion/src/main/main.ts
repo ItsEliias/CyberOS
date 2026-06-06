@@ -53,7 +53,15 @@ function saveConfig(cfg: Record<string, unknown>): boolean {
     if (fs.existsSync(CONFIG_PATH)) {
       try { existing = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')); } catch {}
     }
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify({ ...existing, ...cfg }, null, 2), 'utf8');
+    // Atomic write: every CyberTools app writes to this same shared
+    // ~/cybertools-config.json. Direct fs.writeFileSync races against
+    // sibling apps reading mid-write (their JSON.parse throws or sees
+    // a truncated config, and they silently degrade to defaults until
+    // the next refresh). tmp+rename keeps readers seeing either the
+    // old or new bytes.
+    const tmp = CONFIG_PATH + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify({ ...existing, ...cfg }, null, 2), 'utf8');
+    fs.renameSync(tmp, CONFIG_PATH);
     return true;
   } catch (e: unknown) {
     console.error('saveConfig error:', (e as Error).message);
@@ -63,11 +71,13 @@ function saveConfig(cfg: Record<string, unknown>): boolean {
 
 function saveApiKeySecure(key: string): boolean {
   try {
-    if (safeStorage.isEncryptionAvailable()) {
-      fs.writeFileSync(ENCRYPTED_KEY_FILE, safeStorage.encryptString(key));
-    } else {
-      fs.writeFileSync(ENCRYPTED_KEY_FILE + '.b64', Buffer.from(key).toString('base64'));
+    if (!safeStorage.isEncryptionAvailable()) {
+      // Base64 is NOT encryption — refuse rather than storing the Claude
+      // API key in effectively plaintext. Same rationale as platforms.ts.
+      console.warn('[CyberLab] safeStorage unavailable — refusing to save API key in cleartext');
+      return false;
     }
+    fs.writeFileSync(ENCRYPTED_KEY_FILE, safeStorage.encryptString(key));
     apiKey = key;
     return true;
   } catch (e: unknown) { console.error('saveApiKey error:', (e as Error).message); return false; }
@@ -78,8 +88,15 @@ function loadApiKeySecure(): string | null {
     if (fs.existsSync(ENCRYPTED_KEY_FILE) && safeStorage.isEncryptionAvailable()) {
       return safeStorage.decryptString(fs.readFileSync(ENCRYPTED_KEY_FILE));
     }
+    // Migration: older releases fell back to a base64 file. If one exists,
+    // surface its value once and remove it so we don't keep reading from an
+    // insecure source.
     const b64 = ENCRYPTED_KEY_FILE + '.b64';
-    if (fs.existsSync(b64)) return Buffer.from(fs.readFileSync(b64, 'utf8'), 'base64').toString('utf8');
+    if (fs.existsSync(b64)) {
+      const value = Buffer.from(fs.readFileSync(b64, 'utf8'), 'base64').toString('utf8');
+      try { fs.unlinkSync(b64); } catch { /* ignore */ }
+      return value;
+    }
   } catch {}
   return null;
 }
@@ -289,14 +306,30 @@ function registerIPC() {
 
   ipcMain.handle('save-session',(_, data: { id: string; name?: string; labName?: string }) => {
     try {
-      const fp = path.join(SESSIONS_DIR, `session_${data.id}.json`);
-      fs.writeFileSync(fp, JSON.stringify(data, null, 2), 'utf8');
+      // Sanity-check id so a renderer can't traverse out of SESSIONS_DIR
+      // via "id" like "../../../something". Session ids are short
+      // alphanumeric strings (uuid/nanoid-style) in normal use.
+      if (!data?.id || typeof data.id !== 'string' || !/^[A-Za-z0-9_-]+$/.test(data.id)) {
+        return { success: false, error: 'Invalid session id' };
+      }
+      if (!fs.existsSync(SESSIONS_DIR)) fs.mkdirSync(SESSIONS_DIR, { recursive: true });
+      const fp  = path.join(SESSIONS_DIR, `session_${data.id}.json`);
+      // Atomic write: tmp + rename. A crash or kill mid-writeFileSync
+      // of an active session leaves a truncated/half-parsed JSON that
+      // load-session quietly drops as null next launch — the user
+      // loses their lab notes for no reason.
+      const tmp = fp + '.tmp';
+      fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
+      fs.renameSync(tmp, fp);
       emitEvent('CyberLab', 'cyberlab.session.started', { name: data.name || data.labName || data.id });
       return { success: true, path: fp };
     } catch (e: unknown) { return { success: false, error: (e as Error).message }; }
   });
   ipcMain.handle('load-session', (_, id: string) => {
     try {
+      // Same id format guard as save-session — block traversal /
+      // accidental read of arbitrary JSON files in SESSIONS_DIR's parent.
+      if (typeof id !== 'string' || !/^[A-Za-z0-9_-]+$/.test(id)) return null;
       const fp = path.join(SESSIONS_DIR, `session_${id}.json`);
       if (!fs.existsSync(fp)) return null;
       return JSON.parse(fs.readFileSync(fp, 'utf8'));
@@ -311,6 +344,8 @@ function registerIPC() {
   });
   ipcMain.handle('delete-session', (_, id: string) => {
     try {
+      // Same id format guard as save-session — block traversal.
+      if (typeof id !== 'string' || !/^[A-Za-z0-9_-]+$/.test(id)) return false;
       const fp = path.join(SESSIONS_DIR, `session_${id}.json`);
       if (fs.existsSync(fp)) fs.unlinkSync(fp);
       return true;

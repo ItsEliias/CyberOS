@@ -123,7 +123,38 @@ export default function ProgressView() {
 
   const totalLabs = labs.length
   const doneLabs  = Object.values(progress).filter(p => p.completedAt).length
-  const streakDays = Math.min(doneLabs, 7) // simplified streak
+
+  // Real streak: count consecutive calendar days (ending today) on which
+  // at least one lab was completed. Previously this was
+  // `Math.min(doneLabs, 7)` — i.e. the card just lied: a user with 7 labs
+  // done years ago saw "7 days". Now zero days when there's nothing today
+  // or yesterday, and the streak grows only with daily activity.
+  const streakDays = (() => {
+    const days = new Set<string>()
+    for (const p of Object.values(progress)) {
+      if (!p.completedAt) continue
+      const d = new Date(p.completedAt)
+      if (!Number.isFinite(d.getTime())) continue
+      // Normalise to local YYYY-MM-DD (date-only).
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      days.add(key)
+    }
+    if (days.size === 0) return 0
+    let count = 0
+    const cursor = new Date()
+    // Walk backward day-by-day until we hit a day with no completion.
+    // Cap at 365 to avoid pathological infinite loops on bad clocks.
+    for (let i = 0; i < 365; i++) {
+      const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`
+      if (days.has(key)) {
+        count++
+        cursor.setDate(cursor.getDate() - 1)
+      } else {
+        break
+      }
+    }
+    return count
+  })()
 
   return (
     <div className="flex-1 overflow-y-auto p-6">

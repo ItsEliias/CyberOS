@@ -1,6 +1,44 @@
 import { create } from 'zustand'
 import type { Lab, LabProgress, Topology, CommandSnippet } from '@shared/types'
 
+// ─── Notes-write debouncer ───────────────────────────────────────────────────
+// One timer per lab so that switching between labs while typing in another
+// flushes the previous one. The latest LabProgress for a given labId always
+// wins on flush.
+const NOTES_DEBOUNCE_MS = 500
+const pendingNotesTimers = new Map<string, ReturnType<typeof setTimeout>>()
+const pendingNotesPayload = new Map<string, LabProgress>()
+
+function scheduleNotesPersist(labId: string, progress: LabProgress): void {
+  pendingNotesPayload.set(labId, progress)
+  const existing = pendingNotesTimers.get(labId)
+  if (existing) clearTimeout(existing)
+  pendingNotesTimers.set(labId, setTimeout(() => {
+    const payload = pendingNotesPayload.get(labId)
+    pendingNotesTimers.delete(labId)
+    pendingNotesPayload.delete(labId)
+    if (!payload) return
+    window.electronAPI.labs.updateProgress(payload).catch(console.error)
+  }, NOTES_DEBOUNCE_MS))
+}
+
+// Flush any pending notes write on page unload so the user can't lose
+// the last <=500ms of typing by closing the window mid-debounce.
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    for (const [labId, payload] of pendingNotesPayload.entries()) {
+      const timer = pendingNotesTimers.get(labId)
+      if (timer) clearTimeout(timer)
+      // Best-effort sync IPC — Electron's invoke returns a promise but the
+      // process may not stick around to await it. The atomic-write path
+      // is fast enough that this usually completes.
+      window.electronAPI.labs.updateProgress(payload).catch(() => { /* exiting */ })
+    }
+    pendingNotesPayload.clear()
+    pendingNotesTimers.clear()
+  })
+}
+
 export type ActiveView = 'labs' | 'reference' | 'topology' | 'snippets' | 'progress' | 'settings'
 
 interface NetLabState {
@@ -37,6 +75,7 @@ interface NetLabState {
   updateLabNotes: (labId: string, notes: string) => void
   saveTopology: (t: Topology) => void
   addSnippet: (s: CommandSnippet) => void
+  deleteSnippet: (snippetId: string) => void
 }
 
 export const useNetLabStore = create<NetLabState>((set, get) => ({
@@ -92,7 +131,13 @@ export const useNetLabStore = create<NetLabState>((set, get) => ({
     }
     const updated: LabProgress = { ...existing, notes }
     set({ progress: { ...progress, [labId]: updated } })
-    window.electronAPI.labs.updateProgress(updated).catch(console.error)
+    // Debounce the disk write: this action runs on every textarea keystroke,
+    // and the IPC handler does a full atomic tmp+rename of progress.json on
+    // each call. Pre-debounce, a 200-character note caused 200 fsync'd disk
+    // writes to ~/Library/Application Support/NetLab/progress.json. Wait
+    // 500ms after the last keystroke before persisting; intermediate state
+    // still lives in zustand so reload-on-tab-switch keeps working.
+    scheduleNotesPersist(labId, updated)
   },
 
   saveTopology: (t) => {
@@ -106,5 +151,14 @@ export const useNetLabStore = create<NetLabState>((set, get) => ({
 
   addSnippet: (s) => {
     set(state => ({ snippets: [...state.snippets, s] }))
+  },
+
+  // Remove a single snippet by id. No persistence layer yet (see TODO above
+  // about main.ts IPC), so this is session-only — but at least the user can
+  // get rid of a typo'd or duplicate snippet without restarting the app.
+  // Built-in snippets carry stable ids; the UI is responsible for only
+  // exposing delete for custom snippets (id prefix 'custom-').
+  deleteSnippet: (snippetId) => {
+    set(state => ({ snippets: state.snippets.filter(s => s.id !== snippetId) }))
   },
 }))

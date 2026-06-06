@@ -13,11 +13,13 @@ import fs from 'fs';
 export function saveTokenSecure(file: string, token: string): boolean {
   try {
     if (!token) return false;
-    if (safeStorage.isEncryptionAvailable()) {
-      fs.writeFileSync(file, safeStorage.encryptString(token));
-    } else {
-      fs.writeFileSync(file + '.b64', Buffer.from(token).toString('base64'));
+    if (!safeStorage.isEncryptionAvailable()) {
+      // Base64 is NOT encryption — refuse rather than writing the token in
+      // an effectively-plaintext form. Caller surfaces this to the user.
+      console.warn('[platforms] safeStorage unavailable — refusing to save token in cleartext');
+      return false;
     }
+    fs.writeFileSync(file, safeStorage.encryptString(token));
     return true;
   } catch (e: unknown) {
     console.error('[platforms] saveTokenSecure:', (e as Error).message);
@@ -30,8 +32,16 @@ export function loadTokenSecure(file: string): string | null {
     if (fs.existsSync(file) && safeStorage.isEncryptionAvailable()) {
       return safeStorage.decryptString(fs.readFileSync(file));
     }
+    // Migration: an older version of this file fell back to base64. If any
+    // legacy `.b64` files are still on disk, surface the value once so the
+    // user isn't locked out, then delete it so we don't keep reading from
+    // an insecure location.
     const b64 = file + '.b64';
-    if (fs.existsSync(b64)) return Buffer.from(fs.readFileSync(b64, 'utf8'), 'base64').toString('utf8');
+    if (fs.existsSync(b64)) {
+      const value = Buffer.from(fs.readFileSync(b64, 'utf8'), 'base64').toString('utf8');
+      try { fs.unlinkSync(b64); } catch { /* ignore */ }
+      return value;
+    }
   } catch {}
   return null;
 }

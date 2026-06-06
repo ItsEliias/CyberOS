@@ -93,7 +93,11 @@ export function loadSources(): FeedSource[] {
 
 export function saveSources(sources: FeedSource[]): void {
   ensureDir()
-  fs.writeFileSync(SOURCES_FILE, JSON.stringify(sources, null, 2), 'utf8')
+  // Atomic — a crash mid-write would corrupt sources.json and the next
+  // launch would fall back to DEFAULT_SOURCES, losing every custom feed.
+  const tmp = `${SOURCES_FILE}.tmp`
+  fs.writeFileSync(tmp, JSON.stringify(sources, null, 2), 'utf8')
+  fs.renameSync(tmp, SOURCES_FILE)
 }
 
 export function loadCache(): FeedItem[] {
@@ -109,14 +113,28 @@ export function saveCache(items: FeedItem[]): void {
   const sorted = [...items].sort((a, b) =>
     new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
   )
-  fs.writeFileSync(CACHE_FILE, JSON.stringify(sorted.slice(0, MAX_ITEMS), null, 2), 'utf8')
+  // Atomic — cache.json holds read/saved state. Corrupting it would lose
+  // the user's bookmarks-by-read-state across a refresh.
+  const tmp = `${CACHE_FILE}.tmp`
+  fs.writeFileSync(tmp, JSON.stringify(sorted.slice(0, MAX_ITEMS), null, 2), 'utf8')
+  fs.renameSync(tmp, CACHE_FILE)
 }
 
 // ─── HTTP fetch ───────────────────────────────────────────────────────────────
 
-export function fetchUrl(url: string): Promise<string> {
+// Bound redirect depth — without this, a malicious or misconfigured feed
+// host could redirect indefinitely (each hop opens a new socket + waits
+// for the timeout), holding open file handles and burning memory. Also
+// resolve the Location header against the current URL so relative
+// redirects work, and enforce http(s) only at every hop (a sneaky
+// http→file: redirect would otherwise hit a different code path).
+const MAX_REDIRECTS = 5
+export function fetchUrl(url: string, redirectsLeft: number = MAX_REDIRECTS): Promise<string> {
   return new Promise((resolve, reject) => {
-    const mod = url.startsWith('https') ? https : http
+    let proto: string
+    try { proto = new URL(url).protocol } catch { reject(new Error('invalid url')); return }
+    if (proto !== 'http:' && proto !== 'https:') { reject(new Error(`unsupported scheme ${proto}`)); return }
+    const mod = proto === 'https:' ? https : http
     const req = mod.get(url, {
       headers: {
         'User-Agent': 'SignalBoard/2.0 (CYBERTOOLS; ItsEliias)',
@@ -125,7 +143,10 @@ export function fetchUrl(url: string): Promise<string> {
       timeout: 10_000,
     }, res => {
       if ((res.statusCode === 301 || res.statusCode === 302) && res.headers.location) {
-        fetchUrl(res.headers.location).then(resolve).catch(reject)
+        if (redirectsLeft <= 0) { reject(new Error('too many redirects')); return }
+        // Resolve relative redirects against the current URL.
+        const next = new URL(res.headers.location, url).toString()
+        fetchUrl(next, redirectsLeft - 1).then(resolve).catch(reject)
         return
       }
       if (res.statusCode && res.statusCode >= 400) {
@@ -209,32 +230,44 @@ function parseRss(xml: string, source: FeedSource): FeedItem[] {
     if (atomItems) rawItems.push(...(Array.isArray(atomItems) ? atomItems : [atomItems]))
 
     const now = new Date().toISOString()
-    return (rawItems as Record<string, unknown>[]).slice(0, 30).map(item => {
-      const title   = stripHtml(String(item['title'] ?? ''))
-      const link    = resolveLink(item)
-      const summary = stripHtml(String(item['description'] ?? item['summary'] ?? item['content'] ?? ''))
-      const pubDate = String(item['pubDate'] ?? item['published'] ?? item['updated'] ?? now)
-      const id      = `${source.id}::${link || title}`
-      const score   = 0
+    const out: FeedItem[] = []
+    for (const item of (rawItems as Record<string, unknown>[]).slice(0, 30)) {
+      try {
+        const title   = stripHtml(String(item['title'] ?? ''))
+        const link    = resolveLink(item)
+        const summary = stripHtml(String(item['description'] ?? item['summary'] ?? item['content'] ?? ''))
+        const pubDate = String(item['pubDate'] ?? item['published'] ?? item['updated'] ?? now)
+        const id      = `${source.id}::${link || title}`
+        const score   = 0
 
-      const cveIds = extractCveIds(`${title} ${summary}`)
-      return {
-        id,
-        sourceId:       source.id,
-        sourceName:     source.name,
-        title,
-        url:            link,
-        summary,
-        publishedAt:    new Date(pubDate).toISOString(),
-        fetchedAt:      now,
-        tags:           [],
-        read:           false,
-        saved:          false,
-        relevanceScore: score,
-        relevanceTier:  computeTier(score),
-        cveIds:         cveIds.length ? cveIds : undefined,
-      } satisfies FeedItem
-    })
+        // Malformed RSS dates throw RangeError on .toISOString(). Fall back
+        // to the fetch time so one bad item doesn't kill the whole feed.
+        const parsedDate = new Date(pubDate)
+        const publishedAt = Number.isFinite(parsedDate.getTime())
+          ? parsedDate.toISOString() : now
+
+        const cveIds = extractCveIds(`${title} ${summary}`)
+        out.push({
+          id,
+          sourceId:       source.id,
+          sourceName:     source.name,
+          title,
+          url:            link,
+          summary,
+          publishedAt,
+          fetchedAt:      now,
+          tags:           [],
+          read:           false,
+          saved:          false,
+          relevanceScore: score,
+          relevanceTier:  computeTier(score),
+          cveIds:         cveIds.length ? cveIds : undefined,
+        } satisfies FeedItem)
+      } catch (e) {
+        console.warn(`[SignalBoard] skipping item in ${source.name}:`, (e as Error).message)
+      }
+    }
+    return out
   } catch (e) {
     console.warn(`[SignalBoard] RSS parse error (${source.name}):`, (e as Error).message)
     return []
@@ -254,27 +287,37 @@ function parseCve(json: string, source: FeedSource): FeedItem[] {
   try {
     const data = JSON.parse(json) as CirclCve[]
     const now  = new Date().toISOString()
-    return data.slice(0, 20).map(cve => {
-      const id      = cve.id ?? 'UNKNOWN'
-      const summary = (cve.summary ?? '').slice(0, 500)
-      const cvss    = cve.cvss ? ` · CVSS ${cve.cvss}` : ''
-      const score   = 0
-      return {
-        id:             `${source.id}::${id}`,
-        sourceId:       source.id,
-        sourceName:     source.name,
-        title:          id,
-        url:            `https://cve.mitre.org/cgi-bin/cvename.cgi?name=${id}`,
-        summary:        `${summary}${cvss}`,
-        publishedAt:    cve.Published ? new Date(cve.Published).toISOString() : now,
-        fetchedAt:      now,
-        tags:           ['cve'],
-        read:           false,
-        saved:          false,
-        relevanceScore: score,
-        relevanceTier:  computeTier(score),
-      } satisfies FeedItem
-    })
+    const out: FeedItem[] = []
+    for (const cve of data.slice(0, 20)) {
+      try {
+        const id      = cve.id ?? 'UNKNOWN'
+        const summary = (cve.summary ?? '').slice(0, 500)
+        const cvss    = cve.cvss ? ` · CVSS ${cve.cvss}` : ''
+        const score   = 0
+        // Same fallback pattern as parseRss — malformed dates throw.
+        const parsedDate = cve.Published ? new Date(cve.Published) : null
+        const publishedAt = parsedDate && Number.isFinite(parsedDate.getTime())
+          ? parsedDate.toISOString() : now
+        out.push({
+          id:             `${source.id}::${id}`,
+          sourceId:       source.id,
+          sourceName:     source.name,
+          title:          id,
+          url:            `https://cve.mitre.org/cgi-bin/cvename.cgi?name=${id}`,
+          summary:        `${summary}${cvss}`,
+          publishedAt,
+          fetchedAt:      now,
+          tags:           ['cve'],
+          read:           false,
+          saved:          false,
+          relevanceScore: score,
+          relevanceTier:  computeTier(score),
+        } satisfies FeedItem)
+      } catch (e) {
+        console.warn(`[SignalBoard] skipping CVE in ${source.name}:`, (e as Error).message)
+      }
+    }
+    return out
   } catch (e) {
     console.warn('[SignalBoard] CVE parse error:', (e as Error).message)
     return []
@@ -573,9 +616,26 @@ export function saveItemToVault(item: FeedItem, vaultPath: string): boolean {
     const dir  = path.join(vaultPath, 'SignalBoard')
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
 
-    const safe = item.title.replace(/[<>:"/\\|?*]/g, '-').slice(0, 80)
+    // Feed titles come from arbitrary RSS publishers — a malicious title
+    // like "../../../etc/something" would survive the old regex (it only
+    // stripped /\<>:"|?*) and path.join would normalize the `..` segments,
+    // escaping the vault dir. Also strip `..` runs, leading dots, and null
+    // bytes, then re-verify the resolved file is under `dir`.
+    let safe = item.title
+      .replace(/[<>:"/\\|?*\x00-\x1f]/g, '-')  // banned chars + control bytes
+      .replace(/\.{2,}/g, '-')                   // collapse any run of dots (kills ..)
+      .replace(/^\.+/, '')                        // strip leading dots
+      .trim()
+      .slice(0, 80) || 'untitled'
     const date = new Date(item.publishedAt).toISOString().slice(0, 10)
     const file = path.join(dir, `${date} ${safe}.md`)
+    // Defence-in-depth: confirm the resolved path is still inside `dir`.
+    const dirReal  = path.resolve(dir) + path.sep
+    const fileReal = path.resolve(file)
+    if (!fileReal.startsWith(dirReal)) {
+      console.error('[SignalBoard] vault save blocked: path escapes vault dir')
+      return false
+    }
 
     const aiSection = item.aiSummary?.length
       ? `\n## AI Summary\n\n${item.aiSummary.map(b => `- ${b}`).join('\n')}\n`

@@ -123,11 +123,27 @@ export function VariablesPanel({ vars, disabled, onChange }: {
   vars: Record<string, string>; disabled: boolean; onChange: (v: Record<string, string>) => void
 }) {
   const [newKey, setNewKey] = useState('')
+  const [keyError, setKeyError] = useState('')
 
   function addVar() {
-    if (!newKey.trim() || vars[newKey] !== undefined) return
-    onChange({ ...vars, [newKey.trim()]: '' })
+    // Trim once, then validate against the canonical form:
+    //   - Reject whitespace-only / empty.
+    //   - Reject names containing { or } — these collide with the {{key}}
+    //     substitution regex (the old version happily accepted them, then
+    //     they'd never resolve at run time).
+    //   - Reject collisions with existing keys (the prior check compared
+    //     against the *untrimmed* form, so '  foo  ' would silently
+    //     create a second foo entry when one already existed).
+    const key = newKey.trim()
+    if (!key) { setKeyError(''); return }
+    if (/[{}]/.test(key)) { setKeyError('Variable names cannot contain { or }'); return }
+    if (Object.prototype.hasOwnProperty.call(vars, key)) {
+      setKeyError(`'${key}' already exists`)
+      return
+    }
+    onChange({ ...vars, [key]: '' })
     setNewKey('')
+    setKeyError('')
   }
 
   return (
@@ -173,21 +189,30 @@ export function VariablesPanel({ vars, disabled, onChange }: {
         </div>
       ))}
       {!disabled && (
-        <div className="flex gap-2 pt-1" style={{ borderTop: '1px solid rgba(42,51,71,0.35)' }}>
-          <input
-            className="flex-1 rounded px-2 py-1 text-xs font-mono"
-            style={{ background: '#07080f', border: '1px solid rgba(42,51,71,0.6)', color: '#e6edf3' }}
-            placeholder="new variable name" value={newKey}
-            onChange={e => setNewKey(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && addVar()}
-          />
-          <button
-            onClick={addVar}
-            className="text-xs px-3 py-1 rounded"
-            style={{ background: 'rgba(45,212,191,0.08)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.20)' }}
-          >
-            Add
-          </button>
+        <div className="flex flex-col gap-1 pt-1" style={{ borderTop: '1px solid rgba(42,51,71,0.35)' }}>
+          <div className="flex gap-2">
+            <input
+              className="flex-1 rounded px-2 py-1 text-xs font-mono"
+              style={{
+                background: '#07080f',
+                border: `1px solid ${keyError ? 'rgba(248,81,73,0.4)' : 'rgba(42,51,71,0.6)'}`,
+                color: '#e6edf3',
+              }}
+              placeholder="new variable name" value={newKey}
+              onChange={e => { setNewKey(e.target.value); if (keyError) setKeyError('') }}
+              onKeyDown={e => e.key === 'Enter' && addVar()}
+            />
+            <button
+              onClick={addVar}
+              className="text-xs px-3 py-1 rounded"
+              style={{ background: 'rgba(45,212,191,0.08)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.20)' }}
+            >
+              Add
+            </button>
+          </div>
+          {keyError && (
+            <span className="text-xs" style={{ color: '#f85149' }}>{keyError}</span>
+          )}
         </div>
       )}
     </div>

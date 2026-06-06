@@ -26,6 +26,28 @@ const preloadFile = fs.existsSync(path.join(__dirname, '..', 'preload', 'preload
   ? 'preload.mjs' : 'preload.js';
 const preloadPath = path.join(__dirname, '..', 'preload', preloadFile);
 
+// ─── Atomic JSON write ────────────────────────────────────────────────────────
+// CONFIG_PATH and EVENTS_PATH are both polled by sibling CyberOS apps. A
+// torn write surfaces as JSON.parse() returning empty state and silently
+// wiping prior contents.
+function writeFileAtomic(target: string, content: string): void {
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  const tmp = `${target}.tmp-termlink-${process.pid}-${Date.now()}`;
+  const fd  = fs.openSync(tmp, 'w');
+  try {
+    fs.writeSync(fd, content, 0, 'utf8');
+    try { fs.fsyncSync(fd); } catch { /* fsync best-effort */ }
+  } finally {
+    try { fs.closeSync(fd); } catch { /* already closed */ }
+  }
+  try {
+    fs.renameSync(tmp, target);
+  } catch {
+    fs.writeFileSync(target, content, { encoding: 'utf8' });
+    try { fs.unlinkSync(tmp); } catch { /* ignore */ }
+  }
+}
+
 // ─── Config helpers ───────────────────────────────────────────────────────────
 function readConfig(): Record<string, unknown> {
   try {
@@ -38,7 +60,7 @@ function readConfig(): Record<string, unknown> {
 function writeConfig(patch: Record<string, unknown>): void {
   try {
     const current = readConfig();
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify({ ...current, ...patch }, null, 2));
+    writeFileAtomic(CONFIG_PATH, JSON.stringify({ ...current, ...patch }, null, 2));
   } catch (e) {
     console.error('[terminallink] writeConfig error:', (e as Error).message);
   }
@@ -46,7 +68,6 @@ function writeConfig(patch: Record<string, unknown>): void {
 
 function emitEcosystemEvent(event: string, data: Record<string, unknown>): void {
   try {
-    fs.mkdirSync(path.dirname(EVENTS_PATH), { recursive: true });
     let events: unknown[] = [];
     try { events = JSON.parse(fs.readFileSync(EVENTS_PATH, 'utf8')); } catch { /* empty */ }
     events.push({
@@ -58,7 +79,7 @@ function emitEcosystemEvent(event: string, data: Record<string, unknown>): void 
     });
     // Keep last 200 events
     if (events.length > 200) events = events.slice(-200);
-    fs.writeFileSync(EVENTS_PATH, JSON.stringify(events, null, 2));
+    writeFileAtomic(EVENTS_PATH, JSON.stringify(events, null, 2));
   } catch (e) {
     console.error('[terminallink] emitEcosystemEvent error:', (e as Error).message);
   }
@@ -160,8 +181,47 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 // ─── IPC: PTY ─────────────────────────────────────────────────────────────────
+// Strip env keys that can inject arbitrary code into the spawned shell. A
+// parent process that launched TerminalLink with DYLD_INSERT_LIBRARIES set
+// would otherwise have those vars flow straight into every PTY we spawn,
+// which is how dylib-injection attacks pivot from one process to a forest.
+function ptyCreateSafeEnv(extra: Record<string, string>): NodeJS.ProcessEnv {
+  const out: NodeJS.ProcessEnv = {};
+  for (const [k, v] of Object.entries(process.env)) {
+    if (v === undefined) continue;
+    if (k.startsWith('DYLD_')) continue;
+    if (k === 'LD_PRELOAD' || k === 'LD_LIBRARY_PATH' || k.startsWith('LD_AUDIT')) continue;
+    out[k] = v;
+  }
+  for (const [k, v] of Object.entries(extra)) {
+    if (k.startsWith('DYLD_')) continue;
+    if (k === 'LD_PRELOAD' || k === 'LD_LIBRARY_PATH' || k.startsWith('LD_AUDIT')) continue;
+    out[k] = v;
+  }
+  return out;
+}
+
 ipcMain.handle('pty-create', (_evt, { id, cols, rows }: { id: string; cols: number; rows: number }) => {
   try {
+    // Validate id — empty / non-string / too long means we'd index the ptys
+    // map by garbage and leak processes that can't be killed afterwards.
+    if (typeof id !== 'string' || !id || id.length > 64) {
+      return { error: 'invalid pane id' };
+    }
+    if (!/^[a-zA-Z0-9_\-]+$/.test(id)) {
+      return { error: 'invalid pane id' };
+    }
+    // Re-creating with the same id while one is alive is a resource leak:
+    // the old proc has no handle to be killed afterwards. Kill it first.
+    const existing = ptys.get(id);
+    if (existing) {
+      try { existing.kill(); } catch { /* already dead */ }
+      ptys.delete(id);
+    }
+    // Bound geometry to a sane range so a hostile resize can't OOM us.
+    const safeCols = Math.min(Math.max(Number(cols) || 80, 8), 500);
+    const safeRows = Math.min(Math.max(Number(rows) || 24, 4), 200);
+
     const cfg = readConfig();
     const sharedCtx = (cfg.shared_context || cfg.recondesk_status || {}) as Record<string, unknown>;
     const activeTarget = (sharedCtx.activeTarget || sharedCtx.active_target || '') as string;
@@ -169,15 +229,14 @@ ipcMain.handle('pty-create', (_evt, { id, cols, rows }: { id: string; cols: numb
 
     const proc = pty.spawn('/bin/zsh', [], {
       name: 'xterm-256color',
-      cols: cols || 80,
-      rows: rows || 24,
+      cols: safeCols,
+      rows: safeRows,
       cwd: process.env.HOME,
-      env: {
-        ...process.env,
+      env: ptyCreateSafeEnv({
         TARGET:    activeTarget,
         TARGET_IP: activeIP,
-        TERM:      'xterm-256color'
-      }
+        TERM:      'xterm-256color',
+      }),
     });
 
     proc.onData((data: string) => {
@@ -198,11 +257,22 @@ ipcMain.handle('pty-create', (_evt, { id, cols, rows }: { id: string; cols: numb
 });
 
 ipcMain.on('pty-write', (_evt, { id, data }: { id: string; data: string }) => {
+  // Cap per-call data at 1 MB. A normal keystroke is a few bytes; a paste
+  // is usually <100 KB. Anything larger is a renderer trying to flood the
+  // PTY buffer (which then back-pressures the entire main process).
+  if (typeof data !== 'string') return;
+  if (data.length > 1024 * 1024) return;
   ptys.get(id)?.write(data);
 });
 
 ipcMain.on('pty-resize', (_evt, { id, cols, rows }: { id: string; cols: number; rows: number }) => {
-  ptys.get(id)?.resize(cols, rows);
+  // Same geometry clamp as pty-create — a renderer asking for a 0×0 or a
+  // 1_000_000×1_000_000 terminal would corrupt the PTY or OOM us.
+  const safeCols = Math.min(Math.max(Number(cols) || 80, 8), 500);
+  const safeRows = Math.min(Math.max(Number(rows) || 24, 4), 200);
+  try {
+    ptys.get(id)?.resize(safeCols, safeRows);
+  } catch { /* PTY may not be ready yet */ }
 });
 
 ipcMain.handle('pty-kill', (_evt, { id }: { id: string }) => {
@@ -237,15 +307,38 @@ ipcMain.handle('get-session-context', () => {
 });
 
 // ─── IPC: Log commands ────────────────────────────────────────────────────────
+// Cap individual command length AND the merged history. Without this a
+// renderer could call log-commands every keystroke with multi-MB strings
+// and current.json grows unboundedly; subsequent reads would OOM.
+const MAX_COMMAND_LEN  = 16 * 1024;          // 16 KB per command
+const MAX_LOGGED_ENTRY = 200 * 1024 * 1024;  // 200 MB serialized cap
+const MAX_HISTORY_ROWS = 10_000;             // hard row cap to bound the array
 ipcMain.handle('log-commands', (_evt, { commands }: { commands: CommandEntry[] }) => {
   try {
+    if (!Array.isArray(commands)) return { error: 'commands must be an array' };
+    // Reject any per-command field that exceeds the per-entry cap.
+    const accepted: CommandEntry[] = [];
+    for (const c of commands) {
+      if (!c || typeof c !== 'object') continue;
+      if (typeof c.command !== 'string' || c.command.length > MAX_COMMAND_LEN) continue;
+      accepted.push(c);
+    }
     fs.mkdirSync(SESSIONS_DIR, { recursive: true });
     const sessionFile = path.join(SESSIONS_DIR, 'current.json');
     let existing: CommandEntry[] = [];
     try { existing = JSON.parse(fs.readFileSync(sessionFile, 'utf8')); } catch { /* empty */ }
+    if (!Array.isArray(existing)) existing = [];
 
-    const merged = [...existing, ...commands];
-    fs.writeFileSync(sessionFile, JSON.stringify(merged, null, 2));
+    let merged = [...existing, ...accepted];
+    // Drop oldest entries first to keep the array bounded.
+    if (merged.length > MAX_HISTORY_ROWS) merged = merged.slice(-MAX_HISTORY_ROWS);
+    const json = JSON.stringify(merged, null, 2);
+    if (json.length > MAX_LOGGED_ENTRY) return { error: 'history too large' };
+    // Atomic — current.json is appended every keystroke; a crash mid-write
+    // would lose every command in the current session.
+    const tmp = `${sessionFile}.tmp`;
+    fs.writeFileSync(tmp, json);
+    fs.renameSync(tmp, sessionFile);
 
     const cfg = readConfig();
     const prevStatus = (cfg.terminallink_status || {}) as Record<string, unknown>;
@@ -259,10 +352,10 @@ ipcMain.handle('log-commands', (_evt, { commands }: { commands: CommandEntry[] }
       }
     });
 
-    if (commands.length > 0) {
+    if (accepted.length > 0) {
       emitEcosystemEvent('command:executed', {
-        commandCount: commands.length,
-        lastCommand: commands[commands.length - 1].command
+        commandCount: accepted.length,
+        lastCommand: accepted[accepted.length - 1].command
       });
     }
 
@@ -275,11 +368,55 @@ ipcMain.handle('log-commands', (_evt, { commands }: { commands: CommandEntry[] }
 
 // ─── IPC: Version ─────────────────────────────────────────────────────────────
 ipcMain.handle('get-version', () => app.getVersion());
-ipcMain.handle('open-external', (_e, url: string) => shell.openExternal(url));
+ipcMain.handle('open-external', (_e, url: string) => {
+  // shell.openExternal hands the URL to the OS, which will gladly run
+  // `file://`, custom schemes (e.g. `vscode://file/…`), or any registered
+  // handler. Restrict to the two schemes a terminal app legitimately needs.
+  if (typeof url !== 'string' || !url) return;
+  try {
+    const parsed = new URL(url);
+    const scheme = parsed.protocol.toLowerCase();
+    if (scheme !== 'http:' && scheme !== 'https:') {
+      console.warn('[terminallink] open-external rejected:', scheme);
+      return;
+    }
+    shell.openExternal(url);
+  } catch {
+    // Malformed URL — silently drop.
+  }
+});
+
+// ─── IPC: SSO soft-lock (shared with the rest of CyberOS) ────────────────────
+ipcMain.handle('get-sso', () => {
+  try {
+    const cfgPath = path.join(os.homedir(), 'cybertools-config.json');
+    if (!fs.existsSync(cfgPath)) return { unlocked: false };
+    const shared = JSON.parse(fs.readFileSync(cfgPath, 'utf8')) || {};
+    const sso = shared.sso as { unlocked?: boolean; expiresAt?: string | null; unlockedAt?: string | null } | undefined;
+    if (!sso?.unlocked) return { unlocked: false };
+    if (sso.expiresAt && new Date(sso.expiresAt).getTime() < Date.now()) return { unlocked: false };
+    return { unlocked: true, unlockedAt: sso.unlockedAt, expiresAt: sso.expiresAt };
+  } catch { return { unlocked: false }; }
+});
+
+ipcMain.handle('open-credvault', () => {
+  try {
+    const target = '/Applications/CredVault.app';
+    if (!fs.existsSync(target)) return false;
+    const { spawn } = require('child_process') as typeof import('child_process');
+    spawn('open', [target], { detached: true, stdio: 'ignore' }).unref();
+    return true;
+  } catch { return false; }
+});
 
 // ─── IPC: Capture save ────────────────────────────────────────────────────────
 ipcMain.handle('capture:save', async (_e, payload: CapturePayload) => {
   try {
+    if (!payload || typeof payload !== 'object') return { ok: false, path: '' };
+    if (typeof payload.imageData !== 'string') return { ok: false, path: '' };
+    // Cap the base64 PNG at 50 MB — anything larger is a renderer trying to
+    // exhaust the heap via Buffer.from. A normal full-screen PNG is <10 MB.
+    if (payload.imageData.length > 50 * 1024 * 1024) return { ok: false, path: '' };
     const base64 = payload.imageData.replace(/^data:image\/png;base64,/, '');
     const buffer = Buffer.from(base64, 'base64');
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -293,17 +430,30 @@ ipcMain.handle('capture:save', async (_e, payload: CapturePayload) => {
         const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
         activeLab = (cfg.shared_context as Record<string, string>)?.activeLab ?? 'Unknown';
       } catch { /* fall through to default */ }
-      const vaultBase = path.join(
-        os.homedir(), 'Documents', 'CyberOS-Vault', 'CyberLab', activeLab, 'screenshots'
-      );
+      // Sanitize activeLab — it's read from the shared config which a
+      // sibling app (or hostile patch via terminallink:config:write
+      // pre-hardening) could populate with '../../../.ssh'.
+      const safeLab = activeLab.replace(/[^a-zA-Z0-9_\- ]/g, '_').trim() || 'Unknown';
+      const vaultRoot = path.join(os.homedir(), 'Documents', 'CyberOS-Vault', 'CyberLab');
+      const vaultBase = path.join(vaultRoot, safeLab, 'screenshots');
+      // Defence-in-depth — verify the resolved path stays under vaultRoot.
+      const resolvedBase = path.resolve(vaultBase);
+      const resolvedRoot = path.resolve(vaultRoot);
+      const sep = resolvedRoot.endsWith(path.sep) ? resolvedRoot : resolvedRoot + path.sep;
+      if (!resolvedBase.startsWith(sep)) return { ok: false, path: '' };
       fs.mkdirSync(vaultBase, { recursive: true });
       savePath = path.join(vaultBase, filename);
     } else {
       savePath = path.join(os.homedir(), 'Downloads', filename);
     }
 
-    if (payload.label.trim()) {
-      fs.writeFileSync(savePath.replace('.png', '.txt'), payload.label, 'utf8');
+    if (typeof payload.label === 'string' && payload.label.trim()) {
+      // Cap label at 16 KB — keeps a malicious payload from writing
+      // arbitrarily large companion .txt files.
+      const labelBounded = payload.label.length > 16 * 1024
+        ? payload.label.slice(0, 16 * 1024)
+        : payload.label;
+      fs.writeFileSync(savePath.replace('.png', '.txt'), labelBounded, 'utf8');
     }
     fs.writeFileSync(savePath, buffer);
 

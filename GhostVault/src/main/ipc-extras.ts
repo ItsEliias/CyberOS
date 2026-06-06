@@ -98,6 +98,19 @@ export function registerExtras(ctx: ConfigAccessors) {
   ipcMain.handle('get-capture-hotkey', () => loadConfig().captureHotkey || DEFAULT_CAPTURE_HOTKEY);
 
   ipcMain.handle('set-capture-hotkey', (_, newKey: string) => {
+    // Require an Electron-style accelerator with at least one modifier
+    // (CommandOrControl, Cmd, Ctrl, Alt, Option, Shift, Super). Without
+    // this, the renderer could register the bare 'A' key as a global
+    // shortcut and swallow every 'A' the user types systemwide.
+    const MOD = /\b(CommandOrControl|CmdOrCtrl|Command|Cmd|Control|Ctrl|Alt|Option|Shift|Super|Meta)\b/i;
+    if (
+      typeof newKey !== 'string' ||
+      newKey.length === 0 ||
+      newKey.length > 64 ||
+      !MOD.test(newKey)
+    ) {
+      return { ok: false, error: 'Hotkey must include at least one modifier (Cmd/Ctrl/Alt/Shift)' };
+    }
     const oldKey = loadConfig().captureHotkey || DEFAULT_CAPTURE_HOTKEY;
     try { globalShortcut.unregister(oldKey); } catch { /* ignore */ }
     const ok = globalShortcut.register(newKey, openCapture);
@@ -135,10 +148,27 @@ export function registerExtras(ctx: ConfigAccessors) {
     } catch { return { running: true, models: [] }; }
   });
 
+  // Ollama input limits. Bounded to keep one runaway IPC from queueing a
+  // multi-megabyte generation against the local server and blocking every
+  // other note-formatting call behind it.
+  const OLLAMA_MAX_TEXT     = 64 * 1024;   // 64 KB per single prompt
+  const OLLAMA_MAX_MESSAGES = 64;          // chat turns cap
+  const OLLAMA_MAX_MSG_LEN  = 16 * 1024;   // per-message cap
+  // Model name is sent verbatim to the Ollama API. Stay conservative:
+  // letters/digits/dash/dot/underscore/colon/slash, matching the shape
+  // of names like `qwen2.5:14b-instruct` or `library/llama3.1:8b`.
+  const MODEL_RE = /^[a-zA-Z0-9_\-./:]{1,128}$/;
+  function sanitizeModel(m: unknown): string {
+    if (typeof m !== 'string' || !m) return 'mistral';
+    return MODEL_RE.test(m) ? m : 'mistral';
+  }
+
   ipcMain.handle('ollama-format', async (_, { text, mode: _mode, ctx, model }: { text: string; mode: string; ctx: string; model?: string }) => {
     try {
+      if (typeof text !== 'string' || !text) return { error: 'invalid text' };
+      if (text.length > OLLAMA_MAX_TEXT) return { error: 'text too large' };
       if (!await checkOllamaRunning()) return { error: 'ollama_not_running' };
-      const result = await callOllama(model || 'mistral', buildOllamaPrompt(text, ctx));
+      const result = await callOllama(sanitizeModel(model), buildOllamaPrompt(text, ctx));
       return { result: result.trim() };
     } catch (e) { return { error: (e as Error).message }; }
   });
@@ -153,10 +183,18 @@ export function registerExtras(ctx: ConfigAccessors) {
 
   ipcMain.handle('ghostvault:ollama:chat', async (_, model: string, messages: { role: string; content: string }[]) => {
     try {
+      if (!Array.isArray(messages) || messages.length === 0) return { error: 'invalid messages' };
+      if (messages.length > OLLAMA_MAX_MESSAGES) return { error: 'too many messages' };
+      for (const m of messages) {
+        if (!m || typeof m.role !== 'string' || typeof m.content !== 'string') {
+          return { error: 'invalid message shape' };
+        }
+        if (m.content.length > OLLAMA_MAX_MSG_LEN) return { error: 'message too large' };
+      }
       if (!await checkOllamaRunning()) return { error: 'ollama_not_running' };
       // Flatten messages into a single prompt
       const prompt = messages.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n');
-      const result = await callOllama(model || 'mistral', prompt);
+      const result = await callOllama(sanitizeModel(model), prompt);
       return { result: result.trim() };
     } catch (e) { return { error: (e as Error).message }; }
   });

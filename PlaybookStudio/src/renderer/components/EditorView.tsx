@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useStore } from '../store'
 import type { Playbook, PlaybookStep, PlaybookCategory } from '@shared/types'
 import StepEditorRow from './editor/StepEditor'
@@ -160,6 +160,29 @@ export default function EditorView() {
   const [showAi,  setShowAi]  = useState(false)
   const disabled = pb.isBuiltIn
 
+  // Sync local editor state when the store's activePlaybook switches to a
+  // genuinely different playbook (e.g. user picked a different playbook from
+  // the command palette while the editor was open, or a save round-tripped a
+  // refreshed copy with new updatedAt / versions). Without this, the editor
+  // froze on whichever playbook was active at mount time.
+  //
+  // We key off id + updatedAt so that:
+  //   - Switching playbooks (id change) reloads.
+  //   - Re-loading the same playbook with new server state (updatedAt change,
+  //     e.g. after handleSave) refreshes without clobbering unsaved edits
+  //     because handleSave already calls setPb(res.playbook) directly.
+  //   - Local in-editor edits (same id, same updatedAt) don't trigger a
+  //     reload, so the user's keystrokes are not stomped on every render.
+  const lastSyncedRef = useRef<string>(`${pb.id}::${pb.updatedAt}`)
+  useEffect(() => {
+    if (!activePlaybook) return
+    const key = `${activePlaybook.id}::${activePlaybook.updatedAt}`
+    if (key === lastSyncedRef.current) return
+    lastSyncedRef.current = key
+    setPb(activePlaybook)
+    setError('')
+  }, [activePlaybook])
+
   const updateStep = useCallback((idx: number, updated: PlaybookStep) => {
     setPb(p => ({ ...p, steps: p.steps.map((s, i) => i === idx ? updated : s) }))
   }, [])
@@ -199,6 +222,7 @@ export default function EditorView() {
     const res = await window.electronAPI.savePlaybook(pb)
     if (res.ok && res.playbook) {
       const all = await window.electronAPI.getAllPlaybooks()
+      lastSyncedRef.current = `${res.playbook.id}::${res.playbook.updatedAt}`
       setPlaybooks(all); setActivePlaybook(res.playbook); setPb(res.playbook)
     } else { setError(res.error ?? 'Save failed') }
     setSaving(false)
@@ -209,6 +233,7 @@ export default function EditorView() {
     const res = await window.electronAPI.restoreVersion(pb.id, idx)
     if (res.ok && res.playbook) {
       const all = await window.electronAPI.getAllPlaybooks()
+      lastSyncedRef.current = `${res.playbook.id}::${res.playbook.updatedAt}`
       setPlaybooks(all); setActivePlaybook(res.playbook); setPb(res.playbook)
     }
   }

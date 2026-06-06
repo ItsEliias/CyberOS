@@ -36,7 +36,12 @@ function readJson<T>(filePath: string, fallback: T): T {
 function writeJson(filePath: string, data: unknown): void {
   try {
     ensureDataDir()
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8')
+    // Atomic write — a crash mid-fs.writeFileSync used to leave a partial
+    // labs.json / progress.json / prefs.json that failed to parse on next
+    // launch, dropping all of the user's labs.
+    const tmp = `${filePath}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8')
+    fs.renameSync(tmp, filePath)
   } catch (e) {
     console.error('[NetLab] writeJson failed:', (e as Error).message)
   }

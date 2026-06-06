@@ -21,6 +21,18 @@ const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')
 let mainWindow: BrowserWindow | null = null
 let statusInterval: NodeJS.Timeout | null = null
 let configWatcher: fs.FSWatcher | null = null
+let dataWatcher: fs.FSWatcher | null = null
+// Suppress data:updated push to renderer for a short window after our own
+// saveData() so we don't ping the renderer to re-fetch identical state.
+let suppressDataPushUntil = 0
+
+// Atomic write — tmp + rename so a crash mid-write can't leave a half-written
+// cybertools-config.json that breaks every cooperating CyberOS app.
+function writeSharedConfigAtomic(cfg: unknown): void {
+  const tmp = `${CYBERTOOLS_CONFIG}.tmp`
+  fs.writeFileSync(tmp, JSON.stringify(cfg, null, 2), 'utf8')
+  fs.renameSync(tmp, CYBERTOOLS_CONFIG)
+}
 
 function ensureDataDir(): void {
   const dir = path.dirname(DATA_FILE)
@@ -39,7 +51,36 @@ function loadData(): ReconDeskData {
 
 function saveData(data: ReconDeskData): void {
   ensureDataDir()
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf8')
+  // Atomic write — a crash mid-fs.writeFileSync used to leave a half-written
+  // data.json that failed to parse on next launch, losing every target.
+  const tmp = `${DATA_FILE}.tmp`
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8')
+  fs.renameSync(tmp, DATA_FILE)
+  // Suppress our own watcher echo for the next 500 ms.
+  suppressDataPushUntil = Date.now() + 500
+}
+
+// Watch data.json for external writes (NetworkMap recondesk:push-node,
+// SignalBoard feeds:recondesk-target) so the renderer picks them up without
+// the user having to manually refresh.
+function installDataWatcher(): void {
+  if (dataWatcher) return
+  if (!fs.existsSync(DATA_FILE)) {
+    // Ensure the file exists so fs.watch has something to watch.
+    saveData(loadData())
+  }
+  try {
+    let debounce: NodeJS.Timeout | null = null
+    dataWatcher = fs.watch(DATA_FILE, { persistent: false }, () => {
+      if (Date.now() < suppressDataPushUntil) return
+      if (debounce) clearTimeout(debounce)
+      debounce = setTimeout(() => {
+        try { mainWindow?.webContents?.send('data:updated') } catch { /* ignore */ }
+      }, 120)
+    })
+  } catch (e) {
+    console.warn('[ReconDesk] data watcher install failed:', (e as Error).message)
+  }
 }
 
 function defaultData(): ReconDeskData {
@@ -54,7 +95,7 @@ function updateOperatorProfile(updates: Record<string, unknown>): void {
     }
     const existing = (shared.operator_profile as Record<string, unknown>) || {}
     shared.operator_profile = { ...existing, ...updates }
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8')
+    writeSharedConfigAtomic(shared)
   } catch {}
 }
 
@@ -81,7 +122,7 @@ function writeStatus(data: ReconDeskData): void {
       lastUpdated:  new Date().toISOString(),
       updatedBy:    'ReconDesk'
     }
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8')
+    writeSharedConfigAtomic(shared)
   } catch (e) {
     console.warn('[ReconDesk] status write failed:', (e as Error).message)
   }
@@ -154,7 +195,19 @@ ipcMain.handle('data:save', (_e, data: ReconDeskData) => {
 
 ipcMain.handle('app:version', () => APP_VERSION)
 
-ipcMain.handle('shell:open', (_e, url: string) => shell.openExternal(url))
+// Allowlist URL schemes — without this, a poisoned target URL (e.g. baked
+// into a CVE link or a SignalBoard-imported note) could fire javascript:,
+// file://, or data: URIs through shell.openExternal and trigger code or
+// disclose local files via the default handler.
+const SHELL_OPEN_SCHEMES = new Set(['http:', 'https:', 'mailto:'])
+ipcMain.handle('shell:open', (_e, url: string) => {
+  try {
+    if (typeof url !== 'string' || url.length === 0) return
+    const u = new URL(url)
+    if (!SHELL_OPEN_SCHEMES.has(u.protocol)) return
+    return shell.openExternal(u.toString())
+  } catch { /* malformed URL — drop silently */ }
+})
 
 // ─── New V2 IPC handlers ──────────────────────────────────────────────────────
 
@@ -177,7 +230,7 @@ ipcMain.handle('recondesk:write-context', (_e, ctx: { activeTarget: string; acti
       ...existingStatus,
       activeTarget: ctx.activeTarget,
     }
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8')
+    writeSharedConfigAtomic(shared)
     return { ok: true }
   } catch (e) {
     console.warn('[ReconDesk] writeContext failed:', (e as Error).message)
@@ -299,8 +352,10 @@ ipcMain.handle('get-sso', () => {
 
 ipcMain.handle('open-credvault', () => {
   try {
+    const target = '/Applications/CredVault.app'
+    if (!fs.existsSync(target)) return false
     const { spawn } = require('child_process') as typeof import('child_process')
-    spawn('open', ['/Applications/CredVault.app'], { detached: true, stdio: 'ignore' }).unref()
+    spawn('open', [target], { detached: true, stdio: 'ignore' }).unref()
     return true
   } catch { return false }
 })
@@ -324,7 +379,7 @@ ipcMain.handle('recondesk:open-in-networkmap', (_e, ip: string) => {
       try { shared = JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8')) } catch {}
     }
     shared.networkmap_focus = { ip, requestedAt: new Date().toISOString(), requestedBy: 'ReconDesk' }
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8')
+    writeSharedConfigAtomic(shared)
     emitEvent('ReconDesk', 'networkmap:focus-ip', { ip })
     return { ok: true }
   } catch (e) {
@@ -410,6 +465,7 @@ app.whenReady().then(() => {
   writeStatus(data)
   emitEvent('ReconDesk', 'app:launched', { version: APP_VERSION })
   if (mainWindow) setupConfigWatch(mainWindow)
+  installDataWatcher()
 
   // Tray-menu pending action — let the renderer mount, then dispatch.
   setTimeout(() => {
@@ -437,7 +493,10 @@ app.on('window-all-closed', () => {
   app.quit()
 })
 
-app.on('before-quit', () => { configWatcher?.close() })
+app.on('before-quit', () => {
+  configWatcher?.close()
+  dataWatcher?.close()
+})
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow()

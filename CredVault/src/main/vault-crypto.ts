@@ -30,7 +30,10 @@ export function vaultExists(): boolean {
 export function createSalt(): Buffer {
   ensureAppDir()
   const salt = crypto.randomBytes(32)
-  fs.writeFileSync(SALT_FILE, salt)
+  // Atomic — corrupt salt = unrecoverable vault.
+  const _saltTmp = `${SALT_FILE}.tmp`
+  fs.writeFileSync(_saltTmp, salt)
+  fs.renameSync(_saltTmp, SALT_FILE)
   return salt
 }
 
@@ -55,7 +58,10 @@ export function encryptVault(plaintext: string, password: string): void {
 
   // Layout: [iv (12)] [tag (16)] [ciphertext (N)]
   const combined = Buffer.concat([iv, tag, encrypted])
-  fs.writeFileSync(VAULT_FILE, combined)
+  // Atomic write — see cryptoManager.encryptVaultWithKey for full rationale.
+  const tmp = `${VAULT_FILE}.tmp`
+  fs.writeFileSync(tmp, combined)
+  fs.renameSync(tmp, VAULT_FILE)
 }
 
 export function decryptVault(password: string): string | null {

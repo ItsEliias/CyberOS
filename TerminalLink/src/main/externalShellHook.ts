@@ -178,6 +178,32 @@ export interface InstallResult {
 }
 
 /**
+ * Atomic write: serialize, write to tmp sibling, fsync, rename over target.
+ * We use this for rc file mutations because a torn write would corrupt the
+ * user's shell startup file — a non-recoverable foot-gun. Falls back to a
+ * direct writeFileSync when the cross-filesystem rename fails (e.g. tmp
+ * landed on a different volume), with the same data already on disk.
+ */
+function writeRcAtomic(rcPath: string, content: string): void {
+  const tmp = `${rcPath}.tmp-termlink-${process.pid}-${Date.now()}`;
+  const fd  = fs.openSync(tmp, 'w');
+  try {
+    fs.writeSync(fd, content, 0, 'utf8');
+    try { fs.fsyncSync(fd); } catch { /* fsync best-effort */ }
+  } finally {
+    try { fs.closeSync(fd); } catch { /* already closed */ }
+  }
+  try {
+    fs.renameSync(tmp, rcPath);
+  } catch {
+    // Cross-device rename failure — fall through and write directly. The tmp
+    // file may be left behind; clean it up best-effort.
+    fs.writeFileSync(rcPath, content, { encoding: 'utf8' });
+    try { fs.unlinkSync(tmp); } catch { /* ignore */ }
+  }
+}
+
+/**
  * Append the snippet for `shell` to the corresponding rc file. No-op if
  * the marker block is already present. Creates parent dirs for fish.
  */
@@ -198,7 +224,7 @@ export function installHookForShell(shell: ExternalShellId): InstallResult {
 
     // Ensure a separating newline before append for readability.
     const sep = existing.length === 0 || existing.endsWith('\n') ? '' : '\n';
-    fs.writeFileSync(rcPath, existing + sep + '\n' + snippet, { encoding: 'utf8' });
+    writeRcAtomic(rcPath, existing + sep + '\n' + snippet);
     return { shell, rcPath, changed: true };
   } catch (e) {
     return { shell, rcPath, changed: false, error: (e as Error).message };
@@ -220,7 +246,7 @@ export function uninstallHookForShell(shell: ExternalShellId): InstallResult {
       return { shell, rcPath, changed: false };
     }
     const after = stripMarkerBlock(before).replace(/\n{3,}/g, '\n\n');
-    fs.writeFileSync(rcPath, after, { encoding: 'utf8' });
+    writeRcAtomic(rcPath, after);
     return { shell, rcPath, changed: true };
   } catch (e) {
     return { shell, rcPath, changed: false, error: (e as Error).message };

@@ -30,7 +30,15 @@ export function emitEvent(appName: string, eventType: string, data: Record<strin
       data,
     });
     if (events.length > MAX_EVENTS) events.splice(MAX_EVENTS);
-    fs.writeFileSync(BUS_FILE, JSON.stringify(events, null, 2), 'utf8');
+
+    // Atomic write — every CyberTools app emits into this same file. A
+    // sibling app reading mid-write would parse-throw or see a truncated
+    // event list (we cap at MAX_EVENTS so the next emit would silently
+    // drop history). tmp+rename keeps readers seeing either the previous
+    // or the new bytes.
+    const tmp = BUS_FILE + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(events, null, 2), 'utf8');
+    fs.renameSync(tmp, BUS_FILE);
   } catch (e: unknown) {
     console.error('[EcosystemBus] emit error:', (e as Error).message);
   }

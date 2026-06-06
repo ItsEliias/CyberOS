@@ -33,6 +33,22 @@ function ensureDirs() {
 }
 
 // ─── Shared status writer ─────────────────────────────────────────────────────
+// Atomic write to the shared cybertools-config.json. Every sibling app polls
+// this file every few seconds; a torn read (mid-write JSON.parse failing or
+// returning {}) would silently clobber state across the whole CyberOS suite.
+function writeCyberToolsConfigAtomic(shared: Record<string, unknown>): void {
+  const json = JSON.stringify(shared, null, 2);
+  const tmp  = `${CYBERTOOLS_CONFIG}.tmp-${process.pid}-${Date.now()}`;
+  const fd   = fs.openSync(tmp, 'w');
+  try {
+    fs.writeSync(fd, json, 0, 'utf8');
+    try { fs.fsyncSync(fd); } catch { /* fsync best-effort */ }
+  } finally {
+    try { fs.closeSync(fd); } catch { /* already closed */ }
+  }
+  fs.renameSync(tmp, CYBERTOOLS_CONFIG);
+}
+
 function writeGhostVaultStatus() {
   try {
     let shared: Record<string, unknown> = {};
@@ -45,7 +61,7 @@ function writeGhostVaultStatus() {
       lastCapture : lastCaptureTime,
       noteCount   : vaultNoteCount
     };
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8');
+    writeCyberToolsConfigAtomic(shared);
   } catch (e) {
     console.warn('[GhostVault] status write failed:', (e as Error).message);
   }
@@ -62,7 +78,7 @@ function stopStatusWriter() {
     if (fs.existsSync(CYBERTOOLS_CONFIG)) {
       const shared = JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8'));
       if (shared.ghostvault_status) shared.ghostvault_status.active = false;
-      fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8');
+      writeCyberToolsConfigAtomic(shared);
     }
   } catch (_) {}
 }
@@ -180,6 +196,53 @@ function listVaultNotes(vaultPath: string): NoteFile[] {
   }
   walk(vaultPath, '');
   return results.sort((a, b) => b.mtime - a.mtime);
+}
+
+// ─── Path confinement ────────────────────────────────────────────────────────
+// Validates a candidate vaultPath supplied via save-config. Must be an
+// absolute path strictly under the user's home directory — rejects empties,
+// relative paths, /etc, /private, /, /var, /tmp, /System, /Library, etc.
+// We allow setting the vault directly to $HOME but not to any system root.
+function isSafeVaultPath(p: unknown): boolean {
+  // Undefined / null is allowed (caller may want to unset).
+  if (p === undefined || p === null || p === '') return true;
+  if (typeof p !== 'string') return false;
+  try {
+    const resolved = path.resolve(p);
+    const home     = path.resolve(os.homedir());
+    if (!path.isAbsolute(resolved)) return false;
+    // Reject obvious system roots even if they happen to be under $HOME
+    // (unlikely, but cheap to check first).
+    const denyPrefixes = ['/etc', '/private', '/var', '/tmp', '/usr', '/bin', '/sbin', '/System', '/Library'];
+    for (const deny of denyPrefixes) {
+      if (resolved === deny || resolved.startsWith(deny + path.sep)) return false;
+    }
+    if (resolved === '/') return false;
+    // Require the candidate to be at or under the user's home directory.
+    const homePrefix = home.endsWith(path.sep) ? home : home + path.sep;
+    return resolved === home || resolved.startsWith(homePrefix);
+  } catch {
+    return false;
+  }
+}
+
+// Renderer-supplied paths must resolve inside the configured vault root.
+// Otherwise a compromised renderer can read SSH keys or overwrite shell rc
+// files via the note IPCs. Symlinks inside the vault are deliberately not
+// resolved — the user opted into them by placing them in the vault.
+function isUnderVault(filePath: string): boolean {
+  if (typeof filePath !== 'string' || !filePath) return false;
+  const vault = loadConfig().vaultPath;
+  if (!vault || typeof vault !== 'string') return false;
+  try {
+    const resolvedVault = path.resolve(vault);
+    const resolvedFile  = path.resolve(filePath);
+    if (resolvedFile === resolvedVault) return true;
+    const prefix = resolvedVault.endsWith(path.sep) ? resolvedVault : resolvedVault + path.sep;
+    return resolvedFile.startsWith(prefix);
+  } catch {
+    return false;
+  }
 }
 
 const readNote  = (filePath: string): string => {
@@ -369,6 +432,15 @@ app.on('window-all-closed', () => {
 // ─── IPC ──────────────────────────────────────────────────────────────────────
 ipcMain.handle('get-config',  ()        => loadConfig());
 ipcMain.handle('save-config', (_, c: Partial<GhostVaultConfig>) => {
+  // Reject patches that try to point the vault at a system directory.
+  // Without this, a compromised renderer could set vaultPath=/etc/ and
+  // every subsequent write-note would persist under /etc.
+  if (c && Object.prototype.hasOwnProperty.call(c, 'vaultPath')) {
+    if (!isSafeVaultPath(c.vaultPath)) {
+      console.warn('[GhostVault] save-config rejected: unsafe vaultPath');
+      return false;
+    }
+  }
   const result = saveConfig(c);
   // Push theme changes to the capture window so it stays in sync
   if (c.theme && captureWindow && !captureWindow.isDestroyed()) {
@@ -396,8 +468,10 @@ ipcMain.handle('get-sso', () => {
 // Cross-app: open CredVault from the lock screen.
 ipcMain.handle('open-credvault', () => {
   try {
+    const target = '/Applications/CredVault.app';
+    if (!fs.existsSync(target)) return false;
     const { spawn } = require('child_process') as typeof import('child_process');
-    spawn('open', ['/Applications/CredVault.app'], { detached: true, stdio: 'ignore' }).unref();
+    spawn('open', [target], { detached: true, stdio: 'ignore' }).unref();
     return true;
   } catch { return false; }
 });
@@ -421,7 +495,20 @@ ipcMain.handle('get-always-on-top', () => mainWindow?.isAlwaysOnTop() ?? false);
 ipcMain.handle('minimize-window', () => { mainWindow?.minimize(); });
 ipcMain.handle('close-window',    () => { mainWindow?.close(); });
 
+// Returns true only when the supplied path matches the configured vault.
+// Used as the gate for IPCs that walk a directory tree — without this a
+// renderer could enumerate the entire filesystem by passing '/'.
+function isConfiguredVault(vp: unknown): boolean {
+  if (typeof vp !== 'string' || !vp) return false;
+  const cfg = loadConfig();
+  if (!cfg.vaultPath) return false;
+  try {
+    return path.resolve(vp) === path.resolve(cfg.vaultPath);
+  } catch { return false; }
+}
+
 ipcMain.handle('load-vault', (_, vaultPath: string) => {
+  if (!isConfiguredVault(vaultPath)) return { notes: [], folders: VAULT_FOLDERS };
   const notes   = listVaultNotes(vaultPath);
   const folders: string[] = fs.existsSync(vaultPath)
     ? fs.readdirSync(vaultPath, { withFileTypes: true })
@@ -431,25 +518,42 @@ ipcMain.handle('load-vault', (_, vaultPath: string) => {
   return { notes, folders };
 });
 
-ipcMain.handle('list-notes',  (_, vaultPath: string) => listVaultNotes(vaultPath));
-ipcMain.handle('read-note',   (_, filePath: string)  => readNote(filePath));
+ipcMain.handle('list-notes',  (_, vaultPath: string) => {
+  if (!isConfiguredVault(vaultPath)) return [];
+  return listVaultNotes(vaultPath);
+});
+ipcMain.handle('read-note',   (_, filePath: string)  => {
+  if (!isUnderVault(filePath)) return '';
+  return readNote(filePath);
+});
 ipcMain.handle('write-note',  (_, filePath: string, content: string) => {
+  if (!isUnderVault(filePath)) return false;
   const result = writeNote(filePath, content);
   lastCaptureTime = new Date().toISOString();
   writeGhostVaultStatus();
   return result;
 });
 ipcMain.handle('delete-note', (_, filePath: string) => {
+  if (!isUnderVault(filePath)) return false;
   const r = deleteNote(filePath);
   vaultNoteCount = Math.max(0, vaultNoteCount - 1);
   writeGhostVaultStatus();
   return r;
 });
-ipcMain.handle('rename-note', (_, oldPath: string, newPath: string) => renameNote(oldPath, newPath));
+ipcMain.handle('rename-note', (_, oldPath: string, newPath: string) => {
+  if (!isUnderVault(oldPath) || !isUnderVault(newPath)) return false;
+  return renameNote(oldPath, newPath);
+});
 
 ipcMain.handle('new-note', async (_, vaultPath: string, folder: string, title: string): Promise<NewNoteResult> => {
   const safeName  = title.replace(/[/\\?%*:|"<>]/g, '-') || 'Untitled';
   const filePath  = path.join(vaultPath, folder, `${safeName}.md`);
+  // Defence-in-depth — both vaultPath and folder come from the renderer.
+  // isUnderVault re-resolves against the SAVED config, so even if the
+  // renderer passes a poisoned vaultPath we still write under the real one.
+  if (!isUnderVault(filePath)) {
+    return { path: '', name: safeName, folder, content: '' };
+  }
   const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 16);
   const content   = `# ${title}\n\n*Created: ${timestamp}*\n\n---\n\n`;
   writeNote(filePath, content);
@@ -460,12 +564,15 @@ ipcMain.handle('new-note', async (_, vaultPath: string, folder: string, title: s
 });
 
 ipcMain.handle('create-folder', async (_, vaultPath: string, folderName: string) => {
-  try { fs.mkdirSync(path.join(vaultPath, folderName), { recursive: true }); return true; }
+  const target = path.join(vaultPath, folderName);
+  if (!isUnderVault(target)) return false;
+  try { fs.mkdirSync(target, { recursive: true }); return true; }
   catch { return false; }
 });
 
 ipcMain.handle('list-folders', (_, vaultPath: string): string[] => {
-  if (!vaultPath || !fs.existsSync(vaultPath)) return VAULT_FOLDERS;
+  if (!isConfiguredVault(vaultPath)) return VAULT_FOLDERS;
+  if (!fs.existsSync(vaultPath)) return VAULT_FOLDERS;
   try {
     return fs.readdirSync(vaultPath, { withFileTypes: true })
       .filter(e => e.isDirectory() && !e.name.startsWith('.'))
@@ -474,9 +581,27 @@ ipcMain.handle('list-folders', (_, vaultPath: string): string[] => {
 });
 
 ipcMain.handle('reveal-in-finder', (_, p: string) => {
+  if (!isUnderVault(p)) return;
   if (p && fs.existsSync(p)) shell.showItemInFolder(p);
 });
-ipcMain.handle('open-external', (_, url: string) => shell.openExternal(url));
+ipcMain.handle('open-external', (_, url: string) => {
+  // shell.openExternal will happily hand any URL scheme to the OS — `file://`
+  // opens local files, custom schemes can launch handler apps with attacker-
+  // controlled args. Restrict to the three schemes a notes app legitimately
+  // needs and drop everything else on the floor.
+  if (typeof url !== 'string' || !url) return;
+  try {
+    const parsed = new URL(url);
+    const scheme = parsed.protocol.toLowerCase();
+    if (scheme !== 'http:' && scheme !== 'https:' && scheme !== 'mailto:') {
+      console.warn('[GhostVault] open-external rejected:', scheme);
+      return;
+    }
+    shell.openExternal(url);
+  } catch {
+    // Malformed URL — silently drop.
+  }
+});
 
 ipcMain.handle('pick-vault-dir', async (_, opts: { skipFolderCreate?: boolean } = {}) => {
   const result = await dialog.showOpenDialog(mainWindow!, {
@@ -505,6 +630,11 @@ ipcMain.handle('save-capture-note', async (_, { folder, title, text }: { folder:
     const safeName  = (title || `Quick Note ${timestamp}`).replace(/[/\\?%*:|"<>]/g, '-');
     const content   = `# ${safeName}\n\n*Captured: ${timestamp}*\n\n---\n\n${text}\n`;
     const filePath  = path.join(cfg.vaultPath, folder || 'Notes', `${safeName}.md`);
+    // Folder is renderer-controlled — reject "../../../tmp/evil" patterns
+    // that would escape the vault even though vaultPath itself is trusted.
+    if (!isUnderVault(filePath)) {
+      return { ok: false, error: 'folder escapes vault' };
+    }
     writeNote(filePath, content);
     lastCaptureTime = new Date().toISOString();
     vaultNoteCount++;
@@ -528,7 +658,7 @@ ipcMain.handle('ghostvault:export-notes', (_, payload: { sessionName: string; no
       notes      : payload.notes,
       exportedAt : new Date().toISOString()
     };
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8');
+    writeCyberToolsConfigAtomic(shared);
     return true;
   } catch (e) {
     console.error('[GhostVault] export-notes failed:', (e as Error).message);
@@ -538,6 +668,10 @@ ipcMain.handle('ghostvault:export-notes', (_, payload: { sessionName: string; no
 
 // ─── Move note ────────────────────────────────────────────────────────────────
 ipcMain.handle('move-note', (_, srcPath: string, destFolder: string): boolean => {
+  // Both src and dest must live under the configured vault. Without this a
+  // renderer could move a vault note out to e.g. /tmp, or pull an arbitrary
+  // host file into the vault for later exfiltration through the notes UI.
+  if (!isUnderVault(srcPath) || !isUnderVault(destFolder)) return false;
   try {
     const filename = path.basename(srcPath);
     const newPath  = path.join(destFolder, filename);
@@ -554,6 +688,7 @@ function getVersionsPath(notePath: string): string {
 }
 
 ipcMain.handle('note:versions:list', (_, notePath: string): import('../shared/types.js').NoteVersion[] => {
+  if (!isUnderVault(notePath)) return [];
   const vp = getVersionsPath(notePath);
   try {
     if (fs.existsSync(vp)) return JSON.parse(fs.readFileSync(vp, 'utf8'));
@@ -562,6 +697,7 @@ ipcMain.handle('note:versions:list', (_, notePath: string): import('../shared/ty
 });
 
 ipcMain.handle('note:versions:save', (_, notePath: string, content: string): void => {
+  if (!isUnderVault(notePath)) return;
   const vp = getVersionsPath(notePath);
   let versions: import('../shared/types.js').NoteVersion[] = [];
   try {
@@ -576,6 +712,11 @@ ipcMain.handle('note:versions:save', (_, notePath: string, content: string): voi
 const crypto = await import('crypto');
 
 ipcMain.handle('ghostvault:note:lock', async (_, notePath: string, password: string): Promise<{ ok: boolean; error?: string }> => {
+  // Path confinement matters more here than anywhere else — without it a
+  // compromised renderer could pass `~/.ssh/id_rsa` and we'd encrypt the
+  // user's SSH key in place with an attacker-known password. Equivalent
+  // to ransomware.
+  if (!isUnderVault(notePath)) return { ok: false, error: 'path outside vault' };
   try {
     const content = readNote(notePath);
     const salt    = crypto.randomBytes(16);
@@ -592,6 +733,7 @@ ipcMain.handle('ghostvault:note:lock', async (_, notePath: string, password: str
 });
 
 ipcMain.handle('ghostvault:note:unlock', async (_, notePath: string, password: string): Promise<{ ok: boolean; content?: string; error?: string }> => {
+  if (!isUnderVault(notePath)) return { ok: false, error: 'path outside vault' };
   try {
     const raw = readNote(notePath);
     if (!raw.startsWith('GHOSTVAULT_ENCRYPTED_V1:')) return { ok: false, error: 'Not encrypted' };
@@ -634,14 +776,22 @@ ipcMain.handle('note:export:pdf', async (_, htmlContent: string, noteName: strin
     filters: [{ name: 'PDF', extensions: ['pdf'] }],
   });
   if (result.canceled || !result.filePath) return false;
+  // Track the offscreen window so we can destroy it on every path (success
+  // or any thrown error). Without this, a printToPDF / loadURL failure
+  // leaves the BrowserWindow alive and accumulating on every retry.
+  let pdfWin: BrowserWindow | null = null;
   try {
-    const pdfWin = new BrowserWindow({ show: false, webPreferences: { offscreen: true } });
+    pdfWin = new BrowserWindow({ show: false, webPreferences: { offscreen: true } });
     await pdfWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
     const data = await pdfWin.webContents.printToPDF({ printBackground: true });
-    pdfWin.destroy();
     fs.writeFileSync(result.filePath, data);
     return true;
   } catch { return false; }
+  finally {
+    if (pdfWin && !pdfWin.isDestroyed()) {
+      try { pdfWin.destroy(); } catch { /* already gone */ }
+    }
+  }
 });
 
 // ─── Spec-canonical IPC aliases ───────────────────────────────────────────────
@@ -649,19 +799,32 @@ ipcMain.handle('note:export:pdf', async (_, htmlContent: string, noteName: strin
 // so both naming conventions work without breaking existing renderer code.
 
 ipcMain.handle('ghostvault:vault:list', (_, vaultPath: string) => listVaultNotes(vaultPath));
-ipcMain.handle('ghostvault:note:read',  (_, filePath: string)  => readNote(filePath));
+ipcMain.handle('ghostvault:note:read',  (_, filePath: string)  => {
+  if (!isUnderVault(filePath)) return '';
+  return readNote(filePath);
+});
 ipcMain.handle('ghostvault:note:write', (_, filePath: string, content: string) => {
+  if (!isUnderVault(filePath)) return false;
   const ok = writeNote(filePath, content);
   if (ok) { lastCaptureTime = new Date().toISOString(); writeGhostVaultStatus(); }
   return ok;
 });
 ipcMain.handle('ghostvault:note:delete', (_, filePath: string) => {
+  if (!isUnderVault(filePath)) return false;
   const ok = deleteNote(filePath);
   if (ok) { vaultNoteCount = Math.max(0, vaultNoteCount - 1); writeGhostVaultStatus(); }
   return ok;
 });
 ipcMain.handle('ghostvault:note:search', async (_, vaultPath: string, query: string) => {
-  if (!query.trim()) return [];
+  // Bound the query — a multi-MB query would burn CPU on every note
+  // toLowerCase + indexOf. 256 chars covers every legitimate search.
+  if (typeof query !== 'string' || !query.trim() || query.length > 256) return [];
+  // Require the searched vault to match the configured one — otherwise a
+  // renderer could ask us to walk `/` and list every file on the system.
+  if (typeof vaultPath !== 'string' || !vaultPath) return [];
+  const cfg = loadConfig();
+  if (!cfg.vaultPath) return [];
+  if (path.resolve(vaultPath) !== path.resolve(cfg.vaultPath)) return [];
   const notes = listVaultNotes(vaultPath);
   const lower = query.toLowerCase();
   const results: { path: string; name: string; snippet: string }[] = [];
@@ -679,13 +842,38 @@ ipcMain.handle('ghostvault:note:search', async (_, vaultPath: string, query: str
   return results;
 });
 ipcMain.handle('ghostvault:config:read', () => {
+  // The full shared config is intentionally NOT returned to the renderer:
+  // it contains the SSO session (CredVault unlock token + expiry), every
+  // sibling app's status block, and TerminalLink's chosen shell binary.
+  // A compromised renderer would otherwise have a one-shot read of the
+  // whole CyberOS state. Project only the keys this renderer actually
+  // needs to drive its capture / status UI.
   try {
     if (!fs.existsSync(CYBERTOOLS_CONFIG)) return {};
-    return JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8'));
+    const raw = JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8')) as Record<string, unknown>;
+    return {
+      shared_context:    raw.shared_context     ?? null,
+      ghostvault_status: raw.ghostvault_status  ?? null,
+    };
   } catch { return {}; }
 });
 ipcMain.handle('ghostvault:event:emit', (_, event: { appName: string; eventType: string; data: Record<string, unknown> }) => {
-  ecosystemBus.emitEvent(event.appName || 'GhostVault', event.eventType, event.data || {});
+  // appName is ALWAYS overridden to 'GhostVault' — never trust the renderer
+  // to identify itself when the process boundary already tells us. Bound
+  // eventType + data to prevent DoS against polling sibling apps.
+  if (!event || typeof event !== 'object') return false;
+  const { eventType, data } = event;
+  if (typeof eventType !== 'string' || eventType.length === 0 || eventType.length > 128) return false;
+  if (!/^[a-zA-Z0-9_:.\-]+$/.test(eventType)) return false;
+  let safeData: Record<string, unknown> = {};
+  if (data !== undefined && data !== null) {
+    if (typeof data !== 'object' || Array.isArray(data)) return false;
+    try {
+      if (JSON.stringify(data).length > 16 * 1024) return false; // 16 KB cap
+    } catch { return false; }
+    safeData = data;
+  }
+  ecosystemBus.emitEvent('GhostVault', eventType, safeData);
   return true;
 });
 ipcMain.handle('ghostvault:clipboard:read', () => {

@@ -123,7 +123,19 @@ export function useTerminal({
     const term = termRef.current;
     if (!term || deadRef.current) return;
     term.writeln('\r\n\x1b[33m[TerminalLink] Reconnecting...\x1b[0m');
-    await window.electronAPI.ptyCreate(paneId, term.cols, term.rows);
+    // ptyCreate can return { error } if main rejects (e.g. PTY allocation
+    // failed). Without checking, the user sees "Reconnecting..." forever
+    // and the pane appears alive even though no shell is attached.
+    try {
+      const res = await window.electronAPI.ptyCreate(paneId, term.cols, term.rows);
+      if (res && (res as { error?: string }).error) {
+        term.writeln(`\r\n\x1b[31m[TerminalLink] Reconnect failed: ${(res as { error: string }).error}\x1b[0m`);
+        return;
+      }
+    } catch (e) {
+      term.writeln(`\r\n\x1b[31m[TerminalLink] Reconnect failed: ${(e as Error).message}\x1b[0m`);
+      return;
+    }
     deadRef.current = false;
   }, [paneId]);
 

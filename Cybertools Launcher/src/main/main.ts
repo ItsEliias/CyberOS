@@ -127,9 +127,23 @@ function createTrayIcon(): Electron.NativeImage {
 function detectVPN(): VpnStatus {
   const ifaces   = os.networkInterfaces();
   const patterns = ['tun','tap','vpn','proton','wg','ppp','utun','ipsec','ovpn','nord'];
+  // A real VPN tunnel carries routable traffic. macOS keeps utun0..utunN
+  // around for Continuity / AirDrop with only link-local fe80:: IPv6 — those
+  // would otherwise be misread as "VPN active". Require at least one address
+  // that isn't link-local and isn't loopback before flagging the interface.
+  function hasRoutableAddress(addrs: os.NetworkInterfaceInfo[] | undefined): boolean {
+    if (!addrs) return false;
+    return addrs.some(a => {
+      if (a.internal) return false;
+      const ip = a.address || '';
+      if (a.family === 'IPv6' && ip.toLowerCase().startsWith('fe80')) return false;
+      if (a.family === 'IPv4' && ip.startsWith('169.254.'))            return false;
+      return true;
+    });
+  }
   for (const [name, addrs] of Object.entries(ifaces)) {
     const lo = name.toLowerCase();
-    if (patterns.some(p => lo.includes(p)) && addrs && addrs.length > 0) {
+    if (patterns.some(p => lo.includes(p)) && hasRoutableAddress(addrs)) {
       return { active: true, interface: name };
     }
   }
@@ -391,12 +405,59 @@ function setupSearchIPC(): void {
 
 // ─── Tray setup ───────────────────────────────────────────────────────────────
 
+// Read the shared CredVault session state from cybertools-config.json so the
+// tray menu and IPC handler share one source of truth.
+function readSSOState(): { unlocked: boolean; expiresAt?: string | null } {
+  try {
+    const cfgPath = path.join(os.homedir(), 'cybertools-config.json');
+    if (!fs.existsSync(cfgPath)) return { unlocked: false };
+    const shared = JSON.parse(fs.readFileSync(cfgPath, 'utf8')) || {};
+    const sso = shared.sso as { unlocked?: boolean; expiresAt?: string | null } | undefined;
+    if (!sso?.unlocked) return { unlocked: false };
+    if (sso.expiresAt && new Date(sso.expiresAt).getTime() < Date.now()) return { unlocked: false };
+    return { unlocked: true, expiresAt: sso.expiresAt };
+  } catch { return { unlocked: false }; }
+}
+
 function setupTray(): void {
   tray = new Tray(createTrayIcon());
   tray.setToolTip('CyberTools Launcher — ItsEliias');
   tray.on('click', () => tray!.popUpContextMenu());
   tray.on('double-click', () => tray!.popUpContextMenu());
   refreshContextMenu();
+  // Re-poll SSO state every 7 s so the menu's status line stays accurate
+  // when CredVault is locked/unlocked from another app. Also drives the
+  // pre-expiry warning notification.
+  setInterval(() => {
+    try { refreshContextMenu(); } catch { /* ignore */ }
+    try { ssoExpiryWatcher(); } catch { /* ignore */ }
+  }, 7000);
+}
+
+// ─── SSO pre-expiry warning ──────────────────────────────────────────────────
+// Fires a single desktop notification when the CredVault session is within
+// 90 s of expiry. Resets once the session is re-unlocked or fully expires so
+// the next renewal cycle can warn again.
+let ssoExpiryNotifiedFor: string | null = null;
+
+function ssoExpiryWatcher(): void {
+  const sso = readSSOState();
+  if (!sso.unlocked || !sso.expiresAt) {
+    // Session locked / re-unlocked / no expiry — clear so the next session can warn.
+    ssoExpiryNotifiedFor = null;
+    return;
+  }
+  const ms = new Date(sso.expiresAt).getTime() - Date.now();
+  if (ms <= 0) { ssoExpiryNotifiedFor = null; return; }
+  if (ms > 90_000) return;
+  if (ssoExpiryNotifiedFor === sso.expiresAt) return;
+  ssoExpiryNotifiedFor = sso.expiresAt;
+  const seconds = Math.max(1, Math.round(ms / 1000));
+  notify(
+    'CredVault session expiring',
+    `Auto-lock in ~${seconds}s. Click to renew.`,
+    () => launchApp('credvault'),
+  );
 }
 
 function refreshContextMenu(): void {
@@ -457,15 +518,37 @@ function refreshContextMenu(): void {
       label: 'Run VaultCore Update Now',
       enabled: installedKey('vaultscraper'),
       click: () => {
-        writeTrigger({ action: 'update_now' });
+        // Use the standard pending-actions queue VaultCore already handles so
+        // the action actually runs, instead of the legacy vaultscraper_trigger
+        // field that no client reads.
+        writePendingAction('vaultscraper', 'run-all-scrapes');
+        launchApp('vaultscraper');
         addActivityEntry({ type: 'launcher', text: 'VaultCore update triggered from tray menu' });
       }
     },
+    // SSO status read-out (disabled "label" item) — updates on each menu rebuild.
+    ...(installedKey('credvault') ? [
+      {
+        label: readSSOState().unlocked
+          ? 'CredVault session: active'
+          : 'CredVault session: locked',
+        enabled: false,
+      },
+    ] : []),
     {
-      label: 'Lock CredVault session',
+      // Action flips based on current state: lock when active, open CredVault when locked.
+      label: readSSOState().unlocked ? 'Lock CredVault session' : 'Unlock CredVault…',
       accelerator: 'CommandOrControl+L',
       enabled: installedKey('credvault'),
-      click: lockEcosystemSession,
+      click: () => {
+        if (readSSOState().unlocked) {
+          lockEcosystemSession();
+        } else {
+          launchApp('credvault');
+        }
+        // Reflect new state immediately rather than waiting for the next poll.
+        setTimeout(() => { try { refreshContextMenu(); } catch { /* ignore */ } }, 400);
+      },
     },
     { type: 'separator' },
     {
@@ -515,6 +598,28 @@ const APP_TRAY_ACTIONS: Record<string, TrayAction[]> = {
   cyberlab:       [{ id: 'refresh-stats',   label: 'Refresh platform stats' }],
 };
 
+// Atomic tmp+rename writer for the shared cybertools-config.json.
+// The Launcher's writeConfig() in config.ts handles the typed CyberToolsConfig
+// shape, but the SSO + pending_actions paths below need to read+modify the
+// raw JSON (it carries extra keys other apps write). Direct writeFileSync
+// here races against concurrent readers (sibling apps polling the file)
+// and risks half-written JSON; tmp+rename is the standard fix.
+function writeSharedConfigAtomic(cfgPath: string, payload: Record<string, unknown>): void {
+  const json    = JSON.stringify(payload, null, 2);
+  const tmpPath = cfgPath + '.tmp';
+  try {
+    fs.writeFileSync(tmpPath, json, 'utf8');
+    fs.renameSync(tmpPath, cfgPath);
+  } catch (e) {
+    // Fall back so a transient rename failure doesn't leave the SSO lock
+    // in an inconsistent state. The fall-back is non-atomic by design.
+    try { fs.writeFileSync(cfgPath, json, 'utf8'); }
+    catch (e2) { throw e2; }
+    try { if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath); } catch { /* swallow */ }
+    void e;
+  }
+}
+
 // One-tap soft-lock for the whole ecosystem. Writes sso.unlocked=false
 // straight into the shared cybertools-config.json so soft-locked apps
 // (GhostVault, VaultCore, ReportForge with the setting on) flip back to
@@ -533,7 +638,7 @@ function lockEcosystemSession(): void {
       token:      null,
       source:     'credvault',
     };
-    fs.writeFileSync(cfgPath, JSON.stringify(shared, null, 2), 'utf8');
+    writeSharedConfigAtomic(cfgPath, shared);
   } catch { /* ignore */ }
   writePendingAction('credvault', 'lock-vault');
   ecosystemBus.emitEvent('Launcher', 'launcher.sso.locked', {});
@@ -555,7 +660,7 @@ function writePendingAction(appKey: string, actionId: string): void {
       requestedAt: new Date().toISOString(),
     });
     shared.pending_actions = filtered;
-    fs.writeFileSync(cfgPath, JSON.stringify(shared, null, 2), 'utf8');
+    writeSharedConfigAtomic(cfgPath, shared);
     addActivityEntry({ type: 'launcher', text: `Queued ${appKey}: ${actionId}` });
   } catch (e) {
     console.warn('[tray-action] write failed:', (e as Error).message);
@@ -576,6 +681,7 @@ const APP_FALLBACK_PRODUCTS: Record<string, string> = {
   reportforge:    'ReportForge',
   terminallink:   'TermLink',
   networkmap:     'NetworkMap',
+  netlab:         'NetLab',
 };
 
 // ─── App launching ────────────────────────────────────────────────────────────
@@ -619,6 +725,9 @@ function launchApp(appKey: string): boolean {
   } else if (appKey === 'networkmap') {
     execPath = (config as Record<string,{execPath?:string}>).networkmap?.execPath || '';
     appName  = 'NetworkMap';
+  } else if (appKey === 'netlab') {
+    execPath = (config as Record<string,{execPath?:string}>).netlab?.execPath || '';
+    appName  = 'NetLab';
   } else if (appKey.startsWith('custom_')) {
     const idx  = parseInt(appKey.replace('custom_', ''), 10);
     const slot = config.launcher?.customSlots?.[idx];
@@ -795,8 +904,13 @@ async function runBackupSnapshot(password?: string): Promise<BackupResult> {
     const encrypted = !!password;
     if (encrypted) {
       finalFile = path.join(folder, `cyberos-backup-${stamp}.cyberos-backup`);
-      encryptToFile(tarPath, finalFile, password!);
-      try { fs.unlinkSync(tarPath); } catch { /* ignore */ }
+      try {
+        encryptToFile(tarPath, finalFile, password!);
+      } finally {
+        // Always delete the plaintext tar — even if encryption threw — so
+        // the unencrypted snapshot can't be recovered from /tmp.
+        try { fs.unlinkSync(tarPath); } catch { /* ignore */ }
+      }
     } else {
       finalFile = path.join(folder, `cyberos-backup-${stamp}.tar.gz`);
       fs.renameSync(tarPath, finalFile);
@@ -835,23 +949,50 @@ async function runBackupImport(password?: string): Promise<BackupResult> {
     }
 
     const home = os.homedir();
-    const list = await new Promise<string[]>((resolve, reject) => {
-      const child = spawn('tar', ['-tzf', tarFile], { stdio: ['ignore', 'pipe', 'pipe'] });
-      let out = '';
-      child.stdout?.on('data', d => { out += d.toString(); });
-      child.on('error', reject);
-      child.on('close', code => code === 0 ? resolve(out.split('\n').filter(Boolean)) : reject(new Error(`tar -t exited ${code}`)));
-    });
+    let list: string[];
+    try {
+      list = await new Promise<string[]>((resolve, reject) => {
+        const child = spawn('tar', ['-tzf', tarFile], { stdio: ['ignore', 'pipe', 'pipe'] });
+        let out = '';
+        child.stdout?.on('data', d => { out += d.toString(); });
+        child.on('error', reject);
+        child.on('close', code => code === 0 ? resolve(out.split('\n').filter(Boolean)) : reject(new Error(`tar -t exited ${code}`)));
+      });
 
-    await new Promise<void>((resolve, reject) => {
-      const child = spawn('tar', ['-xzf', tarFile, '-C', home], { stdio: ['ignore', 'pipe', 'pipe'] });
-      let err = '';
-      child.stderr?.on('data', d => { err += d.toString(); });
-      child.on('error', reject);
-      child.on('close', code => code === 0 ? resolve() : reject(new Error(err || `tar -x exited ${code}`)));
-    });
+      // Tar-slip guard. Before extraction, validate every member path
+      // resolves *inside* the user's home directory. A backup is just a
+      // user-supplied file — without this, a malicious .cyberos-backup
+      // could embed `../../etc/...` or absolute paths and overwrite
+      // anywhere the user can write.
+      const resolvedHome = path.resolve(home);
+      const homePrefix   = resolvedHome.endsWith(path.sep) ? resolvedHome : resolvedHome + path.sep;
+      for (const rawMember of list) {
+        const member = rawMember.replace(/\/+$/, ''); // strip trailing slash on dirs
+        if (!member) continue;
+        if (path.isAbsolute(member)) {
+          throw new Error(`Backup rejected — absolute path entry: ${member}`);
+        }
+        if (member.split('/').some(seg => seg === '..')) {
+          throw new Error(`Backup rejected — parent-traversal entry: ${member}`);
+        }
+        const resolved = path.resolve(home, member);
+        if (resolved !== resolvedHome && !resolved.startsWith(homePrefix)) {
+          throw new Error(`Backup rejected — entry escapes home: ${member}`);
+        }
+      }
 
-    if (cleanup) try { fs.unlinkSync(tarFile); } catch { /* ignore */ }
+      await new Promise<void>((resolve, reject) => {
+        const child = spawn('tar', ['-xzf', tarFile, '-C', home], { stdio: ['ignore', 'pipe', 'pipe'] });
+        let err = '';
+        child.stderr?.on('data', d => { err += d.toString(); });
+        child.on('error', reject);
+        child.on('close', code => code === 0 ? resolve() : reject(new Error(err || `tar -x exited ${code}`)));
+      });
+    } finally {
+      // Always remove the decrypted temp tar so it never lingers on /tmp,
+      // even if extraction failed.
+      if (cleanup) { try { fs.unlinkSync(tarFile); } catch { /* ignore */ } }
+    }
 
     addActivityEntry({ type: 'launcher', text: `Backup restored from ${path.basename(file)}` });
     ecosystemBus.emitEvent('Launcher', 'launcher.backup.restored', { file: path.basename(file), count: list.length });
@@ -1239,6 +1380,25 @@ function setupAppManagerIPC(): void {
     const send        = (msg: string) => event.sender.send('app-manager:progress', { id, message: msg });
 
     try {
+      // Fast path: if a fresh bundle already exists in dist/ or release/, just
+      // copy it. Avoids a full rebuild when the user has already run a build
+      // and the "Install →/Apps" button is just for the copy step.
+      const existing = findAppBundle(path.join(dir, 'dist'), 4)
+        ?? findAppBundle(path.join(dir, 'release'), 4);
+      // Only fast-path an arm64 bundle on Apple Silicon. An x86_64 bundle
+      // would otherwise be installed on an arm64 user and silently run
+      // through Rosetta (slow, and breaks native deps like node-pty).
+      const looksArm64 = !!existing && /\b(mac-arm64|arm64)\b/i.test(existing);
+      if (existing && (process.arch !== 'arm64' || looksArm64)) {
+        send(`Copying existing ${path.basename(existing)} to /Applications/...`);
+        await spawnAsync('cp', ['-R', existing, `/Applications/${productName}.app`], '/', send);
+        send('Installed successfully.');
+        return { success: true };
+      }
+      if (existing && process.arch === 'arm64' && !looksArm64) {
+        send('Existing bundle is not arm64 — rebuilding for native performance.');
+      }
+
       if (!fs.existsSync(path.join(dir, 'node_modules'))) {
         send('Installing dependencies...');
         await spawnAsync('npm', ['install'], dir, (l) => send(l.slice(0, 120)));
@@ -1310,7 +1470,14 @@ function setupIPC(): void {
   );
 
   ipcMain.handle('launch-app',     (_e, appKey: string)  => launchApp(appKey));
-  ipcMain.handle('update-now',     () => { writeTrigger({ action: 'update_now' }); addActivityEntry({ type: 'launcher', text: 'VaultCore update triggered' }); return true; });
+  ipcMain.handle('update-now',     () => {
+    // Mirrors the tray-menu path: use the pending-actions queue so VaultCore
+    // actually receives the request.
+    writePendingAction('vaultscraper', 'run-all-scrapes');
+    launchApp('vaultscraper');
+    addActivityEntry({ type: 'launcher', text: 'VaultCore update triggered' });
+    return true;
+  });
   ipcMain.handle('get-vpn-status', () => vpnStatus);
   ipcMain.handle('hide-panel',     () => { hidePanel(); return true; });
   ipcMain.on('hide-after-splash',  () => hidePanel());
@@ -1321,17 +1488,7 @@ function setupIPC(): void {
 
   ipcMain.handle('lock-ecosystem', () => { lockEcosystemSession(); return true; });
 
-  ipcMain.handle('get-sso', () => {
-    try {
-      const cfgPath = path.join(os.homedir(), 'cybertools-config.json');
-      if (!fs.existsSync(cfgPath)) return { unlocked: false };
-      const shared = JSON.parse(fs.readFileSync(cfgPath, 'utf8')) || {};
-      const sso = shared.sso as { unlocked?: boolean; expiresAt?: string | null } | undefined;
-      if (!sso?.unlocked) return { unlocked: false };
-      if (sso.expiresAt && new Date(sso.expiresAt).getTime() < Date.now()) return { unlocked: false };
-      return { unlocked: true, expiresAt: sso.expiresAt };
-    } catch { return { unlocked: false }; }
-  });
+  ipcMain.handle('get-sso', () => readSSOState());
 
   ipcMain.handle('backup-import', async (_e, password?: string) => {
     return await runBackupImport(password);

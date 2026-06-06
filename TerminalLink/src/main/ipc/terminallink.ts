@@ -34,6 +34,30 @@ const SESSIONS_DIR  = path.join(os.homedir(), 'Library', 'Application Support', 
 const HISTORY_FILE  = path.join(SESSIONS_DIR, 'command-history.json');
 const EVENTS_PATH   = path.join(os.homedir(), 'Library', 'Application Support', 'CyberTools', 'ecosystem-events.json');
 
+// ─── Atomic file write ─────────────────────────────────────────────────────────
+// Every persistent state file in this module is read by some external party
+// (sibling CyberOS apps, the renderer on next mount, this process's own
+// poller). A torn write would surface as JSON.parse failing back to {} or [],
+// which silently wipes user state. Route all writers through this helper.
+function writeFileAtomic(target: string, content: string): void {
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  const tmp = `${target}.tmp-termlink-${process.pid}-${Date.now()}`;
+  const fd  = fs.openSync(tmp, 'w');
+  try {
+    fs.writeSync(fd, content, 0, 'utf8');
+    try { fs.fsyncSync(fd); } catch { /* fsync best-effort */ }
+  } finally {
+    try { fs.closeSync(fd); } catch { /* already closed */ }
+  }
+  try {
+    fs.renameSync(tmp, target);
+  } catch {
+    // Cross-device fallback — same data, just non-atomic.
+    fs.writeFileSync(target, content, { encoding: 'utf8' });
+    try { fs.unlinkSync(tmp); } catch { /* ignore */ }
+  }
+}
+
 // ─── Config helpers ─────────────────────────────────────────────────────────────
 function readConfig(): Record<string, unknown> {
   try {
@@ -46,7 +70,7 @@ function readConfig(): Record<string, unknown> {
 function writeConfig(patch: Record<string, unknown>): void {
   try {
     const current = readConfig();
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify({ ...current, ...patch }, null, 2));
+    writeFileAtomic(CONFIG_PATH, JSON.stringify({ ...current, ...patch }, null, 2));
   } catch (e) {
     console.error('[ipc/terminallink] writeConfig error:', (e as Error).message);
   }
@@ -54,7 +78,6 @@ function writeConfig(patch: Record<string, unknown>): void {
 
 function emitEcosystemEvent(event: string, data: Record<string, unknown>): void {
   try {
-    fs.mkdirSync(path.dirname(EVENTS_PATH), { recursive: true });
     let events: unknown[] = [];
     try { events = JSON.parse(fs.readFileSync(EVENTS_PATH, 'utf8')); } catch { /* empty */ }
     events.push({
@@ -65,7 +88,7 @@ function emitEcosystemEvent(event: string, data: Record<string, unknown>): void 
       id: `tl-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     });
     if (events.length > 200) events = events.slice(-200);
-    fs.writeFileSync(EVENTS_PATH, JSON.stringify(events, null, 2));
+    writeFileAtomic(EVENTS_PATH, JSON.stringify(events, null, 2));
   } catch (e) {
     console.error('[ipc/terminallink] emitEcosystemEvent error:', (e as Error).message);
   }
@@ -144,7 +167,7 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
   ipcMain.handle('terminallink:sessions:write', (_evt, sessions: unknown) => {
     try {
       fs.mkdirSync(SESSIONS_DIR, { recursive: true });
-      fs.writeFileSync(path.join(SESSIONS_DIR, 'sessions.json'), JSON.stringify(sessions, null, 2));
+      writeFileAtomic(path.join(SESSIONS_DIR, 'sessions.json'), JSON.stringify(sessions, null, 2));
       return { success: true };
     } catch (e) {
       return { error: (e as Error).message };
@@ -165,7 +188,7 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
   ipcMain.handle('terminallink:history:write', (_evt, history: unknown) => {
     try {
       fs.mkdirSync(SESSIONS_DIR, { recursive: true });
-      fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
+      writeFileAtomic(HISTORY_FILE, JSON.stringify(history, null, 2));
 
       const cfg        = readConfig();
       const prevStatus = (cfg.terminallink_status || {}) as Record<string, unknown>;
@@ -204,9 +227,30 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
   });
 
   // ── Config: write (terminallink_status patch) ───────────────────────────────
+  // Only allow a tiny whitelist of status keys through. The shared cybertools
+  // config is read by every sibling app — letting the renderer write arbitrary
+  // shapes (or prototype-pollution keys) would let it influence what those
+  // other apps see for "TerminalLink status".
+  const STATUS_ALLOWED = new Set([
+    'active',
+    'lastActive',
+    'commandCount',
+    'activeSessionId',
+    'paneCount',
+  ]);
   ipcMain.handle('terminallink:config:write', (_evt, patch: Record<string, unknown>) => {
     try {
-      writeConfig({ terminallink_status: patch });
+      if (!patch || typeof patch !== 'object' || Array.isArray(patch)) {
+        return { error: 'invalid patch' };
+      }
+      const safe: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(patch)) {
+        // Block prototype-pollution sentinels regardless of the allow-list.
+        if (k === '__proto__' || k === 'prototype' || k === 'constructor') continue;
+        if (!STATUS_ALLOWED.has(k)) continue;
+        safe[k] = v;
+      }
+      writeConfig({ terminallink_status: safe });
       return { success: true };
     } catch (e) {
       return { error: (e as Error).message };
@@ -231,7 +275,24 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
   });
 
   // ── Event: emit ─────────────────────────────────────────────────────────────
+  // Sibling apps poll the ecosystem-events file. A malicious or buggy
+  // renderer could flood it with megabyte-sized payloads (DoS) or pollute
+  // event names with control characters. Cap both.
   ipcMain.handle('terminallink:event:emit', (_evt, event: string, data: Record<string, unknown> = {}) => {
+    if (typeof event !== 'string' || event.length === 0 || event.length > 128) return false;
+    // Allow letters, digits, colon, dot, dash, underscore — matches the
+    // convention used elsewhere in the codebase (e.g. 'history:exported').
+    if (!/^[a-zA-Z0-9_:.\-]+$/.test(event)) return false;
+    if (data !== null && typeof data === 'object') {
+      try {
+        const serialized = JSON.stringify(data);
+        if (serialized.length > 16 * 1024) return false; // 16 KB cap
+      } catch {
+        return false;
+      }
+    } else if (data !== undefined && data !== null) {
+      return false;
+    }
     emitEcosystemEvent(event, data);
     return true;
   });
@@ -243,10 +304,23 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
     try {
       const cfg = readConfig();
       const activeLab = ((cfg.shared_context as Record<string,unknown>)?.activeLab as string) ?? 'Unknown';
-      const base = path.join(
-        os.homedir(), 'Documents', 'CyberOS-Vault', 'TerminalLink',
-        folder ?? activeLab
-      );
+      // Sanitize the folder + activeLab as basename-only segments. Without
+      // this, a renderer can pass folder='../../../.ssh' (or activeLab can
+      // be poisoned via a sibling app writing the shared config) and we'd
+      // happily write outside ~/Documents/CyberOS-Vault/TerminalLink.
+      const sanitizeSegment = (s: string): string =>
+        s.replace(/[^a-zA-Z0-9_\- ]/g, '_').trim() || 'capture';
+      const baseRoot  = path.join(os.homedir(), 'Documents', 'CyberOS-Vault', 'TerminalLink');
+      const subFolder = sanitizeSegment(folder ?? activeLab);
+      const base      = path.join(baseRoot, subFolder);
+      // Defence-in-depth: resolve and confirm the final dir is still under
+      // baseRoot even after sanitization.
+      const resolvedBase = path.resolve(base);
+      const resolvedRoot = path.resolve(baseRoot);
+      const prefix = resolvedRoot.endsWith(path.sep) ? resolvedRoot : resolvedRoot + path.sep;
+      if (!resolvedBase.startsWith(prefix) && resolvedBase !== resolvedRoot) {
+        return { ok: false, path: '', error: 'folder escapes vault root' };
+      }
       fs.mkdirSync(base, { recursive: true });
       const safe = title.replace(/[^a-zA-Z0-9_\- ]/g, '_').trim() || 'capture';
       const filePath = path.join(base, `${safe}-${Date.now()}.txt`);
@@ -280,29 +354,51 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
   });
 
   // ── Binary check ─────────────────────────────────────────────────────────
+  // Previously this was `execSync(\`which ${bin}\`)` — a clean shell-injection
+  // vector. A renderer could pass `bin = "x; rm -rf ~/Documents"` and we'd
+  // happily exec it. Now:
+  //   1. Reject anything that's not a plain alphanumeric binary name.
+  //   2. Resolve PATH ourselves with fs.existsSync — no shell, no exec.
   ipcMain.handle('terminallink:binary:check', async (_evt, bin: string) => {
-    const { execSync } = await import('child_process');
-    try {
-      execSync(`which ${bin}`, { stdio: 'ignore' });
-      return true;
-    } catch {
-      return false;
+    if (typeof bin !== 'string' || !bin) return false;
+    if (bin.length > 64) return false;
+    // Allow only the alphabet/digits/dash/dot/underscore that any real
+    // binary name would use. Explicitly rejects path separators, spaces,
+    // shell metacharacters, and NUL.
+    if (!/^[a-zA-Z0-9_.\-]+$/.test(bin)) return false;
+    const pathDirs = (process.env.PATH ?? '/usr/bin:/bin:/usr/sbin:/sbin').split(':');
+    for (const dir of pathDirs) {
+      if (!dir) continue;
+      try {
+        const candidate = path.join(dir, bin);
+        if (fs.existsSync(candidate)) return true;
+      } catch { /* keep scanning */ }
     }
+    return false;
   });
 
   // ── Vault: save text note ─────────────────────────────────────────────────
+  // Sanitize the folder segment and confirm the final path stays under the
+  // vault root. Without this a renderer can pass folder='../../../.ssh'
+  // and we'd write content outside ~/Documents/CyberOS-Vault.
   ipcMain.handle('terminallink:vault:save-text', async (_evt, {
     title, content, folder,
   }: { title: string; content: string; folder?: string }) => {
     try {
       const cfg = readConfig();
       const activeLab = ((cfg.shared_context as Record<string, unknown>)?.activeLab as string) ?? 'Captures';
-      const base = path.join(
-        os.homedir(), 'Documents', 'CyberOS-Vault', 'TerminalLink',
-        folder || activeLab
-      );
+      const sanitizeSegment = (s: string): string =>
+        s.replace(/[^a-zA-Z0-9_\- ]/g, '_').trim() || 'Captures';
+      const baseRoot  = path.join(os.homedir(), 'Documents', 'CyberOS-Vault', 'TerminalLink');
+      const base      = path.join(baseRoot, sanitizeSegment(folder || activeLab));
+      const resolvedBase = path.resolve(base);
+      const resolvedRoot = path.resolve(baseRoot);
+      const prefix = resolvedRoot.endsWith(path.sep) ? resolvedRoot : resolvedRoot + path.sep;
+      if (!resolvedBase.startsWith(prefix) && resolvedBase !== resolvedRoot) {
+        return { success: false, path: '' };
+      }
       fs.mkdirSync(base, { recursive: true });
-      const safe = (title || 'note').replace(/[^a-zA-Z0-9_\- ]/g, '_').trim();
+      const safe = (title || 'note').replace(/[^a-zA-Z0-9_\- ]/g, '_').trim() || 'note';
       const filePath = path.join(base, `${safe}-${Date.now()}.txt`);
       fs.writeFileSync(filePath, content, 'utf8');
       emitEcosystemEvent('terminallink:vault:saved', { path: filePath, title });
@@ -313,14 +409,28 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
   });
 
   // ── Recording: save ───────────────────────────────────────────────────────
+  // sessionId becomes the filename — must not be allowed to escape the
+  // recordings dir via "../" or contain NUL/slashes.
   ipcMain.handle('terminallink:recording:save', async (_evt, {
     sessionId, data,
   }: { sessionId: string; data: unknown }) => {
     try {
+      if (typeof sessionId !== 'string' || !sessionId) return { success: false };
+      // Strict allow-list — UUIDs / nanoids / timestamps all fit this.
+      if (!/^[a-zA-Z0-9_\-]{1,64}$/.test(sessionId)) return { success: false };
       const dir = path.join(SESSIONS_DIR, 'recordings');
       fs.mkdirSync(dir, { recursive: true });
       const filePath = path.join(dir, `${sessionId}.cast`);
-      fs.writeFileSync(filePath, JSON.stringify(data), 'utf8');
+      // Defence-in-depth: ensure the resolved path is still under dir.
+      const resolved = path.resolve(filePath);
+      const resolvedDir = path.resolve(dir);
+      const sep = resolvedDir.endsWith(path.sep) ? resolvedDir : resolvedDir + path.sep;
+      if (!resolved.startsWith(sep)) return { success: false };
+      const json = JSON.stringify(data);
+      // 100 MB ceiling — a normal asciinema cast is <1 MB; anything larger
+      // is a renderer trying to fill the user's disk.
+      if (json.length > 100 * 1024 * 1024) return { success: false };
+      writeFileAtomic(filePath, json);
       return { success: true, path: filePath };
     } catch (e) {
       return { success: false };
@@ -348,8 +458,21 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
   const PREFS_PATH = path.join(SESSIONS_DIR, 'prefs.json');
   ipcMain.handle('terminallink:prefs:save', (_evt, prefs: Record<string, unknown>) => {
     try {
-      fs.mkdirSync(SESSIONS_DIR, { recursive: true });
-      fs.writeFileSync(PREFS_PATH, JSON.stringify(prefs, null, 2));
+      if (!prefs || typeof prefs !== 'object' || Array.isArray(prefs)) {
+        return { success: false };
+      }
+      // Strip prototype-pollution sentinels; bound the serialized size to
+      // keep one bad render from filling the disk with a multi-MB prefs
+      // file that future loads then choke on.
+      const safe: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(prefs)) {
+        if (k === '__proto__' || k === 'prototype' || k === 'constructor') continue;
+        if (typeof k !== 'string' || k.length > 128) continue;
+        safe[k] = v;
+      }
+      const json = JSON.stringify(safe, null, 2);
+      if (json.length > 256 * 1024) return { success: false }; // 256 KB cap
+      writeFileAtomic(PREFS_PATH, json);
       return { success: true };
     } catch {
       return { success: false };

@@ -52,7 +52,10 @@ export function vaultExists(): boolean {
 export function createSalt(): Buffer {
   ensureAppDir()
   const salt = crypto.randomBytes(SALT_LENGTH)
-  fs.writeFileSync(SALT_FILE, salt)
+  // Atomic — corrupt salt = unrecoverable vault. Worth two extra syscalls.
+  const _saltTmp = `${SALT_FILE}.tmp`
+  fs.writeFileSync(_saltTmp, salt)
+  fs.renameSync(_saltTmp, SALT_FILE)
   return salt
 }
 
@@ -110,7 +113,13 @@ export function encryptVaultWithKey(plaintext: string): void {
 
   // Wire format: [IV (12)] [Tag (16)] [Ciphertext (N)]
   const combined = Buffer.concat([iv, tag, encrypted])
-  fs.writeFileSync(VAULT_FILE, combined)
+  // Atomic write — a crash mid-fs.writeFileSync of vault.enc would leave a
+  // half-encrypted file with a bad GCM tag, and decryption would fail on
+  // next launch. The user would lose every saved credential. Write to a
+  // sibling .tmp and rename to atomically replace vault.enc.
+  const tmp = `${VAULT_FILE}.tmp`
+  fs.writeFileSync(tmp, combined)
+  fs.renameSync(tmp, VAULT_FILE)
 }
 
 /**

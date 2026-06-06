@@ -33,7 +33,11 @@ function writeCyberToolsConfig(patch: Record<string, unknown>): void {
   try {
     const existing = readCyberToolsConfig()
     const merged = { ...existing, ...patch }
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(merged, null, 2), 'utf8')
+    // Atomic: every CyberTools app polls this file. A crash mid-write would
+    // leave a truncated file that crashes the JSON.parse in every reader.
+    const tmp = `${CYBERTOOLS_CONFIG}.${process.pid}.${Date.now()}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(merged, null, 2), 'utf8')
+    fs.renameSync(tmp, CYBERTOOLS_CONFIG)
   } catch (e) {
     console.warn('[NetworkMap] config write failed:', (e as Error).message)
   }
@@ -233,11 +237,26 @@ ipcMain.handle('import-from-recondesk', (): NetworkNode[] => {
   }
 })
 
+// Validate a graph id used as a filesystem name. The renderer normally
+// generates `graph-${Date.now()}` but a poisoned IPC payload could supply
+// `../../../foo` and escape GRAPHS_DIR. Allow only safe filename chars.
+function isSafeGraphId(id: unknown): id is string {
+  return typeof id === 'string' && id.length > 0 && id.length <= 128 && /^[a-zA-Z0-9_-]+$/.test(id)
+}
+
 ipcMain.handle('save-graph', (_e, graph: NetworkGraph): void => {
   try {
+    if (!graph || !isSafeGraphId(graph.id)) {
+      console.warn('[NetworkMap] save-graph rejected: invalid graph id')
+      return
+    }
     ensureGraphsDir()
     const file = path.join(GRAPHS_DIR, `${graph.id}.json`)
-    fs.writeFileSync(file, JSON.stringify(graph, null, 2), 'utf8')
+    // Atomic — a crash mid-write would leave a half-formed graph JSON that
+    // would silently disappear from the library on next load.
+    const tmp = `${file}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(graph, null, 2), 'utf8')
+    fs.renameSync(tmp, file)
     emitEvent('NetworkMap', 'graph:saved', { id: graph.id, name: graph.name })
   } catch (e) {
     console.error('[NetworkMap] save-graph failed:', (e as Error).message)
@@ -269,6 +288,7 @@ ipcMain.handle('load-graphs', (): GraphSummary[] => {
 
 ipcMain.handle('load-graph', (_e, id: string): NetworkGraph | null => {
   try {
+    if (!isSafeGraphId(id)) return null
     const file = path.join(GRAPHS_DIR, `${id}.json`)
     if (!fs.existsSync(file)) return null
     return JSON.parse(fs.readFileSync(file, 'utf8')) as NetworkGraph
@@ -277,6 +297,7 @@ ipcMain.handle('load-graph', (_e, id: string): NetworkGraph | null => {
 
 ipcMain.handle('delete-graph', (_e, id: string): void => {
   try {
+    if (!isSafeGraphId(id)) return
     const file = path.join(GRAPHS_DIR, `${id}.json`)
     if (fs.existsSync(file)) fs.unlinkSync(file)
     emitEvent('NetworkMap', 'graph:deleted', { id })
@@ -286,7 +307,24 @@ ipcMain.handle('delete-graph', (_e, id: string): void => {
 })
 
 ipcMain.handle('app:version', () => APP_VERSION)
-ipcMain.handle('open-external', (_e, url: string) => shell.openExternal(url))
+
+// Validate before handing to shell.openExternal — the renderer process is
+// less trusted than main, and a malformed IPC payload (or a future XSS via
+// an imported nmap XML field rendered as a link) could shell-execute
+// arbitrary URI handlers via custom schemes (x-apple-*, vscode://, etc.).
+// Allow only the schemes the app actually uses: http(s) for external links,
+// file: for the bundled docs path, and mailto:. Bare absolute paths to .md
+// files are also allowed (OnboardingModal opens a docs path directly).
+ipcMain.handle('open-external', (_e, url: string) => {
+  if (typeof url !== 'string' || !url) return
+  // Bare absolute path to a markdown docs file — OnboardingModal does this.
+  if (url.startsWith('/') && url.endsWith('.md')) { shell.openExternal(url); return }
+  try {
+    const proto = new URL(url).protocol
+    if (proto !== 'http:' && proto !== 'https:' && proto !== 'file:' && proto !== 'mailto:') return
+    shell.openExternal(url)
+  } catch { /* invalid URL — silently drop */ }
+})
 
 // ─── ReconDesk Sync Handlers ──────────────────────────────────────────────────
 
@@ -295,16 +333,28 @@ ipcMain.handle('recondesk:push-node', (_e, node: {
   ports: Array<{ number: number; protocol: string; service?: string; version?: string; state: string }>
 }) => {
   try {
+    // Renderer-side IPC payload validation — node, node.ip, and node.ports
+    // could each be missing or malformed (or absurdly large) without this
+    // guard. data.targets and target.ports could also be missing from a
+    // partially-initialised ReconDesk data.json.
+    if (!node || typeof node.ip !== 'string' || !Array.isArray(node.ports)) {
+      return { ok: false, reason: 'Invalid node payload' }
+    }
     const dataPath = path.join(os.homedir(), '.recondesk', 'data.json')
     if (!fs.existsSync(dataPath)) return { ok: false, reason: 'ReconDesk data not found' }
     const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'))
-    const target = data.targets.find((t: any) => t.ip === node.ip)
+    if (!Array.isArray(data?.targets)) return { ok: false, reason: 'ReconDesk data.json malformed' }
+    const target = data.targets.find((t: any) => t?.ip === node.ip)
     if (!target) return { ok: false, reason: `No ReconDesk target with IP ${node.ip}` }
+    if (!Array.isArray(target.ports)) target.ports = []
 
     const now = new Date().toISOString()
     let portsAdded = 0
-    for (const port of node.ports) {
-      const exists = target.ports.find((p: any) => p.number === port.number && p.protocol === port.protocol)
+    // Cap at a sane upper bound — nmap rarely returns >65k per host, but a
+    // poisoned payload could send millions.
+    for (const port of node.ports.slice(0, 65536)) {
+      if (!port || typeof port.number !== 'number') continue
+      const exists = target.ports.find((p: any) => p?.number === port.number && p?.protocol === port.protocol)
       if (!exists) {
         target.ports.push({
           id: `${Date.now()}-${port.number}`,
@@ -315,7 +365,12 @@ ipcMain.handle('recondesk:push-node', (_e, node: {
       }
     }
     target.updatedAt = now
-    fs.writeFileSync(dataPath, JSON.stringify(data, null, 2), 'utf8')
+    // Atomic — this writes into ReconDesk's data.json; a partial write would
+    // corrupt every target. (A file lock would be ideal here since ReconDesk
+    // may be writing concurrently, but at minimum prevent corruption.)
+    const tmp = `${dataPath}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8')
+    fs.renameSync(tmp, dataPath)
     return { ok: true, targetName: target.name, portsAdded }
   } catch (e) {
     console.error('[NetworkMap] recondesk:push-node failed:', (e as Error).message)

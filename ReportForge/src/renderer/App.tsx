@@ -36,6 +36,13 @@ export default function App() {
     try { setRequireSSO(localStorage.getItem('rf:requireCredVaultSession') === '1'); } catch { /* ignore */ }
   }, []);
 
+  // Safety: editor view requires an activeReport. If somehow (deletion race,
+  // bad deep-link, future bug) we land in 'editor' without one, the renderer
+  // shows a blank pane — bounce back to the library instead.
+  useEffect(() => {
+    if (view === 'editor' && !activeReport) setView('library');
+  }, [view, activeReport, setView]);
+
   // Poll the SSO state every 5 s.
   useEffect(() => {
     let cancelled = false;
@@ -69,21 +76,35 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── ⌘K command palette ─────────────────────────────────────────────────────
+  // ── ⌘K command palette + ⌘N new report ─────────────────────────────────────
+  // Both suppressed while the SSO soft-lock is active so the user can't open
+  // the palette / wizard from the locked screen.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      if (requireSSO && ssoUnlocked === false) return;
+      if (!(e.metaKey || e.ctrlKey) || e.shiftKey) return;
+      const k = e.key.toLowerCase();
+      if (k === 'k') {
         e.preventDefault();
         setPaletteOpen(o => !o);
+      } else if (k === 'n' && view === 'library') {
+        // ⌘N → new report wizard. Scoped to the library view so the editor
+        // doesn't lose work mid-edit to an accidental Cmd+N.
+        e.preventDefault();
+        setView('wizard');
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [requireSSO, ssoUnlocked, view, setView]);
 
   // ── Auto-save every 30s when in editor and dirty ───────────────────────────
+  // Skipped while the SSO soft-lock is active: the editor is masked, so any
+  // dirty state is stale by definition and writing it back is wasted work
+  // (and would race the user's eventual unlock-then-edit flow).
   useEffect(() => {
-    if (view !== 'editor') {
+    const blocked = requireSSO && ssoUnlocked === false;
+    if (view !== 'editor' || blocked) {
       if (autoSaveRef.current) { clearInterval(autoSaveRef.current); autoSaveRef.current = null; }
       return;
     }
@@ -100,7 +121,7 @@ export default function App() {
     return () => {
       if (autoSaveRef.current) { clearInterval(autoSaveRef.current); autoSaveRef.current = null; }
     };
-  }, [view, upsertReport, setDirty]);
+  }, [view, requireSSO, ssoUnlocked, upsertReport, setDirty]);
 
   // ── Open report ────────────────────────────────────────────────────────────
   const openReport = useCallback((r: Report) => {
@@ -123,6 +144,23 @@ export default function App() {
       addToast('Save failed', 'error');
     }
   }, [upsertReport, setDirty, addToast]);
+
+  // ── ⌘S save (editor only) ──────────────────────────────────────────────────
+  // Pre-empts the browser-default "save page as" prompt and gives users the
+  // native macOS save reflex. Library view leaves the default alone since
+  // there's nothing to save there.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      if (e.key.toLowerCase() !== 's') return;
+      if (view !== 'editor') return;
+      if (requireSSO && ssoUnlocked === false) return;
+      e.preventDefault();
+      void saveReport();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [view, requireSSO, ssoUnlocked, saveReport]);
 
   // ── Wizard complete ────────────────────────────────────────────────────────
   const handleWizardComplete = useCallback(async (r: Report) => {
@@ -163,16 +201,25 @@ export default function App() {
 
   // ── Back to library ────────────────────────────────────────────────────────
   const handleBack = useCallback(async () => {
-    // Auto-save on back if dirty
+    // Auto-save on back if dirty. If the save fails (disk full, permission
+    // denied, main IPC down) we previously navigated away anyway and the
+    // in-memory dirty edits were silently lost. Stay on the editor with a
+    // visible toast so the user can retry, fix the cause, or copy the work
+    // out before losing it.
     const { activeReport: r, dirty: d } = useStore.getState();
     if (d && r) {
-      await window.reportforge.saveReport(r);
+      const ok = await window.reportforge.saveReport(r);
+      if (!ok) {
+        addToast('Save failed — stayed on editor so you can retry', 'error');
+        return;
+      }
       upsertReport(r);
+      setDirty(false);
       setLastSavedAt(new Date());
     }
     setView('library');
     setActiveReport(null);
-  }, [setView, setActiveReport, upsertReport]);
+  }, [setView, setActiveReport, upsertReport, setDirty, addToast]);
 
   // ── Export: open modal (with format pre-selected) ─────────────────────────
   const handleOpenExportModal = useCallback((format?: 'markdown' | 'pdf') => {
@@ -292,7 +339,7 @@ export default function App() {
       {onboarding.show && <OnboardingModal onClose={onboarding.close} />}
 
       <CommandPalette
-        open={paletteOpen}
+        open={paletteOpen && !ssoBlocked}
         onClose={() => setPaletteOpen(false)}
         onExportFormat={(fmt) => {
           // Only exports the active report — palette only shows export commands when activeReport

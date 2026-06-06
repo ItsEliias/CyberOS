@@ -53,6 +53,11 @@ export default function ConflictResolution({ filePath, onDone }: Props) {
       if (!content) return;
       setOriginal(content);
       setBlocks(parseConflicts(content));
+    }).catch(err => {
+      // readFile returns null on main-side errors, but the IPC bridge
+      // itself can reject (e.g. if main is mid-restart). Surface a
+      // user-visible error instead of an unhandled rejection.
+      setError(`Could not load file: ${err?.message ?? 'unknown error'}`);
     });
   }, [filePath]);
 

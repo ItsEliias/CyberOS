@@ -43,8 +43,9 @@ function labelFor(eventType: string, data: Record<string, unknown> | undefined):
                                                 (d.count != null ? ` (${d.count} apps${d.encrypted ? ', encrypted' : ''})` : '');
     case 'launcher.backup.restored':     return `Backup restored${d.file ? `: ${d.file}` : ''}` +
                                                 (d.count != null ? ` (${d.count} files)` : '');
-    case 'app:launched':                 return 'App launched';
-    case 'app:closed':                   return 'App closed';
+    case 'app:launched':                 return d.version ? `Launched (v${d.version})` : 'Launched';
+    case 'app:opened':                   return 'Opened';
+    case 'app:closed':                   return 'Closed';
     case 'dashboard:launched':           return 'Dashboard opened';
     case 'dashboard:closed':             return 'Dashboard closed';
     case 'ghostvault.app.opened':        return 'GhostVault opened';

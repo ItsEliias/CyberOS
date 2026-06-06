@@ -67,11 +67,23 @@ function getRelevanceContext(): RelevanceContext {
   const cfg = readCyberToolsConfig()
   const sc  = cfg['shared_context'] as Record<string, unknown> | undefined
   const sb  = cfg['signalboard']    as Record<string, unknown> | undefined
+  // Defensive: cybertools-config.json is shared across the CyberTools suite.
+  // A buggy or future-version peer app could write a non-string into
+  // activeLab/activeTarget/activeIP (e.g., a number, null, an object). Without
+  // these guards, scoreRelevance later calls `.toLowerCase()` on whatever
+  // came through and crashes the feed fetch cycle. Coerce to undefined unless
+  // the field is actually a non-empty string.
+  const asString = (v: unknown): string | undefined =>
+    typeof v === 'string' && v.length > 0 ? v : undefined
+  const rawKws = sb?.['customKeywords']
+  const customKeywords = Array.isArray(rawKws)
+    ? rawKws.filter((k): k is string => typeof k === 'string')
+    : []
   return {
-    lab:            sc?.['activeLab']    as string | undefined,
-    target:         sc?.['activeTarget'] as string | undefined,
-    ip:             sc?.['activeIP']     as string | undefined,
-    customKeywords: (sb?.['customKeywords'] as string[] | undefined) ?? [],
+    lab:            asString(sc?.['activeLab']),
+    target:         asString(sc?.['activeTarget']),
+    ip:             asString(sc?.['activeIP']),
+    customKeywords,
     isAuto:         true,
   }
 }
@@ -90,8 +102,26 @@ function writeStatus(items: FeedItem[], lastRefresh: string): void {
         topItem:      top?.title ?? null,
       },
     }
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(patch, null, 2), 'utf8')
+    // Atomic: every CyberTools app polls this file. A crash mid-write would
+    // leave a truncated file that JSON.parse-throws in every reader.
+    const tmp = `${CYBERTOOLS_CONFIG}.${process.pid}.${Date.now()}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(patch, null, 2), 'utf8')
+    fs.renameSync(tmp, CYBERTOOLS_CONFIG)
   } catch { /* non-critical */ }
+}
+
+// IPC boundary: only http(s) URLs may be added/probed/updated as feed sources.
+// Without this, a malformed renderer message (or a poisoned import file later
+// on) could persist `file://`, `javascript:`, `data:`, or other schemes into
+// sources.json — at best they'd silently fail to fetch, at worst they'd be a
+// vector for local file disclosure if fetchUrl ever switches to a generic
+// client. Validate at the boundary, not at the parser.
+function isSafeFeedUrl(url: unknown): url is string {
+  if (typeof url !== 'string' || !url.trim()) return false
+  try {
+    const u = new URL(url.trim())
+    return u.protocol === 'http:' || u.protocol === 'https:'
+  } catch { return false }
 }
 
 function loadSettings(): AppSettings {
@@ -102,9 +132,20 @@ function loadSettings(): AppSettings {
   } catch { return DEFAULT_SETTINGS }
 }
 
+// Atomic JSON write helper for ~/.signalboard/*.json files. A crash mid-write
+// would leave a truncated file that JSON.parse-throws in load*(), silently
+// reverting to defaults (settings) or empty arrays (bookmarks) — destroying
+// the user's saved state. tmp+rename guarantees the file is either old or new,
+// never half-written.
+function atomicWriteSignalboardJSON(target: string, data: unknown): void {
+  const tmp = `${target}.${process.pid}.${Date.now()}.tmp`
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8')
+  fs.renameSync(tmp, target)
+}
+
 function saveSettings(s: AppSettings): void {
   ensureDir()
-  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(s, null, 2), 'utf8')
+  atomicWriteSignalboardJSON(SETTINGS_FILE, s)
 }
 
 function loadBookmarks(): { ids: string[]; tags: Record<string, string[]> } {
@@ -118,8 +159,8 @@ function loadBookmarks(): { ids: string[]; tags: Record<string, string[]> } {
 
 function saveBookmarks(ids: string[], tags: Record<string, string[]>): void {
   ensureDir()
-  fs.writeFileSync(BOOKMARKS_FILE, JSON.stringify(ids, null, 2), 'utf8')
-  fs.writeFileSync(BOOKMARK_TAGS_FILE, JSON.stringify(tags, null, 2), 'utf8')
+  atomicWriteSignalboardJSON(BOOKMARKS_FILE, ids)
+  atomicWriteSignalboardJSON(BOOKMARK_TAGS_FILE, tags)
 }
 
 function getVaultPath(): string | undefined {
@@ -235,7 +276,12 @@ function schedulePerSourceTimers(): void {
   perSourceTimers.clear()
   sources.forEach(source => {
     if (!source.enabled || !source.pollIntervalMinutes) return
-    const ms = source.pollIntervalMinutes * 60 * 1_000
+    // Clamp: a renderer-supplied 0.0001 would be a 6ms polling DoS, and a
+    // negative value would be coerced by Node into a 1ms interval. Enforce
+    // sensible bounds: minimum 1 minute, maximum 24 hours.
+    const minutes = Number(source.pollIntervalMinutes)
+    if (!Number.isFinite(minutes) || minutes < 1) return
+    const ms = Math.min(minutes, 24 * 60) * 60 * 1_000
     const timer = setInterval(async () => {
       push('feeds:refreshing', true)
       const ctx = getRelevanceContext()
@@ -373,6 +419,13 @@ ipcMain.handle('feeds:toggle-source', (_e, id: string) => {
 })
 
 ipcMain.handle('feeds:update-source', (_e, id: string, patch: Partial<FeedSource>) => {
+  // If the patch tries to change `url`, validate it the same way as add-source.
+  // Existing source.type is used to allow GitHub slug updates.
+  if (patch && 'url' in patch) {
+    const existing = sources.find(s => s.id === id)
+    const effectiveType = patch.type ?? existing?.type
+    if (effectiveType !== 'github' && !isSafeFeedUrl(patch.url)) return sources
+  }
   sources = sources.map(s => s.id === id ? { ...s, ...patch } : s)
   saveSources(sources)
   schedulePerSourceTimers()
@@ -380,6 +433,9 @@ ipcMain.handle('feeds:update-source', (_e, id: string, patch: Partial<FeedSource
 })
 
 ipcMain.handle('feeds:add-source', (_e, src: Omit<FeedSource, 'id' | 'color' | 'itemCount' | 'errorCount'>) => {
+  // GitHub feeds store the repo slug ("owner/repo"), not a URL — let those
+  // through. Everything else must be http(s).
+  if (src?.type !== 'github' && !isSafeFeedUrl(src?.url)) return sources
   const id = `custom-${Date.now()}`
   const newSource: FeedSource = { ...src, id, color: '#ff6b6b', itemCount: 0, errorCount: 0 }
   sources = [...sources, newSource]
@@ -416,6 +472,7 @@ ipcMain.handle('feeds:refresh-source', async (_e, id: string) => {
 })
 
 ipcMain.handle('feeds:test-source', async (_e, url: string) => {
+  if (!isSafeFeedUrl(url)) return { ok: false, error: 'Only http(s) URLs are supported.' }
   try {
     const raw   = await fetchUrlRaw(url)
     const count = (raw.match(/<item/g) ?? raw.match(/<entry/g) ?? []).length
@@ -428,6 +485,7 @@ ipcMain.handle('feeds:test-source', async (_e, url: string) => {
 // Probe a custom-feed URL: returns {ok, type, title, count} so the Custom Feeds UI can
 // auto-detect rss/atom and seed the source name from the feed's own <title>.
 ipcMain.handle('feeds:probe-feed', async (_e, url: string) => {
+  if (!isSafeFeedUrl(url)) return { ok: false as const, error: 'Only http(s) URLs are supported.' }
   return probeFeed(url)
 })
 
@@ -466,10 +524,19 @@ ipcMain.handle('feeds:export-bookmarks', async (_e, format: 'json' | 'csv', ids:
       const data = bookmarked.map(i => ({ ...i, bookmarkTags: tags[i.id] ?? [] }))
       fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8')
     } else {
+      // CSV: each value gets RFC-4180 quoting AND a formula-injection guard.
+      // Fields beginning with =, +, -, @, tab, or CR will execute as formulas
+      // if Excel/Numbers opens the file. RSS titles are publisher-controlled
+      // and routinely contain leading + / -, so prefix-quote them.
+      const escape = (raw: unknown): string => {
+        const s = String(raw ?? '')
+        const guarded = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s
+        return `"${guarded.replace(/"/g, '""')}"`
+      }
       const header = 'title,url,date,tags,source\n'
       const rows = bookmarked.map(i => {
         const t = (tags[i.id] ?? []).join(';')
-        return `"${i.title.replace(/"/g, '""')}","${i.url}","${i.publishedAt}","${t}","${i.sourceName}"`
+        return [i.title, i.url, i.publishedAt, t, i.sourceName].map(escape).join(',')
       })
       fs.writeFileSync(filePath, header + rows.join('\n'), 'utf8')
     }
@@ -488,9 +555,49 @@ ipcMain.handle('feeds:recondesk-target', (_e, itemId: string) => {
   const ips   = [...text.matchAll(ipRegex)].map(m => m[0])
   const hosts = [...text.matchAll(hostRegex)].map(m => m[0]).filter(h => !h.match(/^\d/) && h.includes('.'))
   const targets = [...new Set([...ips, ...hosts])].slice(0, 10)
-  // Emit ecosystem event for ReconDesk
-  emitEvent('SignalBoard', 'recondesk:add-target', { targets, sourceTitle: item.title, sourceUrl: item.url })
-  return { ok: true, targets }
+
+  // Previously this only emitted a bus event that ReconDesk never
+  // subscribed to. Write the targets straight into ReconDesk's data.json
+  // (atomic) so the user actually sees them on next ReconDesk launch.
+  let appended = 0
+  try {
+    const recondeskData = path.join(os.homedir(), '.recondesk', 'data.json')
+    if (fs.existsSync(recondeskData)) {
+      const data = JSON.parse(fs.readFileSync(recondeskData, 'utf8')) as {
+        targets?: Array<{ id: string; ip?: string; host?: string; name?: string; ports?: unknown[]; notes?: string; createdAt?: string; updatedAt?: string }>
+      }
+      data.targets = data.targets || []
+      const now = new Date().toISOString()
+      for (const t of targets) {
+        const isIp = ipRegex.test(t)
+        ipRegex.lastIndex = 0
+        const exists = data.targets.some(x => (isIp ? x.ip === t : x.host === t))
+        if (exists) continue
+        data.targets.push({
+          id: `sb-${Date.now()}-${appended}`,
+          name: t,
+          ...(isIp ? { ip: t } : { host: t }),
+          ports: [],
+          notes: `From SignalBoard: ${item.title}\n${item.url}`,
+          createdAt: now,
+          updatedAt: now,
+        })
+        appended++
+      }
+      if (appended > 0) {
+        const tmp = `${recondeskData}.tmp`
+        fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8')
+        fs.renameSync(tmp, recondeskData)
+      }
+    }
+  } catch (e) {
+    console.warn('[SignalBoard] recondesk push failed:', (e as Error).message)
+  }
+
+  emitEvent('SignalBoard', 'recondesk:add-target', {
+    targets, sourceTitle: item.title, sourceUrl: item.url, appended,
+  })
+  return { ok: true, targets, appended }
 })
 
 ipcMain.handle('settings:get', () => settings)
@@ -508,7 +615,11 @@ ipcMain.handle('config:write-keywords', (_e, keywords: string[]) => {
     const cfg = readCyberToolsConfig()
     const sb  = (cfg['signalboard'] as Record<string, unknown>) ?? {}
     cfg['signalboard'] = { ...sb, customKeywords: keywords }
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(cfg, null, 2), 'utf8')
+    // Atomic: shared cybertools-config.json is polled by every CyberTools
+    // app. A truncated write would JSON.parse-throw across the suite.
+    const tmp = `${CYBERTOOLS_CONFIG}.${process.pid}.${Date.now()}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(cfg, null, 2), 'utf8')
+    fs.renameSync(tmp, CYBERTOOLS_CONFIG)
     return true
   } catch { return false }
 })
@@ -528,6 +639,14 @@ ipcMain.handle('ai:summarise', async (_e, item: FeedItem, apiKey: string) => {
 })
 
 ipcMain.handle('cve:lookup', async (_e, cveId: string) => {
+  // Validate CVE-YYYY-NNNN[N…] shape before hitting NVD. Without this the
+  // cveCache could be poisoned with garbage keys (unbounded Map growth),
+  // and the API would be hit with junk every time the renderer asks again
+  // for the same garbage id (cache.has would still match the bad key, but
+  // an early reject also blocks the first miss from leaving the machine).
+  if (typeof cveId !== 'string' || !/^CVE-\d{4}-\d{4,}$/i.test(cveId)) {
+    return { ok: false, error: 'Invalid CVE id format' }
+  }
   if (cveCache.has(cveId)) return { ok: true, data: cveCache.get(cveId) }
   try {
     const url  = `https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=${encodeURIComponent(cveId)}`
@@ -547,7 +666,22 @@ ipcMain.handle('cve:lookup', async (_e, cveId: string) => {
 })
 
 ipcMain.handle('app:version',       () => APP_VERSION)
-ipcMain.handle('shell:open',        (_e, url: string) => shell.openExternal(url))
+// Validate before handing to shell.openExternal — item.url comes from
+// third-party RSS feeds, so a malicious publisher could inject javascript:,
+// data:, or a custom-scheme URI handler (x-apple-*, vscode://, slack://)
+// that would shell-execute on click. Allowlist the schemes the app actually
+// uses: http(s) for article links, file: for the bundled docs path,
+// mailto: for completeness. Bare absolute .md paths are allowed because
+// OnboardingModal opens its docs file via a raw path.
+ipcMain.handle('shell:open', (_e, url: string) => {
+  if (typeof url !== 'string' || !url) return
+  if (url.startsWith('/') && url.endsWith('.md')) { shell.openExternal(url); return }
+  try {
+    const proto = new URL(url).protocol
+    if (proto !== 'http:' && proto !== 'https:' && proto !== 'file:' && proto !== 'mailto:') return
+    shell.openExternal(url)
+  } catch { /* invalid URL — silently drop */ }
+})
 ipcMain.handle('app:toggle-fullscreen', () => {
   if (!mainWindow) return
   mainWindow.setFullScreen(!mainWindow.isFullScreen())

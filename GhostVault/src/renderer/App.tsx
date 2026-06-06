@@ -103,6 +103,10 @@ export default function App() {
     ];
 
     function handleKey(e: KeyboardEvent) {
+      // Block all shortcuts under the SSO soft-lock so the requirement toggle
+      // and palette stay out of reach until CredVault is unlocked.
+      const cfgRequire = !!(useStore.getState() as unknown as { config?: { requireCredVaultSession?: boolean } }).config?.requireCredVaultSession;
+      if (cfgRequire && ssoUnlocked === false) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setPaletteOpen(v => !v);
@@ -129,7 +133,7 @@ export default function App() {
       window.removeEventListener('gv:new-note', onPaletteNewNote);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [ssoUnlocked]);
 
   // ── Tray-menu pending action ──────────────────────────────────────────────
   // Forward action ids queued by the Launcher. `gv:new-note` is already
@@ -199,10 +203,22 @@ export default function App() {
   const saveNote = useCallback(async () => {
     const { activeNote, editorContent } = useStore.getState();
     if (!activeNote) return;
-    await window.ghostvault.saveNote(activeNote.path, editorContent);
+    let ok = false;
+    try {
+      ok = await window.ghostvault.saveNote(activeNote.path, editorContent);
+    } catch {
+      ok = false;
+    }
+    if (!ok) {
+      // Don't clear dirty state — user's work is still unsaved on disk and
+      // a silent failure (path outside vault, disk full, file locked, etc.)
+      // would otherwise let them close the app thinking it persisted.
+      addToast('Failed to save note', 'error');
+      return;
+    }
     setDirty(false);
     await refreshVault();
-  }, [setDirty, refreshVault]);
+  }, [setDirty, refreshVault, addToast]);
 
   // ── Create note ────────────────────────────────────────────────────────────
   const createNote = useCallback(async (folder: string, title: string) => {
@@ -504,7 +520,7 @@ export default function App() {
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
       {onboarding.show && <OnboardingModal onClose={onboarding.close} />}
-      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      <CommandPalette open={paletteOpen && !ssoBlocked} onClose={() => setPaletteOpen(false)} />
     </div>
   );
 }

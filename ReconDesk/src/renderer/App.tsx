@@ -30,7 +30,8 @@ const TABS: { id: ActiveTab; label: string }[] = [
 
 export default function App() {
   const onboarding      = useOnboarding()
-  const loadTargets     = useRecondeskStore(s => s.loadTargets)
+  const loadTargets          = useRecondeskStore(s => s.loadTargets)
+  const mergeExternalTargets = useRecondeskStore(s => s.mergeExternalTargets)
   const activeTargetId  = useRecondeskStore(s => s.activeTargetId)
   const activeTab       = useRecondeskStore(s => s.activeTab)
   const setActiveTab    = useRecondeskStore(s => s.setActiveTab)
@@ -64,17 +65,26 @@ export default function App() {
     return () => { cancelled = true; clearInterval(t) }
   }, [])
 
-  // ⌘K → command palette
+  // ⌘K → command palette, ⌘N → new target modal
+  // Both disabled while the SSO soft-lock is active so the requirement toggle
+  // can't be flipped from the locked screen and modal flows can't bypass it.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 'k') {
+      if (requireSSO && ssoUnlocked === false) return
+      if (!(e.metaKey || e.ctrlKey) || e.shiftKey) return
+      if (e.key === 'k') {
         e.preventDefault()
         setPaletteOpen(v => !v)
+      } else if (e.key === 'n') {
+        // ⌘N → open the New Target modal. Same affordance as the tray-menu
+        // pending action 'new-target' so muscle memory translates cleanly.
+        e.preventDefault()
+        setNewTargetModal(true)
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [requireSSO, ssoUnlocked, setNewTargetModal])
 
   // Tray-menu actions fired by the CyberTools Launcher.
   useEffect(() => {
@@ -99,7 +109,14 @@ export default function App() {
         })
       }
     })
-  }, [loadTargets])
+    // Refetch when SignalBoard / NetworkMap push targets into our data.json
+    // from outside this process. The watcher in main suppresses our own
+    // writes, so this only fires on real external changes. We merge (rather
+    // than wholesale-replace) so an external push can't clobber an in-progress
+    // user edit on a target the renderer already has in memory.
+    const unwatch = window.electronAPI.onDataUpdated?.(() => { void mergeExternalTargets() })
+    return () => { unwatch?.() }
+  }, [loadTargets, mergeExternalTargets])
 
   const ssoBlocked = requireSSO && ssoUnlocked === false
 
@@ -205,8 +222,8 @@ export default function App() {
       {/* Global Search (Cmd+Shift+F) */}
       <GlobalSearch />
 
-      {/* Command Palette (Cmd+K) */}
-      <CommandPalette open={paletteOpen} onClose={closePalette} />
+      {/* Command Palette (Cmd+K) — closed while soft-locked. */}
+      <CommandPalette open={paletteOpen && !ssoBlocked} onClose={closePalette} />
 
       {/* Toast stack */}
       <div className="fixed bottom-8 right-4 z-50 flex flex-col gap-2 items-end">

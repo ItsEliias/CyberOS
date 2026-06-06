@@ -7,10 +7,22 @@ import path from 'path'
 import fs from 'fs'
 import os from 'os'
 import { emitEvent } from './ecosystem-bus'
-import { registerCredVaultHandlers, setMainWindow, lockVault, writeCredVaultStatus, credCount } from './ipc/credvault'
+import { registerCredVaultHandlers, setMainWindow, lockVault, writeCredVaultStatus, credCount, isVaultLocked } from './ipc/credvault'
 import { consumePendingAction, installPendingActionWatcher } from './pendingActions'
 
 const APP_KEY = 'credvault'
+
+// Don't let an unhandled rejection (e.g. an IPC handler that forgot to
+// `.catch()` an async chain, or a hung fs op) take down the main process
+// and lock the vault. Log + swallow — every IPC handler is expected to
+// catch its own errors, so anything that reaches here is a programmer
+// bug we can fix without ending the user's session.
+process.on('unhandledRejection', (reason) => {
+  console.error('[CredVault] unhandled rejection:', reason)
+})
+process.on('uncaughtException', (err) => {
+  console.error('[CredVault] uncaught exception:', err)
+})
 
 const APP_VERSION       = '1.0.0'
 const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')
@@ -85,7 +97,17 @@ function createWindow(): void {
 // Register all IPC handlers (crypto + credentials + backup + pending)
 registerCredVaultHandlers()
 
-ipcMain.handle('open-external', (_e, url: string) => shell.openExternal(url))
+ipcMain.handle('open-external', (_e, url: unknown) => {
+  // shell.openExternal forwards to the OS scheme handler. Without an
+  // allowlist a compromised renderer could open file://, javascript:, or any
+  // custom URL scheme registered on the system. CredVault's renderer only
+  // legitimately opens http/https links (HIBP help, the GitHub repo, etc.).
+  if (typeof url !== 'string' || url.length === 0) return false
+  let parsed: URL
+  try { parsed = new URL(url) } catch { return false }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false
+  return shell.openExternal(url)
+})
 
 // App lifecycle
 
@@ -104,9 +126,10 @@ if (!app.requestSingleInstanceLock()) {
     writeCredVaultStatus(true, 0)
     emitEvent('CredVault', 'app:launched', { version: APP_VERSION })
 
-    // Periodic status heartbeat
+    // Periodic status heartbeat — `locked` reflects the actual key state,
+    // not "we have zero credentials" (which the previous check conflated).
     statusInterval = setInterval(() => {
-      writeCredVaultStatus(credCount() === 0, credCount())
+      writeCredVaultStatus(isVaultLocked(), credCount())
     }, 10_000)
 
     // Watch for pending credential pushes from ReconDesk
@@ -119,11 +142,19 @@ if (!app.requestSingleInstanceLock()) {
   app.on('window-all-closed', () => {
     if (statusInterval)  clearInterval(statusInterval)
     if (pendingInterval) clearInterval(pendingInterval)
-    if (mainWindow && !mainWindow.isDestroyed()) lockVault('app closed')
+    // Always tear the session down on close — the previous guard required
+    // a still-live mainWindow, which never holds once the window is closed,
+    // so the SSO state was leaking past the app shutting down.
+    try { lockVault('app closed') } catch { /* ignore */ }
     app.quit()
   })
 
-  app.on('before-quit', () => { configWatcher?.close() })
+  app.on('before-quit', () => {
+    configWatcher?.close()
+    // Also lock on explicit Cmd+Q so the ecosystem SSO state never outlives
+    // the CredVault process.
+    try { lockVault('app quitting') } catch { /* ignore */ }
+  })
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

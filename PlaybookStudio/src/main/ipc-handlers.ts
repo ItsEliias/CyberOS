@@ -17,6 +17,11 @@ export interface AppRefs {
   writeConfig: (patch: Record<string, unknown>) => void
   updateStatus: (activePlaybook?: string, progress?: string) => void
   uid: () => string
+  // Persist custom playbooks / runs to disk. Without these, every mutation
+  // (save / delete / clone / run-start / run-update / run-complete) lives in
+  // memory only and is lost when the app closes.
+  savePlaybooks: () => void
+  saveRuns: () => void
 }
 
 const MAX_VERSIONS = 10
@@ -45,6 +50,7 @@ function registerPlaybookHandlers(refs: AppRefs): void {
     const updated = { ...playbook, updatedAt: now, versions }
     if (idx >= 0) refs.customPlaybooks[idx] = updated
     else refs.customPlaybooks.push(updated)
+    refs.savePlaybooks()
     emitEvent('PlaybookStudio', 'playbook:saved', { id: playbook.id, name: playbook.name })
     return { ok: true, playbook: updated }
   })
@@ -54,6 +60,7 @@ function registerPlaybookHandlers(refs: AppRefs): void {
     if (idx < 0) return { ok: false, error: 'Playbook not found' }
     if (refs.customPlaybooks[idx].isBuiltIn) return { ok: false, error: 'Cannot delete built-in playbooks' }
     refs.customPlaybooks.splice(idx, 1)
+    refs.savePlaybooks()
     return { ok: true }
   })
 
@@ -66,6 +73,7 @@ function registerPlaybookHandlers(refs: AppRefs): void {
       isBuiltIn: false, createdAt: now, updatedAt: now, versions: [],
     }
     refs.customPlaybooks.push(cloned)
+    refs.savePlaybooks()
     return { ok: true, playbook: cloned }
   })
 
@@ -77,6 +85,7 @@ function registerPlaybookHandlers(refs: AppRefs): void {
     if (!ver) return { ok: false, error: 'Version not found' }
     const restored: Playbook = { ...ver.snapshot, id: pb.id, updatedAt: new Date().toISOString(), versions: pb.versions }
     refs.customPlaybooks[idx] = restored
+    refs.savePlaybooks()
     return { ok: true, playbook: restored }
   })
 
@@ -153,6 +162,7 @@ function registerRunHandlers(refs: AppRefs): void {
       variables: { ...(pb.variables ?? {}), ...(variables ?? {}) },
     }
     refs.runs.unshift(run)
+    refs.saveRuns()
     refs.writeConfig({ shared_context: { ...sc, activePlaybook: pb.name } })
     refs.updateStatus(pb.name, `0/${pb.steps.length} steps`)
     emitEvent('PlaybookStudio', 'playbook:started', { runId: run.id, playbook: pb.name, target: run.targetName })
@@ -164,6 +174,7 @@ function registerRunHandlers(refs: AppRefs): void {
     if (idx < 0) return { ok: false, error: 'Run not found' }
     const updated: PlaybookRun = { ...refs.runs[idx], steps: refs.runs[idx].steps.map(s => s.id === stepId ? { ...s, ...patch } : s) }
     refs.runs[idx] = updated
+    refs.saveRuns()
     const done = updated.steps.filter(s => s.status === 'done' || s.status === 'skipped').length
     refs.updateStatus(updated.playbookName, `${done}/${updated.steps.length} steps`)
     emitEvent('PlaybookStudio', 'step:completed', { runId, stepId, progress: `${done}/${updated.steps.length}` })
@@ -175,6 +186,7 @@ function registerRunHandlers(refs: AppRefs): void {
     if (idx < 0) return { ok: false, error: 'Run not found' }
     const run = { ...refs.runs[idx], status: 'completed' as const, completedAt: new Date().toISOString() }
     refs.runs[idx] = run
+    refs.saveRuns()
     const cfg = refs.readConfig()
     const sc  = (cfg['shared_context'] ?? {}) as Record<string, unknown>
     refs.writeConfig({ shared_context: { ...sc, activePlaybook: undefined } })
@@ -188,6 +200,7 @@ function registerRunHandlers(refs: AppRefs): void {
     if (idx < 0) return { ok: false, error: 'Run not found' }
     const run = { ...refs.runs[idx], status: 'abandoned' as const, completedAt: new Date().toISOString() }
     refs.runs[idx] = run
+    refs.saveRuns()
     const cfg = refs.readConfig()
     const sc  = (cfg['shared_context'] ?? {}) as Record<string, unknown>
     refs.writeConfig({ shared_context: { ...sc, activePlaybook: undefined } })
@@ -199,20 +212,34 @@ function registerRunHandlers(refs: AppRefs): void {
     const run = refs.runs.find(r => r.id === runId)
     if (!run) return { ok: false, error: 'Run not found' }
     const report = buildReport(run)
-    try {
-      if (!fs.existsSync(REPORT_FORGE_DIR)) fs.mkdirSync(REPORT_FORGE_DIR, { recursive: true })
-      fs.writeFileSync(path.join(REPORT_FORGE_DIR, `playbook-run-${run.id}.json`), JSON.stringify(report, null, 2), 'utf8')
-    } catch { /* non-fatal */ }
-    emitEvent('PlaybookStudio', 'run:exported', { runId, target: 'ReportForge' })
+    const reportForgeAvailable = isReportForgeInstalled()
+    let pendingPath: string | null = null
+    if (reportForgeAvailable) {
+      try {
+        if (!fs.existsSync(REPORT_FORGE_DIR)) fs.mkdirSync(REPORT_FORGE_DIR, { recursive: true })
+        pendingPath = path.join(REPORT_FORGE_DIR, `playbook-run-${run.id}.json`)
+        atomicWriteJsonFile(pendingPath, report)
+      } catch {
+        // Stat said installed but write failed (permissions?) — degrade
+        // gracefully; the save dialog below still gives the user a path.
+        pendingPath = null
+      }
+    }
+    emitEvent('PlaybookStudio', 'run:exported', {
+      runId, target: 'ReportForge', reportForgeAvailable, pendingPath,
+    })
     const win = refs.getWindow()
-    if (!win) return { ok: true, report }
+    if (!win) return { ok: true, report, reportForgeAvailable, pendingPath }
     const result = await dialog.showSaveDialog(win, {
       title: 'Export Run Report',
       defaultPath: `report-${run.playbookName.replace(/[^a-z0-9]/gi, '_')}-${run.id.slice(-6)}.json`,
       filters: [{ name: 'JSON Report', extensions: ['json'] }],
     })
-    if (!result.canceled && result.filePath) fs.writeFileSync(result.filePath, JSON.stringify(report, null, 2), 'utf8')
-    return { ok: true, report }
+    if (!result.canceled && result.filePath) {
+      try { atomicWriteJsonFile(result.filePath, report) }
+      catch (e) { return { ok: false, error: (e as Error).message, reportForgeAvailable, pendingPath } }
+    }
+    return { ok: true, report, reportForgeAvailable, pendingPath }
   })
 
   ipcMain.handle('playbook:run-command', (_e, payload: unknown) => {

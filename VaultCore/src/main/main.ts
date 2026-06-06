@@ -11,6 +11,18 @@ import { consumePendingAction, installPendingActionWatcher } from './pendingActi
 
 const APP_KEY = 'vaultscraper';
 
+// Don't let an unhandled rejection (e.g. a forgotten .catch() in an IPC
+// chain, or the Playwright child rejecting late) take down the main
+// process mid-scrape. Log + swallow — every IPC handler is expected to
+// catch its own errors, so anything reaching here is a programmer bug
+// worth investigating but not worth crashing the whole app for.
+process.on('unhandledRejection', (reason) => {
+  console.error('[VaultCore] unhandled rejection:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[VaultCore] uncaught exception:', err);
+});
+
 const __dirname  = path.dirname(fileURLToPath(import.meta.url));
 const _require   = createRequire(import.meta.url);
 
@@ -271,7 +283,15 @@ app.whenReady().then(async () => {
 
 app.on('second-instance', () => { if (mainWindow) { mainWindow.show(); mainWindow.focus(); } });
 app.on('window-all-closed', () => { app.quit(); });
-app.on('before-quit', () => { launcher.stopStatusWriter(); stopAllSchedules(); });
+app.on('before-quit', () => {
+  launcher.stopStatusWriter();
+  stopAllSchedules();
+  // Stop any in-flight scrape — `runScrape` spawns a Playwright Chromium
+  // child; without an explicit stopScrape() here the child outlives the
+  // VaultCore process when the user Cmd-Qs mid-scrape, leaving an orphan
+  // browser eating memory + a stale `_scrape_state.json` on disk.
+  try { scraper.stopScrape(); } catch { /* best-effort */ }
+});
 
 // ─── IPC Handlers ─────────────────────────────────────────────────────────────
 
@@ -290,17 +310,35 @@ ipcMain.handle('get-sso', () => {
 
 ipcMain.handle('open-credvault', () => {
   try {
+    const target = '/Applications/CredVault.app';
+    if (!fs.existsSync(target)) return false;
     const { spawn } = _require('child_process') as typeof import('child_process');
-    spawn('open', ['/Applications/CredVault.app'], { detached: true, stdio: 'ignore' }).unref();
+    spawn('open', [target], { detached: true, stdio: 'ignore' }).unref();
     return true;
   } catch { return false; }
 });
 
 ipcMain.handle('get-config',    ()       => launcher.readConfig() || {});
-ipcMain.handle('set-config',    (_, k, v) => { const u: Record<string,unknown> = {}; u[k] = v; return launcher.writeConfig(u); });
+ipcMain.handle('set-config',    (_, k, v) => {
+  // Block prototype-pollution keys + non-string keys. Without these,
+  // `electronAPI.setConfig('__proto__', {...})` could poison Object.prototype
+  // for the main process, and a non-string key silently becomes the literal
+  // 'undefined' / '[object Object]' config entry.
+  if (typeof k !== 'string' || k.length === 0) return false;
+  if (k === '__proto__' || k === 'constructor' || k === 'prototype') return false;
+  const u: Record<string,unknown> = {}; u[k] = v; return launcher.writeConfig(u);
+});
 ipcMain.handle('config-exists', ()       => launcher.configExists());
 ipcMain.handle('get-vault-path',()       => launcher.getVaultPath());
-ipcMain.handle('set-vault-path',(_, vp)  => { launcher.setVaultPath(vp); refreshVaultNoteCount(); return true; });
+ipcMain.handle('set-vault-path',(_, vp)  => {
+  // Without a type check, a non-string vp got written into the obsidianVaultPath
+  // config and every subsequent vault operation read undefined or '[object Object]'.
+  // Empty paths are also rejected so a misclick can't clear the configured vault.
+  if (typeof vp !== 'string' || vp.length === 0) return false;
+  launcher.setVaultPath(vp);
+  refreshVaultNoteCount();
+  return true;
+});
 ipcMain.handle('get-theme',     ()       => launcher.getTheme());
 ipcMain.handle('set-theme',     (_, t)   => launcher.setTheme(t));
 ipcMain.handle('is-cyberlab-installed', () => launcher.isCyberLabInstalled());
@@ -311,11 +349,15 @@ ipcMain.handle('select-folder', async () => {
   return r.canceled ? null : r.filePaths[0];
 });
 ipcMain.handle('select-file', async (_, filters) => {
-  const r = await dialog.showOpenDialog(mainWindow!, { properties: ['openFile'], filters: filters || [] });
+  // dialog.showOpenDialog throws sync if `filters` isn't an array. Normalize
+  // here so a renderer bug passing null/object doesn't take down main.
+  const safeFilters = Array.isArray(filters) ? filters : [];
+  const r = await dialog.showOpenDialog(mainWindow!, { properties: ['openFile'], filters: safeFilters });
   return r.canceled ? null : r.filePaths[0];
 });
 ipcMain.handle('select-files', async (_, filters) => {
-  const r = await dialog.showOpenDialog(mainWindow!, { properties: ['openFile', 'multiSelections'], filters: filters || [] });
+  const safeFilters = Array.isArray(filters) ? filters : [];
+  const r = await dialog.showOpenDialog(mainWindow!, { properties: ['openFile', 'multiSelections'], filters: safeFilters });
   return r.canceled ? [] : r.filePaths;
 });
 
@@ -323,10 +365,35 @@ ipcMain.handle('open-vault-in-obsidian', async (_, vp) => {
   await shell.openExternal(`obsidian://open?path=${encodeURIComponent(vp || launcher.getVaultPath())}`);
   return true;
 });
-ipcMain.handle('open-folder',   async (_, p) => { await shell.openPath(p); return true; });
-ipcMain.handle('open-external', async (_, u) => { await shell.openExternal(u); return true; });
+ipcMain.handle('open-folder',   async (_, p) => {
+  // openPath only opens files/folders that exist on disk, but a non-string
+  // argument crashes the main process with a sync TypeError before shell
+  // sees it. Defend at the boundary.
+  if (typeof p !== 'string' || p.length === 0) return false;
+  await shell.openPath(p);
+  return true;
+});
+ipcMain.handle('open-external', async (_, u) => {
+  // shell.openExternal forwards to the OS scheme handler. Without a scheme
+  // allowlist a compromised renderer could open file://, javascript:, or
+  // arbitrary custom schemes. The renderer only legitimately opens http/https
+  // links (article URLs, GitHub, etc.) and mailto for contact links.
+  if (typeof u !== 'string' || u.length === 0) return false;
+  let parsed: URL;
+  try { parsed = new URL(u); } catch { return false; }
+  const allowed = new Set(['http:', 'https:', 'mailto:']);
+  if (!allowed.has(parsed.protocol)) return false;
+  await shell.openExternal(u);
+  return true;
+});
 
 ipcMain.handle('start-scrape', async (_, config) => {
+  // The renderer hands us a free-form config object. Without this guard a
+  // null/non-object payload crashed the main process on the first property
+  // read (`config.sourceName`).
+  if (!config || typeof config !== 'object' || Array.isArray(config)) {
+    return { error: 'Invalid scrape config' };
+  }
   if (currentScrapeState) return { error: 'A scrape is already running' };
   const vaultPath = launcher.getVaultPath();
   if (!vaultPath) return { error: 'No vault path configured' };
@@ -375,9 +442,27 @@ ipcMain.handle('retry-failed',  async (_, config) => {
 });
 
 ipcMain.handle('get-sources',      ()        => sourcelibrary.getAllSources());
-ipcMain.handle('add-source',       (_, s)    => { const a = sourcelibrary.addSource(s); scheduleSource(a); return a; });
-ipcMain.handle('update-source',    (_, id, s) => { const u = sourcelibrary.updateSource(id, s); scheduleSource(u); return u; });
-ipcMain.handle('delete-source',    (_, id)   => { if (scheduledJobs[id]) { scheduledJobs[id].destroy(); delete scheduledJobs[id]; } return sourcelibrary.deleteSource(id); });
+ipcMain.handle('add-source',       (_, s)    => {
+  // sourcelibrary.addSource spreads `s` into the new record. Null / non-object
+  // payload used to throw 'Cannot convert undefined to object'. Validate at
+  // the boundary so the renderer gets a clean error instead of a crash.
+  if (s === null || typeof s !== 'object' || Array.isArray(s)) {
+    return { error: 'Invalid source payload' };
+  }
+  const a = sourcelibrary.addSource(s); scheduleSource(a); return a;
+});
+ipcMain.handle('update-source',    (_, id, s) => {
+  if (typeof id !== 'string' || id.length === 0) return { error: 'Invalid id' };
+  if (s === null || typeof s !== 'object' || Array.isArray(s)) {
+    return { error: 'Invalid source payload' };
+  }
+  const u = sourcelibrary.updateSource(id, s); scheduleSource(u); return u;
+});
+ipcMain.handle('delete-source',    (_, id)   => {
+  if (typeof id !== 'string' || id.length === 0) return false;
+  if (scheduledJobs[id]) { scheduledJobs[id].destroy(); delete scheduledJobs[id]; }
+  return sourcelibrary.deleteSource(id);
+});
 ipcMain.handle('get-source-health',()        => sourcelibrary.getHealthSummary(launcher.getVaultPath()));
 ipcMain.handle('scrape-source-now',async (_, id) => {
   const source = sourcelibrary.getSourceById(id);
@@ -389,12 +474,20 @@ ipcMain.handle('scrape-source-now',async (_, id) => {
 
 // Schedule-specific update — persists schedule + re-registers cron job and returns
 // the source with a freshly-computed nextRun. Renderer uses this from the modal.
-ipcMain.handle('update-source-schedule', (_, id: string, schedule: Record<string, unknown>) => {
+ipcMain.handle('update-source-schedule', (_, id: unknown, schedule: unknown) => {
+  // Validate at the boundary — id is used as a sourcelibrary lookup key,
+  // and schedule.cronExpression was force-cast to string before being
+  // handed to cron-parser. Both used to silently mis-behave on bad input.
+  if (typeof id !== 'string' || id.length === 0) return { error: 'Invalid id' };
+  if (schedule === null || typeof schedule !== 'object' || Array.isArray(schedule)) {
+    return { error: 'Invalid schedule payload' };
+  }
   const existing = sourcelibrary.getSourceById(id);
   if (!existing) return { error: 'Source not found' };
-  const nextRun = schedule?.enabled && schedule?.cronExpression
-    ? computeNextRun(schedule.cronExpression as string) : null;
-  const merged = { ...schedule, nextRun: nextRun ?? undefined };
+  const s = schedule as Record<string, unknown>;
+  const cron = typeof s.cronExpression === 'string' ? s.cronExpression : null;
+  const nextRun = s.enabled && cron ? computeNextRun(cron) : null;
+  const merged = { ...s, nextRun: nextRun ?? undefined };
   const updated = sourcelibrary.updateSource(id, { schedule: merged });
   scheduleSource(updated);
   return updated;
@@ -418,28 +511,118 @@ ipcMain.handle('run-dead-link-check', async () => {
   if (!vp) return { error: 'No vault path' };
   return vaulthealth.findDeadLinks(vp, (p: unknown) => { if (mainWindow) mainWindow.webContents.send('vault-health-progress', p); });
 });
-ipcMain.handle('clean-markdown',         async (_, opts)     => vaulthealth.cleanMarkdown(opts, launcher.getVaultPath()));
-ipcMain.handle('split-note',             async (_, fp, sp)   => vaulthealth.splitNote(fp, sp, launcher.getVaultPath()));
-ipcMain.handle('analyse-note-headings',  async (_, fp)       => vaulthealth.analyseNoteHeadings(fp));
-ipcMain.handle('merge-notes',            async (_, a, b, kp) => vaulthealth.mergeNotes(a, b, kp));
-ipcMain.handle('delete-note',            async (_, fp)       => vaulthealth.deleteNote(fp));
+ipcMain.handle('clean-markdown',         async (_, opts)     => {
+  // cleanMarkdown destructures `opts` and (depending on scope) reads
+  // opts.filePath or opts.folderPath from disk. Null opts crashes the
+  // destructure; renderer-supplied paths outside the vault would let a
+  // compromised renderer read arbitrary files. Validate at the boundary.
+  if (opts === null || typeof opts !== 'object' || Array.isArray(opts)) {
+    return { error: 'Invalid options' };
+  }
+  const o = opts as Record<string, unknown>;
+  if (typeof o.filePath   === 'string' && !isUnderVault(o.filePath))   return { error: 'Path outside vault' };
+  if (typeof o.folderPath === 'string' && !isUnderVault(o.folderPath)) return { error: 'Path outside vault' };
+  return vaulthealth.cleanMarkdown(opts, launcher.getVaultPath());
+});
+ipcMain.handle('split-note',             async (_, fp, sp)   => {
+  if (!isUnderVault(fp)) return { error: 'Path outside vault' };
+  return vaulthealth.splitNote(fp, sp, launcher.getVaultPath());
+});
+ipcMain.handle('analyse-note-headings',  async (_, fp)       => {
+  if (!isUnderVault(fp)) return { error: 'Path outside vault' };
+  return vaulthealth.analyseNoteHeadings(fp);
+});
+ipcMain.handle('merge-notes',            async (_, a, b, kp) => {
+  if (!isUnderVault(a) || !isUnderVault(b) || !isUnderVault(kp)) {
+    return { error: 'One or more paths are outside the vault' };
+  }
+  return vaulthealth.mergeNotes(a, b, kp);
+});
+ipcMain.handle('delete-note',            async (_, fp)       => {
+  // delete-note unlinks the path it's given. Without confinement a
+  // compromised renderer could delete arbitrary user files, and the
+  // .deleted_* backup the helper writes alongside the file would also land
+  // outside the vault. Same isUnderVault guard the read/write IPCs use.
+  if (!isUnderVault(fp)) return { error: 'Path outside vault' };
+  return vaulthealth.deleteNote(fp);
+});
 ipcMain.handle('export-dead-links-csv',  async (_, r)        => vaulthealth.exportDeadLinksCsv(r, launcher.getVaultPath()));
-ipcMain.handle('archive-wayback',        async (_, url)      => { await shell.openExternal(`https://web.archive.org/web/${url}`); return true; });
+ipcMain.handle('archive-wayback',        async (_, url)      => {
+  // The renderer-supplied URL gets concatenated into a Wayback Machine link.
+  // A non-string crashes shell.openExternal with a sync TypeError; only
+  // allow http/https targets (the only URLs Wayback actually archives).
+  if (typeof url !== 'string' || url.length === 0) return false;
+  let parsed: URL;
+  try { parsed = new URL(url); } catch { return false; }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+  await shell.openExternal(`https://web.archive.org/web/${url}`);
+  return true;
+});
 ipcMain.handle('generate-knowledge-gap-report', async () => {
   const vp = launcher.getVaultPath();
   return vp ? vaulthealth.generateKnowledgeGapReport(vp) : { error: 'No vault path' };
 });
-ipcMain.handle('validate-links',    async (_, fp) => vaulthealth.validateLinks(fp || launcher.getVaultPath()));
-ipcMain.handle('generate-canvas',   async (_, sn, of_) => processor.generateCanvas(sn, of_, launcher.getVaultPath()));
+ipcMain.handle('validate-links',    async (_, fp) => {
+  // validateLinks walks the folder it's given. Falling through to the vault
+  // path when fp is empty is fine, but a renderer-supplied fp outside the
+  // vault would walk + read arbitrary directories (info disclosure of any
+  // .md files on disk). Pin to the vault root.
+  const vp = launcher.getVaultPath();
+  if (!fp) return vaulthealth.validateLinks(vp);
+  if (!isUnderVault(fp)) return { error: 'Path outside vault' };
+  return vaulthealth.validateLinks(fp);
+});
+ipcMain.handle('generate-canvas',   async (_, sn, of_) => {
+  // processor.generateCanvas walks `outputFolder` reading .md files. Without
+  // a confinement check, a renderer-supplied path outside the vault would
+  // enumerate + read markdown anywhere on disk (info disclosure).
+  if (!isUnderVault(of_)) return { error: 'Path outside vault' };
+  return processor.generateCanvas(sn, of_, launcher.getVaultPath());
+});
 
-ipcMain.handle('read-file',  (_, fp) => { try { return fs.readFileSync(fp, 'utf8'); } catch { return null; } });
+// Confine renderer file IPCs to the configured vault root. Without this a
+// compromised renderer could read SSH keys or overwrite arbitrary user files
+// via `electronAPI.readFile('/etc/passwd')` etc.
+function isUnderVault(fp: unknown): fp is string {
+  if (typeof fp !== 'string' || !fp) return false;
+  const root = launcher.getVaultPath();
+  if (!root) return false;
+  const resolved = path.resolve(fp);
+  const resolvedRoot = path.resolve(root) + path.sep;
+  return resolved === path.resolve(root) || resolved.startsWith(resolvedRoot);
+}
+
+ipcMain.handle('read-file',  (_, fp) => {
+  if (!isUnderVault(fp)) return null;
+  try { return fs.readFileSync(fp, 'utf8'); } catch { return null; }
+});
 ipcMain.handle('write-file', (_, fp, c) => {
+  if (!isUnderVault(fp)) return false;
+  // A non-string content used to silently write the literal "undefined" /
+  // "[object Object]" to the file, corrupting notes for any renderer bug
+  // that forgot to stringify first.
+  if (typeof c !== 'string') return false;
   try { fs.mkdirSync(path.dirname(fp), { recursive: true }); fs.writeFileSync(fp, c, 'utf8'); return true; } catch { return false; }
 });
-ipcMain.handle('file-exists', (_, fp) => fs.existsSync(fp));
+ipcMain.handle('file-exists', (_, fp) => isUnderVault(fp) && fs.existsSync(fp));
 ipcMain.handle('list-vault-notes', (_, folderPath) => {
   const vp = launcher.getVaultPath();
-  const base = folderPath ? path.join(vp, folderPath) : vp;
+  if (!vp) return [];
+  // The renderer-supplied folderPath used to be path.joined onto the vault
+  // root with no further checks, so 'list-vault-notes("../..")' would walk
+  // ~/, returning '.md' files outside the configured vault. Resolve + assert
+  // the final path stays inside the vault before walking it.
+  let base: string;
+  if (folderPath && typeof folderPath === 'string') {
+    const candidate = path.resolve(vp, folderPath);
+    const root      = path.resolve(vp) + path.sep;
+    if (candidate !== path.resolve(vp) && !candidate.startsWith(root)) {
+      return [];
+    }
+    base = candidate;
+  } else {
+    base = vp;
+  }
   const notes: string[] = [];
   function walk(dir: string) {
     try {

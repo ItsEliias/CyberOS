@@ -82,6 +82,23 @@ export default function VaultView() {
     return () => clearTimeout(t)
   }, [])
 
+  // Declared before the ⌘K-palette useEffect below — the previous ordering
+  // referenced `runBreachCheck` in the effect's dep array before its
+  // useCallback was reached, which is a TDZ ReferenceError at first render.
+  const runBreachCheck = useCallback(async () => {
+    const withPasswords = credentials.filter(c => c.password)
+    if (!withPasswords.length) return
+    setBreachRunning(true); setBreachDone(false)
+    const results: Record<string, BreachCheckResult> = {}
+    for (const c of withPasswords) {
+      try { results[c.id] = await window.electronAPI.checkBreach(c.id, c.password!) }
+      catch { results[c.id] = { ok: false } }
+    }
+    const breached = Object.values(results).filter(r => r.ok && (r.breachCount ?? 0) > 0).length
+    if (breached > 0) import('../utils/audioNotify').then(m => m.playBreachDetected()).catch(() => {})
+    setBreachMap(results); setBreachRunning(false); setBreachDone(true)
+  }, [credentials])
+
   // ── Command palette wiring ────────────────────────────────────────────
   // The ⌘K palette dispatches window events for actions owned by VaultView.
   useEffect(() => {
@@ -155,20 +172,6 @@ export default function VaultView() {
     await window.electronAPI.updateCredential(id, { status: 'rotated' })
     await refreshData()
   }
-
-  const runBreachCheck = useCallback(async () => {
-    const withPasswords = credentials.filter(c => c.password)
-    if (!withPasswords.length) return
-    setBreachRunning(true); setBreachDone(false)
-    const results: Record<string, BreachCheckResult> = {}
-    for (const c of withPasswords) {
-      try { results[c.id] = await window.electronAPI.checkBreach(c.id, c.password!) }
-      catch { results[c.id] = { ok: false } }
-    }
-    const breached = Object.values(results).filter(r => r.ok && (r.breachCount ?? 0) > 0).length
-    if (breached > 0) import('../utils/audioNotify').then(m => m.playBreachDetected()).catch(() => {})
-    setBreachMap(results); setBreachRunning(false); setBreachDone(true)
-  }, [credentials])
 
   const breachedCount = Object.values(breachMap).filter(r => r.ok && (r.breachCount ?? 0) > 0).length
 

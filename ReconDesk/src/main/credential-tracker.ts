@@ -4,6 +4,14 @@ import type { ReconDeskData } from '../shared/types'
 
 const CYBERTOOLS_CONFIG = require('path').join(require('os').homedir(), 'cybertools-config.json')
 
+// Atomic write — tmp + rename so a crash mid-write can't leave a
+// half-written cybertools-config.json that breaks every cooperating app.
+function writeSharedAtomic(cfg: unknown): void {
+  const tmp = `${CYBERTOOLS_CONFIG}.tmp`
+  fs.writeFileSync(tmp, JSON.stringify(cfg, null, 2), 'utf8')
+  fs.renameSync(tmp, CYBERTOOLS_CONFIG)
+}
+
 function updateOperatorProfile(updates: Record<string, unknown>): void {
   try {
     let shared: Record<string, unknown> = {}
@@ -12,7 +20,7 @@ function updateOperatorProfile(updates: Record<string, unknown>): void {
     }
     const existing = (shared.operator_profile as Record<string, unknown>) || {}
     shared.operator_profile = { ...existing, ...updates }
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8')
+    writeSharedAtomic(shared)
   } catch {}
 }
 
@@ -84,7 +92,7 @@ export function detectCredentialChanges(prev: ReconDeskData, data: ReconDeskData
       }
       const existing = (shared.credvault_pending as typeof newCreds) || []
       shared.credvault_pending = [...existing, ...newCreds]
-      fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8')
+      writeSharedAtomic(shared)
 
       // Best-effort ecosystem-bus emit so the Launcher activity feed picks it up.
       try {
@@ -101,7 +109,9 @@ export function detectCredentialChanges(prev: ReconDeskData, data: ReconDeskData
             timestamp: new Date().toISOString(),
           })
         }
-        fs.writeFileSync(BUS, JSON.stringify(events.slice(0, 150), null, 2), 'utf8')
+        const tmpBus = `${BUS}.tmp`
+        fs.writeFileSync(tmpBus, JSON.stringify(events.slice(0, 150), null, 2), 'utf8')
+        fs.renameSync(tmpBus, BUS)
       } catch {}
     }
   } catch {}

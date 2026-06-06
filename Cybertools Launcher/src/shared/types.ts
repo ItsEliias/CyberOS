@@ -147,7 +147,7 @@ export interface LauncherConfig {
 }
 
 export interface ActivityEntry {
-  type: 'cyberlab' | 'vaultscraper' | 'ghostvault' | 'recondesk' | 'signalboard' | 'cyberos' | 'credvault' | 'playbookstudio' | 'reportforge' | 'terminallink' | 'networkmap' | 'launcher' | 'error';
+  type: 'cyberlab' | 'vaultscraper' | 'ghostvault' | 'recondesk' | 'signalboard' | 'cyberos' | 'credvault' | 'playbookstudio' | 'reportforge' | 'terminallink' | 'networkmap' | 'netlab' | 'launcher' | 'error';
   text: string;
   timestamp: string;
 }

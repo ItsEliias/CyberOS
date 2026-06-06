@@ -19,8 +19,15 @@ function readShared(): Record<string, unknown> {
 }
 
 function writeShared(shared: Record<string, unknown>): void {
-  try { fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8') }
-  catch (e) { console.warn('[CredVault security] writeShared failed:', (e as Error).message) }
+  try {
+    // Atomic — every app polls cybertools-config.json for SSO state. A
+    // partial write would make them all read corrupted SSO and bounce
+    // through the lock screens. The Launcher's writeConfig already uses
+    // the tmp+rename pattern; matching it here.
+    const tmp = `${CYBERTOOLS_CONFIG}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(shared, null, 2), 'utf8')
+    fs.renameSync(tmp, CYBERTOOLS_CONFIG)
+  } catch (e) { console.warn('[CredVault security] writeShared failed:', (e as Error).message) }
 }
 
 // ─── SSO state ────────────────────────────────────────────────────────────────
@@ -74,9 +81,14 @@ export function endSession(): SSOState {
 export function refreshSession(autoLockMs: number): SSOState | null {
   if (!_sessionToken) return null
   const now = Date.now()
-  const expiresAt = autoLockMs > 0 ? new Date(now + autoLockMs).toISOString() : null
   const shared = readShared()
   const prev = (shared.sso as SSOState | undefined) || null
+  // When the caller passes 0 and there is already an active expiry, preserve
+  // it. Otherwise the change-password / token-rotation path would silently
+  // clear auto-lock and the session would never expire.
+  const expiresAt =
+    autoLockMs > 0 ? new Date(now + autoLockMs).toISOString()
+    : prev?.expiresAt ?? null
   const state: SSOState = {
     unlocked:   true,
     unlockedAt: prev?.unlockedAt || new Date(now).toISOString(),

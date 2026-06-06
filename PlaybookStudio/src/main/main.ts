@@ -46,6 +46,26 @@ function loadRuns(): PlaybookRun[] {
   } catch { return [] }
 }
 
+// Atomic write helper — writes to a sibling .tmp and renames into place so a
+// crash mid-write can't leave a half-formed JSON file that fails to parse on
+// next launch.
+function atomicWriteJson(filePath: string, data: unknown): void {
+  ensureAppDir()
+  const tmp = `${filePath}.tmp`
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8')
+  fs.renameSync(tmp, filePath)
+}
+
+function savePlaybooks(): void {
+  try { atomicWriteJson(PLAYBOOKS_FILE, customPlaybooks) }
+  catch (e) { console.warn('[PlaybookStudio] playbooks write failed:', (e as Error).message) }
+}
+
+function saveRuns(): void {
+  try { atomicWriteJson(RUNS_FILE, runs) }
+  catch (e) { console.warn('[PlaybookStudio] runs write failed:', (e as Error).message) }
+}
+
 // ─── CyberTools config helpers ────────────────────────────────────────────────
 
 function readCyberToolsConfig(): Record<string, unknown> {
@@ -144,6 +164,8 @@ app.whenReady().then(() => {
     writeConfig: writeCyberToolsConfig,
     updateStatus,
     uid,
+    savePlaybooks,
+    saveRuns,
   }
 
   registerIpcHandlers(refs)
