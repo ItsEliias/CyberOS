@@ -10,7 +10,7 @@ import type {
 contextBridge.exposeInMainWorld('electronAPI', {
   // Vault auth
   needsSetup:      (): Promise<boolean>                                => ipcRenderer.invoke('vault:needs-setup'),
-  setupVault:      (pw: string): Promise<UnlockResult>                 => ipcRenderer.invoke('vault:setup', pw),
+  setupVault:      (pw: string, autoLockMs?: number): Promise<UnlockResult> => ipcRenderer.invoke('vault:setup', pw, autoLockMs),
   unlockVault:     (pw: string, autoLockMs?: number): Promise<UnlockResult> => ipcRenderer.invoke('vault:unlock', pw, autoLockMs),
   lockVault:       (): Promise<boolean>                                => ipcRenderer.invoke('vault:lock'),
   changePassword:  (cur: string, next: string): Promise<UnlockResult>  => ipcRenderer.invoke('vault:change-password', cur, next),
