@@ -90,6 +90,7 @@ export default function CommandPalette({ open, onClose }: Props) {
   const [activeIdx, setActive]  = useState(0);
   const [installed, setInstalled] = useState<Record<string, boolean>>({});
   const [ssoUnlocked, setSsoUnlocked] = useState<boolean | null>(null);
+  const [runErr, setRunErr]     = useState<string | null>(null);
   const inputRef                = useRef<HTMLInputElement | null>(null);
 
   // Refresh installed map + SSO state whenever palette opens.
@@ -119,7 +120,15 @@ export default function CommandPalette({ open, onClose }: Props) {
       group:    'App',
       keywords: [key, 'open', 'launch'],
       accent:   APP_DOTS[key] || '#8b949e',
-      run:      async () => { await window.api.launchApp(key); onClose(); },
+      run:      async () => {
+        if (installed[key] === false) {
+          setRunErr(`${APP_LABELS[key]} isn't installed — drop the .app into /Applications.`);
+          setTimeout(() => setRunErr(null), 4000);
+          return;
+        }
+        await window.api.launchApp(key);
+        onClose();
+      },
     }));
 
     const actions: Command[] = [
@@ -235,6 +244,7 @@ export default function CommandPalette({ open, onClose }: Props) {
     if (open) {
       setQuery('');
       setActive(0);
+      setRunErr(null);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [open]);
@@ -325,6 +335,19 @@ export default function CommandPalette({ open, onClose }: Props) {
                 ⌘K
               </span>
             </div>
+
+            {runErr && (
+              <div style={{
+                padding: '8px 14px',
+                borderBottom: '1px solid rgba(248,81,73,0.25)',
+                background: 'rgba(248,81,73,0.08)',
+                color: '#f85149',
+                fontSize: 11.5,
+                fontFamily: 'JetBrains Mono, monospace',
+              }}>
+                {runErr}
+              </div>
+            )}
 
             {/* Results list */}
             <div style={{ maxHeight: 360, overflowY: 'auto', padding: '6px 4px' }}>
