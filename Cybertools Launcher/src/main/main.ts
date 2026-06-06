@@ -868,8 +868,13 @@ async function runBackupSnapshot(password?: string): Promise<BackupResult> {
     const encrypted = !!password;
     if (encrypted) {
       finalFile = path.join(folder, `cyberos-backup-${stamp}.cyberos-backup`);
-      encryptToFile(tarPath, finalFile, password!);
-      try { fs.unlinkSync(tarPath); } catch { /* ignore */ }
+      try {
+        encryptToFile(tarPath, finalFile, password!);
+      } finally {
+        // Always delete the plaintext tar — even if encryption threw — so
+        // the unencrypted snapshot can't be recovered from /tmp.
+        try { fs.unlinkSync(tarPath); } catch { /* ignore */ }
+      }
     } else {
       finalFile = path.join(folder, `cyberos-backup-${stamp}.tar.gz`);
       fs.renameSync(tarPath, finalFile);
