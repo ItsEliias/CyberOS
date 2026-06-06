@@ -237,7 +237,11 @@ ipcMain.handle('save-graph', (_e, graph: NetworkGraph): void => {
   try {
     ensureGraphsDir()
     const file = path.join(GRAPHS_DIR, `${graph.id}.json`)
-    fs.writeFileSync(file, JSON.stringify(graph, null, 2), 'utf8')
+    // Atomic — a crash mid-write would leave a half-formed graph JSON that
+    // would silently disappear from the library on next load.
+    const tmp = `${file}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(graph, null, 2), 'utf8')
+    fs.renameSync(tmp, file)
     emitEvent('NetworkMap', 'graph:saved', { id: graph.id, name: graph.name })
   } catch (e) {
     console.error('[NetworkMap] save-graph failed:', (e as Error).message)
@@ -315,7 +319,12 @@ ipcMain.handle('recondesk:push-node', (_e, node: {
       }
     }
     target.updatedAt = now
-    fs.writeFileSync(dataPath, JSON.stringify(data, null, 2), 'utf8')
+    // Atomic — this writes into ReconDesk's data.json; a partial write would
+    // corrupt every target. (A file lock would be ideal here since ReconDesk
+    // may be writing concurrently, but at minimum prevent corruption.)
+    const tmp = `${dataPath}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8')
+    fs.renameSync(tmp, dataPath)
     return { ok: true, targetName: target.name, portsAdded }
   } catch (e) {
     console.error('[NetworkMap] recondesk:push-node failed:', (e as Error).message)
