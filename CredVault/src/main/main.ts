@@ -12,6 +12,18 @@ import { consumePendingAction, installPendingActionWatcher } from './pendingActi
 
 const APP_KEY = 'credvault'
 
+// Don't let an unhandled rejection (e.g. an IPC handler that forgot to
+// `.catch()` an async chain, or a hung fs op) take down the main process
+// and lock the vault. Log + swallow — every IPC handler is expected to
+// catch its own errors, so anything that reaches here is a programmer
+// bug we can fix without ending the user's session.
+process.on('unhandledRejection', (reason) => {
+  console.error('[CredVault] unhandled rejection:', reason)
+})
+process.on('uncaughtException', (err) => {
+  console.error('[CredVault] uncaught exception:', err)
+})
+
 const APP_VERSION       = '1.0.0'
 const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')
 
