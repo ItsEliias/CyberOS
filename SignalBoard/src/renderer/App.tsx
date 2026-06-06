@@ -83,12 +83,18 @@ export default function App() {
     }
   }, [setItems, setSources, setRefreshing, setLastRefreshed, setContext, setVersion, setSettings, setBookmarks, setBookmarkTags, setSelectedId, setActiveView])
 
-  // Cmd+K toggles the command palette
+  // Cmd+K toggles the command palette; Cmd+R triggers a manual feed refresh.
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
         setPaletteOpen(v => !v)
+      } else if ((e.metaKey || e.ctrlKey) && e.key === 'r') {
+        // Pre-empt the browser's reload shortcut so the user gets a
+        // proper feed-refresh — much more useful than reloading the
+        // entire renderer.
+        e.preventDefault()
+        window.electronAPI.refresh().catch(console.error)
       }
     }
     window.addEventListener('keydown', handleKey)
