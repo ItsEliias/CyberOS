@@ -7,6 +7,7 @@ import {
   VariablesModal, SessionContextBar, ProgressBar,
   StepDotTrack, StepListItem, CompleteRunModal,
 } from './run/RunHelpers'
+import HelpTip from './ui/HelpTip'
 
 // ─── RunView ──────────────────────────────────────────────────────────────────
 
@@ -263,10 +264,17 @@ export default function RunView() {
         )}
         <div className="flex-1" />
         {activeRun.status === 'completed' && (
-          <button onClick={handleExportReport} disabled={exporting} className="text-xs px-3 py-1.5 rounded font-medium"
-            style={{ background: 'rgba(63,185,80,0.15)', color: 'var(--success)', border: '1px solid rgba(63,185,80,0.3)' }}>
-            {exporting ? 'Exporting…' : 'Export to Report'}
-          </button>
+          <>
+            <button onClick={handleExportReport} disabled={exporting} className="text-xs px-3 py-1.5 rounded font-medium"
+              style={{ background: 'rgba(63,185,80,0.15)', color: 'var(--success)', border: '1px solid rgba(63,185,80,0.3)' }}>
+              {exporting ? 'Exporting…' : 'Export to Report'}
+            </button>
+            <HelpTip
+              title="Export"
+              body="Generate a Markdown report of this run — steps, status, notes, and timing — saved to the configured reports folder."
+              accent="#3fb950"
+            />
+          </>
         )}
         <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{done}/{total} steps</span>
         {/* Pause/Resume button (visual only) */}
@@ -285,6 +293,10 @@ export default function RunView() {
           style={{ background: done === total ? '#3fb950' : '#4a9eff', color: '#0a0a0f' }}>
           {done === total ? '✓ Complete Run' : 'End Run'}
         </button>
+        <HelpTip
+          title="Run controls"
+          body="Pause to stop the timer, End/Complete to close the run and move it to history. Use [P] pass, [F/S] skip, [N] notes, arrows to navigate."
+        />
       </div>
 
       {showModal && (

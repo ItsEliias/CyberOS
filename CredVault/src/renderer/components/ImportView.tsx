@@ -3,6 +3,7 @@ import { useStore } from '../store'
 import CredentialModal from './CredentialModal'
 import type { Credential, ReconTarget, ImportPreviewRow, PendingCredential } from '@shared/types'
 import { parseCsv, type CsvFormat } from '../utils/csvImport'
+import HelpTip from './ui/HelpTip'
 
 const FORMAT_LABELS: Record<CsvFormat, string> = {
   '1password': '1Password',
@@ -180,7 +181,10 @@ export default function ImportView() {
       <h2 style={{ fontSize: 16, fontWeight: 600 }}>Import Credentials</h2>
 
       {pendingItems.length > 0 && (
-        <Section title={`Live Queue — ${pendingItems.length} pending from ReconDesk`}>
+        <Section
+          title={`Live Queue — ${pendingItems.length} pending from ReconDesk`}
+          help={<HelpTip title="Pending live queue" body="Credentials freshly captured by ReconDesk and waiting for your review. Approve to encrypt and store, or dismiss to drop without saving." />}
+        >
           <div style={{ padding: '10px 14px', marginBottom: 12, background: 'rgba(255,193,7,0.08)', border: '1px solid rgba(255,193,7,0.3)', borderRadius: 6, fontSize: 12, color: '#ffc107', fontWeight: 500 }}>
             {pendingItems.length} new credential{pendingItems.length !== 1 ? 's' : ''} detected from ReconDesk — approve to encrypt and store
           </div>
@@ -336,11 +340,12 @@ export default function ImportView() {
   )
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function Section({ title, children, help }: { title: string; children: ReactNode; help?: ReactNode }) {
   return (
     <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
-      <div style={{ padding: '10px 16px', background: 'var(--panel)', borderBottom: '1px solid var(--border)', fontSize: 12, fontWeight: 500, color: 'var(--text-dim)' }}>
-        {title}
+      <div style={{ padding: '10px 16px', background: 'var(--panel)', borderBottom: '1px solid var(--border)', fontSize: 12, fontWeight: 500, color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span>{title}</span>
+        {help}
       </div>
       <div style={{ padding: '14px 16px' }}>{children}</div>
     </div>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useMemo } from 'react';
 import { useStore } from '../store';
 import { extractWikiLinks } from '../lib/markdown';
+import HelpTip from './ui/HelpTip';
 import type { NoteFile } from '@shared/types';
 
 interface Node {
@@ -143,6 +144,10 @@ export default function GraphView({ onOpenNote }: Props) {
       <div className="px-4 py-2 border-b flex items-center gap-3 shrink-0"
         style={{ borderColor: 'var(--border)', background: 'var(--bg2)' }}>
         <span className="text-xs font-semibold" style={{ color: 'var(--text-dim)' }}>Graph View</span>
+        <HelpTip
+          title="Graph view"
+          body="Visualises wikilinks between notes. Each node is a note; edges are [[wikilinks]]. Bigger nodes have more connections. Click any node to jump to that note."
+        />
         <span className="text-[10px]" style={{ color: 'var(--text-dim)' }}>
           {nodes.length} nodes · {edges.length} connections
         </span>

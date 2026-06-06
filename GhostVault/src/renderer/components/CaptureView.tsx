@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../store';
+import HelpTip from './ui/HelpTip';
 
 interface Props {
   onSaved: () => void;
@@ -29,7 +30,13 @@ export default function CaptureView({ onSaved }: Props) {
 
   return (
     <div className="flex flex-col h-full p-6 gap-4 max-w-2xl mx-auto w-full">
-      <div className="text-xl font-bold" style={{ color: 'var(--text)' }}>Quick Capture</div>
+      <div className="flex items-center gap-2">
+        <div className="text-xl font-bold" style={{ color: 'var(--text)' }}>Quick Capture</div>
+        <HelpTip
+          title="Quick Capture"
+          body="Drop a fast note into your vault without opening the full editor. Pick a folder, optionally name it, type, then press Capture — also triggered by your global hotkey from anywhere."
+        />
+      </div>
 
       {!vaultPath && (
         <div className="p-4 rounded-lg border text-sm" style={{ borderColor: 'var(--warning, #d29922)', color: 'var(--warning, #d29922)', background: 'rgba(210,153,34,.08)' }}>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import HelpTip from '../ui/HelpTip';
 
 export type ExportFormat = 'markdown' | 'pdf' | 'docx' | 'html';
 
@@ -102,7 +103,13 @@ export default function ExportModal({ onExport, onCancel, exporting, defaultForm
         >
           {/* Header */}
           <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid var(--border)' }}>
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Export Report</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Export Report</h3>
+              <HelpTip
+                title="Export"
+                body="Render the report to PDF, Markdown, HTML, or DOCX. Toggle the Include options to add a TOC, finding tables, or redact credentials before sharing."
+              />
+            </div>
           </div>
 
           {/* Body */}

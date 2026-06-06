@@ -4,6 +4,7 @@ import { useStore } from '../store';
 import type { ReportSection, SectionType } from '@shared/types';
 import { makeId } from '../lib/defaults';
 import { unresolvedCount } from './CommentsPanel';
+import HelpTip from './ui/HelpTip';
 
 interface Props {
   onSelectSection: (id: string) => void;
@@ -74,6 +75,21 @@ export default function SectionList({ onSelectSection, activeView, onViewChange 
         width: 210, flexShrink: 0, borderRight: '1px solid var(--border)',
         display: 'flex', flexDirection: 'column', background: 'var(--panel)'
       }}>
+      {/* Help row */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 6,
+        padding: '8px 10px 4px',
+        flexShrink: 0,
+      }}>
+        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+          Structure
+        </span>
+        <HelpTip
+          title="Sections"
+          body="Drag to reorder. Each section becomes a chapter in the exported report — use the visibility dot to exclude a section from the final document."
+        />
+      </div>
+
       {/* View tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', flexShrink: 0, padding: '6px 8px 0', gap: 2 }}>
         {(['sections', 'findings'] as const).map(v => {

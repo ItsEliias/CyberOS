@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store';
 import SeverityPill from './ui/SeverityPill';
+import HelpTip from './ui/HelpTip';
 import type { Report } from '@shared/types';
 import { ReportCard, ReportListRow, EmptyState, SkeletonCard } from './ReportCards';
 
@@ -90,6 +91,15 @@ export default function ReportLibrary({ onNew, onOpen, onDelete, onDuplicate }: 
         }}
       >
         <div style={{ width: 72, flexShrink: 0 }} />
+
+        {/* Library label with help (no-drag) */}
+        <div className="no-drag" style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Library</span>
+          <HelpTip
+            title="Report Library"
+            body="Every saved report lives here. Search by title, target, or operator; switch between grid and list views; click any card to open the editor."
+          />
+        </div>
 
         {/* Search input with clear button (no-drag) */}
         <div className="flex items-center gap-2 flex-1 no-drag" style={{ maxWidth: 340, position: 'relative' }}>

@@ -91,7 +91,7 @@ export function AuditIssueBadge({ issue }: { issue: AuditIssue }) {
 
 // ─── Card ─────────────────────────────────────────────────────────────────────
 
-export function Card({ title, children }: { title: string; children: ReactNode }) {
+export function Card({ title, children, help }: { title: string; children: ReactNode; help?: ReactNode }) {
   return (
     <div style={{
       border: '1px solid rgba(42,51,71,0.6)',
@@ -105,8 +105,10 @@ export function Card({ title, children }: { title: string; children: ReactNode }
         borderBottom: '1px solid rgba(42,51,71,0.45)',
         fontSize: 11, fontWeight: 600,
         color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.06em',
+        display: 'flex', alignItems: 'center', gap: 8,
       }}>
-        {title}
+        <span>{title}</span>
+        {help}
       </div>
       <div style={{ padding: '16px' }}>{children}</div>
     </div>

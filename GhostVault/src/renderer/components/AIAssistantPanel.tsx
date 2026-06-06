@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
+import HelpTip from './ui/HelpTip';
 
 interface ChatMessage {
   id: number;
@@ -148,7 +149,13 @@ export default function AIAssistantPanel() {
       <div className="px-6 py-4 border-b shrink-0" style={{ borderColor: 'var(--border)', background: 'var(--bg2)' }}>
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-lg font-bold" style={{ color: 'var(--text)' }}>AI Assistant</div>
+            <div className="flex items-center gap-2">
+              <div className="text-lg font-bold" style={{ color: 'var(--text)' }}>AI Assistant</div>
+              <HelpTip
+                title="AI Assistant"
+                body="Chat with a local Ollama model about the active note. Use the quick actions (Format, Summarise, Suggest tags, Expand) to transform the current note, or type a message for a free-form prompt."
+              />
+            </div>
             <div className="text-xs mt-0.5" style={{ color: 'var(--text-dim)' }}>
               Powered by Ollama — runs locally
             </div>

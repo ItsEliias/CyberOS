@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import { useRecondeskStore } from '../../stores/useRecondeskStore'
+import HelpTip from '../ui/HelpTip'
 import type { HashType } from '../../types/recondesk'
 
 function credAgeDays(addedAt: string): number {
@@ -103,8 +104,12 @@ export default function CredentialsTab({ targetId }: { targetId: string }) {
     <div className="flex-1 flex flex-col min-h-0">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2.5 flex-shrink-0" style={{ borderBottom: '1px solid rgba(42,51,71,0.5)', background: 'rgba(7,8,15,0.3)' }}>
-        <span className="heading-sm" style={{ color: '#e6edf3' }}>
+        <span className="inline-flex items-center gap-2 heading-sm" style={{ color: '#e6edf3' }}>
           Credentials <span className="text-[10px] font-normal" style={{ color: '#484f58' }}>({creds.length})</span>
+          <HelpTip
+            title="Credentials"
+            body="Usernames, passwords, and hashes captured from this target. Click the eye to reveal, the clipboard to copy. Age badges flag credentials older than 30 / 90 days for rotation."
+          />
         </span>
         <div className="flex items-center gap-2">
           <button

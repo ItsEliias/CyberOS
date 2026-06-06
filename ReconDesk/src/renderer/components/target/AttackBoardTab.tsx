@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useRecondeskStore, calcHealthScore } from '../../stores/useRecondeskStore'
 import { calcCvssScore, cvssColor } from './CvssWidget'
 import { CardDetailModal } from './AttackBoardCardModal'
+import HelpTip from '../ui/HelpTip'
 import type { AttackCard, AttackStage, CardStatus, Target } from '../../types/recondesk'
 
 const STAGES: { id: AttackStage; label: string; color: string; wip: number }[] = [
@@ -260,6 +261,10 @@ export default function AttackBoardTab({ targetId }: { targetId: string }) {
       <div className="flex items-center justify-between px-4 py-2.5 flex-shrink-0" style={{ borderBottom: '1px solid rgba(42,51,71,0.5)', background: 'rgba(7,8,15,0.3)' }}>
         <div className="flex items-center gap-3">
           <span className="heading-sm" style={{ color: '#e6edf3' }}>Attack Board <span className="text-[10px] font-normal" style={{ color: '#484f58' }}>({cards.length} cards)</span></span>
+          <HelpTip
+            title="Attack Board"
+            body="Kanban of attack ideas grouped by kill-chain stage (Recon → Loot). Drag cards between columns to move them; the WIP badge warns when a column is over its limit. Click a card to open its detail modal."
+          />
           <span className="text-[10px] px-1.5 py-0.5 rounded font-mono font-bold" style={{ color: healthColor(health), background: `${healthColor(health)}15`, border: `1px solid ${healthColor(health)}25` }}>
             Health {health}
           </span>

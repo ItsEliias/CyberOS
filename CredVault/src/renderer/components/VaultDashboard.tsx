@@ -8,6 +8,7 @@ import { motion } from 'framer-motion'
 import { useStore } from '../store'
 import { scorePassword } from '../utils/passwordStrength'
 import type { Credential } from '@shared/types'
+import HelpTip from './ui/HelpTip'
 
 interface Props {
   onAddClick:       () => void
@@ -136,8 +137,12 @@ export default function VaultDashboard({
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span style={{ fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600 }}>
             {isEmpty ? 'Welcome' : 'Vault overview'}
+            <HelpTip
+              title="Vault overview"
+              body="Snapshot of your vault — total credentials, password health, breach hits and pending imports. Select a credential on the left to see its details instead."
+            />
           </span>
           <h2 style={{ fontSize: 20, fontWeight: 700, color: '#e6edf3', margin: 0, letterSpacing: '-0.01em' }}>
             {isEmpty ? 'Get started with CredVault' : 'At a glance'}
@@ -185,8 +190,12 @@ export default function VaultDashboard({
       {/* Quick actions */}
       <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>
             Quick actions
+            <HelpTip
+              title="Quick actions"
+              body="One-click shortcuts to add a credential, generate a strong password, import from CSV/JSON, or scan all stored passwords against Have I Been Pwned."
+            />
           </span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
@@ -242,8 +251,12 @@ export default function VaultDashboard({
       {weakest.length > 0 && (
         <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>
               Needs attention
+              <HelpTip
+                title="Needs attention"
+                body="Your five weakest-scoring passwords. Click one to jump straight to its detail panel and rotate it with a freshly generated secret."
+              />
             </span>
             <span style={{ fontSize: 10, color: '#f85149', fontWeight: 600 }}>
               {weakest.length} weak password{weakest.length === 1 ? '' : 's'}

@@ -2,6 +2,7 @@
 
 import type { ActiveView } from '../store'
 import { useNetLabStore } from '../store'
+import HelpTip from './ui/HelpTip'
 
 interface NavItem {
   id: ActiveView
@@ -28,8 +29,12 @@ export default function Sidebar() {
       style={{ width: 220, background: '#0a0a0f' }}
     >
       {/* App subtitle */}
-      <div className="px-4 mb-3">
+      <div className="px-4 mb-3 flex items-center gap-2">
         <span className="text-2xs text-text-muted uppercase tracking-widest">Network Lab</span>
+        <HelpTip
+          title="Navigation"
+          body="Jump between Labs, Reference, Topology, Snippets, Progress, and Settings. The Labs section is where you pick an exercise and step through it."
+        />
       </div>
 
       {/* Navigation */}

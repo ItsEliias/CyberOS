@@ -1,6 +1,7 @@
 // NewReportWizardParts — extracted step components for NewReportWizard
 
 import TemplateCard from './TemplateCard';
+import HelpTip from './ui/HelpTip';
 import { PLATFORMS } from '../lib/defaults';
 import type { Report, ReconDeskTarget, WriteupFile, ReportTemplate } from '@shared/types';
 
@@ -28,9 +29,15 @@ export function StepTemplate({ selected, onSelect }: {
   ];
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <p style={{ color: 'var(--text-dim)', fontSize: 13, margin: 0 }}>
-        Choose a starting structure for your report. You can customise sections after creation.
-      </p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <p style={{ color: 'var(--text-dim)', fontSize: 13, margin: 0 }}>
+          Choose a starting structure for your report. You can customise sections after creation.
+        </p>
+        <HelpTip
+          title="Templates"
+          body="Each template seeds a different section layout (PTES, OWASP web, HTB write-up, etc.). Pick the closest match — you can add, remove, and rename sections after."
+        />
+      </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         {templates.map(t => (
           <TemplateCard key={t} id={t} selected={selected === t} onSelect={onSelect} />

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import { useRecondeskStore } from '../../stores/useRecondeskStore'
+import HelpTip from '../ui/HelpTip'
 import type { TimelineEntryType } from '../../types/recondesk'
 
 const TYPE_CONFIG: Record<TimelineEntryType, { color: string; label: string }> = {
@@ -87,11 +88,15 @@ export default function TimelineTab({ targetId }: { targetId: string }) {
     <div className="flex-1 flex flex-col min-h-0">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2.5 flex-shrink-0" style={{ borderBottom: '1px solid rgba(42,51,71,0.5)', background: 'rgba(7,8,15,0.3)' }}>
-        <span className="heading-sm" style={{ color: '#e6edf3' }}>
+        <span className="inline-flex items-center gap-2 heading-sm" style={{ color: '#e6edf3' }}>
           Timeline
-          <span className="text-[10px] font-normal ml-1.5" style={{ color: '#484f58' }}>
+          <span className="text-[10px] font-normal" style={{ color: '#484f58' }}>
             ({filtered.length}{filtered.length !== timeline.length ? ` of ${timeline.length}` : ''})
           </span>
+          <HelpTip
+            title="Timeline"
+            body="Reverse-chronological log of every action on this target: ports added, credentials captured, attack cards moved, status changes, CVE alerts. Use Filter to narrow by event type."
+          />
         </span>
         <div className="relative">
           <button

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { useRecondeskStore, calcHealthScore } from '../../stores/useRecondeskStore'
 import type { TargetStatus, Platform, Difficulty, AttackStage } from '../../types/recondesk'
 import { ScreenshotsPanel, AiSuggestionsPanel, NetworkDiagram, RiskGauge, computeRiskScore } from './OverviewTabPanels'
+import HelpTip from '../ui/HelpTip'
 
 const PLATFORM_STYLE: Record<Platform, { color: string; bg: string; border: string }> = {
   HTB:      { color: '#f85149', bg: 'rgba(248,81,73,0.10)',   border: 'rgba(248,81,73,0.20)'   },
@@ -245,6 +246,10 @@ export default function OverviewTab({ targetId }: { targetId: string }) {
                 <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
                   <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: STATUS_COLORS[target.status] }} />
                   <h1 className="heading-xl" style={{ color: '#e6edf3' }}>{target.name}</h1>
+                  <HelpTip
+                    title="Overview"
+                    body="Snapshot of this target: identity (IP, platform, OS), status, difficulty, tags, quick stats, attack-stage progress, and a risk gauge. Edit metadata via Edit, jump to Map / Export from here."
+                  />
                   {enrichBadge}
                   <span className="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold" style={{ color: healthColor(health), background: `${healthColor(health)}12`, border: `1px solid ${healthColor(health)}25` }}>
                     {health}

@@ -1,6 +1,7 @@
 // NetworkMap — FilterPanel.tsx — Dark glass filter sidebar (UI redesign, logic unchanged)
 import { useMemo, useState } from 'react'
 import type { NetworkNode } from '@shared/types'
+import HelpTip from './ui/HelpTip'
 
 export interface FilterState {
   osType: string
@@ -160,6 +161,10 @@ export default function FilterPanel({ nodes, filters, onChange, onClose }: Props
           <span style={{ fontSize: 11, fontWeight: 700, color: '#ff8c42', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
             Filters
           </span>
+          <HelpTip
+            title="Filters"
+            body="Hide nodes that don't match your criteria — OS, open port, or date range. Active filter count shows in the toolbar badge."
+          />
           {activeCount > 0 && (
             <span
               key={activeCount}

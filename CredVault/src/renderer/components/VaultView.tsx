@@ -8,6 +8,7 @@ import { FilterChip, Empty, NoResults } from './VaultViewStates'
 import CredentialDetailPanel from './CredentialDetailPanel'
 import VaultDashboard from './VaultDashboard'
 import PasswordGeneratorModal from './PasswordGeneratorModal'
+import HelpTip from './ui/HelpTip'
 
 const SORT_OPTIONS: { value: SortOrder; label: string }[] = [
   { value: null,        label: 'Default'   },
@@ -166,8 +167,22 @@ export default function VaultView() {
         overflow: 'hidden',
       }}>
 
+        {/* Vault list header */}
+        <div style={{ padding: '8px 12px 4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>
+            Vault
+            <HelpTip
+              title="Vault list"
+              body="All stored credentials. Filter by tag, source, or category, switch scope tabs, fuzzy-search by service, then click an item to open its detail panel."
+            />
+          </span>
+          <span style={{ fontSize: 10, color: '#4a5568', fontFamily: 'JetBrains Mono, monospace' }}>
+            {credentials.length}
+          </span>
+        </div>
+
         {/* Search bar */}
-        <div style={{ padding: '10px 12px 6px', borderBottom: '1px solid rgba(42,51,71,0.25)' }}>
+        <div style={{ padding: '6px 12px 6px', borderBottom: '1px solid rgba(42,51,71,0.25)' }}>
           <div className="search-input-wrap" style={{ position: 'relative' }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
               style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#4a5568', pointerEvents: 'none', zIndex: 1 }}>
@@ -234,15 +249,22 @@ export default function VaultView() {
           >
             {SORT_OPTIONS.map(o => <option key={String(o.value)} value={o.value ?? ''}>{o.label}</option>)}
           </select>
-          <button
-            className="btn btn-ghost"
-            style={{ fontSize: 10, padding: '2px 6px', color: breachedCount > 0 ? '#f85149' : breachDone ? '#3fb950' : '#8b949e', minWidth: 52, justifyContent: 'center' }}
-            onClick={runBreachCheck}
-            disabled={breachRunning}
-            title="HIBP breach check"
-          >
-            {breachRunning ? <span className="hibp-spinner" /> : breachDone && breachedCount > 0 ? `⚠ ${breachedCount}` : 'HIBP'}
-          </button>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+            <button
+              className="btn btn-ghost"
+              style={{ fontSize: 10, padding: '2px 6px', color: breachedCount > 0 ? '#f85149' : breachDone ? '#3fb950' : '#8b949e', minWidth: 52, justifyContent: 'center' }}
+              onClick={runBreachCheck}
+              disabled={breachRunning}
+              title="HIBP breach check"
+            >
+              {breachRunning ? <span className="hibp-spinner" /> : breachDone && breachedCount > 0 ? `⚠ ${breachedCount}` : 'HIBP'}
+            </button>
+            <HelpTip
+              title="HIBP scan"
+              body="Hashes every stored password locally and queries the Have I Been Pwned k-anonymity API to flag any that appear in known data breaches. Your full passwords never leave the device."
+              align="right"
+            />
+          </span>
           <button
             className="btn btn-accent"
             style={{ fontSize: 11, padding: '3px 10px', fontWeight: 600 }}

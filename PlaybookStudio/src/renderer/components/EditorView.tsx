@@ -3,6 +3,7 @@ import { useStore } from '../store'
 import type { Playbook, PlaybookStep, PlaybookCategory } from '@shared/types'
 import StepEditorRow from './editor/StepEditor'
 import { AiGenerateModal, VariablesPanel } from './editor/EditorHelpers'
+import HelpTip from './ui/HelpTip'
 
 const PB_CATS: PlaybookCategory[] = ['web-app', 'network', 'active-directory', 'linux', 'windows', 'ctf', 'custom', 'ccna']
 
@@ -268,6 +269,10 @@ export default function EditorView() {
           <span className="text-sm font-medium truncate" style={{ color: '#e6edf3' }}>
             {disabled ? `${pb.name} (view only)` : (pb.name || 'Untitled Playbook')}
           </span>
+          <HelpTip
+            title="Playbook editor"
+            body="Edit playbook details, variables, and the ordered list of steps. Reorder, duplicate, or add dependencies between steps; use AI Steps to draft new ones."
+          />
         </div>
 
         {error && <span className="text-xs flex-shrink-0" style={{ color: '#f85149' }}>{error}</span>}
@@ -315,6 +320,10 @@ export default function EditorView() {
           >
             <div className="w-px h-4 rounded-full" style={{ background: '#4a9eff' }} />
             <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#4a9eff' }}>Playbook Details</span>
+            <HelpTip
+              title="Playbook details"
+              body="Name, category, version, description, and searchable tags. These show up on the library card and drive filtering."
+            />
           </div>
           <div className="flex gap-3">
             <div className="flex-1">
@@ -371,6 +380,10 @@ export default function EditorView() {
             >
               {pb.steps.length}
             </span>
+            <HelpTip
+              title="Steps"
+              body="Ordered actions in the playbook. Each step has commands, notes, optional dependencies, and a category. Drag to reorder or use the arrows."
+            />
           </div>
           {!disabled && (
             <div className="flex items-center gap-1.5">

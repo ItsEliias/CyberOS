@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useNetLabStore } from '../store'
 import type { NetLabPrefs } from '@shared/types'
+import HelpTip from './ui/HelpTip'
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -78,7 +79,13 @@ export default function SettingsView() {
 
         {/* Appearance */}
         <div className="mb-6">
-          <p className="text-2xs text-text-muted uppercase tracking-wider mb-3">Appearance</p>
+          <div className="flex items-center gap-2 mb-3">
+            <p className="text-2xs text-text-muted uppercase tracking-wider">Appearance</p>
+            <HelpTip
+              title="Appearance"
+              body="Theme and visual settings. NetLab ships dark-only by design — optimized for low-light lab sessions."
+            />
+          </div>
           <div className="p-4 rounded border border-border-subtle" style={{ background: '#0f1117' }}>
             <SettingRow
               label="Theme"
@@ -94,7 +101,13 @@ export default function SettingsView() {
 
         {/* Integrations */}
         <div className="mb-6">
-          <p className="text-2xs text-text-muted uppercase tracking-wider mb-3">Integrations</p>
+          <div className="flex items-center gap-2 mb-3">
+            <p className="text-2xs text-text-muted uppercase tracking-wider">Integrations</p>
+            <HelpTip
+              title="Integrations"
+              body="Connect NetLab to sibling CYBERTOOLS apps: TerminalLink for one-click command execution and GhostVault for archiving lab notes."
+            />
+          </div>
           <div className="p-4 rounded border border-border-subtle" style={{ background: '#0f1117' }}>
             <SettingRow
               label="TerminalLink Path"
@@ -121,7 +134,13 @@ export default function SettingsView() {
 
         {/* Data */}
         <div className="mb-6">
-          <p className="text-2xs text-text-muted uppercase tracking-wider mb-3">Data</p>
+          <div className="flex items-center gap-2 mb-3">
+            <p className="text-2xs text-text-muted uppercase tracking-wider">Data</p>
+            <HelpTip
+              title="Data"
+              body="Manage where custom labs are stored, export your progress to JSON for backup, or reset all completion history."
+            />
+          </div>
           <div className="p-4 rounded border border-border-subtle" style={{ background: '#0f1117' }}>
             <SettingRow
               label="Lab Data Directory"

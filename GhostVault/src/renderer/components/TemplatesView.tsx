@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { TEMPLATES_BY_MODE, TEMPLATE_LABELS, getTemplate } from '../lib/templates';
 import TemplateEditor from './templates/TemplateEditor';
 import { useStore } from '../store';
+import HelpTip from './ui/HelpTip';
 import type { AiCtx, Template } from '@shared/types';
 
 interface Props {
@@ -164,7 +165,13 @@ export default function TemplatesView({ onInsert }: Props) {
       style={{ scrollbarWidth: 'thin', scrollbarColor: 'var(--border) transparent' }}
     >
       <div className="flex items-center justify-between mb-1">
-        <div className="text-xl font-bold" style={{ color: 'var(--text)' }}>Templates</div>
+        <div className="flex items-center gap-2">
+          <div className="text-xl font-bold" style={{ color: 'var(--text)' }}>Templates</div>
+          <HelpTip
+            title="Templates"
+            body="Pre-built note skeletons (lab session, recon finding, cheatsheets, etc.). Click Use / Insert on a template and it drops into your active note with placeholders like {{LAB}} filled from session context."
+          />
+        </div>
         <div className="flex gap-2">
           <button
             onClick={seedCheatsheets}

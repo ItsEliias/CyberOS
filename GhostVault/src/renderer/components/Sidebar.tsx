@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
+import HelpTip from './ui/HelpTip';
 import type { NoteFile, ViewId } from '@shared/types';
 
 interface Props {
@@ -269,6 +270,18 @@ export default function Sidebar({ onNewNote, onNewFolder, onOpenNote, onContextM
         <>
           {/* Search + actions */}
           <div className="px-2 py-2" style={{ borderBottom: '1px solid rgba(42,51,71,0.3)' }}>
+            <div className="flex items-center justify-between mb-1.5 px-0.5">
+              <span
+                className="text-[9px] font-semibold uppercase tracking-wider"
+                style={{ color: 'rgba(139,148,158,0.5)', fontFamily: 'var(--font-display)' }}
+              >
+                Notes
+              </span>
+              <HelpTip
+                title="Note list"
+                body="Type to filter notes by name or folder. Use + Note to create a new note in the active folder, + Folder to add a new section. Right-click a note for pin / rename / delete."
+              />
+            </div>
             <div className="relative">
               <input
                 value={searchQuery}
@@ -324,6 +337,18 @@ export default function Sidebar({ onNewNote, onNewFolder, onOpenNote, onContextM
           </div>
 
           {/* Note tree */}
+          <div className="flex items-center justify-between px-3 pt-2 pb-0.5">
+            <span
+              className="text-[9px] font-semibold uppercase tracking-wider"
+              style={{ color: 'rgba(139,148,158,0.5)', fontFamily: 'var(--font-display)' }}
+            >
+              Folders
+            </span>
+            <HelpTip
+              title="Folder tree"
+              body="Your vault's folder structure. Click a folder name to expand or collapse. Pinned notes always appear at the top; root-level notes live under Root."
+            />
+          </div>
           <div
             className="flex-1 overflow-y-auto py-1"
             style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(42,51,71,0.4) transparent' }}

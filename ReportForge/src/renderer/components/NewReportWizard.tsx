@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { makeReportFromTemplate, makeId } from '../lib/defaults';
 import { StepTemplate, Step2Form, Step3Import, Step4Writeup, ReportCoverPreview } from './NewReportWizardParts';
+import HelpTip from './ui/HelpTip';
 import type { Report, ReconDeskTarget, WriteupFile, ReportTemplate } from '@shared/types';
 
 interface Props {
@@ -124,6 +125,13 @@ export default function NewReportWizard({ onComplete, onCancel }: Props) {
 
   const canNext2 = draft.title.trim() && draft.targetName.trim() && draft.operator.trim();
 
+  const STEP_HELP: Record<number, { title: string; body: string }> = {
+    1: { title: 'Choose Template', body: 'Pick a starting structure (PTES, OWASP Web, HTB, blank, etc.). Sections seed in for you and stay fully editable.' },
+    2: { title: 'Report Metadata', body: 'Set the title, target, platform, and operator. These propagate into the cover page and report variables.' },
+    3: { title: 'ReconDesk Import', body: 'Pull a target from the shared ReconDesk app to auto-fill target name, IP, and any captured credentials. Optional — Skip to continue.' },
+    4: { title: 'Writeup Import', body: 'Seed the Executive Summary from a GhostVault session, a CyberLab markdown writeup, or pasted markdown. Optional.' },
+  };
+
   return (
     <div style={{
       position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
@@ -142,7 +150,13 @@ export default function NewReportWizard({ onComplete, onCancel }: Props) {
         {/* Header */}
         <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>New Report</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>New Report</h2>
+              <HelpTip
+                title={STEP_HELP[step].title}
+                body={STEP_HELP[step].body}
+              />
+            </div>
             <span style={{ fontSize: 11, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
               {step} / {TOTAL_STEPS}
             </span>
