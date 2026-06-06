@@ -393,6 +393,11 @@ ipcMain.handle('open-credvault', () => {
 // ─── IPC: Capture save ────────────────────────────────────────────────────────
 ipcMain.handle('capture:save', async (_e, payload: CapturePayload) => {
   try {
+    if (!payload || typeof payload !== 'object') return { ok: false, path: '' };
+    if (typeof payload.imageData !== 'string') return { ok: false, path: '' };
+    // Cap the base64 PNG at 50 MB — anything larger is a renderer trying to
+    // exhaust the heap via Buffer.from. A normal full-screen PNG is <10 MB.
+    if (payload.imageData.length > 50 * 1024 * 1024) return { ok: false, path: '' };
     const base64 = payload.imageData.replace(/^data:image\/png;base64,/, '');
     const buffer = Buffer.from(base64, 'base64');
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -406,17 +411,30 @@ ipcMain.handle('capture:save', async (_e, payload: CapturePayload) => {
         const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
         activeLab = (cfg.shared_context as Record<string, string>)?.activeLab ?? 'Unknown';
       } catch { /* fall through to default */ }
-      const vaultBase = path.join(
-        os.homedir(), 'Documents', 'CyberOS-Vault', 'CyberLab', activeLab, 'screenshots'
-      );
+      // Sanitize activeLab — it's read from the shared config which a
+      // sibling app (or hostile patch via terminallink:config:write
+      // pre-hardening) could populate with '../../../.ssh'.
+      const safeLab = activeLab.replace(/[^a-zA-Z0-9_\- ]/g, '_').trim() || 'Unknown';
+      const vaultRoot = path.join(os.homedir(), 'Documents', 'CyberOS-Vault', 'CyberLab');
+      const vaultBase = path.join(vaultRoot, safeLab, 'screenshots');
+      // Defence-in-depth — verify the resolved path stays under vaultRoot.
+      const resolvedBase = path.resolve(vaultBase);
+      const resolvedRoot = path.resolve(vaultRoot);
+      const sep = resolvedRoot.endsWith(path.sep) ? resolvedRoot : resolvedRoot + path.sep;
+      if (!resolvedBase.startsWith(sep)) return { ok: false, path: '' };
       fs.mkdirSync(vaultBase, { recursive: true });
       savePath = path.join(vaultBase, filename);
     } else {
       savePath = path.join(os.homedir(), 'Downloads', filename);
     }
 
-    if (payload.label.trim()) {
-      fs.writeFileSync(savePath.replace('.png', '.txt'), payload.label, 'utf8');
+    if (typeof payload.label === 'string' && payload.label.trim()) {
+      // Cap label at 16 KB — keeps a malicious payload from writing
+      // arbitrarily large companion .txt files.
+      const labelBounded = payload.label.length > 16 * 1024
+        ? payload.label.slice(0, 16 * 1024)
+        : payload.label;
+      fs.writeFileSync(savePath.replace('.png', '.txt'), labelBounded, 'utf8');
     }
     fs.writeFileSync(savePath, buffer);
 
