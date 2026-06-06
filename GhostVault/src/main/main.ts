@@ -711,14 +711,26 @@ ipcMain.handle('note:versions:list', (_, notePath: string): import('../shared/ty
 
 ipcMain.handle('note:versions:save', (_, notePath: string, content: string): void => {
   if (!isUnderVault(notePath)) return;
+  if (typeof content !== 'string') return;
+  // 2 MB per version. 20 versions × 2 MB = 40 MB ceiling on .versions.json,
+  // which keeps note read amplification reasonable.
+  if (content.length > 2 * 1024 * 1024) return;
   const vp = getVersionsPath(notePath);
   let versions: import('../shared/types.js').NoteVersion[] = [];
   try {
     if (fs.existsSync(vp)) versions = JSON.parse(fs.readFileSync(vp, 'utf8'));
   } catch { /* ignore */ }
+  if (!Array.isArray(versions)) versions = [];
   versions.push({ timestamp: Date.now(), content });
   if (versions.length > 20) versions = versions.slice(-20);
-  try { fs.writeFileSync(vp, JSON.stringify(versions, null, 2), 'utf8'); } catch { /* ignore */ }
+  // Atomic — versions file is read on every note open; a torn write would
+  // surface as an empty version history.
+  try {
+    const json = JSON.stringify(versions, null, 2);
+    const tmp = `${vp}.tmp-${process.pid}-${Date.now()}`;
+    fs.writeFileSync(tmp, json, 'utf8');
+    fs.renameSync(tmp, vp);
+  } catch { /* ignore */ }
 });
 
 // ─── Note encryption ──────────────────────────────────────────────────────────
