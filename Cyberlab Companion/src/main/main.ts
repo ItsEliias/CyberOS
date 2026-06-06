@@ -585,7 +585,11 @@ function registerIPC() {
           lastUpdated: new Date().toISOString(),
           updatedBy:   'CyberLab'
         };
-        fs.writeFileSync(CONFIG_PATH, JSON.stringify(shared, null, 2), 'utf8');
+        // Atomic — every sibling app polls this file; a torn write breaks
+        // SSO state across the suite.
+        const tmp = `${CONFIG_PATH}.tmp`;
+        fs.writeFileSync(tmp, JSON.stringify(shared, null, 2), 'utf8');
+        fs.renameSync(tmp, CONFIG_PATH);
       }
     } catch {}
   });
