@@ -495,7 +495,20 @@ ipcMain.handle('get-always-on-top', () => mainWindow?.isAlwaysOnTop() ?? false);
 ipcMain.handle('minimize-window', () => { mainWindow?.minimize(); });
 ipcMain.handle('close-window',    () => { mainWindow?.close(); });
 
+// Returns true only when the supplied path matches the configured vault.
+// Used as the gate for IPCs that walk a directory tree — without this a
+// renderer could enumerate the entire filesystem by passing '/'.
+function isConfiguredVault(vp: unknown): boolean {
+  if (typeof vp !== 'string' || !vp) return false;
+  const cfg = loadConfig();
+  if (!cfg.vaultPath) return false;
+  try {
+    return path.resolve(vp) === path.resolve(cfg.vaultPath);
+  } catch { return false; }
+}
+
 ipcMain.handle('load-vault', (_, vaultPath: string) => {
+  if (!isConfiguredVault(vaultPath)) return { notes: [], folders: VAULT_FOLDERS };
   const notes   = listVaultNotes(vaultPath);
   const folders: string[] = fs.existsSync(vaultPath)
     ? fs.readdirSync(vaultPath, { withFileTypes: true })
@@ -505,7 +518,10 @@ ipcMain.handle('load-vault', (_, vaultPath: string) => {
   return { notes, folders };
 });
 
-ipcMain.handle('list-notes',  (_, vaultPath: string) => listVaultNotes(vaultPath));
+ipcMain.handle('list-notes',  (_, vaultPath: string) => {
+  if (!isConfiguredVault(vaultPath)) return [];
+  return listVaultNotes(vaultPath);
+});
 ipcMain.handle('read-note',   (_, filePath: string)  => {
   if (!isUnderVault(filePath)) return '';
   return readNote(filePath);
@@ -555,7 +571,8 @@ ipcMain.handle('create-folder', async (_, vaultPath: string, folderName: string)
 });
 
 ipcMain.handle('list-folders', (_, vaultPath: string): string[] => {
-  if (!vaultPath || !fs.existsSync(vaultPath)) return VAULT_FOLDERS;
+  if (!isConfiguredVault(vaultPath)) return VAULT_FOLDERS;
+  if (!fs.existsSync(vaultPath)) return VAULT_FOLDERS;
   try {
     return fs.readdirSync(vaultPath, { withFileTypes: true })
       .filter(e => e.isDirectory() && !e.name.startsWith('.'))
