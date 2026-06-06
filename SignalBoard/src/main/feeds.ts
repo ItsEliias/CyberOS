@@ -266,27 +266,37 @@ function parseCve(json: string, source: FeedSource): FeedItem[] {
   try {
     const data = JSON.parse(json) as CirclCve[]
     const now  = new Date().toISOString()
-    return data.slice(0, 20).map(cve => {
-      const id      = cve.id ?? 'UNKNOWN'
-      const summary = (cve.summary ?? '').slice(0, 500)
-      const cvss    = cve.cvss ? ` · CVSS ${cve.cvss}` : ''
-      const score   = 0
-      return {
-        id:             `${source.id}::${id}`,
-        sourceId:       source.id,
-        sourceName:     source.name,
-        title:          id,
-        url:            `https://cve.mitre.org/cgi-bin/cvename.cgi?name=${id}`,
-        summary:        `${summary}${cvss}`,
-        publishedAt:    cve.Published ? new Date(cve.Published).toISOString() : now,
-        fetchedAt:      now,
-        tags:           ['cve'],
-        read:           false,
-        saved:          false,
-        relevanceScore: score,
-        relevanceTier:  computeTier(score),
-      } satisfies FeedItem
-    })
+    const out: FeedItem[] = []
+    for (const cve of data.slice(0, 20)) {
+      try {
+        const id      = cve.id ?? 'UNKNOWN'
+        const summary = (cve.summary ?? '').slice(0, 500)
+        const cvss    = cve.cvss ? ` · CVSS ${cve.cvss}` : ''
+        const score   = 0
+        // Same fallback pattern as parseRss — malformed dates throw.
+        const parsedDate = cve.Published ? new Date(cve.Published) : null
+        const publishedAt = parsedDate && Number.isFinite(parsedDate.getTime())
+          ? parsedDate.toISOString() : now
+        out.push({
+          id:             `${source.id}::${id}`,
+          sourceId:       source.id,
+          sourceName:     source.name,
+          title:          id,
+          url:            `https://cve.mitre.org/cgi-bin/cvename.cgi?name=${id}`,
+          summary:        `${summary}${cvss}`,
+          publishedAt,
+          fetchedAt:      now,
+          tags:           ['cve'],
+          read:           false,
+          saved:          false,
+          relevanceScore: score,
+          relevanceTier:  computeTier(score),
+        } satisfies FeedItem)
+      } catch (e) {
+        console.warn(`[SignalBoard] skipping CVE in ${source.name}:`, (e as Error).message)
+      }
+    }
+    return out
   } catch (e) {
     console.warn('[SignalBoard] CVE parse error:', (e as Error).message)
     return []
