@@ -264,6 +264,10 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
   // ── Export: save dialog ─────────────────────────────────────────────────────
   ipcMain.handle('terminallink:export:dialog', async (_evt, content: string) => {
     try {
+      if (typeof content !== 'string') return { success: false, reason: 'invalid' };
+      // Bound the dump — a renderer can otherwise call us with a multi-GB
+      // string assembled from the command log and OOM the main process.
+      if (content.length > 200 * 1024 * 1024) return { success: false, reason: 'too large' };
       const result = await dialog.showSaveDialog(win, {
         title: 'Export Command History',
         defaultPath: path.join(os.homedir(), `terminallink-history-${Date.now()}.txt`),
