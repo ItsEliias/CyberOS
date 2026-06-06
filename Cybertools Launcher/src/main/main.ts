@@ -16,7 +16,7 @@ import {
   addActivityEntry, clearActivityFeed, writeTrigger
 } from './config.js';
 import * as ecosystemBus from './ecosystem-bus.js';
-import { peerAppPath, userDataDir, sharedConfigPath } from './platform.js';
+import { peerAppPath, userDataDir, sharedConfigPath, launchPeerApp } from './platform.js';
 import type { VpnStatus } from '../shared/types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1423,14 +1423,14 @@ function setupAppManagerIPC(): void {
   });
 
   ipcMain.handle('app-manager:open', async (_e, { productName }: { productName: string }) => {
-    try {
-      const child = spawn('open', [`/Applications/${productName}.app`], { detached: true, stdio: 'ignore' });
-      child.on('error', (err) => console.error('[app-manager:open]', err.message));
-      child.unref();
-      return { success: true };
-    } catch (err) {
-      return { success: false, error: (err as Error).message };
+    // Cross-platform via launchPeerApp: /Applications/X.app on macOS,
+    // %LOCALAPPDATA%\Programs\X\X.exe on Windows, /usr/local/bin/x on Linux.
+    if (typeof productName !== 'string' || !productName) {
+      return { success: false, error: 'Invalid productName' };
     }
+    const ok = launchPeerApp(productName);
+    if (!ok) return { success: false, error: `${productName} is not installed` };
+    return { success: true };
   });
 }
 
