@@ -204,9 +204,30 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
   });
 
   // ── Config: write (terminallink_status patch) ───────────────────────────────
+  // Only allow a tiny whitelist of status keys through. The shared cybertools
+  // config is read by every sibling app — letting the renderer write arbitrary
+  // shapes (or prototype-pollution keys) would let it influence what those
+  // other apps see for "TerminalLink status".
+  const STATUS_ALLOWED = new Set([
+    'active',
+    'lastActive',
+    'commandCount',
+    'activeSessionId',
+    'paneCount',
+  ]);
   ipcMain.handle('terminallink:config:write', (_evt, patch: Record<string, unknown>) => {
     try {
-      writeConfig({ terminallink_status: patch });
+      if (!patch || typeof patch !== 'object' || Array.isArray(patch)) {
+        return { error: 'invalid patch' };
+      }
+      const safe: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(patch)) {
+        // Block prototype-pollution sentinels regardless of the allow-list.
+        if (k === '__proto__' || k === 'prototype' || k === 'constructor') continue;
+        if (!STATUS_ALLOWED.has(k)) continue;
+        safe[k] = v;
+      }
+      writeConfig({ terminallink_status: safe });
       return { success: true };
     } catch (e) {
       return { error: (e as Error).message };
