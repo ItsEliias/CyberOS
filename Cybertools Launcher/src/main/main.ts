@@ -127,9 +127,23 @@ function createTrayIcon(): Electron.NativeImage {
 function detectVPN(): VpnStatus {
   const ifaces   = os.networkInterfaces();
   const patterns = ['tun','tap','vpn','proton','wg','ppp','utun','ipsec','ovpn','nord'];
+  // A real VPN tunnel carries routable traffic. macOS keeps utun0..utunN
+  // around for Continuity / AirDrop with only link-local fe80:: IPv6 — those
+  // would otherwise be misread as "VPN active". Require at least one address
+  // that isn't link-local and isn't loopback before flagging the interface.
+  function hasRoutableAddress(addrs: os.NetworkInterfaceInfo[] | undefined): boolean {
+    if (!addrs) return false;
+    return addrs.some(a => {
+      if (a.internal) return false;
+      const ip = a.address || '';
+      if (a.family === 'IPv6' && ip.toLowerCase().startsWith('fe80')) return false;
+      if (a.family === 'IPv4' && ip.startsWith('169.254.'))            return false;
+      return true;
+    });
+  }
   for (const [name, addrs] of Object.entries(ifaces)) {
     const lo = name.toLowerCase();
-    if (patterns.some(p => lo.includes(p)) && addrs && addrs.length > 0) {
+    if (patterns.some(p => lo.includes(p)) && hasRoutableAddress(addrs)) {
       return { active: true, interface: name };
     }
   }
