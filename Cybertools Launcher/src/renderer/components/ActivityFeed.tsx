@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatRelativeTime } from '../lib/utils';
 import type { ActivityEntry, EcosystemEvent } from '@shared/types';
+import HelpTip from './ui/HelpTip';
 
 interface Props {
   entries: ActivityEntry[];
@@ -38,22 +39,40 @@ function labelFor(eventType: string, data: Record<string, unknown> | undefined):
   const d = data || {};
   switch (eventType) {
     case 'launcher.opened':              return 'Launcher opened';
+    case 'launcher.backup.created':      return `Backup saved${d.file ? `: ${d.file}` : ''}` +
+                                                (d.count != null ? ` (${d.count} apps${d.encrypted ? ', encrypted' : ''})` : '');
+    case 'launcher.backup.restored':     return `Backup restored${d.file ? `: ${d.file}` : ''}` +
+                                                (d.count != null ? ` (${d.count} files)` : '');
     case 'app:launched':                 return 'App launched';
     case 'app:closed':                   return 'App closed';
+    case 'dashboard:launched':           return 'Dashboard opened';
+    case 'dashboard:closed':             return 'Dashboard closed';
+    case 'ghostvault.app.opened':        return 'GhostVault opened';
+    case 'vaultcore.app.opened':         return 'VaultCore opened';
 
-    case 'cyberlab.session.started':     return `Lab session started: ${d.lab || ''}`.trim();
-    case 'cyberlab.session.ended':       return `Lab session ended: ${d.lab || ''}`.trim();
-    case 'cyberlab.flag.captured':       return `Flag captured: ${d.lab || ''}`.trim();
+    case 'cyberlab.session.started':     return `Lab session started${d.lab ? `: ${d.lab}` : ''}${d.platform ? ` (${d.platform})` : ''}`.trim();
+    case 'cyberlab.session.ended':       return `Lab session ended${d.lab ? `: ${d.lab}` : ''}`.trim();
+    case 'cyberlab.flag.captured':       return `Flag captured${d.lab ? `: ${d.lab}` : ''}`.trim();
     case 'cyberlab.connected':           return `Connected to ${d.platform || 'platform'}`;
+    case 'cyberlab.htb.connected':       return 'HackTheBox connected';
+    case 'cyberlab.thm.connected':       return 'TryHackMe connected';
+    case 'cyberlab.htb.synced':          return 'HTB stats synced';
+    case 'cyberlab.thm.synced':          return 'THM stats synced';
+    case 'cyberlab.htb.disconnected':    return 'HackTheBox disconnected';
+    case 'cyberlab.thm.disconnected':    return 'TryHackMe disconnected';
+    case 'lab:started':                  return `Lab started${d.name ? `: ${d.name}` : ''}`;
+    case 'lab:completed':                return `Lab completed${d.name ? `: ${d.name}` : ''}`;
 
     case 'vaultscraper.scrape.started':  return `Scrape started: ${d.source || ''}`;
     case 'vaultscraper.scrape.complete': return `Scrape complete: ${d.source || ''}` +
                                                 (d.saved != null ? ` (${d.saved} new, ${d.updated ?? 0} updated)` : '');
     case 'vaultcore.sync.completed':     return `Sync completed: ${d.source || ''}`;
+    case 'vaultcore.credvault.push':     return 'Pushed credentials to CredVault';
 
     case 'recondesk.target.added':       return `Target added: ${d.name || ''}`;
-    case 'recondesk.credential.found':   return `Credential found on ${d.target || 'target'}`;
+    case 'recondesk.credential.found':   return `Credential found on ${d.target || 'target'}${d.lab ? ` (${d.lab})` : ''}`;
     case 'recondesk.activeLab.changed':  return `Active lab: ${d.lab || ''}`;
+    case 'target:completed':             return `Target completed${d.name ? `: ${d.name}` : ''}${d.ip ? ` (${d.ip})` : ''}`;
 
     case 'signalboard.item.saved':       return `Bookmarked: ${d.title || ''}`;
     case 'signalboard.feed.added':       return `Feed added: ${d.url || ''}`;
@@ -61,18 +80,33 @@ function labelFor(eventType: string, data: Record<string, unknown> | undefined):
     case 'credvault.vault.unlocked':
     case 'vault:unlocked':               return 'Vault unlocked';
     case 'credvault.vault.locked':
-    case 'vault:locked':                 return 'Vault locked';
-    case 'credvault.credential.added':   return `Credential added: ${d.service || ''}`;
+    case 'vault:locked':                 return d.reason ? `Vault locked (${d.reason})` : 'Vault locked';
+    case 'credential:added':
+    case 'credvault.credential.added':   return `Credential added${d.service ? `: ${d.service}` : ''}`;
     case 'credvault.pending.received':   return `Pending: ${d.count || 1} credential(s)`;
+    case 'credvault.security.twofactor.enabled':  return '2FA enabled';
+    case 'credvault.security.twofactor.disabled': return '2FA disabled';
+    case 'credvault.security.recovery.generated': return 'Recovery key generated';
 
     case 'ghostvault.note.created':      return `Note created: ${d.title || ''}`;
     case 'ghostvault.vault.opened':      return `Vault opened: ${d.name || ''}`;
+    case 'ghostvault:note-saved':        return `Note saved${d.labTitle ? ` for ${d.labTitle}` : ''}`;
 
-    case 'playbookstudio.playbook.run':  return `Playbook run: ${d.name || ''}`;
+    case 'playbookstudio.playbook.run':
+    case 'playbook:started':             return `Playbook started${d.name ? `: ${d.name}` : ''}`;
+    case 'playbook:saved':               return `Playbook saved${d.name ? `: ${d.name}` : ''}`;
+    case 'playbook:completed':           return `Playbook completed${d.name ? `: ${d.name}` : ''}`;
     case 'reportforge.report.exported':  return `Report exported: ${d.title || ''}`;
-    case 'terminallink.command':         return d.cmd ? `$ ${String(d.cmd).slice(0, 60)}` : 'Command run';
+    case 'terminallink.command':
+    case 'terminallink:command':         return d.cmd ? `$ ${String(d.cmd).slice(0, 60)}` :
+                                                d.command ? `$ ${String(d.command).slice(0, 60)}` : 'Command run';
     case 'networkmap.scan.imported':     return `Scan imported: ${d.host || ''}`;
+    case 'graph:saved':                  return `Graph saved${d.name ? `: ${d.name}` : ''}`;
+    case 'graph:exported':               return `Graph exported${d.name ? `: ${d.name}` : ''}${d.format ? ` (${d.format})` : ''}`;
+    case 'graph:deleted':                return `Graph deleted${d.id ? `: ${d.id}` : ''}`;
     case 'netlab.lab.started':           return `Lab started: ${d.name || ''}`;
+    case 'lab:saved':                    return `Lab saved${d.title ? `: ${d.title}` : ''}`;
+    case 'progress:updated':             return 'Lab progress updated';
 
     default:                             return eventType;
   }
@@ -148,6 +182,10 @@ export default function ActivityFeed({ entries, ecosystemEvents, onClear }: Prop
           <span className="text-[10px] font-mono tabular-nums" style={{ color: '#4a5568' }}>
             · {allFeed.length}
           </span>
+          <HelpTip
+            title="Activity feed"
+            body="Live stream of ecosystem events from every CyberOS app — launches, scrapes, captures, unlocks. Filter by app or click a row to inspect the raw event payload."
+          />
         </div>
         {allFeed.length > 0 && (
           <button
