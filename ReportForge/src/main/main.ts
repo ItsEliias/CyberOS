@@ -380,8 +380,22 @@ ipcMain.handle('list-writeup-files', (): WriteupFile[] => {
   } catch { return []; }
 });
 
-ipcMain.handle('read-writeup-file', (_, filePath: string): string => {
-  try { return fs.readFileSync(filePath, 'utf8'); } catch { return ''; }
+ipcMain.handle('read-writeup-file', (_, filePath: unknown): string => {
+  // Confine reads to the configured obsidian vault. Without this check, a
+  // renderer could call this IPC with `/etc/passwd` and exfiltrate any
+  // file the main process can read.
+  if (typeof filePath !== 'string' || !filePath) return '';
+  try {
+    const cfg = readSharedConfig();
+    const vaultPath = (cfg.cyberlab as { obsidianVault?: string } | undefined)?.obsidianVault
+      || cfg.obsidianVaultPath as string | undefined;
+    if (!vaultPath) return '';
+    const vaultResolved = path.resolve(vaultPath) + path.sep;
+    const fileResolved  = path.resolve(filePath);
+    if (!fileResolved.startsWith(vaultResolved)) return '';
+    if (!filePath.endsWith('.md')) return '';  // writeups are .md only
+    return fs.readFileSync(filePath, 'utf8');
+  } catch { return ''; }
 });
 
 // Export
