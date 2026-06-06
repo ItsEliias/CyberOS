@@ -5,7 +5,7 @@ import fs from 'fs';
 import os from 'os';
 import * as ecosystemBus from './ecosystem-bus.js';
 import { consumePendingAction, installPendingActionWatcher } from './pendingActions.js'
-import { launchPeerApp } from './platform.js'
+import { launchPeerApp, sharedConfigPath, userDataDir } from './platform.js'
 import type {
   Report, CyberToolsSharedConfig, ExportResult, WriteupFile, ReconDeskTarget
 } from '../shared/types.js';
@@ -14,8 +14,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const APP_VERSION       = '1.0.0';
-const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json');
-const DATA_DIR          = path.join(os.homedir(), 'Library', 'Application Support', 'ReportForge');
+const CYBERTOOLS_CONFIG = sharedConfigPath();
+const DATA_DIR          = userDataDir('ReportForge');
 const REPORTS_FILE      = path.join(DATA_DIR, 'reports.json');
 
 // ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────

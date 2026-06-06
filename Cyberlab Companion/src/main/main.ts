@@ -12,9 +12,10 @@ import {
   saveTokenSecure, loadTokenSecure, clearTokenSecure,
   fetchHtbStats, fetchThmStats, writeActiveLab,
 } from './platforms.js';
+import { sharedConfigPath } from './platform';
 
 const APP_VERSION        = '1.0';
-const CONFIG_PATH        = path.join(os.homedir(), 'cybertools-config.json');
+const CONFIG_PATH        = sharedConfigPath();
 const DATA_DIR           = path.join(os.homedir(), '.cyberlab-companion');
 const SESSIONS_DIR       = path.join(DATA_DIR, 'sessions');
 const ENCRYPTED_KEY_FILE = path.join(DATA_DIR, 'apikey.enc');
