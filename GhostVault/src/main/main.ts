@@ -609,6 +609,19 @@ ipcMain.handle('pick-vault-dir', async (_, opts: { skipFolderCreate?: boolean } 
   });
   if (!result.canceled && result.filePaths[0]) {
     const vaultPath = result.filePaths[0];
+    // Same validation as save-config — a user could otherwise pick /etc/
+    // through the dialog and we'd happily create note folders there.
+    if (!isSafeVaultPath(vaultPath)) {
+      try {
+        dialog.showMessageBox(mainWindow!, {
+          type: 'warning',
+          title: 'Invalid vault location',
+          message: `"${vaultPath}" is outside your home directory.`,
+          detail: 'Pick a folder inside ~/Documents, ~/Library, or another path under your home.',
+        });
+      } catch { /* dialog optional */ }
+      return null;
+    }
     const cfg = loadConfig();
     if (!cfg.useExistingStructure && !opts.skipFolderCreate) ensureVaultFolders(vaultPath);
     saveConfig({ vaultPath });
