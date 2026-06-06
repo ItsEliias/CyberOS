@@ -14,7 +14,7 @@ interface Command {
   id:        string;
   label:     string;
   hint?:     string;
-  group:     'Navigation' | 'Report' | 'Editor' | 'Library';
+  group:     'Navigation' | 'Report' | 'Editor' | 'Library' | 'Security';
   keywords?: string[];
   accent:    string;
   run:       () => Promise<void> | void;
@@ -67,6 +67,23 @@ export default function CommandPalette({ open, onClose, onExportFormat, onOpenCv
       keywords: ['library', 'reports', 'home'],
       accent: ACCENT,
       run: () => { setView('library'); onClose(); },
+    });
+
+    // Security toggle — flips the require-CredVault-session preference
+    const requireSSO = (() => { try { return localStorage.getItem('rf:requireCredVaultSession') === '1'; } catch { return false } })();
+    list.push({
+      id: 'security:require-sso-toggle',
+      label: requireSSO ? 'Disable: Require CredVault session' : 'Enable: Require CredVault session',
+      hint: requireSSO ? 'Soft-lock off' : 'Soft-lock ReportForge until CredVault is unlocked',
+      group: 'Security',
+      keywords: ['sso', 'lock', 'credvault', 'session', 'security'],
+      accent: ACCENT,
+      run: () => {
+        try { localStorage.setItem('rf:requireCredVaultSession', requireSSO ? '0' : '1'); } catch { /* ignore */ }
+        // Hard reload so the App effect re-reads localStorage and the lock
+        // overlay engages immediately.
+        location.reload();
+      },
     });
     if (activeReport) {
       list.push({

@@ -11,6 +11,7 @@ import TitleBar from './components/layout/TitleBar';
 import type { Report } from '@shared/types';
 import OnboardingModal, { useOnboarding } from './components/OnboardingModal';
 import CommandPalette from './components/CommandPalette';
+import SSOLockScreen from './components/SSOLockScreen';
 
 const AUTO_SAVE_MS = 30_000;
 
@@ -27,6 +28,27 @@ export default function App() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [ssoUnlocked, setSsoUnlocked] = useState<boolean | null>(null);
+  const [requireSSO,  setRequireSSO]  = useState(false);
+
+  // Read the "Require CredVault session" preference from localStorage.
+  useEffect(() => {
+    try { setRequireSSO(localStorage.getItem('rf:requireCredVaultSession') === '1'); } catch { /* ignore */ }
+  }, []);
+
+  // Poll the SSO state every 5 s.
+  useEffect(() => {
+    let cancelled = false;
+    async function check() {
+      try {
+        const r = await window.reportforge.getSSO();
+        if (!cancelled) setSsoUnlocked(!!r.unlocked);
+      } catch { if (!cancelled) setSsoUnlocked(true); }
+    }
+    void check();
+    const t = setInterval(check, 5000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, []);
   const autoSaveRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Bootstrap ──────────────────────────────────────────────────────────────
@@ -200,8 +222,16 @@ export default function App() {
     );
   }
 
+  const ssoBlocked = requireSSO && ssoUnlocked === false;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'var(--bg)', color: 'var(--text)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'var(--bg)', color: 'var(--text)', position: 'relative' }}>
+      {ssoBlocked && (
+        <SSOLockScreen onCheck={async () => {
+          const r = await window.reportforge.getSSO();
+          setSsoUnlocked(!!r.unlocked);
+        }} />
+      )}
       <TitleBar
         onNew={view === 'library' ? () => setView('wizard') : undefined}
         onHelp={onboarding.open}
