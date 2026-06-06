@@ -16,6 +16,16 @@ interface PendingAction {
   requestedAt?: string
 }
 
+// Atomic write: every CyberTools app polls ~/cybertools-config.json, so a
+// partial / truncated write would corrupt shared state for the whole suite.
+// tmp+rename ensures readers either see the previous bytes or the new bytes,
+// never a half-written file.
+function atomicWriteJSON(target: string, data: unknown): void {
+  const tmp = `${target}.${process.pid}.${Date.now()}.tmp`
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8')
+  fs.renameSync(tmp, target)
+}
+
 export function consumePendingAction(appKey: string): { action: string } | null {
   try {
     if (!fs.existsSync(CYBERTOOLS_CONFIG)) return null
@@ -43,14 +53,14 @@ export function consumePendingAction(appKey: string): { action: string } | null 
       const age = Date.now() - new Date(entry.requestedAt).getTime()
       if (Number.isFinite(age) && age > STALE_MS) {
         arr.splice(idx, 1)
-        cfg['pending_actions'] = list
-        try { fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(cfg, null, 2), 'utf8') } catch {}
+        cfg['pending_actions'] = arr
+        try { atomicWriteJSON(CYBERTOOLS_CONFIG, cfg) } catch {}
         return null
       }
     }
     arr.splice(idx, 1)
     cfg['pending_actions'] = arr
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(cfg, null, 2), 'utf8')
+    atomicWriteJSON(CYBERTOOLS_CONFIG, cfg)
 
     return { action: entry.action }
   } catch {
