@@ -67,11 +67,23 @@ function getRelevanceContext(): RelevanceContext {
   const cfg = readCyberToolsConfig()
   const sc  = cfg['shared_context'] as Record<string, unknown> | undefined
   const sb  = cfg['signalboard']    as Record<string, unknown> | undefined
+  // Defensive: cybertools-config.json is shared across the CyberTools suite.
+  // A buggy or future-version peer app could write a non-string into
+  // activeLab/activeTarget/activeIP (e.g., a number, null, an object). Without
+  // these guards, scoreRelevance later calls `.toLowerCase()` on whatever
+  // came through and crashes the feed fetch cycle. Coerce to undefined unless
+  // the field is actually a non-empty string.
+  const asString = (v: unknown): string | undefined =>
+    typeof v === 'string' && v.length > 0 ? v : undefined
+  const rawKws = sb?.['customKeywords']
+  const customKeywords = Array.isArray(rawKws)
+    ? rawKws.filter((k): k is string => typeof k === 'string')
+    : []
   return {
-    lab:            sc?.['activeLab']    as string | undefined,
-    target:         sc?.['activeTarget'] as string | undefined,
-    ip:             sc?.['activeIP']     as string | undefined,
-    customKeywords: (sb?.['customKeywords'] as string[] | undefined) ?? [],
+    lab:            asString(sc?.['activeLab']),
+    target:         asString(sc?.['activeTarget']),
+    ip:             asString(sc?.['activeIP']),
+    customKeywords,
     isAuto:         true,
   }
 }
