@@ -10,6 +10,18 @@ import os from 'os'
 
 const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')
 
+/**
+ * Atomic write to ~/cybertools-config.json. Every CyberOS app reads this
+ * file for SSO + pending actions; a partial write (process killed mid-flush,
+ * disk full, etc.) would corrupt JSON and bounce every running app through
+ * the lock screen. Matches the tmp+rename pattern used in security.ts.
+ */
+function writeConfigAtomic(cfg: unknown): void {
+  const tmp = `${CYBERTOOLS_CONFIG}.tmp`
+  fs.writeFileSync(tmp, JSON.stringify(cfg, null, 2), 'utf8')
+  fs.renameSync(tmp, CYBERTOOLS_CONFIG)
+}
+
 interface PendingActionEntry {
   app:         string
   action:      string
@@ -46,14 +58,14 @@ export function consumePendingAction(appKey: string): { action: string } | null 
       if (Number.isFinite(age) && age > STALE_MS) {
         list.splice(idx, 1)
         cfg.pending_actions = list
-        try { fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(cfg, null, 2), 'utf8') } catch {}
+        try { writeConfigAtomic(cfg) } catch {}
         return null
       }
     }
 
     list.splice(idx, 1)
     cfg.pending_actions = list
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(cfg, null, 2), 'utf8')
+    writeConfigAtomic(cfg)
     return { action: entry.action }
   } catch {
     return null
