@@ -613,6 +613,11 @@ ipcMain.handle('save-capture-note', async (_, { folder, title, text }: { folder:
     const safeName  = (title || `Quick Note ${timestamp}`).replace(/[/\\?%*:|"<>]/g, '-');
     const content   = `# ${safeName}\n\n*Captured: ${timestamp}*\n\n---\n\n${text}\n`;
     const filePath  = path.join(cfg.vaultPath, folder || 'Notes', `${safeName}.md`);
+    // Folder is renderer-controlled — reject "../../../tmp/evil" patterns
+    // that would escape the vault even though vaultPath itself is trusted.
+    if (!isUnderVault(filePath)) {
+      return { ok: false, error: 'folder escapes vault' };
+    }
     writeNote(filePath, content);
     lastCaptureTime = new Date().toISOString();
     vaultNoteCount++;
