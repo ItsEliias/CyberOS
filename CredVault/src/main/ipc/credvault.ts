@@ -108,6 +108,26 @@ function uid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 }
 
+// ─── Boundary validation ─────────────────────────────────────────────────────
+// IPC handlers accept arbitrary JSON from the renderer. A malformed payload
+// (null, array, wrong type) used to crash the main process with a TypeError
+// because handlers assumed shape without checking. These guards keep all
+// crashes inside the handler — the IPC contract returns a sane error/null
+// instead of taking the whole vault process down.
+
+function isObject(v: unknown): v is Record<string, unknown> {
+  return v !== null && typeof v === 'object' && !Array.isArray(v)
+}
+
+function isNonEmptyString(v: unknown): v is string {
+  return typeof v === 'string' && v.length > 0
+}
+
+function isCredentialInput(v: unknown): v is Omit<Credential, 'id' | 'createdAt' | 'updatedAt'> {
+  if (!isObject(v)) return false
+  return isNonEmptyString(v.service) && isNonEmptyString(v.source)
+}
+
 function defaultVault(): VaultData {
   return { credentials: [], version: APP_VERSION }
 }

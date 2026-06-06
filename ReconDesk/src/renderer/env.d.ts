@@ -22,6 +22,12 @@ declare global {
       onConfigUpdated?: (cb: (data: Record<string, unknown>) => void) => void
       // Tray pending actions (from CyberTools Launcher)
       onPendingAction?: (cb: (action: string) => void) => (() => void)
+      // External data.json change notifier
+      onDataUpdated?: (cb: () => void) => (() => void)
+      // SSO soft-lock — read shared CredVault session
+      getSSO:        () => Promise<{ unlocked: boolean; unlockedAt?: string | null; expiresAt?: string | null }>
+      // SSO soft-lock — open CredVault.app; resolves false when not installed
+      openCredVault: () => Promise<boolean>
     }
   }
 }

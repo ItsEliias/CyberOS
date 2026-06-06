@@ -122,6 +122,27 @@ export default function CommandPalette({ open, onClose }: Props) {
     onClose()
   }
 
+  async function handleCopyRunToClipboard() {
+    if (!activeRun) {
+      showToast('No active run — start a playbook run first')
+      onClose()
+      return
+    }
+    const res = await window.electronAPI.exportRunReport(activeRun.id)
+    if (!res.ok || !res.report) {
+      showToast(`Copy failed: ${res.error ?? 'no report'}`)
+      onClose()
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(res.report, null, 2))
+      showToast('Run report copied to clipboard')
+    } catch (e) {
+      showToast(`Clipboard write failed: ${(e as Error).message}`)
+    }
+    onClose()
+  }
+
   function handleOpenTemplates() {
     setCategoryFilter('templates')
     setView('library')
@@ -160,6 +181,13 @@ export default function CommandPalette({ open, onClose }: Props) {
         hint: activeRun ? activeRun.playbookName : 'No active run',
         group: 'Action', accent: '#f78166', keywords: ['export', 'report', 'reportforge'],
         run: handleExportToReportForge,
+      },
+      {
+        id: 'action:copy-run-clipboard', label: 'Copy current run report to clipboard',
+        hint: activeRun ? `${activeRun.playbookName} — JSON` : 'No active run',
+        group: 'Action', accent: '#a371f7',
+        keywords: ['copy', 'clipboard', 'json', 'export', 'run'],
+        run: handleCopyRunToClipboard,
       },
     ]
 

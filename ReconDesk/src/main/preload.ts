@@ -80,4 +80,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('pending-action', fn)
     return () => ipcRenderer.removeListener('pending-action', fn)
   },
+
+  // SSO soft-lock — read shared CredVault session from ~/cybertools-config.json.
+  // Without this, App.tsx's getSSO() throws, the lock check defaults to
+  // "unlocked", and the soft-lock screen never appears even when CredVault
+  // is locked or the session expired.
+  getSSO: (): Promise<{ unlocked: boolean; unlockedAt?: string | null; expiresAt?: string | null }> =>
+    ipcRenderer.invoke('get-sso'),
+
+  // SSO soft-lock — open CredVault.app. Resolves false when CredVault isn't
+  // installed so the lock screen can surface that to the user instead of
+  // silently doing nothing on click.
+  openCredVault: (): Promise<boolean> =>
+    ipcRenderer.invoke('open-credvault'),
 })
