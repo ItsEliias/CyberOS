@@ -102,6 +102,11 @@ export default function App() {
         })
       }
     })
+    // Refetch when SignalBoard / NetworkMap push targets into our data.json
+    // from outside this process. The watcher in main suppresses our own
+    // writes, so this only fires on real external changes.
+    const unwatch = window.electronAPI.onDataUpdated?.(() => { void loadTargets() })
+    return () => { unwatch?.() }
   }, [loadTargets])
 
   const ssoBlocked = requireSSO && ssoUnlocked === false
