@@ -80,6 +80,10 @@ const api = {
                           ipcRenderer.invoke('backup-has-saved-password'),
   backupClearPassword : (): Promise<boolean> =>
                           ipcRenderer.invoke('backup-clear-password'),
+
+  // Lock the whole ecosystem (used by the ⌘K palette).
+  lockEcosystem       : (): Promise<boolean> => ipcRenderer.invoke('lock-ecosystem'),
+
   onEcosystemUpdated  : (cb: (events: EcosystemEvent[]) => void) => {
     const listener = (_e: Electron.IpcRendererEvent, events: EcosystemEvent[]) => cb(events);
     ipcRenderer.on('ecosystem-events-updated', listener);

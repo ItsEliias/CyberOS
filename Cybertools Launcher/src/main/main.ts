@@ -465,28 +465,7 @@ function refreshContextMenu(): void {
       label: 'Lock CredVault session',
       accelerator: 'CommandOrControl+L',
       enabled: installedKey('credvault'),
-      click: () => {
-        // Soft-lock the whole ecosystem by flipping the shared SSO state
-        // and queueing a "lock-vault" pending action so CredVault itself
-        // also wipes its in-memory key on next launch / focus.
-        try {
-          const cfgPath = path.join(os.homedir(), 'cybertools-config.json');
-          const shared = fs.existsSync(cfgPath)
-            ? JSON.parse(fs.readFileSync(cfgPath, 'utf8'))
-            : {};
-          shared.sso = {
-            unlocked:   false,
-            unlockedAt: null,
-            expiresAt:  null,
-            token:      null,
-            source:     'credvault',
-          };
-          fs.writeFileSync(cfgPath, JSON.stringify(shared, null, 2), 'utf8');
-        } catch { /* ignore */ }
-        writePendingAction('credvault', 'lock-vault');
-        ecosystemBus.emitEvent('Launcher', 'launcher.sso.locked', {});
-        addActivityEntry({ type: 'launcher', text: 'Ecosystem session locked' });
-      }
+      click: lockEcosystemSession,
     },
     { type: 'separator' },
     {
@@ -535,6 +514,31 @@ const APP_TRAY_ACTIONS: Record<string, TrayAction[]> = {
   reportforge:    [{ id: 'new-report',      label: 'New report…' }],
   cyberlab:       [{ id: 'refresh-stats',   label: 'Refresh platform stats' }],
 };
+
+// One-tap soft-lock for the whole ecosystem. Writes sso.unlocked=false
+// straight into the shared cybertools-config.json so soft-locked apps
+// (GhostVault, VaultCore, ReportForge with the setting on) flip back to
+// their lock screen within ~5 s. Also queues a `lock-vault` action for
+// CredVault itself so its in-memory key is wiped on next focus / launch.
+function lockEcosystemSession(): void {
+  try {
+    const cfgPath = path.join(os.homedir(), 'cybertools-config.json');
+    const shared = fs.existsSync(cfgPath)
+      ? JSON.parse(fs.readFileSync(cfgPath, 'utf8'))
+      : {};
+    shared.sso = {
+      unlocked:   false,
+      unlockedAt: null,
+      expiresAt:  null,
+      token:      null,
+      source:     'credvault',
+    };
+    fs.writeFileSync(cfgPath, JSON.stringify(shared, null, 2), 'utf8');
+  } catch { /* ignore */ }
+  writePendingAction('credvault', 'lock-vault');
+  ecosystemBus.emitEvent('Launcher', 'launcher.sso.locked', {});
+  addActivityEntry({ type: 'launcher', text: 'Ecosystem session locked' });
+}
 
 function writePendingAction(appKey: string, actionId: string): void {
   try {
@@ -1314,6 +1318,8 @@ function setupIPC(): void {
   ipcMain.handle('backup-snapshot', async (_e, password?: string) => {
     return await runBackupSnapshot(password);
   });
+
+  ipcMain.handle('lock-ecosystem', () => { lockEcosystemSession(); return true; });
 
   ipcMain.handle('backup-import', async (_e, password?: string) => {
     return await runBackupImport(password);

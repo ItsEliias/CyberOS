@@ -151,6 +151,15 @@ export default function CommandPalette({ open, onClose }: Props) {
         accent:   '#8b949e',
         run:      async () => { await window.api.hidePanel(); },
       },
+      {
+        id:       'action:lock-ecosystem',
+        label:    'Lock CredVault session',
+        hint:     '⌘L · Soft-locks every app that requires the session',
+        group:    'Action',
+        keywords: ['lock', 'sso', 'credvault', 'session', 'logout'],
+        accent:   '#f78166',
+        run:      async () => { await window.api.lockEcosystem(); onClose(); },
+      },
     ];
 
     const settings: Command[] = [
