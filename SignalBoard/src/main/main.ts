@@ -120,9 +120,20 @@ function loadSettings(): AppSettings {
   } catch { return DEFAULT_SETTINGS }
 }
 
+// Atomic JSON write helper for ~/.signalboard/*.json files. A crash mid-write
+// would leave a truncated file that JSON.parse-throws in load*(), silently
+// reverting to defaults (settings) or empty arrays (bookmarks) — destroying
+// the user's saved state. tmp+rename guarantees the file is either old or new,
+// never half-written.
+function atomicWriteSignalboardJSON(target: string, data: unknown): void {
+  const tmp = `${target}.${process.pid}.${Date.now()}.tmp`
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8')
+  fs.renameSync(tmp, target)
+}
+
 function saveSettings(s: AppSettings): void {
   ensureDir()
-  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(s, null, 2), 'utf8')
+  atomicWriteSignalboardJSON(SETTINGS_FILE, s)
 }
 
 function loadBookmarks(): { ids: string[]; tags: Record<string, string[]> } {
@@ -136,8 +147,8 @@ function loadBookmarks(): { ids: string[]; tags: Record<string, string[]> } {
 
 function saveBookmarks(ids: string[], tags: Record<string, string[]>): void {
   ensureDir()
-  fs.writeFileSync(BOOKMARKS_FILE, JSON.stringify(ids, null, 2), 'utf8')
-  fs.writeFileSync(BOOKMARK_TAGS_FILE, JSON.stringify(tags, null, 2), 'utf8')
+  atomicWriteSignalboardJSON(BOOKMARKS_FILE, ids)
+  atomicWriteSignalboardJSON(BOOKMARK_TAGS_FILE, tags)
 }
 
 function getVaultPath(): string | undefined {
@@ -577,7 +588,11 @@ ipcMain.handle('config:write-keywords', (_e, keywords: string[]) => {
     const cfg = readCyberToolsConfig()
     const sb  = (cfg['signalboard'] as Record<string, unknown>) ?? {}
     cfg['signalboard'] = { ...sb, customKeywords: keywords }
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(cfg, null, 2), 'utf8')
+    // Atomic: shared cybertools-config.json is polled by every CyberTools
+    // app. A truncated write would JSON.parse-throw across the suite.
+    const tmp = `${CYBERTOOLS_CONFIG}.${process.pid}.${Date.now()}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(cfg, null, 2), 'utf8')
+    fs.renameSync(tmp, CYBERTOOLS_CONFIG)
     return true
   } catch { return false }
 })
