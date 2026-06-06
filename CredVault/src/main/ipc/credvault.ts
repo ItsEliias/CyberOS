@@ -716,4 +716,8 @@ export function registerCredVaultHandlers(): void {
   })
 }
 
+export function isVaultLocked(): boolean {
+  return vaultData === null || !hasKey()
+}
+
 export { writeCredVaultStatus, credCount, readPending, writePending }

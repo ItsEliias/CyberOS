@@ -7,7 +7,7 @@ import path from 'path'
 import fs from 'fs'
 import os from 'os'
 import { emitEvent } from './ecosystem-bus'
-import { registerCredVaultHandlers, setMainWindow, lockVault, writeCredVaultStatus, credCount } from './ipc/credvault'
+import { registerCredVaultHandlers, setMainWindow, lockVault, writeCredVaultStatus, credCount, isVaultLocked } from './ipc/credvault'
 import { consumePendingAction, installPendingActionWatcher } from './pendingActions'
 
 const APP_KEY = 'credvault'
@@ -104,9 +104,10 @@ if (!app.requestSingleInstanceLock()) {
     writeCredVaultStatus(true, 0)
     emitEvent('CredVault', 'app:launched', { version: APP_VERSION })
 
-    // Periodic status heartbeat
+    // Periodic status heartbeat — `locked` reflects the actual key state,
+    // not "we have zero credentials" (which the previous check conflated).
     statusInterval = setInterval(() => {
-      writeCredVaultStatus(credCount() === 0, credCount())
+      writeCredVaultStatus(isVaultLocked(), credCount())
     }, 10_000)
 
     // Watch for pending credential pushes from ReconDesk
