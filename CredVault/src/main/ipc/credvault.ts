@@ -820,8 +820,10 @@ export function registerCredVaultHandlers(): void {
 
   // ── Status helpers exposed for main.ts ────────────────────────────────────
 
-  ipcMain.handle('vault:write-status', (_e, locked: boolean) => {
-    writeCredVaultStatus(locked, credCount())
+  ipcMain.handle('vault:write-status', (_e, locked: unknown) => {
+    // Coerce to a real boolean — without this a renderer call with the
+    // string "false" would mark the vault locked because of JS truthiness.
+    writeCredVaultStatus(locked === true, credCount())
     return true
   })
 }
