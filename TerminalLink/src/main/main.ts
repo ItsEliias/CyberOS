@@ -261,7 +261,13 @@ ipcMain.on('pty-write', (_evt, { id, data }: { id: string; data: string }) => {
 });
 
 ipcMain.on('pty-resize', (_evt, { id, cols, rows }: { id: string; cols: number; rows: number }) => {
-  ptys.get(id)?.resize(cols, rows);
+  // Same geometry clamp as pty-create — a renderer asking for a 0×0 or a
+  // 1_000_000×1_000_000 terminal would corrupt the PTY or OOM us.
+  const safeCols = Math.min(Math.max(Number(cols) || 80, 8), 500);
+  const safeRows = Math.min(Math.max(Number(rows) || 24, 4), 200);
+  try {
+    ptys.get(id)?.resize(safeCols, safeRows);
+  } catch { /* PTY may not be ready yet */ }
 });
 
 ipcMain.handle('pty-kill', (_evt, { id }: { id: string }) => {
