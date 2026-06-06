@@ -25,10 +25,16 @@ function makeNode(type: DeviceType, x: number, y: number): TopologyNode {
 }
 
 export default function TopologyView() {
-  const { topologies, saveTopology, activeTopology, setActiveTopology } = useNetLabStore(s => ({
-    topologies: s.topologies, saveTopology: s.saveTopology,
-    activeTopology: s.activeTopology, setActiveTopology: s.setActiveTopology,
-  }))
+  // Each useNetLabStore call must select a single value (or use shallow
+  // equality) — passing an object literal selector caused a new object
+  // identity on every store update, which forced this component to
+  // re-render on every progress, labs, snippet, or activeView change.
+  // During topology drag (which fires setNodes -> store-adjacent state
+  // change -> store subscriber notify), this produced a re-render storm.
+  const topologies       = useNetLabStore(s => s.topologies)
+  const saveTopology     = useNetLabStore(s => s.saveTopology)
+  const activeTopology   = useNetLabStore(s => s.activeTopology)
+  const setActiveTopology = useNetLabStore(s => s.setActiveTopology)
 
   const [nodes, setNodes]         = useState<TopologyNode[]>(activeTopology?.nodes ?? [])
   const [links, setLinks]         = useState<TopologyLink[]>(activeTopology?.links ?? [])
