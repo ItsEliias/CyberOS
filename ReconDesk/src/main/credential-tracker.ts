@@ -39,8 +39,20 @@ export function detectCredentialChanges(prev: ReconDeskData, data: ReconDeskData
 
   // Collect new cred objects and push to credvault_pending
   try {
+    // Read shared_context.activeLab once so every new cred gets tagged with the
+    // current lab. Falls back to the target name when no active lab is set.
+    let activeLab: string | undefined
+    try {
+      if (fs.existsSync(CYBERTOOLS_CONFIG)) {
+        const shared = JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8'))
+        const ctx = (shared.shared_context as Record<string, unknown>) || {}
+        if (typeof ctx.activeLab === 'string' && ctx.activeLab.trim()) activeLab = ctx.activeLab.trim()
+      }
+    } catch {}
+
     const newCreds: Array<{
-      targetName: string; targetIP: string; username?: string; hash?: string; type: string; service?: string; queuedAt: string
+      targetName: string; targetIP: string; username?: string; password?: string; hash?: string;
+      type: string; service?: string; queuedAt: string; lab?: string; suggestedFolder?: string
     }> = []
 
     for (const target of data.targets) {
@@ -48,14 +60,18 @@ export function detectCredentialChanges(prev: ReconDeskData, data: ReconDeskData
       const prevCredIds = new Set(prevTarget?.credentials.map(c => c.id) ?? [])
       for (const cred of target.credentials) {
         if (!prevCredIds.has(cred.id)) {
+          const lab = activeLab || target.name
           newCreds.push({
             targetName: target.name,
             targetIP:   target.ip,
             username:   cred.username,
+            password:   (cred as { password?: string }).password,
             hash:       cred.hash,
             type:       cred.type ?? 'unknown',
             service:    cred.service,
             queuedAt:   new Date().toISOString(),
+            lab,
+            suggestedFolder: `Labs / ${lab}`,
           })
         }
       }
@@ -69,6 +85,24 @@ export function detectCredentialChanges(prev: ReconDeskData, data: ReconDeskData
       const existing = (shared.credvault_pending as typeof newCreds) || []
       shared.credvault_pending = [...existing, ...newCreds]
       fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8')
+
+      // Best-effort ecosystem-bus emit so the Launcher activity feed picks it up.
+      try {
+        const path = require('path') as typeof import('path')
+        const os   = require('os')   as typeof import('os')
+        const BUS  = path.join(os.homedir(), 'Library', 'Application Support', 'CyberTools', 'ecosystem-events.json')
+        const events = fs.existsSync(BUS) ? JSON.parse(fs.readFileSync(BUS, 'utf8')) : []
+        for (const c of newCreds) {
+          events.unshift({
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            appName: 'ReconDesk',
+            eventType: 'recondesk.credential.found',
+            data: { target: c.targetName, lab: c.lab, count: 1 },
+            timestamp: new Date().toISOString(),
+          })
+        }
+        fs.writeFileSync(BUS, JSON.stringify(events.slice(0, 150), null, 2), 'utf8')
+      } catch {}
     }
   } catch {}
 }

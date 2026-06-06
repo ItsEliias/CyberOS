@@ -1,8 +1,10 @@
-import { useState } from 'react';
-import type { TerminalSettings, OutputAlertRule, KeybindingMap } from '../../types/terminallink';
+import { useEffect, useState } from 'react';
+import type { TerminalSettings, OutputAlertRule, KeybindingMap, ExternalShellHookSettings } from '../../types/terminallink';
 import { APP_THEME_PRESETS, ACCENT_SWATCHES } from '../../types/terminallink';
 import SshManager from '../SshManager';
+import HelpIcon from '../ui/HelpIcon';
 import { useTerminalLinkStore } from '../../stores/useTerminalLinkStore';
+import type { ExternalHookStatus } from '@shared/types';
 
 interface Props {
   settings: TerminalSettings;
@@ -21,10 +23,13 @@ const SECTION_TITLE: React.CSSProperties = {
 };
 const LABEL: React.CSSProperties = { fontSize: 11, color: 'var(--text-dim)', marginBottom: 4, display: 'block' };
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, help, children }: { title: string; help?: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 24 }}>
-      <div style={SECTION_TITLE}>{title}</div>
+      <div style={{ ...SECTION_TITLE, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span>{title}</span>
+        {help && <HelpIcon text={help} />}
+      </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>{children}</div>
     </div>
   );
@@ -250,6 +255,166 @@ function ThemeSection({ settings, onUpdate }: Props) {
   );
 }
 
+// ─── External Shell Hook Section ──────────────────────────────────────────────
+const SUPPORTED_SHELLS: Array<ExternalShellHookSettings['shells'][number]> = ['zsh', 'bash', 'fish'];
+
+function ExternalShellHookSection({ settings, onUpdate }: Props) {
+  const hook: ExternalShellHookSettings = settings.externalShellHook ?? { enabled: false, shells: ['zsh'] };
+  const [status, setStatus]   = useState<ExternalHookStatus | null>(null);
+  const [busy, setBusy]       = useState(false);
+  const [opError, setOpError] = useState<string | null>(null);
+
+  async function refreshStatus() {
+    try {
+      const s = await window.electronAPI.externalShellStatus?.();
+      if (s) setStatus(s);
+    } catch (e) {
+      setOpError((e as Error).message);
+    }
+  }
+
+  useEffect(() => {
+    refreshStatus();
+    const handle = setInterval(refreshStatus, 5000);
+    return () => clearInterval(handle);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function applyEnabled(next: boolean) {
+    setBusy(true); setOpError(null);
+    try {
+      if (next) {
+        const shells = hook.shells.length > 0 ? hook.shells : (['zsh'] as ExternalShellHookSettings['shells']);
+        const res = await window.electronAPI.externalShellInstall?.(shells);
+        if (res && !res.success) {
+          const firstErr = res.results.find(r => r.error);
+          setOpError(firstErr?.error || 'Install failed');
+        }
+        onUpdate({ externalShellHook: { ...hook, enabled: true, shells } });
+      } else {
+        const res = await window.electronAPI.externalShellUninstall?.();
+        if (res && !res.success) {
+          const firstErr = res.results.find(r => r.error);
+          setOpError(firstErr?.error || 'Uninstall failed');
+        }
+        onUpdate({ externalShellHook: { ...hook, enabled: false } });
+      }
+      await refreshStatus();
+    } catch (e) {
+      setOpError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggleShell(shell: ExternalShellHookSettings['shells'][number]) {
+    const isSelected = hook.shells.includes(shell);
+    const nextShells: ExternalShellHookSettings['shells'] = isSelected
+      ? hook.shells.filter(s => s !== shell)
+      : [...hook.shells, shell];
+
+    onUpdate({ externalShellHook: { ...hook, shells: nextShells } });
+
+    // Only mutate rc files if the master toggle is on.
+    if (!hook.enabled) return;
+
+    setBusy(true); setOpError(null);
+    try {
+      if (isSelected) {
+        const res = await window.electronAPI.externalShellUninstall?.([shell]);
+        if (res && !res.success) {
+          const firstErr = res.results.find(r => r.error);
+          setOpError(firstErr?.error || 'Uninstall failed');
+        }
+      } else {
+        const res = await window.electronAPI.externalShellInstall?.([shell]);
+        if (res && !res.success) {
+          const firstErr = res.results.find(r => r.error);
+          setOpError(firstErr?.error || 'Install failed');
+        }
+      }
+      await refreshStatus();
+    } catch (e) {
+      setOpError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Section
+      title="External Shell Hook"
+      help="Mirror commands typed in Terminal.app / iTerm / Warp into the TermLink log via an opt-in shell pre-exec hook. Default OFF."
+    >
+      <Toggle
+        checked={hook.enabled}
+        onChange={v => { if (!busy) applyEnabled(v); }}
+        label="Capture commands from external terminals"
+      />
+
+      <Field label="Shells to hook">
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {SUPPORTED_SHELLS.map(shell => {
+            const selected = hook.shells.includes(shell);
+            const installed = status?.installed?.[shell] ?? false;
+            return (
+              <button
+                key={shell}
+                onClick={() => { if (!busy) toggleShell(shell); }}
+                disabled={busy}
+                title={installed ? 'Hook installed in rc file' : 'Hook not installed'}
+                style={{
+                  padding: '4px 10px', borderRadius: 6, fontSize: 11,
+                  background: selected ? 'rgba(0,255,65,0.12)' : 'var(--bg)',
+                  border: `1px solid ${selected ? 'rgba(0,255,65,0.5)' : 'var(--border)'}`,
+                  color: selected ? 'var(--accent)' : 'var(--text-dim)',
+                  cursor: busy ? 'wait' : 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                }}
+              >
+                <span>{shell}</span>
+                {installed && (
+                  <span style={{ fontSize: 8, color: 'var(--accent)' }}>●</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </Field>
+
+      <div style={{
+        padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 4,
+        background: 'rgba(0,255,65,0.02)', fontSize: 10, color: 'var(--text-dim)',
+        fontFamily: 'var(--font-mono)', display: 'flex', flexDirection: 'column', gap: 4,
+      }}>
+        <div>
+          <span style={{ color: 'var(--text-muted)' }}>Log file: </span>
+          <span style={{ color: 'var(--accent)' }}>{status?.logPath ?? '—'}</span>
+        </div>
+        <div>
+          <span style={{ color: 'var(--text-muted)' }}>Last seen: </span>
+          <span>{status?.lastSeenAt ?? 'never'}</span>
+        </div>
+        <div>
+          <span style={{ color: 'var(--text-muted)' }}>Tailing: </span>
+          <span style={{ color: status?.tailing ? 'var(--accent)' : 'var(--text-muted)' }}>
+            {status?.tailing ? 'active' : 'stopped'}
+          </span>
+        </div>
+        {status?.lastError && (
+          <div style={{ color: 'var(--error)' }}>Watcher error: {status.lastError}</div>
+        )}
+      </div>
+
+      {opError && (
+        <div style={{ fontSize: 11, color: 'var(--error)' }}>
+          {opError}
+        </div>
+      )}
+    </Section>
+  );
+}
+
 // ─── SettingsView ─────────────────────────────────────────────────────────────
 export default function SettingsView({ settings, onUpdate }: Props) {
   const { sshProfiles, addSshProfile, removeSshProfile } = useTerminalLinkStore();
@@ -314,6 +479,8 @@ export default function SettingsView({ settings, onUpdate }: Props) {
       <Section title="Keybindings">
         <KeybindingsTable kb={settings.keybindings} onChange={k => onUpdate({ keybindings: k })} />
       </Section>
+
+      <ExternalShellHookSection settings={settings} onUpdate={onUpdate} />
     </div>
   );
 }

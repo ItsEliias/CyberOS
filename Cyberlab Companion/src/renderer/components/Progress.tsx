@@ -114,18 +114,27 @@ export default function Progress() {
   }, []);
 
   async function loadHtbProfile() {
-    const key = config?.htbApiKey;
-    if (!key) { setHtbError('No HTB API key configured. Add it in Settings.'); return; }
     setHtbLoading(true);
     setHtbError('');
     try {
-      const res = await window.electronAPI.syncHTB(key) as { success: boolean; labs?: unknown[]; error?: string; partialMsg?: string };
-      if (!res.success) { setHtbError(res.error || 'Failed to fetch HTB profile'); return; }
+      const api = window.electronAPI as Record<string, Function>;
+      const has = await api.hasHtbToken?.().catch(() => false);
+      if (!has) {
+        setHtbError('Not connected to HTB. Add your API token in Settings → API Connections.');
+        return;
+      }
+      const res = await api.fetchHtbStats() as {
+        success: boolean;
+        data?: { username: string; rank: string; points: number; userOwns: number; rootOwns: number };
+        error?: string;
+      };
+      if (!res?.success) { setHtbError(res?.error || 'Failed to fetch HTB profile'); return; }
+      const d = res.data!;
       setHtbProfile({
-        name: config?.operatorName || 'Operator',
-        rank: 'Hacker',
-        points: (res.labs?.length ?? 0) * 20,
-        owns: { user: res.labs?.length ?? 0, root: Math.floor((res.labs?.length ?? 0) * 0.7) },
+        name: d.username || config?.operatorName || 'Operator',
+        rank: d.rank || 'Hacker',
+        points: d.points,
+        owns: { user: d.userOwns, root: d.rootOwns },
       });
     } catch (e: unknown) {
       setHtbError(e instanceof Error ? e.message : 'Unknown error');
@@ -562,20 +571,20 @@ export default function Progress() {
       {/* ── HTB Progress ── */}
       {activeTab === 'htb' && (
         <div className="space-y-4">
-          {!config?.htbApiKey && (
+          {!htbProfile && !htbLoading && htbError && htbError.includes('Not connected') && (
             <div className="card text-center py-6">
               <div className="text-2xl mb-2">🔗</div>
               <div className="text-sm font-semibold mb-1" style={{ color: 'var(--text)' }}>Connect HTB Account</div>
               <div className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
-                Add your HTB API key in Settings to sync your progress
+                Add your HTB API token in Settings → API Connections to sync your progress
               </div>
-              <div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                Settings → AI Provider → HTB API Key
-              </div>
+              <button className="btn-ghost px-4 py-2 text-xs" onClick={loadHtbProfile}>
+                Retry
+              </button>
             </div>
           )}
 
-          {config?.htbApiKey && !htbProfile && !htbLoading && (
+          {!htbProfile && !htbLoading && (!htbError || !htbError.includes('Not connected')) && (
             <div className="card text-center py-6">
               {htbError && (
                 <div className="text-xs mb-3" style={{ color: 'var(--error)' }}>{htbError}</div>

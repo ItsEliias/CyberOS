@@ -52,6 +52,11 @@ const DEFAULT_SETTINGS: TerminalSettings = {
   ollamaEnabled: false,
   snippetsOpen: false,
   appTheme: DEFAULT_APP_THEME,
+  // External shell hook OFF by default; user must opt in via Settings.
+  externalShellHook: {
+    enabled: false,
+    shells: ['zsh'],
+  },
 }
 
 const DEFAULT_SNIPPETS: Snippet[] = [
@@ -102,7 +107,7 @@ interface TerminalLinkState {
   renameSession: (id: string, name: string) => void
   setSessionColor: (id: string, color: TerminalSession['color']) => void
   setSessionTheme: (id: string, theme: TerminalSession['theme']) => void
-  addCommand: (cmd: Omit<CommandEntry, 'id' | 'sessionId' | 'timestamp'>) => void
+  addCommand: (cmd: Omit<CommandEntry, 'id' | 'sessionId' | 'timestamp'> & { timestamp?: string }) => void
   exportHistory: () => Promise<void>
   setSharedContext: (ctx: SharedContext) => void
   toggleHistoryPanel: () => void
@@ -199,7 +204,8 @@ export const useTerminalLinkStore = create<TerminalLinkState>((set, get) => ({
     const entry: CommandEntry = {
       id: genId(),
       sessionId: activeSessionId ?? undefined,
-      timestamp: new Date().toISOString(),
+      timestamp: payload.timestamp ?? new Date().toISOString(),
+      source: 'pane',
       ...payload,
     }
     const maxEntries = settings.maxHistoryEntries

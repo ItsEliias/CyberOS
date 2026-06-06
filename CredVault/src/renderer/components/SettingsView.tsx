@@ -6,6 +6,7 @@ import MetricCard from './ui/MetricCard'
 import {
   Card, SettingRow, Toggle, VaultHealthRing, AuditIssueBadge, ThemeSection,
 } from './SettingsViewParts'
+import SecuritySection from './SecuritySection'
 
 const AUTO_LOCK_OPTIONS = [
   { label: 'Never',    ms: 0 },
@@ -162,6 +163,9 @@ export default function SettingsView() {
           </SettingRow>
         </div>
       </Card>
+
+      {/* ── Two-factor + Recovery key ──────────────────────────────────────── */}
+      <SecuritySection />
 
       {/* ── Clipboard ─────────────────────────────────────────────────────── */}
       <Card title="Clipboard">

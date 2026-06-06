@@ -1,0 +1,261 @@
+// CredVault — Security section: 2FA setup + Recovery key generation.
+// Renders inside SettingsView; uses the security IPC handlers added in
+// `src/main/security.ts` + `src/main/ipc/credvault.ts`.
+
+import { useEffect, useState } from 'react'
+import { Card, SettingRow } from './SettingsViewParts'
+
+export default function SecuritySection() {
+  // ── 2FA state ───────────────────────────────────────────────────────────
+  const [twoFA, setTwoFA]                 = useState<{ enabled: boolean }>({ enabled: false })
+  const [setupSecret, setSetupSecret]     = useState<string | null>(null)
+  const [setupUri, setSetupUri]           = useState<string | null>(null)
+  const [setupCode, setSetupCode]         = useState('')
+  const [setupErr, setSetupErr]           = useState<string | null>(null)
+  const [setupBusy, setSetupBusy]         = useState(false)
+  const [disableCode, setDisableCode]     = useState('')
+  const [disableErr, setDisableErr]       = useState<string | null>(null)
+
+  // ── Recovery key state ─────────────────────────────────────────────────
+  const [rec, setRec]                     = useState<{ configured: boolean }>({ configured: false })
+  const [showRecovery, setShowRecovery]   = useState(false)
+  const [recovery, setRecovery]           = useState<string | null>(null)
+  const [recBusy, setRecBusy]             = useState(false)
+
+  useEffect(() => {
+    window.electronAPI.totpStatus().then(setTwoFA).catch(() => {})
+    window.electronAPI.recoveryStatus().then(setRec).catch(() => {})
+  }, [])
+
+  async function startTotpSetup() {
+    setSetupErr(null)
+    const r = await window.electronAPI.totpSetup()
+    setSetupSecret(r.secret)
+    setSetupUri(r.otpauthUri)
+    setSetupCode('')
+  }
+
+  async function confirmTotp() {
+    if (!setupSecret) return
+    setSetupBusy(true); setSetupErr(null)
+    try {
+      const r = await window.electronAPI.totpConfirm(setupSecret, setupCode)
+      if (!r.ok) { setSetupErr(r.error || 'Could not confirm code'); return }
+      setSetupSecret(null); setSetupUri(null); setSetupCode('')
+      setTwoFA({ enabled: true })
+    } finally { setSetupBusy(false) }
+  }
+
+  function cancelTotpSetup() {
+    setSetupSecret(null); setSetupUri(null); setSetupCode(''); setSetupErr(null)
+  }
+
+  async function disableTotp() {
+    setDisableErr(null)
+    const r = await window.electronAPI.totpDisable(disableCode)
+    if (!r.ok) { setDisableErr(r.error || 'Could not disable'); return }
+    setDisableCode('')
+    setTwoFA({ enabled: false })
+  }
+
+  async function generateRecovery() {
+    setRecBusy(true)
+    try {
+      const r = await window.electronAPI.recoveryGenerate()
+      setRecovery(r.display)
+      setShowRecovery(true)
+      setRec({ configured: true })
+    } finally { setRecBusy(false) }
+  }
+
+  async function downloadRecovery() {
+    if (!recovery) return
+    const blob = new Blob(
+      [`CredVault Recovery Key\n` +
+       `Generated: ${new Date().toISOString()}\n\n` +
+       `${recovery}\n\n` +
+       `Keep this safe. Without it AND your master password, your vault cannot be recovered.\n`],
+      { type: 'text/plain' }
+    )
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `credvault-recovery-${new Date().toISOString().slice(0, 10)}.txt`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function copyRecovery() {
+    if (recovery) await navigator.clipboard.writeText(recovery)
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────
+
+  return (
+    <>
+      <Card title="Two-Factor Authentication">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+          {!twoFA.enabled && !setupSecret && (
+            <>
+              <p style={{ fontSize: 12, color: '#8b949e', marginBottom: 0, lineHeight: 1.55 }}>
+                Add a TOTP code from your authenticator app (1Password, Authy, Google Authenticator,
+                Microsoft Authenticator) on top of your master password. Strongly recommended.
+              </p>
+              <button onClick={startTotpSetup} className="btn btn-accent" style={{ alignSelf: 'flex-start', fontSize: 12 }}>
+                Set up authenticator app
+              </button>
+            </>
+          )}
+
+          {setupSecret && setupUri && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <p style={{ fontSize: 12, color: '#8b949e', marginBottom: 0, lineHeight: 1.55 }}>
+                Add this secret to your authenticator app, then enter the 6-digit code it generates
+                to confirm.
+              </p>
+              <div style={{
+                padding: '10px 12px', borderRadius: 6,
+                background: 'rgba(13,14,24,0.7)', border: '1px solid rgba(42,51,71,0.6)',
+                display: 'flex', flexDirection: 'column', gap: 6,
+              }}>
+                <div>
+                  <div style={{ fontSize: 10, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
+                    Secret (base32)
+                  </div>
+                  <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, color: '#e6edf3', wordBreak: 'break-all', userSelect: 'all' }}>
+                    {setupSecret}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
+                    Or paste this otpauth:// URI
+                  </div>
+                  <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: '#8b949e', wordBreak: 'break-all', userSelect: 'all' }}>
+                    {setupUri}
+                  </div>
+                </div>
+              </div>
+              <SettingRow label="6-digit code" description="From your authenticator app">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="000000"
+                  value={setupCode}
+                  onChange={e => setSetupCode(e.target.value.replace(/\D/g, ''))}
+                  style={{ width: 110, fontFamily: 'JetBrains Mono, monospace', fontSize: 14, letterSpacing: '0.15em', textAlign: 'center' }}
+                />
+              </SettingRow>
+              {setupErr && <p style={{ fontSize: 12, color: 'var(--error)' }}>{setupErr}</p>}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={confirmTotp} className="btn btn-accent" style={{ fontSize: 12 }}
+                  disabled={setupCode.length !== 6 || setupBusy}>
+                  {setupBusy ? 'Verifying…' : 'Confirm + enable'}
+                </button>
+                <button onClick={cancelTotpSetup} className="btn btn-ghost" style={{ fontSize: 12 }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {twoFA.enabled && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 6,
+                            background: 'rgba(63,185,80,0.08)', border: '1px solid rgba(63,185,80,0.25)' }}>
+                <span style={{ width: 6, height: 6, borderRadius: 99, background: '#3fb950' }} />
+                <span style={{ fontSize: 12, color: '#3fb950', fontWeight: 600 }}>2FA active</span>
+                <span style={{ fontSize: 11, color: '#8b949e' }}>
+                  · A code from your authenticator is required on unlock.
+                </span>
+              </div>
+              <SettingRow label="Disable 2FA" description="Enter a current authenticator code to turn off">
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="000000"
+                    value={disableCode}
+                    onChange={e => setDisableCode(e.target.value.replace(/\D/g, ''))}
+                    style={{ width: 110, fontFamily: 'JetBrains Mono, monospace', fontSize: 14, letterSpacing: '0.15em', textAlign: 'center' }}
+                  />
+                  <button onClick={disableTotp} className="btn btn-ghost" style={{ fontSize: 12 }}
+                    disabled={disableCode.length !== 6}>
+                    Disable
+                  </button>
+                </div>
+              </SettingRow>
+              {disableErr && <p style={{ fontSize: 12, color: 'var(--error)' }}>{disableErr}</p>}
+            </>
+          )}
+        </div>
+      </Card>
+
+      <Card title="Recovery Key">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+          {!rec.configured && !showRecovery && (
+            <>
+              <p style={{ fontSize: 12, color: '#8b949e', marginBottom: 0, lineHeight: 1.55 }}>
+                Generate a 48-character one-time recovery key. Store it somewhere safe (1Password,
+                paper, USB key) — you can use it to reset your master password if you ever forget it.
+                Without it AND your password, the vault is unrecoverable.
+              </p>
+              <button onClick={generateRecovery} className="btn btn-accent" style={{ alignSelf: 'flex-start', fontSize: 12 }}
+                disabled={recBusy}>
+                {recBusy ? 'Generating…' : 'Generate recovery key'}
+              </button>
+            </>
+          )}
+
+          {rec.configured && !showRecovery && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 6,
+                            background: 'rgba(63,185,80,0.08)', border: '1px solid rgba(63,185,80,0.25)' }}>
+                <span style={{ width: 6, height: 6, borderRadius: 99, background: '#3fb950' }} />
+                <span style={{ fontSize: 12, color: '#3fb950', fontWeight: 600 }}>Recovery key configured</span>
+              </div>
+              <p style={{ fontSize: 11, color: '#8b949e', marginBottom: 0, lineHeight: 1.55 }}>
+                Generating a new key will invalidate the old one.
+              </p>
+              <button onClick={generateRecovery} className="btn btn-ghost" style={{ alignSelf: 'flex-start', fontSize: 12 }}
+                disabled={recBusy}>
+                {recBusy ? 'Generating…' : 'Regenerate recovery key'}
+              </button>
+            </>
+          )}
+
+          {showRecovery && recovery && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <p style={{ fontSize: 12, color: '#f78166', marginBottom: 0, lineHeight: 1.55, fontWeight: 600 }}>
+                ⚠ This is your only chance to record this key. Save it now.
+              </p>
+              <div style={{
+                padding: '14px 16px', borderRadius: 8,
+                background: 'rgba(13,14,24,0.85)', border: '1px solid rgba(247,129,102,0.35)',
+                fontFamily: 'JetBrains Mono, monospace', fontSize: 14, color: '#e6edf3',
+                letterSpacing: '0.04em', textAlign: 'center', userSelect: 'all', wordBreak: 'break-all',
+              }}>
+                {recovery}
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={copyRecovery} className="btn btn-ghost" style={{ fontSize: 12 }}>
+                  Copy
+                </button>
+                <button onClick={downloadRecovery} className="btn btn-ghost" style={{ fontSize: 12 }}>
+                  Download .txt
+                </button>
+                <button onClick={() => { setShowRecovery(false); setRecovery(null) }}
+                  className="btn btn-accent" style={{ fontSize: 12 }}>
+                  I've saved it
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+    </>
+  )
+}

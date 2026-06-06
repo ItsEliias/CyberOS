@@ -15,6 +15,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
   lockVault:       (): Promise<boolean>                                => ipcRenderer.invoke('vault:lock'),
   changePassword:  (cur: string, next: string): Promise<UnlockResult>  => ipcRenderer.invoke('vault:change-password', cur, next),
 
+  // Two-factor auth (TOTP)
+  totpStatus:      (): Promise<{ enabled: boolean }>                   => ipcRenderer.invoke('vault:totp-status'),
+  totpSetup:       (): Promise<{ secret: string; otpauthUri: string }> => ipcRenderer.invoke('vault:totp-setup'),
+  totpConfirm:     (secret: string, code: string): Promise<{ ok: boolean; error?: string }> =>
+                                                                          ipcRenderer.invoke('vault:totp-confirm', secret, code),
+  totpDisable:     (code: string): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('vault:totp-disable', code),
+  totpVerify:      (code: string, autoLockMs?: number): Promise<{ ok: boolean; error?: string }> =>
+                                                                          ipcRenderer.invoke('vault:totp-verify', code, autoLockMs),
+
+  // Recovery key
+  recoveryStatus:  (): Promise<{ configured: boolean }>                => ipcRenderer.invoke('vault:recovery-status'),
+  recoveryGenerate:(): Promise<{ display: string }>                    => ipcRenderer.invoke('vault:recovery-generate'),
+  recoveryVerify:  (input: string): Promise<{ ok: boolean }>           => ipcRenderer.invoke('vault:recovery-verify', input),
+
+  // SSO session keep-alive (call when user is active)
+  ssoRefresh:      (autoLockMs: number): Promise<unknown>              => ipcRenderer.invoke('sso:refresh', autoLockMs),
+
   // Touch ID / biometric
   touchIdAvailable:(): Promise<boolean>                                => ipcRenderer.invoke('vault:touch-id-available'),
   touchIdPrompt:   (): Promise<{ ok: boolean; error?: string }>        => ipcRenderer.invoke('vault:touch-id-prompt'),

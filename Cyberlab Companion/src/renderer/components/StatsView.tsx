@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { useStore } from '../store';
 import type { Session } from '@shared/types';
+import { usePlatformStats } from '../hooks/usePlatformStats';
+import HelpIcon from './ui/HelpIcon';
 
 interface CategoryStats {
   category: string;
@@ -113,6 +115,138 @@ function RadarChart({ catStats }: { catStats: Record<string, CategoryStats> }) {
   );
 }
 
+// ── Live platform stats (HTB + THM) ──────────────────────────────────────────
+
+function PlatformStatsBlock() {
+  const { htbConnected, thmConnected, htbStats, thmStats, htbError, thmError, loading, lastSyncAt, refresh } = usePlatformStats();
+  if (!htbConnected && !thmConnected) {
+    return (
+      <div className="card" style={{ borderStyle: 'dashed' }}>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+            No platform connected — add HTB or THM in Settings → API Connections.
+          </span>
+          <HelpIcon text="Once connected, this block shows live rank, owns, active machines (HTB) and completed/in-progress rooms (THM), refreshed every 5 minutes." label="About platform stats" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-dim)' }}>
+          Platform Activity
+        </span>
+        <HelpIcon text="Pulled directly from HackTheBox and TryHackMe using your encrypted tokens. Active HTB machines auto-sync to CyberOS shared_context.activeLab so ReconDesk and TermLink can follow along." label="Platform sync details" />
+        <button
+          className="btn-ghost px-2 py-0.5 text-[10px] ml-auto"
+          onClick={refresh}
+          disabled={loading}
+        >
+          {loading ? 'Syncing...' : 'Refresh'}
+        </button>
+      </div>
+      <div className={`grid gap-3 ${htbConnected && thmConnected ? 'grid-cols-2' : 'grid-cols-1'}`}>
+        {htbConnected && (
+          <div className="card space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold" style={{ color: '#9fef00' }}>HackTheBox</span>
+              {htbStats?.rank && (
+                <span className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>{htbStats.rank}</span>
+              )}
+            </div>
+            {htbStats ? (
+              <>
+                <div className="grid grid-cols-3 gap-1 text-center">
+                  <Metric label="Points"     value={htbStats.points} color="#9fef00" />
+                  <Metric label="User Owns"  value={htbStats.userOwns} color="#4a9eff" />
+                  <Metric label="Root Owns"  value={htbStats.rootOwns} color="#f85149" />
+                </div>
+                {htbStats.activeMachines?.[0] && (
+                  <div className="text-[11px]" style={{ color: 'var(--text-dim)' }}>
+                    Active: <span className="font-mono" style={{ color: 'var(--accent)' }}>{htbStats.activeMachines[0].name}</span>
+                    {htbStats.activeMachines[0].difficulty && <span style={{ color: 'var(--text-muted)' }}> · {htbStats.activeMachines[0].difficulty}</span>}
+                  </div>
+                )}
+                {htbStats.recentMachines && htbStats.recentMachines.length > 0 && (
+                  <div>
+                    <div className="text-[10px] mb-1" style={{ color: 'var(--text-muted)' }}>Recent</div>
+                    <div className="flex flex-wrap gap-1">
+                      {htbStats.recentMachines.slice(0, 5).map(m => (
+                        <span key={m.id || m.name} className="text-[10px] px-1.5 py-0.5 rounded font-mono"
+                              style={{ background: 'rgba(159,239,0,0.08)', color: '#9fef00', border: '1px solid rgba(159,239,0,0.18)' }}>
+                          {m.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-[11px]" style={{ color: htbError ? 'var(--error)' : 'var(--text-muted)' }}>
+                {htbError || 'Loading...'}
+              </div>
+            )}
+          </div>
+        )}
+        {thmConnected && (
+          <div className="card space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold" style={{ color: '#88cc14' }}>TryHackMe</span>
+              {thmStats?.username && (
+                <span className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>{thmStats.username}</span>
+              )}
+            </div>
+            {thmStats ? (
+              <>
+                <div className="grid grid-cols-2 gap-1 text-center">
+                  <Metric label="Completed"   value={thmStats.completedRooms} color="#3fb950" />
+                  <Metric label="In Progress" value={thmStats.inProgressRooms} color="#d29922" />
+                </div>
+                {thmStats.recentRooms && thmStats.recentRooms.length > 0 && (
+                  <div>
+                    <div className="text-[10px] mb-1" style={{ color: 'var(--text-muted)' }}>Recent</div>
+                    <div className="flex flex-wrap gap-1">
+                      {thmStats.recentRooms.slice(0, 5).map(r => (
+                        <span key={r.code || r.title} className="text-[10px] px-1.5 py-0.5 rounded font-mono"
+                              style={{ background: 'rgba(136,204,20,0.08)', color: '#88cc14', border: '1px solid rgba(136,204,20,0.18)' }}>
+                          {r.title}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {thmStats.partial && (
+                  <div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{thmStats.partial}</div>
+                )}
+              </>
+            ) : (
+              <div className="text-[11px]" style={{ color: thmError ? 'var(--error)' : 'var(--text-muted)' }}>
+                {thmError || 'Loading...'}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      {lastSyncAt && (
+        <div className="text-[10px] text-right" style={{ color: 'var(--text-muted)' }}>
+          Last sync {new Date(lastSyncAt).toLocaleTimeString()}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Metric({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div className="py-1 rounded" style={{ background: 'rgba(13,14,24,0.5)', border: '1px solid var(--border)' }}>
+      <div className="font-mono font-bold text-sm" style={{ color }}>{value}</div>
+      <div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{label}</div>
+    </div>
+  );
+}
+
 export default function StatsView() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
@@ -214,7 +348,14 @@ export default function StatsView() {
 
   return (
     <div className="flex flex-col h-full overflow-y-auto p-4 space-y-4">
-      <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Time-to-Solve Analytics</h2>
+      <div className="flex items-center gap-2">
+        <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Time-to-Solve Analytics</h2>
+        <HelpIcon text="Aggregated analytics across all your saved lab sessions: total time, flags, per-category breakdowns, and a personal-record card. Data lives locally in ~/.cyberlab-companion." label="About Stats" />
+      </div>
+
+      {/* HTB / THM live integration stats */}
+      <PlatformStatsBlock />
+
 
       {/* Summary strip */}
       <div className="grid grid-cols-4 gap-3">

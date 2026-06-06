@@ -10,6 +10,11 @@ import https from 'https'
 import crypto from 'crypto'
 import { emitEvent } from '../ecosystem-bus'
 import {
+  beginSession, endSession, refreshSession,
+  generateTotpSecret, verifyTotp,
+  generateRecoveryKey, verifyRecoveryKey, type RecoveryKey,
+} from '../security'
+import {
   saltExists, vaultExists,
   ensureAppDir,
   clearKey, hasKey,
@@ -60,6 +65,7 @@ export function lockVault(reason: string): void {
   vaultData = null
   if (_lockTimer) { clearTimeout(_lockTimer); _lockTimer = null }
   writeCredVaultStatus(true, 0)
+  endSession()
   emitEvent('CredVault', 'vault:locked', { reason })
   if (_mainWindow && !_mainWindow.isDestroyed()) {
     _mainWindow.webContents.send('vault:locked')
@@ -70,6 +76,8 @@ export function lockVault(reason: string): void {
 
 interface Prefs {
   sortOrder?: string
+  totp?: { enabled: boolean; secret?: string }
+  recovery?: { hashHex: string; saltHex: string }
 }
 
 function readPrefs(): Prefs {
@@ -84,6 +92,10 @@ function writePrefs(p: Prefs): void {
     ensureAppDir()
     fs.writeFileSync(PREFS_FILE, JSON.stringify(p, null, 2), 'utf8')
   } catch {}
+}
+
+function getTotpEnabled(): boolean {
+  return readPrefs().totp?.enabled === true
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -227,15 +239,95 @@ export function registerCredVaultHandlers(): void {
       vaultData = defaultVault()
     }
 
+    // If 2FA is enabled, defer the full session until the renderer submits a
+    // valid TOTP code via `vault:totp-verify`. Otherwise begin the SSO session
+    // immediately so other apps in the ecosystem can pick up the unlock.
+    if (!getTotpEnabled()) {
+      beginSession(autoLockMs ?? 0)
+    }
+
     writeCredVaultStatus(false, credCount())
     emitEvent('CredVault', 'vault:unlocked', {})
     resetLockTimer(autoLockMs ?? 0)
-    return { ok: true }
+    return { ok: true, twoFactorRequired: getTotpEnabled() }
   })
 
   ipcMain.handle('vault:lock', () => {
     lockVault('user request')
     return true
+  })
+
+  // ── 2FA (TOTP) ────────────────────────────────────────────────────────────
+
+  ipcMain.handle('vault:totp-status', (): { enabled: boolean } => {
+    return { enabled: getTotpEnabled() }
+  })
+
+  // Issue a fresh secret to display in the renderer. Not persisted until
+  // confirmed via `vault:totp-confirm` with a valid 6-digit code.
+  ipcMain.handle('vault:totp-setup', (): { secret: string; otpauthUri: string } => {
+    return generateTotpSecret()
+  })
+
+  ipcMain.handle('vault:totp-confirm', (_e, secret: string, code: string): { ok: boolean; error?: string } => {
+    if (!secret || !code) return { ok: false, error: 'Missing secret or code' }
+    if (!verifyTotp(secret, code)) return { ok: false, error: 'Code did not verify — check your authenticator clock' }
+    const p = readPrefs()
+    p.totp = { enabled: true, secret }
+    writePrefs(p)
+    emitEvent('CredVault', 'credvault.security.twofactor.enabled', {})
+    return { ok: true }
+  })
+
+  ipcMain.handle('vault:totp-disable', (_e, code: string): { ok: boolean; error?: string } => {
+    const p = readPrefs()
+    const secret = p.totp?.secret
+    if (!secret) { p.totp = { enabled: false }; writePrefs(p); return { ok: true } }
+    if (!verifyTotp(secret, code)) return { ok: false, error: 'Code did not verify' }
+    p.totp = { enabled: false }
+    writePrefs(p)
+    emitEvent('CredVault', 'credvault.security.twofactor.disabled', {})
+    return { ok: true }
+  })
+
+  // Called after the password unlock when twoFactorRequired was returned.
+  // Completes the SSO session on success.
+  ipcMain.handle('vault:totp-verify', (_e, code: string, autoLockMs?: number): { ok: boolean; error?: string } => {
+    const secret = readPrefs().totp?.secret
+    if (!secret) return { ok: false, error: 'TOTP not configured' }
+    if (!verifyTotp(secret, code)) return { ok: false, error: 'Code did not verify' }
+    beginSession(autoLockMs ?? 0)
+    return { ok: true }
+  })
+
+  // ── Recovery key ──────────────────────────────────────────────────────────
+
+  ipcMain.handle('vault:recovery-status', (): { configured: boolean } => {
+    return { configured: !!readPrefs().recovery }
+  })
+
+  // Generates + stores the hash for later verification. The plaintext is
+  // returned ONCE to the renderer for the user to record; we never see it again.
+  ipcMain.handle('vault:recovery-generate', (): { display: string } => {
+    const rk: RecoveryKey = generateRecoveryKey()
+    const p = readPrefs()
+    p.recovery = { hashHex: rk.hashHex, saltHex: rk.saltHex }
+    writePrefs(p)
+    emitEvent('CredVault', 'credvault.security.recovery.generated', {})
+    return { display: rk.display }
+  })
+
+  ipcMain.handle('vault:recovery-verify', (_e, input: string): { ok: boolean } => {
+    const r = readPrefs().recovery
+    if (!r) return { ok: false }
+    try { return { ok: verifyRecoveryKey(input, r.hashHex, r.saltHex) } }
+    catch { return { ok: false } }
+  })
+
+  // ── SSO state read (for activity feed / debugging) ────────────────────────
+
+  ipcMain.handle('sso:refresh', (_e, autoLockMs: number) => {
+    return refreshSession(autoLockMs ?? 0)
   })
 
   ipcMain.handle('vault:change-password', (_e, currentPassword: string, newPassword: string): UnlockResult => {

@@ -5,6 +5,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { TerminalSession, SshProfile, RecordedSession } from '../types/terminallink';
 import SshManager from './SshManager';
+import HelpIcon from './ui/HelpIcon';
 
 /* ── Recent hosts derived from session names ─────────────────────────────── */
 const KNOWN_RECENT_HOSTS = [
@@ -345,6 +346,7 @@ export default function SessionsView({
             <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: '#00ff41' }}>
               Sessions
             </span>
+            <HelpIcon text="Each session is an independent shell with its own command history and (optional) link to a CyberLab session. Use the SSH and Recordings tabs to manage saved connections and replays." />
           </div>
           <button
             onClick={onNewSession}

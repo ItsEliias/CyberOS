@@ -17,6 +17,7 @@ declare global {
       addSource:       (src: Omit<FeedSource, 'id' | 'color' | 'itemCount' | 'errorCount'>) => Promise<FeedSource[]>
       deleteSource:    (id: string) => Promise<FeedSource[]>
       testSource:      (url: string) => Promise<{ ok: boolean; count?: number; error?: string }>
+      probeFeed:       (url: string) => Promise<{ ok: true; type: 'rss' | 'atom'; title: string; count: number } | { ok: false; error: string }>
       refreshSource:   (id: string) => Promise<boolean>
       rescore:         () => Promise<boolean>
       writeKeywords:   (keywords: string[]) => Promise<boolean>

@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   addSource:      (src: Omit<FeedSource, 'id' | 'color' | 'itemCount' | 'errorCount'>): Promise<FeedSource[]> => ipcRenderer.invoke('feeds:add-source', src),
   deleteSource:   (id: string): Promise<FeedSource[]>               => ipcRenderer.invoke('feeds:delete-source', id),
   testSource:     (url: string): Promise<{ ok: boolean; count?: number; error?: string }> => ipcRenderer.invoke('feeds:test-source', url),
+  probeFeed:      (url: string): Promise<{ ok: true; type: 'rss' | 'atom'; title: string; count: number } | { ok: false; error: string }> => ipcRenderer.invoke('feeds:probe-feed', url),
   refreshSource:  (id: string): Promise<boolean>                    => ipcRenderer.invoke('feeds:refresh-source', id),
 
   // Context / keywords

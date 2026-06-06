@@ -8,6 +8,7 @@ import LastRunSummary from './LastRunSummary';
 import VaultCompositionChart from './VaultCompositionChart';
 import DiffViewer from '../diff/DiffViewer';
 import SectionHeader from '../ui/SectionHeader';
+import HelpTip from '../ui/Tooltip';
 import Button from '../ui/Button';
 import LiveDot from '../ui/LiveDot';
 import type { ScrapeRun, ScrapingSource } from '../../types/vaultcore';
@@ -216,6 +217,7 @@ export default function DashboardView() {
           subtitle={`${sources.length} source${sources.length !== 1 ? 's' : ''} configured`}
           actions={
             <div className="flex items-center gap-2">
+              <HelpTip text="Live overview of your vault: configured sources, last/active runs, and disk usage. Use Scrape All to fan out a manual sweep of every enabled source." side="left" />
               <span
                 className="text-[10px] font-mono tabular-nums px-2 py-1 rounded-lg border"
                 style={{

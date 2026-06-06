@@ -1,4 +1,5 @@
 import type { SessionContext } from '@shared/types';
+import HelpIcon from '../ui/HelpIcon';
 
 interface Props {
   sessionCtx: SessionContext;
@@ -136,9 +137,12 @@ export default function TitleBar({
           <button onClick={onToggleSnippets} title="Snippet library" style={snippetsOpen ? btnActive : btnBase}>
             Snippets
           </button>
-          <button onClick={onToggleSplit} title={splitMode ? 'Single pane' : 'Split panes'} style={splitMode ? btnActive : btnBase}>
-            {splitMode ? 'Unsplit' : 'Split'}
-          </button>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0, WebkitAppRegion: 'no-drag' as unknown as undefined }}>
+            <button onClick={onToggleSplit} title={splitMode ? 'Single pane' : 'Split panes'} style={splitMode ? btnActive : btnBase}>
+              {splitMode ? 'Unsplit' : 'Split'}
+            </button>
+            <HelpIcon text="Split-pane mode runs two independent shells side by side. Toggle Broadcast to mirror keystrokes to every open pane at once." />
+          </span>
           <button onClick={onToggleHistory} title="Command history" style={historyOpen ? btnActive : btnBase}>
             History
           </button>

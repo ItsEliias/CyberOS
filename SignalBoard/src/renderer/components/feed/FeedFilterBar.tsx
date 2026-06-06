@@ -2,6 +2,7 @@
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useStore } from '../../store'
+import HelpTip from '../ui/HelpTip'
 import type { ActiveFilter } from '../../../shared/types'
 
 interface Tab { id: ActiveFilter; label: string }
@@ -66,16 +67,23 @@ export default function FeedFilterBar() {
             </button>
           )
         })}
-        <motion.span
-          key={activeCount}
-          initial={{ opacity: 0, scale: 0.85 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.15 }}
-          className="ml-auto text-[9px] font-mono tabular-nums px-1.5 py-0.5 rounded"
-          style={{ color: '#ff6b6b', background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.2)' }}
-        >
-          {activeCount} shown
-        </motion.span>
+        <div className="ml-auto flex items-center gap-1.5">
+          <HelpTip
+            side="bottom-left"
+            title="Filters & Search"
+            text="Filter the current feed by relevance tier, starred state, or unread status. Press ⌘K from anywhere to open full-text search across every item."
+          />
+          <motion.span
+            key={activeCount}
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.15 }}
+            className="text-[9px] font-mono tabular-nums px-1.5 py-0.5 rounded"
+            style={{ color: '#ff6b6b', background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.2)' }}
+          >
+            {activeCount} shown
+          </motion.span>
+        </div>
       </div>
     </div>
   )

@@ -68,9 +68,11 @@ function updateSource(id, updates) {
   const idx = sources.findIndex(s => s.id === id);
   if (idx === -1) return null;
   sources[idx] = { ...sources[idx], ...updates };
-  writeSources(sources);
-  // Rebuild cron expression if frequency changed
-  if (updates.schedule) {
+  // Rebuild cron expression from `frequency`+`time` ONLY when the caller passed
+  // those legacy fields and did not provide an explicit cronExpression. Without
+  // this guard, any schedule update from the UI would have its cron clobbered
+  // to null because frequencyToCron(undefined, undefined) returns null.
+  if (updates.schedule && updates.schedule.frequency && updates.schedule.cronExpression === undefined) {
     sources[idx].schedule.cronExpression = frequencyToCron(updates.schedule.frequency, updates.schedule.time);
   }
   writeSources(sources);

@@ -6,6 +6,7 @@ import {
   searchLabs, serialize, type Lab, type LabColumn,
 } from '../lib/labtracker';
 import Badge from './ui/Badge';
+import HelpIcon from './ui/HelpIcon';
 
 // ── ProgressArc: 32×32 SVG arc showing task completion ratio ──────────────────
 
@@ -154,6 +155,7 @@ export default function LabTracker() {
               {totalLabs}
             </span>
           )}
+          <HelpIcon text="Kanban board for tracking machines across HTB, THM, CTFs, and custom labs. Drag cards between To-Do / In Progress / Completed. Connected platforms auto-populate via API sync." label="About Lab Tracker" />
         </div>
         <input
           type="text"

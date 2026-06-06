@@ -7,12 +7,18 @@ import http from 'http';
 import { URL } from 'url';
 import { emitEvent } from './ecosystem-bus.js';
 import { registerExtrasIPC } from './ipc-extras.js';
+import {
+  saveTokenSecure, loadTokenSecure, clearTokenSecure,
+  fetchHtbStats, fetchThmStats, writeActiveLab,
+} from './platforms.js';
 
 const APP_VERSION        = '1.0';
 const CONFIG_PATH        = path.join(os.homedir(), 'cybertools-config.json');
 const DATA_DIR           = path.join(os.homedir(), '.cyberlab-companion');
 const SESSIONS_DIR       = path.join(DATA_DIR, 'sessions');
 const ENCRYPTED_KEY_FILE = path.join(DATA_DIR, 'apikey.enc');
+const HTB_TOKEN_FILE     = path.join(DATA_DIR, 'htb-token.enc');
+const THM_TOKEN_FILE     = path.join(DATA_DIR, 'thm-token.enc');
 const PROGRESS_FILE      = path.join(DATA_DIR, 'progress.json');
 const LAB_TRACKER_FILE   = path.join(DATA_DIR, 'labs.json');
 const SNIPPETS_FILE      = path.join(DATA_DIR, 'snippets.json');
@@ -76,6 +82,8 @@ function loadApiKeySecure(): string | null {
   } catch {}
   return null;
 }
+
+// HTB/THM logic + encrypted token storage extracted to './platforms.ts'.
 
 function fetchJSON(url: string, opts: { method?: string; headers?: Record<string,string>; body?: string } = {}, _hops = 0): Promise<{ status: number; data: unknown; raw?: boolean }> {
   return new Promise((resolve, reject) => {
@@ -390,6 +398,84 @@ function registerIPC() {
       emitEvent('CyberLab', 'cyberlab.thm.synced', { count: labs.length });
       return { success: true, labs };
     } catch (e: unknown) { return { success: false, error: (e as Error).message }; }
+  });
+
+  // ── HTB / THM token management (encrypted at rest) ─────────────────────────
+
+  ipcMain.handle('save-htb-token', async (_, token: string) => {
+    if (!token || typeof token !== 'string') return { success: false, error: 'Empty token' };
+    const test = await fetchHtbStats(token);
+    if (!test.success) return { success: false, error: test.error || 'HTB validation failed' };
+    if (!saveTokenSecure(HTB_TOKEN_FILE, token)) return { success: false, error: 'Failed to encrypt token' };
+    saveConfig({ htbConnected: true });
+    emitEvent('CyberLab', 'cyberlab.htb.connected', { username: test.data?.username });
+    return { success: true, data: test.data };
+  });
+
+  ipcMain.handle('test-htb-token', async (_, token?: string) => {
+    const t = token || loadTokenSecure(HTB_TOKEN_FILE);
+    if (!t) return { success: false, error: 'No HTB token configured' };
+    const res = await fetchHtbStats(t);
+    return res;
+  });
+
+  ipcMain.handle('clear-htb-token', () => {
+    clearTokenSecure(HTB_TOKEN_FILE);
+    saveConfig({ htbConnected: false });
+    emitEvent('CyberLab', 'cyberlab.htb.disconnected', {});
+    return { success: true };
+  });
+
+  ipcMain.handle('has-htb-token', () => !!loadTokenSecure(HTB_TOKEN_FILE));
+
+  ipcMain.handle('fetch-htb-stats', async () => {
+    const token = loadTokenSecure(HTB_TOKEN_FILE);
+    if (!token) return { success: false, error: 'Not connected to HTB' };
+    const res = await fetchHtbStats(token);
+    // Update shared_context if there's an active machine
+    if (res.success && res.data?.activeMachines?.length) {
+      const m = res.data.activeMachines[0];
+      writeActiveLab(CONFIG_PATH, m.name, 'HTB', { activeIP: m.ip || null, activeDifficulty: m.difficulty || null });
+    }
+    return res;
+  });
+
+  ipcMain.handle('save-thm-token', async (_, payload: { token: string; username?: string }) => {
+    const token = payload?.token || '';
+    if (!token) return { success: false, error: 'Empty THM token' };
+    const test = await fetchThmStats(token, payload.username);
+    if (!test.success) return { success: false, error: test.error || 'THM validation failed' };
+    if (!saveTokenSecure(THM_TOKEN_FILE, token)) return { success: false, error: 'Failed to encrypt token' };
+    saveConfig({ thmConnected: true, thmUsername: test.data?.username || payload.username });
+    emitEvent('CyberLab', 'cyberlab.thm.connected', { username: test.data?.username });
+    return { success: true, data: test.data };
+  });
+
+  ipcMain.handle('test-thm-token', async (_, payload?: { token?: string; username?: string }) => {
+    const token = payload?.token || loadTokenSecure(THM_TOKEN_FILE);
+    if (!token) return { success: false, error: 'No THM token configured' };
+    return fetchThmStats(token, payload?.username);
+  });
+
+  ipcMain.handle('clear-thm-token', () => {
+    clearTokenSecure(THM_TOKEN_FILE);
+    saveConfig({ thmConnected: false });
+    emitEvent('CyberLab', 'cyberlab.thm.disconnected', {});
+    return { success: true };
+  });
+
+  ipcMain.handle('has-thm-token', () => !!loadTokenSecure(THM_TOKEN_FILE));
+
+  ipcMain.handle('fetch-thm-stats', async () => {
+    const token = loadTokenSecure(THM_TOKEN_FILE);
+    if (!token) return { success: false, error: 'Not connected to THM' };
+    const cfg = loadConfig();
+    return fetchThmStats(token, cfg.thmUsername as string | undefined);
+  });
+
+  ipcMain.handle('set-active-lab', (_, payload: { name: string | null; platform: string; ip?: string }) => {
+    writeActiveLab(CONFIG_PATH, payload?.name || null, payload?.platform || '', { activeIP: payload?.ip || null });
+    return { success: true };
   });
 
   ipcMain.handle('update-launcher-status', (_, status: Record<string, unknown>) => {

@@ -2,6 +2,7 @@
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../../store'
+import HelpTip from '../ui/HelpTip'
 import type { FeedSource, FeedType, FeedCategory } from '../../../shared/types'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -372,7 +373,13 @@ export default function SourcesView() {
     <div className="flex-1 flex flex-col min-w-0">
       <div className="px-5 py-4 border-b border-border/50 flex-shrink-0 flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-text">Sources</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-text">Sources</h2>
+            <HelpTip
+              title="Sources"
+              text="Every feed SignalBoard polls. Toggle a source to include or exclude it from the Signal Feed, set per-source poll intervals, or test new URLs. Custom user-added feeds live here too — see Settings → Custom Feeds for a focused view."
+            />
+          </div>
           <p className="text-xs text-muted/50 mt-0.5">
             {sources.length} configured · {active} active
             {errored > 0 && <span className="text-danger ml-1">· {errored} errored</span>}

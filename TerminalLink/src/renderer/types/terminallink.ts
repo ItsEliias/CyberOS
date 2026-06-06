@@ -42,6 +42,13 @@ export const ACCENT_SWATCHES = [
   '#00ff41', '#4a9eff', '#3fb950', '#d29922', '#b44fff', '#f78166',
 ] as const
 
+export interface ExternalShellHookSettings {
+  /** Master switch for capture from external terminals. Default false. */
+  enabled: boolean
+  /** Which shells we currently inject the hook into. */
+  shells: Array<'zsh' | 'bash' | 'fish'>
+}
+
 export interface TerminalSettings {
   shellPath: string
   fontSize: number
@@ -57,6 +64,7 @@ export interface TerminalSettings {
   ollamaEnabled: boolean
   snippetsOpen: boolean
   appTheme: AppTheme
+  externalShellHook: ExternalShellHookSettings
 }
 
 export type ActiveView = 'terminal' | 'sessions' | 'settings'

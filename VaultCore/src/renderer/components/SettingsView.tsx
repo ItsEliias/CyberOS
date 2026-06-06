@@ -1,6 +1,15 @@
 import { useState } from 'react';
 import { useStore } from '../store';
 import type { CoreTheme, PersonalityTheme } from '@shared/types';
+import HelpTip from './ui/Tooltip';
+
+const SECTION_HELP: Record<string, string> = {
+  Vault: 'Where scraped notes land. Point VaultCore at your Obsidian vault and it will detect installed plugins.',
+  Theme: 'Visual presets. Core sets the base palette, Personality layers a color accent.',
+  Behaviour: 'How the app handles tray minimization, notifications, sounds, and background scrapes.',
+  About: 'App version and update checks.',
+  'Danger Zone': 'Destructive operations like factory reset. Cannot be undone.',
+};
 
 const CORES: CoreTheme[]                = ['stealth', 'graphite', 'frost', 'oled'];
 const PERSONALITIES: PersonalityTheme[] = ['neutral', 'cyberpunk', 'terminal', 'threat'];
@@ -222,11 +231,16 @@ export default function SettingsView() {
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const help = SECTION_HELP[title];
   return (
     <div>
-      <div className="text-[10px] uppercase tracking-wider mb-3 pb-1 border-b"
-        style={{ color: 'var(--accent)', borderColor: 'var(--border)' }}>
-        {title}
+      <div className="flex items-center gap-2 mb-3 pb-1 border-b"
+        style={{ borderColor: 'var(--border)' }}>
+        <div className="text-[10px] uppercase tracking-wider"
+          style={{ color: 'var(--accent)' }}>
+          {title}
+        </div>
+        {help && <HelpTip text={help} side="right" />}
       </div>
       <div className="space-y-4">{children}</div>
     </div>

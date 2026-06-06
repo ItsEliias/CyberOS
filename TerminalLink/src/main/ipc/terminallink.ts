@@ -17,6 +17,16 @@ import {
   killPty,
   setPtyCallbacks,
 } from '../ptyManager';
+import {
+  installHookForShell,
+  uninstallHookForShell,
+  startTailing,
+  stopTailing,
+  setExternalLineCallback,
+  getHookStatus,
+  SUPPORTED_SHELLS,
+} from '../externalShellHook';
+import type { ExternalShellId } from '../../shared/types.js';
 
 // ─── Paths ─────────────────────────────────────────────────────────────────────
 const CONFIG_PATH   = path.join(os.homedir(), 'cybertools-config.json');
@@ -69,6 +79,14 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
     (id, data) => win.webContents.send('pty-data', { id, data }),
     (id, code) => win.webContents.send('pty-exit', { id, code }),
   );
+
+  // Forward external-shell-hook command lines into the renderer. The renderer
+  // funnels these through addCommand so they merge with the in-app log.
+  setExternalLineCallback(entry => {
+    try {
+      win.webContents.send('externalshell:command', entry);
+    } catch { /* renderer may be torn down */ }
+  });
 
   // ── PTY: create ─────────────────────────────────────────────────────────────
   ipcMain.handle('terminallink:pty:create', (_evt, id: string, env: Record<string, string> = {}) => {
@@ -346,5 +364,57 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
     } catch {
       return {};
     }
+  });
+
+  // ── External Shell Hook: install ─────────────────────────────────────────
+  ipcMain.handle(
+    'terminallink:externalshell:install',
+    (_evt, shells: ExternalShellId[]) => {
+      const targets = (shells || []).filter(s => SUPPORTED_SHELLS.includes(s));
+      const results = targets.map(installHookForShell);
+      const errored = results.filter(r => r.error);
+      if (errored.length === 0) {
+        startTailing();
+      }
+      return {
+        success: errored.length === 0,
+        results,
+        status: getHookStatus(),
+      };
+    },
+  );
+
+  // ── External Shell Hook: uninstall ───────────────────────────────────────
+  ipcMain.handle(
+    'terminallink:externalshell:uninstall',
+    (_evt, shells?: ExternalShellId[]) => {
+      const targets = (
+        shells && shells.length > 0 ? shells : (SUPPORTED_SHELLS as ExternalShellId[])
+      ).filter(s => SUPPORTED_SHELLS.includes(s));
+      const results = targets.map(uninstallHookForShell);
+      // Stop tailing only when no shell still has the hook installed.
+      const stillInstalled = SUPPORTED_SHELLS.some(s => getHookStatus().installed[s]);
+      if (!stillInstalled) {
+        stopTailing();
+      }
+      return {
+        success: results.every(r => !r.error),
+        results,
+        status: getHookStatus(),
+      };
+    },
+  );
+
+  // ── External Shell Hook: status ──────────────────────────────────────────
+  ipcMain.handle('terminallink:externalshell:status', () => getHookStatus());
+
+  // ── External Shell Hook: start/stop tail independently ───────────────────
+  ipcMain.handle('terminallink:externalshell:start-tail', () => {
+    startTailing();
+    return getHookStatus();
+  });
+  ipcMain.handle('terminallink:externalshell:stop-tail', () => {
+    stopTailing();
+    return getHookStatus();
   });
 }

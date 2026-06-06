@@ -5,6 +5,7 @@ import { useStore } from '../../store'
 import FeedFilterBar from './FeedFilterBar'
 import FeedItemCard from './FeedItem'
 import ReadingPane from './ReadingPane'
+import HelpTip from '../ui/HelpTip'
 import type { FeedItem } from '../../../shared/types'
 
 // Inject refresh glow animation once
@@ -100,7 +101,13 @@ export default function FeedView() {
       <div className="w-[340px] flex flex-col border-r border-white/[0.06] flex-shrink-0">
         {/* Column header with refresh indicator */}
         <div className="flex items-center justify-between px-3 pt-2 pb-1" style={{ minHeight: '28px' }}>
-          <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#4a5568' }}>Feed</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#4a5568' }}>Feed</span>
+            <HelpTip
+              title="Signal Feed"
+              text="Aggregated stream of items from every enabled source. Click an item to read it; high-relevance signals surface automatically based on your active context and keywords."
+            />
+          </div>
           <div className="flex items-center gap-2">
             {filtered.filter(i => !i.read).length > 0 && (
               <button

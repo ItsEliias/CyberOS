@@ -2,6 +2,7 @@
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../../store'
+import HelpTip from '../ui/HelpTip'
 import type { FeedItem } from '../../../shared/types'
 
 const TIER_COLOR: Record<string, string> = {
@@ -168,7 +169,13 @@ export default function BookmarksView() {
       {/* Header */}
       <div className="px-5 py-4 border-b border-border/50 flex-shrink-0 flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-text">Bookmarks</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-text">Bookmarks</h2>
+            <HelpTip
+              title="Bookmarks"
+              text="Items you've starred from the feed. Add tags to organise them, filter by tag, and export the whole collection as JSON or CSV for archiving or analysis."
+            />
+          </div>
           <p className="text-xs text-muted/50 mt-0.5">
             {bookmarks.length} saved · {bookmarkedItems.length} shown
           </p>

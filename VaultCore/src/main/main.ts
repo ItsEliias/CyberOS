@@ -19,6 +19,16 @@ const conflict      = _require('./lib/conflict.js');
 const processor     = _require('./lib/processor.js');
 const scraper       = _require('./lib/scraper.js');
 const cron          = _require('node-cron');
+const cronParser    = _require('cron-parser');
+
+// ── cron next-run helper ─────────────────────────────────────────────────────
+function computeNextRun(cronExpression: string | null | undefined): string | null {
+  if (!cronExpression) return null;
+  try {
+    const it = cronParser.parseExpression(cronExpression);
+    return it.next().toDate().toISOString();
+  } catch { return null; }
+}
 
 // ─── Globals ──────────────────────────────────────────────────────────────────
 let mainWindow: BrowserWindow | null = null;
@@ -112,6 +122,9 @@ function scheduleSource(source: Record<string, unknown>) {
       if (currentScrapeState) return;
       await runScheduledScrape(source);
     });
+    // Persist next run so renderer/list rows can show it without re-querying.
+    const nextRun = computeNextRun(schedule.cronExpression as string);
+    if (nextRun) sourcelibrary.updateSource(id, { schedule: { ...schedule, nextRun } });
   } catch (e) { console.error('[scheduler] Failed:', (source.name as string), (e as Error).message); }
 }
 
@@ -332,6 +345,26 @@ ipcMain.handle('scrape-source-now',async (_, id) => {
   await runScheduledScrape(source);
   return { success: true };
 });
+
+// Schedule-specific update — persists schedule + re-registers cron job and returns
+// the source with a freshly-computed nextRun. Renderer uses this from the modal.
+ipcMain.handle('update-source-schedule', (_, id: string, schedule: Record<string, unknown>) => {
+  const existing = sourcelibrary.getSourceById(id);
+  if (!existing) return { error: 'Source not found' };
+  const nextRun = schedule?.enabled && schedule?.cronExpression
+    ? computeNextRun(schedule.cronExpression as string) : null;
+  const merged = { ...schedule, nextRun: nextRun ?? undefined };
+  const updated = sourcelibrary.updateSource(id, { schedule: merged });
+  scheduleSource(updated);
+  return updated;
+});
+
+// Returns whatever scrape (if any) is currently in flight — used by the source
+// list to render a "scraping now" pulse on the matching row.
+ipcMain.handle('get-active-scrape', () => currentScrapeState);
+
+// Pure cron-string → ISO timestamp helper for renderer-side previews.
+ipcMain.handle('compute-next-run', (_, cronExpression: string) => computeNextRun(cronExpression));
 
 ipcMain.handle('get-vault-stats',  async () => { const vp = launcher.getVaultPath(); return vp ? vaulthealth.getStats(vp) : null; });
 ipcMain.handle('run-duplicate-check', async () => {
