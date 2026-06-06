@@ -76,20 +76,27 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── ⌘K command palette ─────────────────────────────────────────────────────
-  // Suppressed while the SSO soft-lock is active so the user can't disable the
-  // "Require CredVault session" toggle without unlocking first.
+  // ── ⌘K command palette + ⌘N new report ─────────────────────────────────────
+  // Both suppressed while the SSO soft-lock is active so the user can't open
+  // the palette / wizard from the locked screen.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        if (requireSSO && ssoUnlocked === false) return;
+      if (requireSSO && ssoUnlocked === false) return;
+      if (!(e.metaKey || e.ctrlKey) || e.shiftKey) return;
+      const k = e.key.toLowerCase();
+      if (k === 'k') {
         e.preventDefault();
         setPaletteOpen(o => !o);
+      } else if (k === 'n' && view === 'library') {
+        // ⌘N → new report wizard. Scoped to the library view so the editor
+        // doesn't lose work mid-edit to an accidental Cmd+N.
+        e.preventDefault();
+        setView('wizard');
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [requireSSO, ssoUnlocked]);
+  }, [requireSSO, ssoUnlocked, view, setView]);
 
   // ── Auto-save every 30s when in editor and dirty ───────────────────────────
   // Skipped while the SSO soft-lock is active: the editor is masked, so any
