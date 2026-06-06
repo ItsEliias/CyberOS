@@ -93,7 +93,11 @@ export function loadSources(): FeedSource[] {
 
 export function saveSources(sources: FeedSource[]): void {
   ensureDir()
-  fs.writeFileSync(SOURCES_FILE, JSON.stringify(sources, null, 2), 'utf8')
+  // Atomic — a crash mid-write would corrupt sources.json and the next
+  // launch would fall back to DEFAULT_SOURCES, losing every custom feed.
+  const tmp = `${SOURCES_FILE}.tmp`
+  fs.writeFileSync(tmp, JSON.stringify(sources, null, 2), 'utf8')
+  fs.renameSync(tmp, SOURCES_FILE)
 }
 
 export function loadCache(): FeedItem[] {
@@ -109,7 +113,11 @@ export function saveCache(items: FeedItem[]): void {
   const sorted = [...items].sort((a, b) =>
     new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
   )
-  fs.writeFileSync(CACHE_FILE, JSON.stringify(sorted.slice(0, MAX_ITEMS), null, 2), 'utf8')
+  // Atomic — cache.json holds read/saved state. Corrupting it would lose
+  // the user's bookmarks-by-read-state across a refresh.
+  const tmp = `${CACHE_FILE}.tmp`
+  fs.writeFileSync(tmp, JSON.stringify(sorted.slice(0, MAX_ITEMS), null, 2), 'utf8')
+  fs.renameSync(tmp, CACHE_FILE)
 }
 
 // ─── HTTP fetch ───────────────────────────────────────────────────────────────
