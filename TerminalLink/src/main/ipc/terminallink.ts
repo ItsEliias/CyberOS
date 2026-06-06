@@ -426,7 +426,11 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
       const resolvedDir = path.resolve(dir);
       const sep = resolvedDir.endsWith(path.sep) ? resolvedDir : resolvedDir + path.sep;
       if (!resolved.startsWith(sep)) return { success: false };
-      fs.writeFileSync(filePath, JSON.stringify(data), 'utf8');
+      const json = JSON.stringify(data);
+      // 100 MB ceiling — a normal asciinema cast is <1 MB; anything larger
+      // is a renderer trying to fill the user's disk.
+      if (json.length > 100 * 1024 * 1024) return { success: false };
+      writeFileAtomic(filePath, json);
       return { success: true, path: filePath };
     } catch (e) {
       return { success: false };
