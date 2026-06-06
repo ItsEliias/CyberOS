@@ -795,8 +795,14 @@ export function registerCredVaultHandlers(): void {
 
   ipcMain.handle('app:version', () => APP_VERSION)
 
-  ipcMain.handle('vault:reset-idle-timer', (_e, autoLockMs: number) => {
-    if (hasKey()) resetLockTimer(autoLockMs)
+  ipcMain.handle('vault:reset-idle-timer', (_e, autoLockMs: unknown) => {
+    // Without this guard, a non-number autoLockMs (NaN, string) would
+    // bypass resetLockTimer's `timeoutMs <= 0` check (NaN <= 0 === false)
+    // and reach setTimeout(fn, NaN), which Node coerces to 0 — the vault
+    // would lock immediately the next event-loop tick.
+    if (!hasKey()) return true
+    const ms = typeof autoLockMs === 'number' && Number.isFinite(autoLockMs) ? autoLockMs : 0
+    resetLockTimer(ms)
     return true
   })
 
