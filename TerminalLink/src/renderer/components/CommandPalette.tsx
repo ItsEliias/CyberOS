@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import HelpIcon from './ui/HelpIcon';
 
 export interface PaletteItem {
   id: string;
@@ -181,6 +182,7 @@ export default function CommandPalette({ items, onClose }: Props) {
             background: 'rgba(0,255,65,0.06)', border: '1px solid rgba(0,255,65,0.15)',
             borderRadius: 4, padding: '2px 6px', fontFamily: 'var(--font-mono)',
           }}>ESC</kbd>
+          <HelpIcon text="Fuzzy-search every action, view, snippet, and SSH profile. Use ↑↓ to navigate and Enter to execute. Opened with Cmd+Shift+P." />
         </div>
 
         <div ref={listRef} style={{ maxHeight: 360, overflowY: 'auto' }}>

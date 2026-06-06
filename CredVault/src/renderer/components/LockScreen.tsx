@@ -121,6 +121,11 @@ export default function LockScreen({ needsSetup }: Props) {
   const [failCount, setFailCount] = useState(0)
   const MAX_ATTEMPTS = 5
 
+  // 2FA second-step state
+  const [twoFAOpen, setTwoFAOpen] = useState(false)
+  const [otpCode, setOtpCode]     = useState('')
+  const [twoFABusy, setTwoFABusy] = useState(false)
+
   useEffect(() => {
     if (!needsSetup) {
       window.electronAPI.touchIdAvailable().then(setTouchIdAvailable).catch(() => {})
@@ -157,12 +162,35 @@ export default function LockScreen({ needsSetup }: Props) {
     setLoading(true); setError('')
     const res = await window.electronAPI.unlockVault(pw, autoLockMs)
     setLoading(false)
-    if (res.ok) { setUnlockedAnim(true); setTimeout(() => setUnlocked(true), 600) }
-    else {
+    if (res.ok) {
+      if (res.twoFactorRequired) {
+        setTwoFAOpen(true)
+        setOtpCode('')
+      } else {
+        setUnlockedAnim(true); setTimeout(() => setUnlocked(true), 600)
+      }
+    } else {
       if (res.lockoutSeconds) setCountdown(res.lockoutSeconds)
       setError(res.error ?? 'Unlock failed')
       setPw('')
       setFailCount(c => c + 1)
+      triggerShake()
+    }
+  }
+
+  async function handleTwoFA(e: FormEvent) {
+    e.preventDefault()
+    if (otpCode.length !== 6) return
+    setTwoFABusy(true); setError('')
+    const res = await window.electronAPI.totpVerify(otpCode, autoLockMs)
+    setTwoFABusy(false)
+    if (res.ok) {
+      setTwoFAOpen(false)
+      setUnlockedAnim(true)
+      setTimeout(() => setUnlocked(true), 600)
+    } else {
+      setError(res.error ?? 'Code did not verify')
+      setOtpCode('')
       triggerShake()
     }
   }
@@ -302,7 +330,50 @@ export default function LockScreen({ needsSetup }: Props) {
           </motion.div>
         )}
 
-        {/* Form */}
+        {/* 2FA step — replaces the password form once the password verifies */}
+        {twoFAOpen ? (
+          <form onSubmit={handleTwoFA} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ fontSize: 11, color: '#8b949e', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Two-factor code
+              </span>
+              <span style={{ fontSize: 11, color: '#6b7280' }}>
+                Enter the 6-digit code from your authenticator app.
+              </span>
+            </div>
+            <motion.div
+              key={shakeKey}
+              animate={shakeKey > 0 ? { x: [0, -5, 5, -5, 5, 0] } : {}}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+            >
+              <input
+                autoFocus
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="000000"
+                value={otpCode}
+                onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                disabled={twoFABusy}
+                style={{
+                  width: '100%', textAlign: 'center', fontSize: 24,
+                  letterSpacing: '0.25em', fontFamily: 'JetBrains Mono, monospace',
+                  padding: '14px 12px',
+                }}
+              />
+            </motion.div>
+            {error && <p style={{ fontSize: 12, color: 'var(--error)', textAlign: 'center' }}>{error}</p>}
+            <button type="submit" className="btn btn-accent" disabled={otpCode.length !== 6 || twoFABusy}
+              style={{ width: '100%', padding: '12px', fontSize: 14, fontWeight: 600 }}>
+              {twoFABusy ? 'Verifying…' : 'Unlock'}
+            </button>
+            <button type="button" onClick={() => { setTwoFAOpen(false); setOtpCode(''); setError('') }}
+              style={{ background: 'transparent', border: 'none', color: '#6b7280', fontSize: 11, cursor: 'pointer' }}>
+              Use a different password
+            </button>
+          </form>
+        ) : (
+        /* Form */
         <form onSubmit={needsSetup ? handleSetup : handleUnlock} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <motion.div
             key={shakeKey}
@@ -382,8 +453,9 @@ export default function LockScreen({ needsSetup }: Props) {
               : needsSetup ? 'Create Vault' : 'Unlock Vault'}
           </button>
         </form>
+        )}
 
-        {!needsSetup && touchIdAvailable && (
+        {!needsSetup && touchIdAvailable && !twoFAOpen && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginTop: -8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
               <div style={{ flex: 1, height: 1, background: 'rgba(42,51,71,0.4)' }} />

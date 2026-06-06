@@ -236,3 +236,39 @@ export interface DetectedTag {
   value: string;
   url: string;
 }
+
+// ── Platform integrations: HTB / THM ─────────────────────────────────────────
+
+export interface HtbStats {
+  username: string;
+  rank: string;
+  points: number;
+  userOwns: number;
+  rootOwns: number;
+  totalOwns: number;
+  ranking: number | null;
+  activeMachines: Array<{ id: string; name: string; difficulty: string; os: string; ip?: string }>;
+  recentMachines: Array<{ id: string; name: string; difficulty: string; os: string }>;
+  fetchedAt: string;
+}
+
+export interface ThmStats {
+  username: string;
+  rank?: string;
+  points?: number;
+  completedRooms: number;
+  inProgressRooms: number;
+  recentRooms: Array<{ code: string; title: string; difficulty: string }>;
+  fetchedAt: string;
+  partial?: string;
+}
+
+export interface PlatformConnectionState {
+  htbConnected: boolean;
+  thmConnected: boolean;
+  htbStats: HtbStats | null;
+  thmStats: ThmStats | null;
+  htbError: string | null;
+  thmError: string | null;
+  lastSyncAt: string | null;
+}

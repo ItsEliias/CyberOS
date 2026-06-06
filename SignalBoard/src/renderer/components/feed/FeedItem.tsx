@@ -104,7 +104,8 @@ export default function FeedItemCard({ item, index = 0 }: { item: FeedItemType; 
   const topAlert       = item.alertMatches?.[0]
   const [expanded, setExpanded] = useState(false)
 
-  const sourceColor = sources.find(s => s.id === item.sourceId)?.color ?? '#8b949e'
+  const sourceColor   = sources.find(s => s.id === item.sourceId)?.color ?? '#8b949e'
+  const isCustomFeed  = item.sourceId.startsWith('custom-')
 
   useEffect(() => {
     if (item.relevanceScore >= 60 && cardRef.current) {
@@ -189,6 +190,15 @@ export default function FeedItemCard({ item, index = 0 }: { item: FeedItemType; 
             <TrustBadge sourceName={item.sourceName} />
             {item.sourceName}
           </span>
+          {isCustomFeed && (
+            <span
+              className="text-[9px] font-bold uppercase px-1.5 py-[2px] rounded flex-shrink-0"
+              style={{ background: 'rgba(255,107,107,0.12)', color: '#ff6b6b', border: '1px solid rgba(255,107,107,0.35)' }}
+              title="User-added custom feed"
+            >
+              Custom
+            </span>
+          )}
           <span
             className="text-[9px] font-bold uppercase px-1.5 py-[2px] rounded flex-shrink-0"
             style={{ background: `${tier.color}${tier.bgAlpha}`, color: tier.color, border: `1px solid ${tier.color}44` }}

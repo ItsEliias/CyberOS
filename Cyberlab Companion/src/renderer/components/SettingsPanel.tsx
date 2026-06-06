@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useStore } from '../store';
 import type { AppConfig, BgThemeId, AccentThemeId } from '@shared/types';
 import { BG_THEMES, ACCENT_THEMES } from '../lib/themes';
+import ApiConnections from './ApiConnections';
+import HelpIcon from './ui/HelpIcon';
 
 export default function SettingsPanel() {
   const { config, setConfig, setBgTheme, setAccentTheme, bgTheme, accentTheme } = useStore();
@@ -81,7 +83,10 @@ export default function SettingsPanel() {
   return (
     <div className="flex flex-col h-full overflow-y-auto p-4">
       <div className="max-w-xl mx-auto w-full space-y-6">
-        <h2 className="text-sm font-semibold text-[var(--text)]">Settings</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-[var(--text)]">Settings</h2>
+          <HelpIcon text="Configure your operator profile, theme, AI provider, platform integrations (HTB/THM), and storage paths. Everything here lives on your machine — tokens encrypted with Electron safeStorage." label="About Settings" />
+        </div>
 
         {/* Theme — Background */}
         <section className="card space-y-3">
@@ -259,33 +264,8 @@ export default function SettingsPanel() {
           )}
         </section>
 
-        {/* Integrations: HTB + THM */}
-        <section className="card space-y-3">
-          <div className="text-xs font-semibold text-[var(--text-dim)] uppercase tracking-wide">Integrations</div>
-          <div className="input-group">
-            <label>HTB API Key</label>
-            <input
-              type="password"
-              value={form.htbApiKey || ''}
-              onChange={e => setForm(f => ({ ...f, htbApiKey: e.target.value }))}
-              className="w-full font-mono text-xs"
-              placeholder="eyJ0eXAi... (from hackthebox.com/profile)"
-            />
-            <div className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
-              Used for HTB Machine lookup in New Session and the HTB Progress dashboard
-            </div>
-          </div>
-          <div className="input-group">
-            <label>THM Username</label>
-            <input
-              type="text"
-              value={form.thmUsername || ''}
-              onChange={e => setForm(f => ({ ...f, thmUsername: e.target.value }))}
-              className="w-full font-mono text-xs"
-              placeholder="your-thm-username"
-            />
-          </div>
-        </section>
+        {/* Integrations: HTB + THM (encrypted token storage, live stats) */}
+        <ApiConnections />
 
         {/* Preferences */}
         <section className="card space-y-3">

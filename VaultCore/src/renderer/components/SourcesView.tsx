@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import type { Source, SourceType, ConflictStrategy, SourceHealth } from '@shared/types';
 import SectionHeader from './ui/SectionHeader';
 import Button from './ui/Button';
 import Badge from './ui/Badge';
+import HelpTip from './ui/Tooltip';
+import ScheduleModal from './sources/ScheduleModal';
+import { formatRelative } from '../utils/cron';
 
 // ── Health indicator ──────────────────────────────────────────────────────────
 
@@ -93,6 +96,30 @@ export default function SourcesView() {
   const [editId, setEditId]         = useState<string | null>(null);
   const [scrapingId, setScrapingId] = useState<string | null>(null);
   const [saving, setSaving]         = useState(false);
+  const [scheduleFor, setScheduleFor] = useState<Source | null>(null);
+  const [activeScrapeName, setActiveScrapeName] = useState<string | null>(null);
+
+  // Poll the main process every 2s for the currently-active scrape so we can
+  // pulse the matching row. Lightweight — just one IPC, no payload.
+  useEffect(() => {
+    let cancelled = false;
+    async function tick() {
+      try {
+        const s = await window.electronAPI.getActiveScrape();
+        if (!cancelled) setActiveScrapeName(s?.sourceName ?? null);
+      } catch { /* ignore */ }
+    }
+    tick();
+    const id = setInterval(tick, 2000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
+  // Lightweight re-render every 30s so the "Next: in 2h 14m" subtitle stays fresh.
+  const [, force] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => force(n => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   function updateForm(patch: Partial<AddForm>) { setForm(f => ({ ...f, ...patch })); }
   function startAdd() { setEditId(null); setForm(DEFAULT_FORM); setShowAdd(true); }
@@ -145,10 +172,13 @@ export default function SourcesView() {
     <div className="h-full flex flex-col overflow-hidden">
       {/* Toolbar */}
       <div className="flex items-center justify-between px-5 py-4 border-b shrink-0" style={{ borderColor: 'var(--border-default)' }}>
-        <SectionHeader
-          title="Source Library"
-          subtitle={`${sources.length} source${sources.length !== 1 ? 's' : ''} configured`}
-        />
+        <div className="flex items-center gap-2">
+          <SectionHeader
+            title="Source Library"
+            subtitle={`${sources.length} source${sources.length !== 1 ? 's' : ''} configured`}
+          />
+          <HelpTip text="Configure web/file/feed sources VaultCore scrapes into your Obsidian vault. Click Schedule on any row to automate runs." />
+        </div>
         <Button variant="primary" size="sm" onClick={startAdd}>+ Add Source</Button>
       </div>
 
@@ -209,6 +239,21 @@ export default function SourcesView() {
         )}
       </AnimatePresence>
 
+      {/* Schedule modal */}
+      {scheduleFor && (
+        <ScheduleModal
+          source={scheduleFor}
+          onClose={() => setScheduleFor(null)}
+          onSaved={(u) => setSources(sources.map(s => s.id === u.id ? u : s))}
+          onRunNow={async () => {
+            const target = scheduleFor;
+            setScheduleFor(null);
+            await scrapeNow(target);
+          }}
+          runningNow={scrapingId === scheduleFor.id || activeScrapeName === scheduleFor.name}
+        />
+      )}
+
       {/* Source list */}
       <div className="flex-1 overflow-auto p-5">
         {sources.length === 0 ? (
@@ -222,12 +267,19 @@ export default function SourcesView() {
           </div>
         ) : (
           <div className="space-y-2">
-            {sources.map(source => (
+            {sources.map(source => {
+              const isMidScrape = activeScrapeName === source.name;
+              const nextRunIso = source.schedule?.enabled ? source.schedule?.nextRun : undefined;
+              return (
               <motion.div
                 key={source.id}
                 layout
                 className="flex items-center gap-4 p-4 rounded-lg border transition-colors"
-                style={{ background: 'var(--surface-1)', borderColor: 'var(--border-default)' }}
+                style={{
+                  background: 'var(--surface-1)',
+                  borderColor: isMidScrape ? 'rgba(63,185,80,0.55)' : 'var(--border-default)',
+                  boxShadow: isMidScrape ? '0 0 0 1px rgba(63,185,80,0.30), 0 0 18px rgba(63,185,80,0.18)' : undefined,
+                }}
                 initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
               >
                 <HealthDot health={source.health} />
@@ -244,13 +296,23 @@ export default function SourcesView() {
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{source.name}</div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{source.name}</div>
+                    {isMidScrape && (
+                      <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider"
+                        style={{ color: '#3fb950' }}>
+                        <span className="w-1.5 h-1.5 rounded-full animate-pulse"
+                          style={{ background: '#3fb950', boxShadow: '0 0 6px #3fb950' }} />
+                        Scraping
+                      </span>
+                    )}
+                  </div>
                   {source.url && (
                     <div className="text-[11px] font-mono truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>
                       {source.url}
                     </div>
                   )}
-                  <div className="flex items-center gap-3 mt-1">
+                  <div className="flex items-center gap-3 mt-1 flex-wrap">
                     {source.lastScraped && (
                       <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                         Last: {new Date(source.lastScraped).toLocaleDateString()}
@@ -264,6 +326,11 @@ export default function SourcesView() {
                     {source.schedule?.cronExpression && (
                       <Badge variant="accent">⏱ {source.schedule.cronExpression}</Badge>
                     )}
+                    {nextRunIso && (
+                      <span className="text-[10px] tabular-nums" style={{ color: 'var(--text-secondary)' }}>
+                        Next run: {formatRelative(nextRunIso)}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -272,16 +339,17 @@ export default function SourcesView() {
                   <Button
                     variant="primary" size="xs"
                     onClick={() => scrapeNow(source)}
-                    disabled={scrapingId === source.id}
+                    disabled={scrapingId === source.id || isMidScrape}
                     loading={scrapingId === source.id}
                   >
                     Scrape
                   </Button>
+                  <Button variant="ghost" size="xs" onClick={() => setScheduleFor(source)}>Schedule</Button>
                   <Button variant="ghost" size="xs" onClick={() => startEdit(source)}>Edit</Button>
                   <Button variant="danger" size="xs" onClick={() => deleteSource(source.id)}>Delete</Button>
                 </div>
               </motion.div>
-            ))}
+            );})}
           </div>
         )}
       </div>

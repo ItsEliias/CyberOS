@@ -41,6 +41,12 @@ const api = {
   deleteSource   : (id: string) => ipcRenderer.invoke('delete-source', id) as Promise<boolean>,
   getSourceHealth: ()        => ipcRenderer.invoke('get-source-health') as Promise<unknown>,
   scrapeSourceNow: (id: string) => ipcRenderer.invoke('scrape-source-now', id) as Promise<{ success?: boolean; error?: string }>,
+  updateSourceSchedule: (id: string, schedule: Record<string, unknown>) =>
+    ipcRenderer.invoke('update-source-schedule', id, schedule) as Promise<Source | { error: string }>,
+  getActiveScrape: () =>
+    ipcRenderer.invoke('get-active-scrape') as Promise<{ sourceName: string; progress: number; startTime: number; paused?: boolean } | null>,
+  computeNextRun: (cronExpression: string) =>
+    ipcRenderer.invoke('compute-next-run', cronExpression) as Promise<string | null>,
 
   // ── Vault Health ──────────────────────────────────────────────────────────
   getVaultStats            : ()                   => ipcRenderer.invoke('get-vault-stats') as Promise<VaultStats | null>,

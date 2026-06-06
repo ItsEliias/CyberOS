@@ -77,6 +77,34 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Subscribe to commands captured from external terminals (zsh/bash/fish)
+  // via the rc-file hook. Funnel them through the standard command pipeline
+  // so they appear in the in-app history and ecosystem bus.
+  useEffect(() => {
+    const off = window.electronAPI.onExternalShellCommand?.(entry => {
+      addCommand({
+        command: entry.command,
+        pane: entry.pane,
+        outputSnippet: entry.outputSnippet,
+        source: 'external',
+        externalShell: entry.externalShell,
+        externalCwd: entry.externalCwd,
+        timestamp: entry.timestamp,
+      });
+    });
+    return () => { off?.(); };
+  }, [addCommand]);
+
+  // Bootstrap the external shell hook: if user previously enabled it, the
+  // setting persists; ensure the tail is running on app start.
+  useEffect(() => {
+    if (settings.externalShellHook?.enabled) {
+      window.electronAPI.externalShellStartTail?.().catch(() => undefined);
+    }
+  // Only run once on mount; toggle changes handled inside SettingsView.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const handle = setInterval(() => { loadSharedContext().catch(() => undefined); }, 10_000);
     return () => clearInterval(handle);

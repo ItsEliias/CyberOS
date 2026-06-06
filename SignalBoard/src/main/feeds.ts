@@ -146,6 +146,41 @@ export function fetchUrl(url: string): Promise<string> {
 
 const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' })
 
+// Probe a remote feed URL: returns a guess at the feed type and the channel/feed title.
+// Used by the Custom Feeds UI to auto-populate metadata when a user pastes a URL.
+export async function probeFeed(url: string): Promise<{ ok: true; type: 'rss' | 'atom'; title: string; count: number } | { ok: false; error: string }> {
+  try {
+    const raw = await fetchUrl(url)
+    const parsed = xmlParser.parse(raw)
+    let type: 'rss' | 'atom' = 'rss'
+    let title = ''
+    let count = 0
+    if (parsed?.rss?.channel) {
+      type = 'rss'
+      const ch = parsed.rss.channel as Record<string, unknown>
+      title = typeof ch['title'] === 'string' ? (ch['title'] as string).trim() : ''
+      const items = ch['item']
+      count = Array.isArray(items) ? items.length : items ? 1 : 0
+    } else if (parsed?.feed) {
+      type = 'atom'
+      const f = parsed.feed as Record<string, unknown>
+      const rawTitle = f['title']
+      if (typeof rawTitle === 'string') title = rawTitle.trim()
+      else if (rawTitle && typeof rawTitle === 'object') {
+        const t = (rawTitle as Record<string, unknown>)['#text']
+        if (typeof t === 'string') title = t.trim()
+      }
+      const entries = f['entry']
+      count = Array.isArray(entries) ? entries.length : entries ? 1 : 0
+    } else {
+      return { ok: false, error: 'Not a recognised RSS or Atom feed' }
+    }
+    return { ok: true, type, title: title.slice(0, 120), count }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+}
+
 function stripHtml(html: string): string {
   return html
     .replace(/<[^>]+>/g, ' ')

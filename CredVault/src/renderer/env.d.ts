@@ -19,6 +19,21 @@ declare global {
       lockVault:        () => Promise<boolean>
       changePassword:   (cur: string, next: string) => Promise<UnlockResult>
 
+      // Two-factor (TOTP)
+      totpStatus:       () => Promise<{ enabled: boolean }>
+      totpSetup:        () => Promise<{ secret: string; otpauthUri: string }>
+      totpConfirm:      (secret: string, code: string) => Promise<{ ok: boolean; error?: string }>
+      totpDisable:      (code: string) => Promise<{ ok: boolean; error?: string }>
+      totpVerify:       (code: string, autoLockMs?: number) => Promise<{ ok: boolean; error?: string }>
+
+      // Recovery key
+      recoveryStatus:   () => Promise<{ configured: boolean }>
+      recoveryGenerate: () => Promise<{ display: string }>
+      recoveryVerify:   (input: string) => Promise<{ ok: boolean }>
+
+      // SSO session keep-alive
+      ssoRefresh:       (autoLockMs: number) => Promise<unknown>
+
       // Credentials CRUD
       getCredentials:   () => Promise<Credential[]>
       addCredential:    (c: Omit<Credential, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Credential | null>

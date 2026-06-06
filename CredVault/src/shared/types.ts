@@ -66,6 +66,7 @@ export interface UnlockResult {
   error?: string
   attemptsLeft?: number
   lockoutSeconds?: number
+  twoFactorRequired?: boolean
 }
 
 export interface VaultStats {
@@ -115,9 +116,13 @@ export interface PendingCredential {
   targetIP: string
   username?: string
   hash?: string
+  password?: string
   type: string
   service?: string
   queuedAt: string
+  // Lab/folder suggestion (set by ReconDesk when shared_context.activeLab is known)
+  lab?: string
+  suggestedFolder?: string
 }
 
 export interface BreachCheckResult {

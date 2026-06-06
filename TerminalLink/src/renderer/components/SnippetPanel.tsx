@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import type { Snippet } from '../types/terminallink';
+import HelpIcon from './ui/HelpIcon';
 
 interface Props {
   snippets: Snippet[];
@@ -61,8 +62,9 @@ export default function SnippetPanel({ snippets, onPaste, onClose, onAdd, onRemo
         justifyContent: 'space-between',
         flexShrink: 0,
       }}>
-        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--accent)' }}>
+        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--accent)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           Snippets
+          <HelpIcon text="Reusable command templates. Click to paste into the active terminal — $TARGET / $TARGET_IP are substituted from the shared context." />
         </span>
         <div style={{ display: 'flex', gap: 4 }}>
           <button

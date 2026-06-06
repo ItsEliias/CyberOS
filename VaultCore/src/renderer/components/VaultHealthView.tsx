@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import type { DuplicateGroup, DeadLink } from '@shared/types';
+import HelpTip from './ui/Tooltip';
 
 type HealthTab = 'overview' | 'duplicates' | 'deadlinks' | 'sources';
 
@@ -77,7 +78,10 @@ export default function VaultHealthView() {
       <div className="flex items-center justify-between px-5 py-3 border-b shrink-0"
         style={{ borderColor: 'var(--border)' }}>
         <div>
-          <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Vault Health</div>
+          <div className="flex items-center gap-2">
+            <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Vault Health</div>
+            <HelpTip text="Audit your vault: surface duplicate notes, dead links, and per-source health so you can clean up before re-scraping." />
+          </div>
           <div className="text-[11px]" style={{ color: 'var(--text-dim)' }}>
             {vaultPath ? vaultPath.split('/').pop() : 'No vault configured'}
           </div>

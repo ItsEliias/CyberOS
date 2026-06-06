@@ -6,6 +6,7 @@ import { createRequire } from 'module';
 import fs from 'fs';
 import type { CommandEntry, CapturePayload, SessionContext } from '../shared/types.js';
 import { registerTerminalLinkIPC } from './ipc/terminallink';
+import { stopTailing } from './externalShellHook';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const _require   = createRequire(import.meta.url);
@@ -142,6 +143,7 @@ if (!app.requestSingleInstanceLock()) {
       try { proc.kill(); } catch { /* ignore */ }
     }
     ptys.clear();
+    try { stopTailing(); } catch { /* ignore */ }
   });
 }
 

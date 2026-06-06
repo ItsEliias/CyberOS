@@ -34,6 +34,23 @@ const api = {
   syncHTB:     (apiKey: string) => ipcRenderer.invoke('sync-htb', apiKey),
   syncTHM:     (username: string) => ipcRenderer.invoke('sync-thm', username),
 
+  // HTB token (encrypted) + stats
+  saveHtbToken:  (token: string) => ipcRenderer.invoke('save-htb-token', token),
+  testHtbToken:  (token?: string) => ipcRenderer.invoke('test-htb-token', token),
+  clearHtbToken: () => ipcRenderer.invoke('clear-htb-token'),
+  hasHtbToken:   () => ipcRenderer.invoke('has-htb-token'),
+  fetchHtbStats: () => ipcRenderer.invoke('fetch-htb-stats'),
+
+  // THM token (encrypted) + stats
+  saveThmToken:  (payload: { token: string; username?: string }) => ipcRenderer.invoke('save-thm-token', payload),
+  testThmToken:  (payload?: { token?: string; username?: string }) => ipcRenderer.invoke('test-thm-token', payload),
+  clearThmToken: () => ipcRenderer.invoke('clear-thm-token'),
+  hasThmToken:   () => ipcRenderer.invoke('has-thm-token'),
+  fetchThmStats: () => ipcRenderer.invoke('fetch-thm-stats'),
+
+  setActiveLab: (payload: { name: string | null; platform: string; ip?: string }) =>
+    ipcRenderer.invoke('set-active-lab', payload),
+
   updateLauncherStatus: (status: unknown) => ipcRenderer.invoke('update-launcher-status', status),
 
   saveProgress: (data: unknown) => ipcRenderer.invoke('save-progress', data),

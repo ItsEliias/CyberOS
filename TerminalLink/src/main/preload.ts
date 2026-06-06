@@ -1,5 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { CommandEntry, SessionContext, CapturePayload, CaptureResult } from '../shared/types.js';
+import type {
+  CommandEntry, SessionContext, CapturePayload, CaptureResult,
+  ExternalHookStatus, ExternalShellId,
+} from '../shared/types.js';
 
 const api = {
   // ── PTY ───────────────────────────────────────────────────────────────────
@@ -86,6 +89,32 @@ const api = {
   // Check binary exists in PATH
   checkBinary: (bin: string): Promise<boolean> =>
     ipcRenderer.invoke('terminallink:binary:check', bin),
+
+  // ── External Shell Hook ─────────────────────────────────────────────────
+  externalShellInstall: (
+    shells: ExternalShellId[],
+  ): Promise<{ success: boolean; results: Array<{ shell: ExternalShellId; rcPath: string; changed: boolean; error?: string }>; status: ExternalHookStatus }> =>
+    ipcRenderer.invoke('terminallink:externalshell:install', shells),
+
+  externalShellUninstall: (
+    shells?: ExternalShellId[],
+  ): Promise<{ success: boolean; results: Array<{ shell: ExternalShellId; rcPath: string; changed: boolean; error?: string }>; status: ExternalHookStatus }> =>
+    ipcRenderer.invoke('terminallink:externalshell:uninstall', shells),
+
+  externalShellStatus: (): Promise<ExternalHookStatus> =>
+    ipcRenderer.invoke('terminallink:externalshell:status'),
+
+  externalShellStartTail: (): Promise<ExternalHookStatus> =>
+    ipcRenderer.invoke('terminallink:externalshell:start-tail'),
+
+  externalShellStopTail: (): Promise<ExternalHookStatus> =>
+    ipcRenderer.invoke('terminallink:externalshell:stop-tail'),
+
+  onExternalShellCommand: (cb: (entry: CommandEntry) => void): (() => void) => {
+    const fn = (_: Electron.IpcRendererEvent, p: CommandEntry) => cb(p);
+    ipcRenderer.on('externalshell:command', fn);
+    return () => ipcRenderer.removeListener('externalshell:command', fn);
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', api);

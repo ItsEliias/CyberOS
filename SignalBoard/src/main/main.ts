@@ -9,7 +9,7 @@ import { emitEvent } from './ecosystem-bus'
 import {
   DEFAULT_SOURCES, loadSources, saveSources,
   loadCache, saveCache, fetchAllFeeds, saveItemToVault,
-  computeTier, applyAlertRules, deduplicateItems
+  computeTier, applyAlertRules, deduplicateItems, probeFeed
 } from './feeds'
 import type {
   FeedItem, FeedSource, FeedState, RelevanceContext, AppSettings, AlertRule
@@ -422,6 +422,12 @@ ipcMain.handle('feeds:test-source', async (_e, url: string) => {
   } catch (e) {
     return { ok: false, error: (e as Error).message }
   }
+})
+
+// Probe a custom-feed URL: returns {ok, type, title, count} so the Custom Feeds UI can
+// auto-detect rss/atom and seed the source name from the feed's own <title>.
+ipcMain.handle('feeds:probe-feed', async (_e, url: string) => {
+  return probeFeed(url)
 })
 
 ipcMain.handle('feeds:rescore', (_e) => {

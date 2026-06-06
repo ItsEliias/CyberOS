@@ -1,7 +1,7 @@
 {
   "name": "vaultcore",
   "version": "1.0.0",
-  "description": "Centralized vault intelligence engine \u2014 CYBERTOOLS",
+  "description": "Centralized vault intelligence engine — CYBERTOOLS",
   "main": "out/main/index.js",
   "scripts": {
     "sync-lib": "node -e \"const fs=require('fs'),path=require('path');const FILES=['launcher.js','ecosystem-bus.js','sourcelibrary.js','vaulthealth.js','conflict.js','processor.js','scraper.js'];const dest='out/main/lib';fs.mkdirSync(dest,{recursive:true});FILES.forEach(f=>{if(fs.existsSync(f))fs.copyFileSync(f,path.join(dest,f));});if(fs.existsSync('sources')){const walk=(s,d)=>{fs.mkdirSync(d,{recursive:true});for(const e of fs.readdirSync(s,{withFileTypes:true})){const sp=path.join(s,e.name),dp=path.join(d,e.name);e.isDirectory()?walk(sp,dp):fs.copyFileSync(sp,dp);}};walk('sources','out/main/lib/sources');}console.log('Synced backend JS to out/main/lib/');\"",
@@ -19,6 +19,7 @@
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@playwright/browser-chromium": "^1.40.0",
     "cheerio": "^1.0.0-rc.12",
+    "cron-parser": "^4.9.0",
     "node-cron": "^3.0.3",
     "node-fetch": "^2.7.0",
     "pdf-parse": "^1.1.1",
@@ -42,7 +43,7 @@
   "build": {
     "appId": "com.itsEliias.vaultcore",
     "productName": "VaultCore",
-    "copyright": "Copyright \u00a9 2024 ItsEliias",
+    "copyright": "Copyright © 2024 ItsEliias",
     "directories": {
       "output": "dist",
       "buildResources": "assets"

@@ -3,15 +3,18 @@ import { useState } from 'react'
 import { useStore } from '../../store'
 import ThemeSection from './SettingsTheme'
 import { AlertRulesEditor, DigestEditor } from './SettingsEditors'
+import CustomFeedsEditor from './CustomFeedsEditor'
+import HelpTip from '../ui/HelpTip'
 import type { AppSettings } from '../../../shared/types'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, help, children }: { title: string; help?: { title: string; text: string }; children: React.ReactNode }) {
   return (
     <div className="mb-6">
-      <h3 className="text-[10px] font-semibold text-muted/60 uppercase tracking-widest mb-3 pb-1.5 border-b border-border/40">
-        {title}
+      <h3 className="text-[10px] font-semibold text-muted/60 uppercase tracking-widest mb-3 pb-1.5 border-b border-border/40 flex items-center gap-2">
+        <span>{title}</span>
+        {help && <HelpTip title={help.title} text={help.text} />}
       </h3>
       <div className="space-y-3">{children}</div>
     </div>
@@ -138,6 +141,16 @@ export default function SettingsView() {
           <Row label="Reader light mode" description="White background, dark text, serif font in reading pane.">
             <Toggle checked={!!settings.readerLightMode} onChange={v => patch({ readerLightMode: v })} />
           </Row>
+        </Section>
+
+        <Section
+          title="Custom Feeds"
+          help={{
+            title: 'Custom Feeds',
+            text: 'Add your own RSS or Atom feed URLs. Items are fetched on launch and after each add, then merged into the main Signal Feed with a "Custom" badge so you can tell them apart from the built-in sources.',
+          }}
+        >
+          <CustomFeedsEditor />
         </Section>
 
         <Section title="Alert Rules">

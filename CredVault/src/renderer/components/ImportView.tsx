@@ -61,9 +61,13 @@ export default function ImportView() {
       const cred = await window.electronAPI.pending.approve(index)
       if (cred) {
         await window.electronAPI.addCredential({
-          username: cred.username ?? '(unknown)', hash: cred.hash, hashType: cred.type,
+          username: cred.username ?? '(unknown)',
+          password: cred.password,
+          hash: cred.hash, hashType: cred.type,
           service: cred.service ?? 'Unknown', source: 'ReconDesk live push',
           targetName: cred.targetName, ip: cred.targetIP, tags: [], verified: false, status: 'active',
+          labName: cred.lab,
+          folder: cred.suggestedFolder,
         })
         addImportHistory({ timestamp: new Date().toISOString(), count: 1, sourceLabel: `Live push from ReconDesk — ${cred.targetName}` })
         await refreshData()
