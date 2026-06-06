@@ -776,14 +776,22 @@ ipcMain.handle('note:export:pdf', async (_, htmlContent: string, noteName: strin
     filters: [{ name: 'PDF', extensions: ['pdf'] }],
   });
   if (result.canceled || !result.filePath) return false;
+  // Track the offscreen window so we can destroy it on every path (success
+  // or any thrown error). Without this, a printToPDF / loadURL failure
+  // leaves the BrowserWindow alive and accumulating on every retry.
+  let pdfWin: BrowserWindow | null = null;
   try {
-    const pdfWin = new BrowserWindow({ show: false, webPreferences: { offscreen: true } });
+    pdfWin = new BrowserWindow({ show: false, webPreferences: { offscreen: true } });
     await pdfWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
     const data = await pdfWin.webContents.printToPDF({ printBackground: true });
-    pdfWin.destroy();
     fs.writeFileSync(result.filePath, data);
     return true;
   } catch { return false; }
+  finally {
+    if (pdfWin && !pdfWin.isDestroyed()) {
+      try { pdfWin.destroy(); } catch { /* already gone */ }
+    }
+  }
 });
 
 // ─── Spec-canonical IPC aliases ───────────────────────────────────────────────
