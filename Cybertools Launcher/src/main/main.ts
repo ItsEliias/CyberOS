@@ -1,6 +1,6 @@
 import {
   app, BrowserWindow, Tray, Menu, nativeImage,
-  ipcMain, dialog, Notification, screen, shell, globalShortcut
+  ipcMain, dialog, Notification, screen, shell, globalShortcut, safeStorage
 } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -9,6 +9,7 @@ import fs from 'fs';
 import https from 'https';
 import { spawn } from 'child_process';
 import zlib from 'zlib';
+import cryptoModule from 'crypto';
 
 import {
   readConfig, writeConfig, updateConfig,
@@ -593,7 +594,59 @@ function launchApp(appKey: string): boolean {
 // Snapshot all CyberOS app config locations into a single tar.gz in the
 // user-selected backup folder. No encryption yet — warn user this is plain.
 
-interface BackupResult { ok: boolean; file?: string; error?: string; count?: number }
+interface BackupResult { ok: boolean; file?: string; error?: string; count?: number; encrypted?: boolean }
+
+// AES-GCM wrapped tarball:
+//   [4-byte magic 'CBKP'] [16-byte salt] [12-byte iv] [16-byte tag] [ciphertext]
+// Magic distinguishes encrypted backups from plain tar.gz so import can route.
+const BACKUP_MAGIC = Buffer.from('CBKP');
+const PBKDF2_ITERS = 200_000;
+const SALT_LEN = 16;
+const IV_LEN   = 12;
+const TAG_LEN  = 16;
+
+function deriveBackupKey(password: string, salt: Buffer): Buffer {
+  return cryptoModule.pbkdf2Sync(password, salt, PBKDF2_ITERS, 32, 'sha256');
+}
+
+function encryptToFile(plainPath: string, encPath: string, password: string): void {
+  const salt = cryptoModule.randomBytes(SALT_LEN);
+  const iv   = cryptoModule.randomBytes(IV_LEN);
+  const key  = deriveBackupKey(password, salt);
+  const cipher = cryptoModule.createCipheriv('aes-256-gcm', key, iv);
+  const plain  = fs.readFileSync(plainPath);
+  const enc    = Buffer.concat([cipher.update(plain), cipher.final()]);
+  const tag    = cipher.getAuthTag();
+  fs.writeFileSync(encPath, Buffer.concat([BACKUP_MAGIC, salt, iv, tag, enc]));
+}
+
+function decryptFromFile(encPath: string, plainPath: string, password: string): void {
+  const buf = fs.readFileSync(encPath);
+  if (buf.length < BACKUP_MAGIC.length + SALT_LEN + IV_LEN + TAG_LEN ||
+      !buf.subarray(0, BACKUP_MAGIC.length).equals(BACKUP_MAGIC)) {
+    throw new Error('Not an encrypted CyberOS backup');
+  }
+  let off = BACKUP_MAGIC.length;
+  const salt = buf.subarray(off, off + SALT_LEN); off += SALT_LEN;
+  const iv   = buf.subarray(off, off + IV_LEN);   off += IV_LEN;
+  const tag  = buf.subarray(off, off + TAG_LEN);  off += TAG_LEN;
+  const enc  = buf.subarray(off);
+  const key  = deriveBackupKey(password, salt);
+  const decipher = cryptoModule.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(tag);
+  const plain = Buffer.concat([decipher.update(enc), decipher.final()]);
+  fs.writeFileSync(plainPath, plain);
+}
+
+function isEncryptedBackup(file: string): boolean {
+  try {
+    const fd = fs.openSync(file, 'r');
+    const buf = Buffer.alloc(4);
+    fs.readSync(fd, buf, 0, 4, 0);
+    fs.closeSync(fd);
+    return buf.equals(BACKUP_MAGIC);
+  } catch { return false; }
+}
 
 const BACKUP_PATHS = [
   // Shared ecosystem config
@@ -618,7 +671,7 @@ const BACKUP_PATHS = [
   path.join(os.homedir(), '.cybertools/term-log.jsonl'),
 ];
 
-async function runBackupSnapshot(): Promise<BackupResult> {
+async function runBackupSnapshot(password?: string): Promise<BackupResult> {
   try {
     const cfg     = readConfig() as Record<string, { folder?: string }>;
     const folder  = cfg.backup?.folder;
@@ -630,16 +683,13 @@ async function runBackupSnapshot(): Promise<BackupResult> {
       return { ok: false, error: 'Nothing to back up — no app data found.' };
     }
 
-    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const file  = path.join(folder, `cyberos-backup-${stamp}.tar.gz`);
-
-    // Use macOS `tar` so we don't need extra deps. Paths recorded relative
-    // to $HOME so restore is portable.
-    const home = os.homedir();
+    const stamp   = new Date().toISOString().replace(/[:.]/g, '-');
+    const home    = os.homedir();
     const relPaths = present.map(p => p.startsWith(home + '/') ? p.slice(home.length + 1) : p);
+    const tarPath  = path.join(os.tmpdir(), `cyberos-backup-${stamp}.tar.gz`);
 
     await new Promise<void>((resolve, reject) => {
-      const child = spawn('tar', ['-czf', file, '-C', home, ...relPaths],
+      const child = spawn('tar', ['-czf', tarPath, '-C', home, ...relPaths],
         { stdio: ['ignore', 'pipe', 'pipe'] });
       let err = '';
       child.stderr?.on('data', d => { err += d.toString(); });
@@ -650,29 +700,52 @@ async function runBackupSnapshot(): Promise<BackupResult> {
       });
     });
 
-    addActivityEntry({ type: 'launcher', text: `Backup snapshot saved (${path.basename(file)})` });
-    ecosystemBus.emitEvent('Launcher', 'launcher.backup.created', { file: path.basename(file), count: present.length });
-    return { ok: true, file, count: present.length };
+    let finalFile: string;
+    const encrypted = !!password;
+    if (encrypted) {
+      finalFile = path.join(folder, `cyberos-backup-${stamp}.cyberos-backup`);
+      encryptToFile(tarPath, finalFile, password!);
+      try { fs.unlinkSync(tarPath); } catch { /* ignore */ }
+    } else {
+      finalFile = path.join(folder, `cyberos-backup-${stamp}.tar.gz`);
+      fs.renameSync(tarPath, finalFile);
+    }
+
+    addActivityEntry({ type: 'launcher', text: `Backup snapshot saved (${path.basename(finalFile)})${encrypted ? ' [encrypted]' : ''}` });
+    ecosystemBus.emitEvent('Launcher', 'launcher.backup.created', { file: path.basename(finalFile), count: present.length, encrypted });
+    return { ok: true, file: finalFile, count: present.length, encrypted };
   } catch (e) {
     return { ok: false, error: (e as Error).message };
   }
 }
 
-async function runBackupImport(): Promise<BackupResult> {
+async function runBackupImport(password?: string): Promise<BackupResult> {
   try {
     isDialogOpen = true;
     const result = await dialog.showOpenDialog(panelWindow!, {
       properties: ['openFile'],
-      filters: [{ name: 'CyberOS backup', extensions: ['gz', 'tgz', 'tar.gz'] }],
+      filters: [{ name: 'CyberOS backup', extensions: ['cyberos-backup', 'gz', 'tgz', 'tar.gz'] }],
     });
     isDialogOpen = false;
     if (result.canceled || !result.filePaths[0]) return { ok: false, error: '' };
     const file = result.filePaths[0];
 
+    let tarFile = file;
+    let cleanup = false;
+    if (isEncryptedBackup(file)) {
+      if (!password) return { ok: false, error: 'This backup is encrypted — password required.', encrypted: true };
+      tarFile = path.join(os.tmpdir(), `cyberos-restore-${Date.now()}.tar.gz`);
+      try {
+        decryptFromFile(file, tarFile, password);
+        cleanup = true;
+      } catch (e) {
+        return { ok: false, error: `Decrypt failed: ${(e as Error).message}` };
+      }
+    }
+
     const home = os.homedir();
-    // List archive members first so we can report count
     const list = await new Promise<string[]>((resolve, reject) => {
-      const child = spawn('tar', ['-tzf', file], { stdio: ['ignore', 'pipe', 'pipe'] });
+      const child = spawn('tar', ['-tzf', tarFile], { stdio: ['ignore', 'pipe', 'pipe'] });
       let out = '';
       child.stdout?.on('data', d => { out += d.toString(); });
       child.on('error', reject);
@@ -680,12 +753,14 @@ async function runBackupImport(): Promise<BackupResult> {
     });
 
     await new Promise<void>((resolve, reject) => {
-      const child = spawn('tar', ['-xzf', file, '-C', home], { stdio: ['ignore', 'pipe', 'pipe'] });
+      const child = spawn('tar', ['-xzf', tarFile, '-C', home], { stdio: ['ignore', 'pipe', 'pipe'] });
       let err = '';
       child.stderr?.on('data', d => { err += d.toString(); });
       child.on('error', reject);
       child.on('close', code => code === 0 ? resolve() : reject(new Error(err || `tar -x exited ${code}`)));
     });
+
+    if (cleanup) try { fs.unlinkSync(tarFile); } catch { /* ignore */ }
 
     addActivityEntry({ type: 'launcher', text: `Backup restored from ${path.basename(file)}` });
     ecosystemBus.emitEvent('Launcher', 'launcher.backup.restored', { file: path.basename(file), count: list.length });
@@ -694,6 +769,81 @@ async function runBackupImport(): Promise<BackupResult> {
     isDialogOpen = false;
     return { ok: false, error: (e as Error).message };
   }
+}
+
+// ─── Backup scheduling ────────────────────────────────────────────────────────
+// Checks every 30 min: if backup is enabled with daily/weekly frequency and the
+// last run is older than the interval, run a snapshot. Uses safeStorage for the
+// encrypted-backup password — if encryption is on, the password must have been
+// captured at enable-time.
+
+let backupSchedulerTimer: NodeJS.Timeout | null = null;
+
+function savedBackupPasswordPath(): string {
+  return path.join(os.homedir(), 'Library/Application Support/CyberTools/backup-key.enc');
+}
+
+function saveBackupPassword(password: string): boolean {
+  try {
+    if (!safeStorage.isEncryptionAvailable()) return false;
+    const enc = safeStorage.encryptString(password);
+    fs.mkdirSync(path.dirname(savedBackupPasswordPath()), { recursive: true });
+    fs.writeFileSync(savedBackupPasswordPath(), enc);
+    return true;
+  } catch { return false; }
+}
+
+function loadBackupPassword(): string | null {
+  try {
+    const p = savedBackupPasswordPath();
+    if (!fs.existsSync(p)) return null;
+    if (!safeStorage.isEncryptionAvailable()) return null;
+    return safeStorage.decryptString(fs.readFileSync(p));
+  } catch { return null; }
+}
+
+function clearBackupPassword(): void {
+  try { fs.unlinkSync(savedBackupPasswordPath()); } catch { /* ignore */ }
+}
+
+async function checkScheduledBackup(): Promise<void> {
+  try {
+    const cfg = readConfig() as Record<string, {
+      enabled?: boolean; folder?: string; frequency?: 'manual' | 'daily' | 'weekly'; lastRun?: string; encrypt?: boolean
+    }>;
+    const b = cfg.backup;
+    if (!b?.enabled || !b.folder) return;
+    const freq = b.frequency || 'manual';
+    if (freq === 'manual') return;
+
+    const intervalMs = freq === 'daily' ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
+    const last = b.lastRun ? new Date(b.lastRun).getTime() : 0;
+    if (Date.now() - last < intervalMs) return;
+
+    const password = b.encrypt ? loadBackupPassword() : undefined;
+    if (b.encrypt && !password) {
+      console.warn('[backup] scheduled backup skipped — encryption enabled but no saved password');
+      return;
+    }
+
+    const result = await runBackupSnapshot(password || undefined);
+    if (result.ok) {
+      writeConfig({ backup: { ...b, lastRun: new Date().toISOString() } });
+      const shared = readConfig();
+      if (panelWindow && !panelWindow.isDestroyed()) {
+        panelWindow.webContents.send('config-update', shared);
+      }
+    }
+  } catch (e) {
+    console.warn('[backup] scheduler error:', (e as Error).message);
+  }
+}
+
+function startBackupScheduler(): void {
+  if (backupSchedulerTimer) clearInterval(backupSchedulerTimer);
+  // First check after 60s, then every 30 min
+  setTimeout(() => { void checkScheduledBackup(); }, 60_000);
+  backupSchedulerTimer = setInterval(() => { void checkScheduledBackup(); }, 30 * 60_000);
 }
 
 // ─── Config polling ───────────────────────────────────────────────────────────
@@ -1074,12 +1224,25 @@ function setupIPC(): void {
   ipcMain.handle('hide-panel',     () => { hidePanel(); return true; });
   ipcMain.on('hide-after-splash',  () => hidePanel());
 
-  ipcMain.handle('backup-snapshot', async () => {
-    return await runBackupSnapshot();
+  ipcMain.handle('backup-snapshot', async (_e, password?: string) => {
+    return await runBackupSnapshot(password);
   });
 
-  ipcMain.handle('backup-import', async () => {
-    return await runBackupImport();
+  ipcMain.handle('backup-import', async (_e, password?: string) => {
+    return await runBackupImport(password);
+  });
+
+  ipcMain.handle('backup-save-password', (_e, password: string) => {
+    return saveBackupPassword(password);
+  });
+
+  ipcMain.handle('backup-has-saved-password', () => {
+    return fs.existsSync(savedBackupPasswordPath());
+  });
+
+  ipcMain.handle('backup-clear-password', () => {
+    clearBackupPassword();
+    return true;
   });
 
   ipcMain.handle('open-file-picker', async (_e, opts: { filters?: Electron.FileFilter[] }) => {
@@ -1207,6 +1370,8 @@ app.whenReady().then(() => {
   startVpnCheck();
 
   ecosystemBus.emitEvent('Launcher', 'launcher.opened', {});
+
+  startBackupScheduler();
 
   ecosystemBus.watchEvents((events) => {
     if (panelWindow && !panelWindow.isDestroyed()) {
