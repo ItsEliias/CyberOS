@@ -70,10 +70,16 @@ const api = {
   },
 
   // Backup
-  backupSnapshot      : (): Promise<{ ok: boolean; file?: string; error?: string; count?: number }> =>
-                          ipcRenderer.invoke('backup-snapshot'),
-  backupImport        : (): Promise<{ ok: boolean; count?: number; error?: string }> =>
-                          ipcRenderer.invoke('backup-import'),
+  backupSnapshot      : (password?: string): Promise<{ ok: boolean; file?: string; error?: string; count?: number; encrypted?: boolean }> =>
+                          ipcRenderer.invoke('backup-snapshot', password),
+  backupImport        : (password?: string): Promise<{ ok: boolean; count?: number; error?: string; encrypted?: boolean }> =>
+                          ipcRenderer.invoke('backup-import', password),
+  backupSavePassword  : (password: string): Promise<boolean> =>
+                          ipcRenderer.invoke('backup-save-password', password),
+  backupHasSavedPassword : (): Promise<boolean> =>
+                          ipcRenderer.invoke('backup-has-saved-password'),
+  backupClearPassword : (): Promise<boolean> =>
+                          ipcRenderer.invoke('backup-clear-password'),
   onEcosystemUpdated  : (cb: (events: EcosystemEvent[]) => void) => {
     const listener = (_e: Electron.IpcRendererEvent, events: EcosystemEvent[]) => cb(events);
     ipcRenderer.on('ecosystem-events-updated', listener);

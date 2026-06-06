@@ -1,4 +1,5 @@
-// ReconDesk — Global Search (Cmd+K, Feature 14)
+// ReconDesk — Global Search (content-search modal). Opened with ⌘Shift+F
+// (⌘K now opens the CommandPalette — the action palette).
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRecondeskStore } from '../stores/useRecondeskStore'
@@ -16,7 +17,8 @@ export default function GlobalSearch() {
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      // ⌘Shift+F → open search
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'f' || e.key === 'F')) {
         e.preventDefault()
         setOpen(o => !o)
       }

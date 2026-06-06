@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useStore } from './store'
 import { useThemeStore } from './store/themeStore'
@@ -12,6 +12,7 @@ import SettingsView from './components/settings/SettingsView'
 import BookmarksView from './components/bookmarks/BookmarksView'
 import TimelineView from './components/timeline/TimelineView'
 import SearchOverlay from './components/search/SearchOverlay'
+import CommandPalette from './components/CommandPalette'
 import OnboardingModal, { useOnboarding } from './components/OnboardingModal'
 
 export default function App() {
@@ -31,6 +32,7 @@ export default function App() {
   const activeView       = useStore(s => s.activeView)
   const searchOpen       = useStore(s => s.searchOpen)
   const setSearchOpen    = useStore(s => s.setSearchOpen)
+  const [paletteOpen, setPaletteOpen] = useState(false)
 
   useEffect(() => {
     window.electronAPI.getState().then(state => {
@@ -70,17 +72,17 @@ export default function App() {
     }
   }, [setItems, setSources, setRefreshing, setLastRefreshed, setContext, setVersion, setSettings, setBookmarks, setBookmarkTags, setSelectedId, setActiveView])
 
-  // Cmd+K to open search
+  // Cmd+K toggles the command palette
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
-        setSearchOpen(true)
+        setPaletteOpen(v => !v)
       }
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [setSearchOpen])
+  }, [])
 
   return (
     <div
@@ -116,6 +118,7 @@ export default function App() {
       </div>
       <StatusBar />
       {searchOpen && <SearchOverlay onClose={() => setSearchOpen(false)} />}
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       {onboarding.show && <OnboardingModal onClose={onboarding.close} />}
     </div>
   )

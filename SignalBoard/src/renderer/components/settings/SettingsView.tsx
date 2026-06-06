@@ -1,5 +1,5 @@
 // SettingsView — feed refresh, relevance, notifications, AI, alert rules, digest
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore } from '../../store'
 import ThemeSection from './SettingsTheme'
 import { AlertRulesEditor, DigestEditor } from './SettingsEditors'
@@ -9,9 +9,9 @@ import type { AppSettings } from '../../../shared/types'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-function Section({ title, help, children }: { title: string; help?: { title: string; text: string }; children: React.ReactNode }) {
+function Section({ id, title, help, children }: { id?: string; title: string; help?: { title: string; text: string }; children: React.ReactNode }) {
   return (
-    <div className="mb-6">
+    <div id={id} className="mb-6">
       <h3 className="text-[10px] font-semibold text-muted/60 uppercase tracking-widest mb-3 pb-1.5 border-b border-border/40 flex items-center gap-2">
         <span>{title}</span>
         {help && <HelpTip title={help.title} text={help.text} />}
@@ -84,6 +84,21 @@ export default function SettingsView() {
     setTimeout(() => setSaved(false), 1500)
   }
 
+  // Scroll to Custom Feeds when palette command requests it
+  useEffect(() => {
+    function onScrollRequest(e: Event) {
+      const detail = (e as CustomEvent<{ section?: string }>).detail
+      const id = detail?.section
+      if (!id) return
+      requestAnimationFrame(() => {
+        const el = document.getElementById(id)
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    }
+    window.addEventListener('signalboard:settings-scroll', onScrollRequest)
+    return () => window.removeEventListener('signalboard:settings-scroll', onScrollRequest)
+  }, [])
+
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="max-w-lg mx-auto px-6 py-6">
@@ -144,6 +159,7 @@ export default function SettingsView() {
         </Section>
 
         <Section
+          id="custom-feeds-section"
           title="Custom Feeds"
           help={{
             title: 'Custom Feeds',

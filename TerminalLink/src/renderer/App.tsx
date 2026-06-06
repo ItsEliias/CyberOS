@@ -114,6 +114,8 @@ export default function App() {
   useEffect(() => {
     function handler(e: KeyboardEvent) {
       const mod = e.metaKey || e.ctrlKey;
+      // ⌘K / ⌘Shift+P → command palette (⌘K is the new primary trigger)
+      if (mod && !e.shiftKey && e.key === 'k') { e.preventDefault(); setCommandPaletteOpen(true); }
       if (mod && e.shiftKey && e.key === 'p') { e.preventDefault(); setCommandPaletteOpen(true); }
       if (mod && e.shiftKey && e.key === 'b') { e.preventDefault(); handleBroadcastToggle(); }
       if (mod && e.key === 'l') { e.preventDefault(); setToolLauncherOpen(true); }
@@ -181,25 +183,33 @@ export default function App() {
 
   // Build command palette items
   const paletteItems: PaletteItem[] = [
-    { id: 'split',     label: 'Toggle Split View',    category: 'Action',  action: toggleSplitMode },
-    { id: 'history',   label: 'Toggle History Panel', category: 'Action',  action: toggleHistoryPanel },
-    { id: 'broadcast', label: broadcastMode ? 'Disable Broadcast' : 'Enable Broadcast', category: 'Action', action: handleBroadcastToggle },
-    { id: 'snippets',  label: 'Toggle Snippets Panel', category: 'Action', action: toggleSnippetsPanel },
-    { id: 'sessions',  label: 'View Sessions',         category: 'Nav',    action: () => setActiveView('sessions') },
-    { id: 'settings',  label: 'Open Settings',         category: 'Nav',    action: () => setActiveView('settings') },
-    { id: 'terminal',  label: 'Back to Terminal',      category: 'Nav',    action: () => setActiveView('terminal') },
-    { id: 'newterm',   label: 'New Session',           category: 'Action', action: handleNewSession },
-    { id: 'launcher',  label: 'Open Tool Launcher',    category: 'Action', action: () => setToolLauncherOpen(true) },
-    ...snippets.map(s => ({
+    // ── Sessions ─────────────────────────────────────────────────────────
+    { id: 'newterm',   label: 'New Session',             category: 'Sessions', action: handleNewSession },
+    { id: 'split',     label: 'Toggle Split View',       category: 'Sessions', action: toggleSplitMode },
+    { id: 'broadcast', label: broadcastMode ? 'Disable Broadcast Mode' : 'Toggle Broadcast Mode', category: 'Sessions', action: handleBroadcastToggle },
+    { id: 'history',   label: 'Toggle History Panel',    category: 'Sessions', action: toggleHistoryPanel },
+    { id: 'snippets',  label: 'Toggle Snippets Panel',   category: 'Sessions', action: toggleSnippetsPanel },
+    { id: 'launcher',  label: 'Open Tool Launcher',      category: 'Sessions', action: () => setToolLauncherOpen(true) },
+
+    // ── Navigation ───────────────────────────────────────────────────────
+    { id: 'terminal',  label: 'Open Terminal',           category: 'Navigation', action: () => setActiveView('terminal') },
+    { id: 'sessions',  label: 'Open Sessions',           category: 'Navigation', action: () => setActiveView('sessions') },
+    { id: 'snip-view', label: 'Open Snippets',           category: 'Navigation', action: () => { if (!snippetsPanelOpen) toggleSnippetsPanel(); setActiveView('terminal'); } },
+    { id: 'settings',  label: 'Open Settings',           category: 'Navigation', action: () => setActiveView('settings') },
+
+    // ── Dynamic: top snippets — "Run snippet…" ───────────────────────────
+    ...snippets.slice(0, 50).map(s => ({
       id:          `snip-${s.id}`,
-      label:       s.title,
+      label:       `Run snippet: ${s.title}`,
       description: s.command,
-      category:    s.category,
+      category:    'Snippets',
       action:      () => handlePasteToTerminal(s.command),
     })),
+
+    // ── Dynamic: SSH profiles ────────────────────────────────────────────
     ...sshProfiles.map(p => ({
       id:          `ssh-${p.id}`,
-      label:       p.name,
+      label:       `Connect via SSH: ${p.name}`,
       description: `${p.username}@${p.host}:${p.port}`,
       category:    'SSH',
       action:      () => handleSshConnect(`ssh ${p.identityFile ? `-i ${p.identityFile} ` : ''}-p ${p.port} ${p.username}@${p.host}`),

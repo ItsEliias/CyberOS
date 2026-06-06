@@ -82,6 +82,22 @@ export default function VaultView() {
     return () => clearTimeout(t)
   }, [])
 
+  // ── Command palette wiring ────────────────────────────────────────────
+  // The ⌘K palette dispatches window events for actions owned by VaultView.
+  useEffect(() => {
+    const openAdd      = () => { useStore.getState().setView('vault'); setShowModal(true) }
+    const openGen      = () => { useStore.getState().setView('vault'); setShowGenerator(true) }
+    const triggerHibp  = () => { useStore.getState().setView('vault'); void runBreachCheck() }
+    window.addEventListener('cv:add',      openAdd)
+    window.addEventListener('cv:generate', openGen)
+    window.addEventListener('cv:hibp',     triggerHibp)
+    return () => {
+      window.removeEventListener('cv:add',      openAdd)
+      window.removeEventListener('cv:generate', openGen)
+      window.removeEventListener('cv:hibp',     triggerHibp)
+    }
+  }, [runBreachCheck])
+
   const allTags     = useMemo(() => [...new Set(credentials.flatMap(c => c.tags))].sort(), [credentials])
   const allSources  = useMemo(() => [...new Set(credentials.map(c => c.source))].sort(), [credentials])
   const hasFilters  = searchQuery || filterTag || filterStatus || filterSource || filterCategory || (filterFolder && filterFolder !== '__notes__')

@@ -5,6 +5,7 @@ import GraphLibrary from './components/GraphLibrary'
 import GraphCanvas from './components/GraphCanvas'
 import ImportModal from './components/ImportModal'
 import SettingsView from './components/SettingsView'
+import CommandPalette from './components/CommandPalette'
 import OnboardingModal, { useOnboarding } from './components/OnboardingModal'
 
 type View = 'library' | 'canvas' | 'settings'
@@ -16,7 +17,34 @@ export default function App() {
   const [importOpen, setImportOpen]   = useState(false)
   // Track all imported scans for port timeline and diff features
   const [allScans, setAllScans]       = useState<ScanRecord[]>([])
+  const [paletteOpen, setPaletteOpen] = useState(false)
   const onboarding = useOnboarding()
+
+  // ⌘K toggles the command palette
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setPaletteOpen(v => !v)
+      }
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [])
+
+  const handleNewEmptyGraph = useCallback(() => {
+    const now = new Date().toISOString()
+    const graph: NetworkGraph = {
+      id:        `graph-${Date.now()}`,
+      name:      'Untitled Graph',
+      nodes:     [],
+      edges:     [],
+      createdAt: now,
+      updatedAt: now,
+    }
+    setActiveGraph(graph)
+    setView('canvas')
+  }, [])
 
   const refreshGraphs = useCallback(() => {
     window.electronAPI.loadGraphs().then(setSavedGraphs).catch(console.error)
@@ -86,6 +114,15 @@ export default function App() {
           onImport={handleImportComplete}
         />
       )}
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        savedGraphs={savedGraphs}
+        onGoto={target => setView(target)}
+        onNewGraph={handleNewEmptyGraph}
+        onOpenImport={() => setImportOpen(true)}
+        onOpenGraph={handleOpenGraph}
+      />
       {onboarding.show && <OnboardingModal onClose={onboarding.close} />}
     </div>
   )

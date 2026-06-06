@@ -16,6 +16,7 @@ import SnippetsView  from './components/SnippetsView'
 import ProgressView  from './components/ProgressView'
 import SettingsView  from './components/SettingsView'
 import SearchModal   from './components/SearchModal'
+import CommandPalette from './components/CommandPalette'
 
 export default function App() {
   const activeView  = useNetLabStore(s => s.activeView)
@@ -23,15 +24,21 @@ export default function App() {
   const setProgress = useNetLabStore(s => s.setProgress)
   const setSnippets = useNetLabStore(s => s.setSnippets)
 
-  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchOpen,   setSearchOpen]   = useState(false)
+  const [paletteOpen,  setPaletteOpen]  = useState(false)
 
-  const openSearch  = useCallback(() => setSearchOpen(true),  [])
-  const closeSearch = useCallback(() => setSearchOpen(false), [])
+  const openSearch   = useCallback(() => setSearchOpen(true),  [])
+  const closeSearch  = useCallback(() => setSearchOpen(false), [])
+  const closePalette = useCallback(() => setPaletteOpen(false), [])
 
-  // Cmd+K global search
+  // ⌘K → command palette (actions). ⌘Shift+F → SearchModal (content search).
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      const mod = e.metaKey || e.ctrlKey
+      if (mod && !e.shiftKey && e.key === 'k') {
+        e.preventDefault()
+        setPaletteOpen(v => !v)
+      } else if (mod && e.shiftKey && (e.key === 'f' || e.key === 'F')) {
         e.preventDefault()
         setSearchOpen(v => !v)
       }
@@ -89,6 +96,7 @@ export default function App() {
 
       <StatusBar />
       <SearchModal open={searchOpen} onClose={closeSearch} />
+      <CommandPalette open={paletteOpen} onClose={closePalette} />
     </div>
   )
 }

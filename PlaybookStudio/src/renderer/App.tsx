@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useStore, applyTheme, type View } from './store'
 import TitleBar from './components/layout/TitleBar'
@@ -8,6 +8,7 @@ import EditorView from './components/EditorView'
 import RunView from './components/RunView'
 import HistoryView from './components/HistoryView'
 import SettingsView from './components/SettingsView'
+import CommandPalette from './components/CommandPalette'
 import OnboardingModal, { useOnboarding } from './components/OnboardingModal'
 
 // ─── Sidebar ───────────────────────────────────────────────────────────────────
@@ -132,9 +133,22 @@ export default function App() {
   const setActiveRun = useStore(s => s.setActiveRun)
   const activeRun    = useStore(s => s.activeRun)
   const theme        = useStore(s => s.theme)
+  const [paletteOpen, setPaletteOpen] = useState(false)
 
   // Apply theme on mount
   useEffect(() => { applyTheme(theme) }, [])
+
+  // ⌘K toggles the command palette
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setPaletteOpen(v => !v)
+      }
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [])
 
   useEffect(() => {
     window.electronAPI.getState().then(state => {
@@ -169,6 +183,7 @@ export default function App() {
         </div>
       </div>
       <StatusBar />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       {onboarding.show && <OnboardingModal onClose={onboarding.close} />}
     </div>
   )

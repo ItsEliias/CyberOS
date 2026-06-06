@@ -10,6 +10,7 @@ import ExportModal, { type ExportOptions } from './components/export/ExportModal
 import TitleBar from './components/layout/TitleBar';
 import type { Report } from '@shared/types';
 import OnboardingModal, { useOnboarding } from './components/OnboardingModal';
+import CommandPalette from './components/CommandPalette';
 
 const AUTO_SAVE_MS = 30_000;
 
@@ -25,6 +26,7 @@ export default function App() {
   const [printReport, setPrintReport] = useState<Report | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const autoSaveRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Bootstrap ──────────────────────────────────────────────────────────────
@@ -36,6 +38,18 @@ export default function App() {
 
     return () => { unsubPrint(); unsubDone(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── ⌘K command palette ─────────────────────────────────────────────────────
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen(o => !o);
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
   // ── Auto-save every 30s when in editor and dirty ───────────────────────────
@@ -239,6 +253,15 @@ export default function App() {
       <ToastContainer toasts={toasts} onRemove={removeToast} />
       </div>
       {onboarding.show && <OnboardingModal onClose={onboarding.close} />}
+
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        onExportFormat={(fmt) => {
+          // Only exports the active report — palette only shows export commands when activeReport
+          handleOpenExportModal(fmt);
+        }}
+      />
     </div>
   );
 }

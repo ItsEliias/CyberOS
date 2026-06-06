@@ -4,6 +4,7 @@ import { useStore } from './store';
 import { localAiProcess } from './lib/local-ai';
 import TitleBar from './components/layout/TitleBar';
 import OnboardingModal, { useOnboarding } from './components/OnboardingModal';
+import CommandPalette from './components/CommandPalette';
 import StatusBar from './components/layout/StatusBar';
 import SetupWizard from './components/SetupWizard';
 import Sidebar from './components/Sidebar';
@@ -18,6 +19,7 @@ import AIAssistantPanel from './components/AIAssistantPanel';
 import GraphView from './components/GraphView';
 import FullSearchView from './components/FullSearchView';
 import NotePasswordModal from './components/NotePasswordModal';
+import SSOLockScreen from './components/SSOLockScreen';
 import {
   NewNoteModal, NewFolderModal, QuickCaptureModal,
   AiOverlay, AiMenu, NoteContextMenu, ToastContainer, useToast,
@@ -39,6 +41,7 @@ export default function App() {
   const [showNewNote, setShowNewNote]     = useState(false);
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [showCapture, setShowCapture]     = useState(false);
+  const [ssoUnlocked, setSsoUnlocked]     = useState<boolean | null>(null);
   const [aiMenuOpen, setAiMenuOpen]       = useState(false);
   const [aiOverlay, setAiOverlay]         = useState<{ mode: string; result: string } | null>(null);
   const [contextMenu, setContextMenu]     = useState<{ x: number; y: number; path: string } | null>(null);
@@ -46,6 +49,7 @@ export default function App() {
   const [setupDone, setSetupDone]         = useState(false);
   const [passwordModal, setPasswordModal] = useState<{ path: string; name: string; mode: 'lock' | 'unlock' } | null>(null);
   const [editorFocusMode, setEditorFocusMode] = useState(false);
+  const [paletteOpen, setPaletteOpen]     = useState(false);
   const onboarding = useOnboarding();
 
   // ── Bootstrap ──────────────────────────────────────────────────────────────
@@ -99,6 +103,11 @@ export default function App() {
     ];
 
     function handleKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen(v => !v);
+        return;
+      }
       if (e.metaKey && e.key === 'n') { e.preventDefault(); setShowNewNote(true); }
       if (e.metaKey && e.key === 'p') { e.preventDefault(); setShowCapture(true); }
       if (e.metaKey && e.key === '/') { e.preventDefault(); setAiMenuOpen(v => !v); }
@@ -110,11 +119,32 @@ export default function App() {
     }
     window.addEventListener('keydown', handleKey);
 
+    // ⌘K palette → forwarded actions for state owned by App
+    const onPaletteNewNote = () => setShowNewNote(true);
+    window.addEventListener('gv:new-note', onPaletteNewNote);
+
     return () => {
       unsubs.forEach(u => u());
       window.removeEventListener('keydown', handleKey);
+      window.removeEventListener('gv:new-note', onPaletteNewNote);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── SSO soft-lock poll ─────────────────────────────────────────────────────
+  // Re-reads the CredVault SSO state every 5s. When the user has opted into
+  // "Require CredVault session" in Settings, this drives the SSOLockScreen.
+  useEffect(() => {
+    let cancelled = false;
+    async function checkSSO() {
+      try {
+        const r = await window.ghostvault.getSSO();
+        if (!cancelled) setSsoUnlocked(!!r.unlocked);
+      } catch { if (!cancelled) setSsoUnlocked(true); /* fail-open */ }
+    }
+    void checkSSO();
+    const t = setInterval(checkSSO, 5000);
+    return () => { cancelled = true; clearInterval(t); };
   }, []);
 
   // ── Vault refresh ──────────────────────────────────────────────────────────
@@ -134,6 +164,18 @@ export default function App() {
     setDirty(false);
     setActiveView('notes');
   }, [setActiveNote, setEditorContent, setDirty, setActiveView]);
+
+  // ⌘K palette → open a note by path
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const path = (e as CustomEvent<string>).detail;
+      const { notes } = useStore.getState();
+      const note = notes.find(n => n.path === path);
+      if (note) void openNote(note);
+    };
+    window.addEventListener('gv:open-note', handler);
+    return () => window.removeEventListener('gv:open-note', handler);
+  }, [openNote]);
 
   // ── Save note ──────────────────────────────────────────────────────────────
   const saveNote = useCallback(async () => {
@@ -298,8 +340,17 @@ export default function App() {
     return <SetupWizard onComplete={handleSetupComplete} />;
   }
 
+  const requireSSO = !!(useStore.getState() as unknown as { config?: { requireCredVaultSession?: boolean } }).config?.requireCredVaultSession;
+  const ssoBlocked = requireSSO && ssoUnlocked === false;
+
   return (
     <div className="flex flex-col h-screen overflow-hidden" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
+      {ssoBlocked && (
+        <SSOLockScreen onCheck={async () => {
+          const r = await window.ghostvault.getSSO();
+          setSsoUnlocked(!!r.unlocked);
+        }} />
+      )}
       {/* Custom title bar */}
       <TitleBar onHelp={onboarding.open} />
 
@@ -435,6 +486,7 @@ export default function App() {
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
       {onboarding.show && <OnboardingModal onClose={onboarding.close} />}
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   );
 }

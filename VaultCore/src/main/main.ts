@@ -255,6 +255,28 @@ app.on('window-all-closed', () => { app.quit(); });
 app.on('before-quit', () => { launcher.stopStatusWriter(); stopAllSchedules(); });
 
 // ─── IPC Handlers ─────────────────────────────────────────────────────────────
+
+// SSO state — read CredVault's session from the shared cybertools-config.json
+ipcMain.handle('get-sso', () => {
+  try {
+    const cfgPath = path.join(os.homedir(), 'cybertools-config.json');
+    if (!fs.existsSync(cfgPath)) return { unlocked: false };
+    const shared = JSON.parse(fs.readFileSync(cfgPath, 'utf8')) || {};
+    const sso = shared.sso as { unlocked?: boolean; expiresAt?: string | null; unlockedAt?: string | null } | undefined;
+    if (!sso?.unlocked) return { unlocked: false };
+    if (sso.expiresAt && new Date(sso.expiresAt).getTime() < Date.now()) return { unlocked: false };
+    return { unlocked: true, unlockedAt: sso.unlockedAt, expiresAt: sso.expiresAt };
+  } catch { return { unlocked: false }; }
+});
+
+ipcMain.handle('open-credvault', () => {
+  try {
+    const { spawn } = _require('child_process') as typeof import('child_process');
+    spawn('open', ['/Applications/CredVault.app'], { detached: true, stdio: 'ignore' }).unref();
+    return true;
+  } catch { return false; }
+});
+
 ipcMain.handle('get-config',    ()       => launcher.readConfig() || {});
 ipcMain.handle('set-config',    (_, k, v) => { const u: Record<string,unknown> = {}; u[k] = v; return launcher.writeConfig(u); });
 ipcMain.handle('config-exists', ()       => launcher.configExists());
