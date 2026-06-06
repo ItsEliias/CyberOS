@@ -341,10 +341,17 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
     content, ext,
   }: { content: string; ext: 'cast' | 'txt' }) => {
     try {
+      // Constrain ext — the dialog title + default-path interpolate it, so
+      // arbitrary input could spoof titles or filenames. Only the two
+      // formats the renderer is allowed to ask for.
+      const safeExt: 'cast' | 'txt' = ext === 'cast' ? 'cast' : 'txt';
+      if (typeof content !== 'string') return { success: false };
+      // 200 MB cap on the export payload.
+      if (content.length > 200 * 1024 * 1024) return { success: false, error: 'content too large' };
       const result = await dialog.showSaveDialog(win, {
-        title: `Export Session as .${ext}`,
-        defaultPath: path.join(os.homedir(), `session-${Date.now()}.${ext}`),
-        filters: ext === 'cast'
+        title: `Export Session as .${safeExt}`,
+        defaultPath: path.join(os.homedir(), `session-${Date.now()}.${safeExt}`),
+        filters: safeExt === 'cast'
           ? [{ name: 'Asciinema Cast', extensions: ['cast'] }]
           : [{ name: 'Text', extensions: ['txt'] }],
       });
