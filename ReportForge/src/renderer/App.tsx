@@ -70,16 +70,19 @@ export default function App() {
   }, []);
 
   // ── ⌘K command palette ─────────────────────────────────────────────────────
+  // Suppressed while the SSO soft-lock is active so the user can't disable the
+  // "Require CredVault session" toggle without unlocking first.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        if (requireSSO && ssoUnlocked === false) return;
         e.preventDefault();
         setPaletteOpen(o => !o);
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [requireSSO, ssoUnlocked]);
 
   // ── Auto-save every 30s when in editor and dirty ───────────────────────────
   useEffect(() => {
@@ -292,7 +295,7 @@ export default function App() {
       {onboarding.show && <OnboardingModal onClose={onboarding.close} />}
 
       <CommandPalette
-        open={paletteOpen}
+        open={paletteOpen && !ssoBlocked}
         onClose={() => setPaletteOpen(false)}
         onExportFormat={(fmt) => {
           // Only exports the active report — palette only shows export commands when activeReport

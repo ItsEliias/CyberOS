@@ -65,16 +65,19 @@ export default function App() {
   }, [])
 
   // ⌘K → command palette
+  // Disabled while the SSO soft-lock is active so the requirement toggle can't
+  // be flipped from the locked screen.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 'k') {
+        if (requireSSO && ssoUnlocked === false) return
         e.preventDefault()
         setPaletteOpen(v => !v)
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [requireSSO, ssoUnlocked])
 
   // Tray-menu actions fired by the CyberTools Launcher.
   useEffect(() => {
@@ -205,8 +208,8 @@ export default function App() {
       {/* Global Search (Cmd+Shift+F) */}
       <GlobalSearch />
 
-      {/* Command Palette (Cmd+K) */}
-      <CommandPalette open={paletteOpen} onClose={closePalette} />
+      {/* Command Palette (Cmd+K) — closed while soft-locked. */}
+      <CommandPalette open={paletteOpen && !ssoBlocked} onClose={closePalette} />
 
       {/* Toast stack */}
       <div className="fixed bottom-8 right-4 z-50 flex flex-col gap-2 items-end">
