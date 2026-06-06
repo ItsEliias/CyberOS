@@ -16,6 +16,7 @@ import {
   addActivityEntry, clearActivityFeed, writeTrigger
 } from './config.js';
 import * as ecosystemBus from './ecosystem-bus.js';
+import { peerAppPath, userDataDir, sharedConfigPath } from './platform.js';
 import type { VpnStatus } from '../shared/types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -738,14 +739,14 @@ function launchApp(appKey: string): boolean {
     }
   }
 
-  // Fall back to /Applications/{productName}.app if config has no execPath
+  // Fall back to the OS-conventional install path if config has no execPath.
+  // Cross-platform via peerAppPath: /Applications/X.app on macOS,
+  // %LOCALAPPDATA%\Programs\X\X.exe on Windows, /usr/local/bin/x on Linux.
   if (!execPath || !fs.existsSync(execPath)) {
     const product = APP_FALLBACK_PRODUCTS[appKey];
     if (product) {
-      const fallback = `/Applications/${product}.app`;
-      if (fs.existsSync(fallback)) {
-        execPath = fallback;
-      }
+      const fallback = peerAppPath(product);
+      if (fallback) execPath = fallback;
     }
   }
 
@@ -848,26 +849,26 @@ function isEncryptedBackup(file: string): boolean {
   } catch { return false; }
 }
 
+// Apps whose per-app data directory we want to capture in a backup. Both the
+// CamelCase and lowercase variants are tried because different apps used
+// different casing historically. Cross-platform: userDataDir() returns the
+// macOS / Linux XDG / Windows APPDATA path as appropriate.
+const BACKUP_APP_NAMES = [
+  'CredVault', 'GhostVault', 'VaultCore', 'ReconDesk', 'SignalBoard',
+  'PlaybookStudio', 'ReportForge', 'NetworkMap', 'NetLab',
+  'cyberlab-companion', 'TerminalLink', 'CyberTools',
+];
+
 const BACKUP_PATHS = [
-  // Shared ecosystem config
-  path.join(os.homedir(), 'cybertools-config.json'),
-  // Per-app Application Support directories (lowercase forms common in macOS)
-  path.join(os.homedir(), 'Library/Application Support/CredVault'),
-  path.join(os.homedir(), 'Library/Application Support/credvault'),
-  path.join(os.homedir(), 'Library/Application Support/ghostvault'),
-  path.join(os.homedir(), 'Library/Application Support/GhostVault'),
-  path.join(os.homedir(), 'Library/Application Support/vaultcore'),
-  path.join(os.homedir(), 'Library/Application Support/VaultCore'),
-  path.join(os.homedir(), 'Library/Application Support/recondesk'),
-  path.join(os.homedir(), 'Library/Application Support/signalboard'),
-  path.join(os.homedir(), 'Library/Application Support/playbookstudio'),
-  path.join(os.homedir(), 'Library/Application Support/reportforge'),
-  path.join(os.homedir(), 'Library/Application Support/networkmap'),
-  path.join(os.homedir(), 'Library/Application Support/netlab'),
-  path.join(os.homedir(), 'Library/Application Support/cyberlab-companion'),
-  path.join(os.homedir(), 'Library/Application Support/terminallink'),
-  path.join(os.homedir(), 'Library/Application Support/CyberTools'),
-  // TermLink shell-hook log
+  // Shared ecosystem config (~/cybertools-config.json on macOS;
+  // APPDATA / XDG-equivalent on other platforms).
+  sharedConfigPath(),
+  // Per-app data dirs, both cases (filtered by existsSync at backup time).
+  ...BACKUP_APP_NAMES.flatMap(name => [
+    userDataDir(name),
+    userDataDir(name.toLowerCase()),
+  ]),
+  // TermLink shell-hook log — same path on every OS (~/.cybertools/).
   path.join(os.homedir(), '.cybertools/term-log.jsonl'),
 ];
 
@@ -1570,6 +1571,10 @@ function setupIPC(): void {
 }
 
 // ─── App lifecycle ────────────────────────────────────────────────────────────
+
+// ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+try { require('electron').crashReporter.start({ uploadToServer: false, productName: "CybertoolsLauncher", companyName: 'CyberOS' }) } catch { /* unavailable */ }
 
 app.whenReady().then(() => {
   const PROJECT_BASE  = path.join(os.homedir(), 'Documents', 'Claude', 'Projects');

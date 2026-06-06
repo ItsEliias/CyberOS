@@ -157,6 +157,14 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
       const file = path.join(SESSIONS_DIR, 'sessions.json');
       fs.mkdirSync(SESSIONS_DIR, { recursive: true });
       if (!fs.existsSync(file)) return [];
+      // A sessions.json bloated by an earlier (unpatched) build can OOM us
+      // on every launch. Refuse to load anything over 50 MB and the
+      // renderer will see an empty list — recoverable by deleting the file.
+      const stat = fs.statSync(file);
+      if (stat.size > 50 * 1024 * 1024) {
+        console.warn('[ipc/terminallink] sessions.json too large, ignoring');
+        return [];
+      }
       return JSON.parse(fs.readFileSync(file, 'utf8'));
     } catch {
       return [];
@@ -182,6 +190,13 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
   ipcMain.handle('terminallink:history:read', () => {
     try {
       if (!fs.existsSync(HISTORY_FILE)) return [];
+      // Same OOM guard as sessions:read — a 200 MB history file from an
+      // earlier unbounded build would otherwise crash the app on launch.
+      const stat = fs.statSync(HISTORY_FILE);
+      if (stat.size > 200 * 1024 * 1024) {
+        console.warn('[ipc/terminallink] history file too large, ignoring');
+        return [];
+      }
       return JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8'));
     } catch {
       return [];
@@ -264,6 +279,10 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
   // ── Export: save dialog ─────────────────────────────────────────────────────
   ipcMain.handle('terminallink:export:dialog', async (_evt, content: string) => {
     try {
+      if (typeof content !== 'string') return { success: false, reason: 'invalid' };
+      // Bound the dump — a renderer can otherwise call us with a multi-GB
+      // string assembled from the command log and OOM the main process.
+      if (content.length > 200 * 1024 * 1024) return { success: false, reason: 'too large' };
       const result = await dialog.showSaveDialog(win, {
         title: 'Export Command History',
         defaultPath: path.join(os.homedir(), `terminallink-history-${Date.now()}.txt`),
@@ -341,10 +360,17 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
     content, ext,
   }: { content: string; ext: 'cast' | 'txt' }) => {
     try {
+      // Constrain ext — the dialog title + default-path interpolate it, so
+      // arbitrary input could spoof titles or filenames. Only the two
+      // formats the renderer is allowed to ask for.
+      const safeExt: 'cast' | 'txt' = ext === 'cast' ? 'cast' : 'txt';
+      if (typeof content !== 'string') return { success: false };
+      // 200 MB cap on the export payload.
+      if (content.length > 200 * 1024 * 1024) return { success: false, error: 'content too large' };
       const result = await dialog.showSaveDialog(win, {
-        title: `Export Session as .${ext}`,
-        defaultPath: path.join(os.homedir(), `session-${Date.now()}.${ext}`),
-        filters: ext === 'cast'
+        title: `Export Session as .${safeExt}`,
+        defaultPath: path.join(os.homedir(), `session-${Date.now()}.${safeExt}`),
+        filters: safeExt === 'cast'
           ? [{ name: 'Asciinema Cast', extensions: ['cast'] }]
           : [{ name: 'Text', extensions: ['txt'] }],
       });

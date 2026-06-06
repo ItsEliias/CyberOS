@@ -9,6 +9,7 @@ import * as ecosystemBus from './ecosystem-bus.js';
 import { registerExtras, DEFAULT_CAPTURE_HOTKEY } from './ipc-extras.js';
 import { consumePendingAction, installPendingActionWatcher } from './pendingActions.js'
 import type { GhostVaultConfig, NoteFile, NewNoteResult, SaveCaptureResult } from '../shared/types.js';
+import { launchPeerApp } from './platform'
 
 const APP_KEY = 'ghostvault';
 
@@ -20,6 +21,10 @@ const CONFIG_PATH       = path.join(os.homedir(), 'ghostvault-config.json');
 const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json');
 const DATA_DIR          = path.join(os.homedir(), '.ghostvault');
 const VAULT_FOLDERS     = ['Notes', 'Meetings', 'Projects', 'Study', 'Tasks', 'Archive'];
+
+// ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+try { require('electron').crashReporter.start({ uploadToServer: false, productName: "GhostVault", companyName: 'CyberOS' }) } catch { /* unavailable */ }
 
 let mainWindow:    BrowserWindow | null = null;
 let captureWindow: BrowserWindow | null = null;
@@ -466,15 +471,7 @@ ipcMain.handle('get-sso', () => {
 });
 
 // Cross-app: open CredVault from the lock screen.
-ipcMain.handle('open-credvault', () => {
-  try {
-    const target = '/Applications/CredVault.app';
-    if (!fs.existsSync(target)) return false;
-    const { spawn } = require('child_process') as typeof import('child_process');
-    spawn('open', [target], { detached: true, stdio: 'ignore' }).unref();
-    return true;
-  } catch { return false; }
-});
+ipcMain.handle('open-credvault', () => launchPeerApp('CredVault'))
 
 ipcMain.handle('ecosystem-emit', (_, appName: string, eventType: string, data: Record<string, unknown>) => {
   ecosystemBus.emitEvent(appName, eventType, data);
@@ -526,8 +523,13 @@ ipcMain.handle('read-note',   (_, filePath: string)  => {
   if (!isUnderVault(filePath)) return '';
   return readNote(filePath);
 });
+// 10 MB per note. A markdown note that large is suspicious anyway; this
+// also caps disk-fill attacks via runaway saveNote loops in the renderer.
+const MAX_NOTE_BYTES = 10 * 1024 * 1024;
 ipcMain.handle('write-note',  (_, filePath: string, content: string) => {
   if (!isUnderVault(filePath)) return false;
+  if (typeof content !== 'string') return false;
+  if (content.length > MAX_NOTE_BYTES) return false;
   const result = writeNote(filePath, content);
   lastCaptureTime = new Date().toISOString();
   writeGhostVaultStatus();
@@ -609,6 +611,19 @@ ipcMain.handle('pick-vault-dir', async (_, opts: { skipFolderCreate?: boolean } 
   });
   if (!result.canceled && result.filePaths[0]) {
     const vaultPath = result.filePaths[0];
+    // Same validation as save-config — a user could otherwise pick /etc/
+    // through the dialog and we'd happily create note folders there.
+    if (!isSafeVaultPath(vaultPath)) {
+      try {
+        dialog.showMessageBox(mainWindow!, {
+          type: 'warning',
+          title: 'Invalid vault location',
+          message: `"${vaultPath}" is outside your home directory.`,
+          detail: 'Pick a folder inside ~/Documents, ~/Library, or another path under your home.',
+        });
+      } catch { /* dialog optional */ }
+      return null;
+    }
     const cfg = loadConfig();
     if (!cfg.useExistingStructure && !opts.skipFolderCreate) ensureVaultFolders(vaultPath);
     saveConfig({ vaultPath });
@@ -698,14 +713,26 @@ ipcMain.handle('note:versions:list', (_, notePath: string): import('../shared/ty
 
 ipcMain.handle('note:versions:save', (_, notePath: string, content: string): void => {
   if (!isUnderVault(notePath)) return;
+  if (typeof content !== 'string') return;
+  // 2 MB per version. 20 versions × 2 MB = 40 MB ceiling on .versions.json,
+  // which keeps note read amplification reasonable.
+  if (content.length > 2 * 1024 * 1024) return;
   const vp = getVersionsPath(notePath);
   let versions: import('../shared/types.js').NoteVersion[] = [];
   try {
     if (fs.existsSync(vp)) versions = JSON.parse(fs.readFileSync(vp, 'utf8'));
   } catch { /* ignore */ }
+  if (!Array.isArray(versions)) versions = [];
   versions.push({ timestamp: Date.now(), content });
   if (versions.length > 20) versions = versions.slice(-20);
-  try { fs.writeFileSync(vp, JSON.stringify(versions, null, 2), 'utf8'); } catch { /* ignore */ }
+  // Atomic — versions file is read on every note open; a torn write would
+  // surface as an empty version history.
+  try {
+    const json = JSON.stringify(versions, null, 2);
+    const tmp = `${vp}.tmp-${process.pid}-${Date.now()}`;
+    fs.writeFileSync(tmp, json, 'utf8');
+    fs.renameSync(tmp, vp);
+  } catch { /* ignore */ }
 });
 
 // ─── Note encryption ──────────────────────────────────────────────────────────
@@ -755,9 +782,18 @@ ipcMain.handle('ghostvault:note:unlock', async (_, notePath: string, password: s
 
 // ─── Export as HTML ───────────────────────────────────────────────────────────
 ipcMain.handle('note:export:html', async (_, html: string, noteName: string): Promise<boolean> => {
+  if (typeof html !== 'string') return false;
+  // Cap exported HTML at 50 MB. A note that big is almost certainly the
+  // renderer trying to make us OOM via dialog.showSaveDialog stack.
+  if (html.length > 50 * 1024 * 1024) return false;
+  // Sanitize noteName for the default path — Electron will quote it, but
+  // path separators in defaultPath have historically influenced the dialog.
+  const safeName = (typeof noteName === 'string' ? noteName : 'note')
+    .replace(/[/\\?%*:|"<>]/g, '-')
+    .slice(0, 128);
   const result = await dialog.showSaveDialog(mainWindow!, {
     title: 'Export as HTML',
-    defaultPath: `${noteName}.html`,
+    defaultPath: `${safeName}.html`,
     filters: [{ name: 'HTML', extensions: ['html'] }],
   });
   if (result.canceled || !result.filePath) return false;
@@ -770,9 +806,16 @@ ipcMain.handle('note:export:html', async (_, html: string, noteName: string): Pr
 // ─── Export as PDF ────────────────────────────────────────────────────────────
 ipcMain.handle('note:export:pdf', async (_, htmlContent: string, noteName: string): Promise<boolean> => {
   if (!mainWindow) return false;
+  if (typeof htmlContent !== 'string') return false;
+  // 50 MB ceiling — encodeURIComponent triples size, and BrowserWindow.loadURL
+  // chokes on data: URIs much above this anyway.
+  if (htmlContent.length > 50 * 1024 * 1024) return false;
+  const safeName = (typeof noteName === 'string' ? noteName : 'note')
+    .replace(/[/\\?%*:|"<>]/g, '-')
+    .slice(0, 128);
   const result = await dialog.showSaveDialog(mainWindow, {
     title: 'Export as PDF',
-    defaultPath: `${noteName}.pdf`,
+    defaultPath: `${safeName}.pdf`,
     filters: [{ name: 'PDF', extensions: ['pdf'] }],
   });
   if (result.canceled || !result.filePath) return false;
@@ -805,6 +848,8 @@ ipcMain.handle('ghostvault:note:read',  (_, filePath: string)  => {
 });
 ipcMain.handle('ghostvault:note:write', (_, filePath: string, content: string) => {
   if (!isUnderVault(filePath)) return false;
+  if (typeof content !== 'string') return false;
+  if (content.length > MAX_NOTE_BYTES) return false;
   const ok = writeNote(filePath, content);
   if (ok) { lastCaptureTime = new Date().toISOString(); writeGhostVaultStatus(); }
   return ok;

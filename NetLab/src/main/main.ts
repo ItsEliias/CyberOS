@@ -18,6 +18,10 @@ const LABS_FILE   = path.join(DATA_DIR, 'labs.json')
 const PROGRESS_FILE = path.join(DATA_DIR, 'progress.json')
 const PREFS_FILE  = path.join(DATA_DIR, 'netlab-prefs.json')
 
+// ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+try { require('electron').crashReporter.start({ uploadToServer: false, productName: "NetLab", companyName: 'CyberOS' }) } catch { /* unavailable */ }
+
 let mainWindow: BrowserWindow | null = null
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

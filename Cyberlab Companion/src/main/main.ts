@@ -29,6 +29,10 @@ const CLAUDE_API_URL     = 'https://api.anthropic.com/v1/messages';
 const CLAUDE_MODEL       = 'claude-sonnet-4-20250514';
 const UPDATE_CHECK_URL   = 'https://api.github.com/repos/ItsEliias/cyberlab-companion/releases/latest';
 
+// ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+try { require('electron').crashReporter.start({ uploadToServer: false, productName: "CyberlabCompanion", companyName: 'CyberOS' }) } catch { /* unavailable */ }
+
 let mainWindow: BrowserWindow | null = null;
 let apiKey: string | null = null;
 let autosaveInterval: ReturnType<typeof setInterval> | null = null;

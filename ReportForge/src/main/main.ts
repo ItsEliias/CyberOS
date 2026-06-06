@@ -5,6 +5,7 @@ import fs from 'fs';
 import os from 'os';
 import * as ecosystemBus from './ecosystem-bus.js';
 import { consumePendingAction, installPendingActionWatcher } from './pendingActions.js'
+import { launchPeerApp } from './platform.js'
 import type {
   Report, CyberToolsSharedConfig, ExportResult, WriteupFile, ReconDeskTarget
 } from '../shared/types.js';
@@ -16,6 +17,10 @@ const APP_VERSION       = '1.0.0';
 const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json');
 const DATA_DIR          = path.join(os.homedir(), 'Library', 'Application Support', 'ReportForge');
 const REPORTS_FILE      = path.join(DATA_DIR, 'reports.json');
+
+// ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+try { require('electron').crashReporter.start({ uploadToServer: false, productName: "ReportForge", companyName: 'CyberOS' }) } catch { /* unavailable */ }
 
 let mainWindow: BrowserWindow | null = null;
 let statusInterval: ReturnType<typeof setInterval> | null = null;
@@ -293,15 +298,7 @@ ipcMain.handle('get-sso', () => {
   } catch { return { unlocked: false }; }
 });
 
-ipcMain.handle('open-credvault', () => {
-  try {
-    const target = '/Applications/CredVault.app';
-    if (!fs.existsSync(target)) return false;
-    const { spawn } = require('child_process') as typeof import('child_process');
-    spawn('open', [target], { detached: true, stdio: 'ignore' }).unref();
-    return true;
-  } catch { return false; }
-});
+ipcMain.handle('open-credvault', () => launchPeerApp('CredVault'))
 ipcMain.handle('minimize-window', () => mainWindow?.minimize());
 ipcMain.handle('close-window',    () => mainWindow?.close());
 

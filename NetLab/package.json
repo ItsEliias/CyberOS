@@ -4,7 +4,10 @@
   "description": "Network engineering lab workspace — CYBERTOOLS",
   "main": "out/main/main.js",
   "type": "module",
-  "author": "ItsEliias",
+  "author": {
+    "name": "ItsEliias",
+    "email": "ItsEliias@users.noreply.github.com"
+  },
   "license": "MIT",
   "scripts": {
     "start": "electron-vite dev",
@@ -39,21 +42,51 @@
     "appId": "com.itsEliias.netlab",
     "productName": "NetLab",
     "copyright": "Copyright © 2025 ItsEliias",
-    "directories": { "output": "dist" },
-    "files": ["out/**/*", "assets/**/*"],
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*",
+      "assets/**/*"
+    ],
     "mac": {
-      "target": [{ "target": "dmg", "arch": ["x64", "arm64"] }],
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
       "icon": "assets/icon.icns",
       "category": "public.app-category.developer-tools"
     },
     "win": {
-      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "icon": "assets/icon.ico"
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "icon": "assets/icon.png",
       "category": "Development"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": true
     }
-  }
+  },
+  "homepage": "https://github.com/ItsEliias/CyberOS"
 }

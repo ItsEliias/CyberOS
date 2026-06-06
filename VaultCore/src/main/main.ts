@@ -8,6 +8,7 @@ import fs from 'fs';
 import os from 'os';
 import { registerSecretIpc } from './secretIpc';
 import { consumePendingAction, installPendingActionWatcher } from './pendingActions'
+import { launchPeerApp } from './platform'
 
 const APP_KEY = 'vaultscraper';
 
@@ -47,6 +48,10 @@ function computeNextRun(cronExpression: string | null | undefined): string | nul
 }
 
 // ─── Globals ──────────────────────────────────────────────────────────────────
+// ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+try { require('electron').crashReporter.start({ uploadToServer: false, productName: "VaultCore", companyName: 'CyberOS' }) } catch { /* unavailable */ }
+
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let currentScrapeState: { sourceName: string; progress: number; startTime: number; paused?: boolean } | null = null;
@@ -308,15 +313,7 @@ ipcMain.handle('get-sso', () => {
   } catch { return { unlocked: false }; }
 });
 
-ipcMain.handle('open-credvault', () => {
-  try {
-    const target = '/Applications/CredVault.app';
-    if (!fs.existsSync(target)) return false;
-    const { spawn } = _require('child_process') as typeof import('child_process');
-    spawn('open', [target], { detached: true, stdio: 'ignore' }).unref();
-    return true;
-  } catch { return false; }
-});
+ipcMain.handle('open-credvault', () => launchPeerApp('CredVault'))
 
 ipcMain.handle('get-config',    ()       => launcher.readConfig() || {});
 ipcMain.handle('set-config',    (_, k, v) => {

@@ -85,6 +85,47 @@ export function setWikiLinkOpener(fn: (name: string) => void) {
   _noteOpener = fn;
 }
 
+// ── Delegated click handler for sanitized markdown links ─────────────────────
+// Installed once at module-load. Any rendered <a class="md-link"> click is
+// intercepted and routed through the IPC bridge, which itself re-validates
+// the scheme on the main side. We don't trust the href attribute directly
+// because dangerouslySetInnerHTML places it back into live DOM where the
+// browser would otherwise navigate.
+type Win = typeof window & { ghostvault?: { openExternal?: (url: string) => unknown } };
+if (typeof document !== 'undefined') {
+  document.addEventListener('click', (e: MouseEvent) => {
+    const el = e.target as HTMLElement | null;
+    // External link → route through main, which re-validates the scheme.
+    const link = el?.closest('a.md-link') as HTMLAnchorElement | null;
+    if (link) {
+      e.preventDefault();
+      const href = link.getAttribute('data-href') ?? link.getAttribute('href') ?? '';
+      if (!href || href === '#') return;
+      try {
+        (window as Win).ghostvault?.openExternal?.(href);
+      } catch { /* ignore */ }
+      return;
+    }
+    // Wiki-link → either call the registered opener directly, or dispatch
+    // the open-note CustomEvent for components that hook into it.
+    const wiki = el?.closest('.wiki-link') as HTMLElement | null;
+    if (wiki) {
+      const page = wiki.getAttribute('data-page') ?? '';
+      if (!page) return;
+      if (_noteOpener) {
+        try { _noteOpener(page); } catch { /* ignore */ }
+      } else {
+        const root = document.querySelector('[data-wiki-root]');
+        if (root) {
+          try {
+            root.dispatchEvent(new CustomEvent('open-note', { detail: page, bubbles: true }));
+          } catch { /* ignore */ }
+        }
+      }
+    }
+  });
+}
+
 // ── Main markdown parser ──────────────────────────────────────────────────────
 
 export function parseMarkdown(md: string, openNote?: (name: string) => void): string {
@@ -104,13 +145,15 @@ export function parseMarkdown(md: string, openNote?: (name: string) => void): st
   // Inline code
   html = html.replace(/`([^`]+)`/g, (_, c) => `<code>${escHtml(c)}</code>`);
 
-  // Headings
-  html = html.replace(/^#{6}\s+(.+)$/gm, '<h6>$1</h6>');
-  html = html.replace(/^#{5}\s+(.+)$/gm, '<h5>$1</h5>');
-  html = html.replace(/^#{4}\s+(.+)$/gm, '<h4>$1</h4>');
-  html = html.replace(/^#{3}\s+(.+)$/gm, '<h3>$1</h3>');
-  html = html.replace(/^#{2}\s+(.+)$/gm, '<h2>$1</h2>');
-  html = html.replace(/^#{1}\s+(.+)$/gm, '<h1>$1</h1>');
+  // Headings — escape the captured text so a note containing
+  // `# <img src=x onerror=alert(1)>` doesn't pop a JS exec via the
+  // dangerouslySetInnerHTML render.
+  html = html.replace(/^#{6}\s+(.+)$/gm, (_, t: string) => `<h6>${escHtml(t)}</h6>`);
+  html = html.replace(/^#{5}\s+(.+)$/gm, (_, t: string) => `<h5>${escHtml(t)}</h5>`);
+  html = html.replace(/^#{4}\s+(.+)$/gm, (_, t: string) => `<h4>${escHtml(t)}</h4>`);
+  html = html.replace(/^#{3}\s+(.+)$/gm, (_, t: string) => `<h3>${escHtml(t)}</h3>`);
+  html = html.replace(/^#{2}\s+(.+)$/gm, (_, t: string) => `<h2>${escHtml(t)}</h2>`);
+  html = html.replace(/^#{1}\s+(.+)$/gm, (_, t: string) => `<h1>${escHtml(t)}</h1>`);
 
   // Horizontal rule
   html = html.replace(/^[-*_]{3,}\s*$/gm, '<hr>');
@@ -135,10 +178,14 @@ export function parseMarkdown(md: string, openNote?: (name: string) => void): st
     return parseTable(block);
   });
 
-  // Wiki-links [[Note Name]]
-  html = html.replace(/\[\[([^\]]+)\]\]/g, (_, page) => {
+  // Wiki-links [[Note Name]] — delegated click handler installed at module
+  // load reads the data-page attribute instead of executing inline JS. The
+  // previous inline onclick used a hand-rolled string-escape that didn't
+  // cover \n / </script> sequences and was a latent XSS gadget under any
+  // future CSP relaxation.
+  html = html.replace(/\[\[([^\]]+)\]\]/g, (_, page: string) => {
     const safePage = escHtml(page);
-    return `<span class="wiki-link" data-page="${safePage}" onclick="(function(){var e=document.querySelector('[data-wiki-root]');if(e){var ev=new CustomEvent('open-note',{detail:'${safePage.replace(/'/g, "\\'")}',bubbles:true});e.dispatchEvent(ev);}else{console.log('open:${safePage.replace(/'/g, "\\'")}');}})()">[[${safePage}]]</span>`;
+    return `<span class="wiki-link" data-page="${safePage}">[[${safePage}]]</span>`;
   });
 
   // Tags #tag
@@ -163,13 +210,33 @@ export function parseMarkdown(md: string, openNote?: (name: string) => void): st
     return `<li style="margin-left:${level * 16}px">${item}</li>`;
   });
 
-  // Images
-  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:6px;margin:8px 0;">');
+  // Images — escape URL + alt, and only allow http(s)/data:image/ schemes.
+  // Without this, a note containing ![](javascript:alert(1)) renders as
+  // a clickable XSS payload because `dangerouslySetInnerHTML` happily
+  // injects whatever we hand it.
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt: string, url: string) => {
+    const trimmed = url.trim();
+    const lower = trimmed.toLowerCase();
+    const ok = lower.startsWith('http://') ||
+               lower.startsWith('https://') ||
+               lower.startsWith('data:image/');
+    if (!ok) return escHtml(alt);
+    return `<img src="${escHtml(trimmed)}" alt="${escHtml(alt)}" style="max-width:100%;border-radius:6px;margin:8px 0;">`;
+  });
 
-  // Links
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g,
-    `<a href="$2" onclick="event.preventDefault();window.ghostvault.openExternal('$2')">$1</a>`
-  );
+  // Links — escape URL + label, and only allow http/https/mailto. The
+  // inline onclick previously substituted $2 raw, so a URL containing
+  // `')` could break out into arbitrary JS. We now stash the URL on a
+  // data-href attribute and route every click through a single delegated
+  // handler that calls window.ghostvault.openExternal (which itself
+  // re-validates the scheme on the main side).
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label: string, url: string) => {
+    const trimmed = url.trim();
+    const lower = trimmed.toLowerCase();
+    const ok = lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('mailto:');
+    const safeHref = ok ? escHtml(trimmed) : '#';
+    return `<a href="${safeHref}" data-href="${safeHref}" class="md-link">${escHtml(label)}</a>`;
+  });
 
   // Auto-detect IPs
   html = html.replace(/\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?::\d+)?)\b/g,
