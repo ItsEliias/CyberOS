@@ -354,14 +354,27 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
   });
 
   // ── Binary check ─────────────────────────────────────────────────────────
+  // Previously this was `execSync(\`which ${bin}\`)` — a clean shell-injection
+  // vector. A renderer could pass `bin = "x; rm -rf ~/Documents"` and we'd
+  // happily exec it. Now:
+  //   1. Reject anything that's not a plain alphanumeric binary name.
+  //   2. Resolve PATH ourselves with fs.existsSync — no shell, no exec.
   ipcMain.handle('terminallink:binary:check', async (_evt, bin: string) => {
-    const { execSync } = await import('child_process');
-    try {
-      execSync(`which ${bin}`, { stdio: 'ignore' });
-      return true;
-    } catch {
-      return false;
+    if (typeof bin !== 'string' || !bin) return false;
+    if (bin.length > 64) return false;
+    // Allow only the alphabet/digits/dash/dot/underscore that any real
+    // binary name would use. Explicitly rejects path separators, spaces,
+    // shell metacharacters, and NUL.
+    if (!/^[a-zA-Z0-9_.\-]+$/.test(bin)) return false;
+    const pathDirs = (process.env.PATH ?? '/usr/bin:/bin:/usr/sbin:/sbin').split(':');
+    for (const dir of pathDirs) {
+      if (!dir) continue;
+      try {
+        const candidate = path.join(dir, bin);
+        if (fs.existsSync(candidate)) return true;
+      } catch { /* keep scanning */ }
     }
+    return false;
   });
 
   // ── Vault: save text note ─────────────────────────────────────────────────
