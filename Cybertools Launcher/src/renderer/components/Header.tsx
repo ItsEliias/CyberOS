@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { useLauncherStore } from '../store';
+import HelpTip from './ui/HelpTip';
 
 interface Props {
   onSettingsClick: () => void;
@@ -7,6 +9,32 @@ interface Props {
 export default function Header({ onSettingsClick }: Props) {
   const vpn     = useLauncherStore(s => s.vpn);
   const version = useLauncherStore(s => s.version);
+  const [ssoUnlocked, setSsoUnlocked] = useState<boolean | null>(null);
+
+  // Poll the shared SSO state every 5 s so the indicator stays accurate
+  // even when CredVault is updated outside the Launcher.
+  useEffect(() => {
+    let cancelled = false;
+    async function check() {
+      try {
+        const r = await window.api.getSSO();
+        if (!cancelled) setSsoUnlocked(!!r.unlocked);
+      } catch { if (!cancelled) setSsoUnlocked(null); }
+    }
+    void check();
+    const t = setInterval(check, 5000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, []);
+
+  async function onSSOClick() {
+    if (ssoUnlocked) {
+      // Currently unlocked → lock everything.
+      try { await window.api.lockEcosystem(); setSsoUnlocked(false); } catch { /* ignore */ }
+    } else {
+      // Currently locked → bounce to CredVault so the user can unlock.
+      try { await window.api.launchApp('credvault'); } catch { /* ignore */ }
+    }
+  }
 
   return (
     <div className="flex items-center justify-between px-4 py-3 border-b"
@@ -42,6 +70,32 @@ export default function Header({ onSettingsClick }: Props) {
 
       {/* Right: VPN status + settings */}
       <div className="flex items-center gap-3" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+        {/* SSO session lock indicator */}
+        <button onClick={onSSOClick}
+          className="flex items-center gap-1.5 px-2 py-1 rounded transition-all hover:bg-white/5"
+          style={{
+            background: 'rgba(22,27,39,0.6)',
+            border: '1px solid rgba(42,51,71,0.6)',
+            cursor: 'pointer',
+          }}
+          title={ssoUnlocked === null
+            ? 'CredVault session state unknown'
+            : ssoUnlocked
+              ? 'CredVault session active — click to lock'
+              : 'CredVault locked — click to open CredVault'}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+            stroke={ssoUnlocked ? '#3fb950' : '#f85149'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" />
+            {ssoUnlocked
+              ? <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+              : <path d="M7 11V7a5 5 0 0 1 10 0v4" />}
+          </svg>
+          <span className="text-[9px] font-mono tracking-wider"
+            style={{ color: ssoUnlocked ? '#3fb950' : '#8b949e' }}>
+            {ssoUnlocked ? 'SSO' : 'LOCKED'}
+          </span>
+        </button>
+
         <div className="flex items-center gap-1.5 px-2 py-1 rounded"
           style={{ background: 'rgba(22,27,39,0.6)', border: '1px solid rgba(42,51,71,0.6)' }}>
           <div className="w-1.5 h-1.5 rounded-full flex-shrink-0"
@@ -53,6 +107,11 @@ export default function Header({ onSettingsClick }: Props) {
             style={{ color: vpn.active ? '#3fb950' : '#8b949e' }}>
             {vpn.active ? 'VPN' : 'NO VPN'}
           </span>
+          <HelpTip
+            title="VPN indicator"
+            body="Reflects whether a VPN tunnel is currently detected on this machine. Green means traffic is routed through the tunnel — red means it isn't."
+            align="right"
+          />
         </div>
 
         <div className="text-[9px] font-mono" style={{ color: '#4a5568' }}>
