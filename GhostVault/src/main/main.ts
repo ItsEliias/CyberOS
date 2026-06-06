@@ -532,6 +532,12 @@ ipcMain.handle('rename-note', (_, oldPath: string, newPath: string) => {
 ipcMain.handle('new-note', async (_, vaultPath: string, folder: string, title: string): Promise<NewNoteResult> => {
   const safeName  = title.replace(/[/\\?%*:|"<>]/g, '-') || 'Untitled';
   const filePath  = path.join(vaultPath, folder, `${safeName}.md`);
+  // Defence-in-depth — both vaultPath and folder come from the renderer.
+  // isUnderVault re-resolves against the SAVED config, so even if the
+  // renderer passes a poisoned vaultPath we still write under the real one.
+  if (!isUnderVault(filePath)) {
+    return { path: '', name: safeName, folder, content: '' };
+  }
   const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 16);
   const content   = `# ${title}\n\n*Created: ${timestamp}*\n\n---\n\n`;
   writeNote(filePath, content);
@@ -542,7 +548,9 @@ ipcMain.handle('new-note', async (_, vaultPath: string, folder: string, title: s
 });
 
 ipcMain.handle('create-folder', async (_, vaultPath: string, folderName: string) => {
-  try { fs.mkdirSync(path.join(vaultPath, folderName), { recursive: true }); return true; }
+  const target = path.join(vaultPath, folderName);
+  if (!isUnderVault(target)) return false;
+  try { fs.mkdirSync(target, { recursive: true }); return true; }
   catch { return false; }
 });
 
