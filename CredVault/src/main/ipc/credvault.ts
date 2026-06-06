@@ -673,8 +673,12 @@ export function registerCredVaultHandlers(): void {
 
   // ── Backup ────────────────────────────────────────────────────────────────
 
-  ipcMain.handle('vault:export-backup', async (_e, payload: ExportBackupPayload): Promise<{ ok: boolean; error?: string }> => {
+  ipcMain.handle('vault:export-backup', async (_e, payload: unknown): Promise<{ ok: boolean; error?: string }> => {
     if (!vaultData || !hasKey()) return { ok: false, error: 'Vault is locked' }
+    if (!isObject(payload) || !isNonEmptyString(payload.exportPassword)) {
+      return { ok: false, error: 'Export password required' }
+    }
+    const exportPassword = payload.exportPassword
     const win = BrowserWindow.getFocusedWindow()
     const { filePath, canceled } = await dialog.showSaveDialog(win!, {
       title: 'Export CredVault Backup',
@@ -683,7 +687,7 @@ export function registerCredVaultHandlers(): void {
     })
     if (canceled || !filePath) return { ok: false, error: 'Cancelled' }
     try {
-      const encrypted = encryptBackup(JSON.stringify(vaultData), payload.exportPassword)
+      const encrypted = encryptBackup(JSON.stringify(vaultData), exportPassword)
       fs.writeFileSync(filePath, encrypted)
       return { ok: true }
     } catch (e) {
@@ -691,7 +695,10 @@ export function registerCredVaultHandlers(): void {
     }
   })
 
-  ipcMain.handle('vault:import-backup', async (_e, importPassword: string): Promise<{ ok: boolean; count?: number; error?: string }> => {
+  ipcMain.handle('vault:import-backup', async (_e, importPassword: unknown): Promise<{ ok: boolean; count?: number; error?: string }> => {
+    if (!isNonEmptyString(importPassword)) {
+      return { ok: false, error: 'Import password required' }
+    }
     const win = BrowserWindow.getFocusedWindow()
     const { filePaths, canceled } = await dialog.showOpenDialog(win!, {
       title: 'Import CredVault Backup',
@@ -705,11 +712,17 @@ export function registerCredVaultHandlers(): void {
       if (!plaintext) return { ok: false, error: 'Incorrect backup password or corrupted file' }
       const backup = JSON.parse(plaintext) as VaultData
       if (!vaultData) return { ok: false, error: 'Vault is locked — unlock first' }
+      // A malformed backup with credentials: null/undefined used to throw
+      // 'is not iterable' inside the for-of, surfacing a confusing error.
+      if (!Array.isArray(backup?.credentials)) {
+        return { ok: false, error: 'Backup is missing a credentials array' }
+      }
       let added = 0
       const now = new Date().toISOString()
       for (const c of backup.credentials) {
-        if (!vaultData.credentials.find(x => x.id === c.id)) {
-          vaultData.credentials.push({ ...c, updatedAt: now })
+        if (!isCredentialInput(c) && !(isObject(c) && isNonEmptyString(c.id))) continue
+        if (!vaultData.credentials.find(x => x.id === (c as Credential).id)) {
+          vaultData.credentials.push({ ...(c as Credential), updatedAt: now })
           added++
         }
       }
