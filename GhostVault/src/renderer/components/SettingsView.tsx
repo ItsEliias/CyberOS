@@ -21,6 +21,7 @@ export default function SettingsView({ ollamaModels, onOllamaRefresh }: Props) {
   const [hotkeyRecording, setHotkeyRecording]   = useState(false);
   const [hotkeyError, setHotkeyError]           = useState<string | null>(null);
   const [hotkeySuccess, setHotkeySuccess]       = useState(false);
+  const [vaultError, setVaultError]             = useState<string | null>(null);
   const [academicMode, setAcademicMode]         = useState(false);
   const [academicAuthor, setAcademicAuthor]     = useState('');
 
@@ -90,9 +91,11 @@ export default function SettingsView({ ollamaModels, onOllamaRefresh }: Props) {
     // pick didn't stick.
     const ok = await window.ghostvault.saveConfig({ vaultPath: p });
     if (!ok) {
-      alert(`Cannot use "${p}" as a vault. Pick a folder inside your home directory.`);
+      setVaultError(`Cannot use "${p}" — pick a folder inside your home directory.`);
+      setTimeout(() => setVaultError(null), 6000);
       return;
     }
+    setVaultError(null);
     window.location.reload();
   }
 
@@ -146,6 +149,12 @@ export default function SettingsView({ ollamaModels, onOllamaRefresh }: Props) {
             style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
             Change Vault…
           </button>
+          {vaultError && (
+            <div className="text-xs px-3 py-2 rounded-lg border"
+              style={{ borderColor: 'rgba(248,81,73,0.4)', background: 'rgba(248,81,73,0.1)', color: '#f85149' }}>
+              {vaultError}
+            </div>
+          )}
         </div>
       </section>
 

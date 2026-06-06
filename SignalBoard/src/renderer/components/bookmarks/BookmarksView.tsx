@@ -141,6 +141,7 @@ export default function BookmarksView() {
   const bookmarkTags = useStore(s => s.bookmarkTags)
   const [tagFilter, setTagFilter] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState<string | null>(null)
 
   const bookmarkedItems = useMemo(() => {
     const byId = new Map(items.map(i => [i.id, i]))
@@ -159,9 +160,13 @@ export default function BookmarksView() {
 
   async function handleExport(format: 'json' | 'csv') {
     setExporting(true)
+    setExportError(null)
     const res = await window.electronAPI.exportBookmarks(format, bookmarks, bookmarkTags)
     setExporting(false)
-    if (!res.ok && res.error) alert(`Export failed: ${res.error}`)
+    if (!res.ok && res.error) {
+      setExportError(`Export failed: ${res.error}`)
+      setTimeout(() => setExportError(null), 5000)
+    }
   }
 
   return (
@@ -181,6 +186,11 @@ export default function BookmarksView() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {exportError && (
+            <span className="text-[11px] text-danger font-mono mr-1" title={exportError}>
+              {exportError}
+            </span>
+          )}
           <button
             onClick={() => handleExport('json')}
             disabled={exporting || bookmarks.length === 0}

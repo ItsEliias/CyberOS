@@ -82,6 +82,7 @@ export default function ReadingPane() {
   const [reconResult, setReconResult] = useState<{ targets: string[] } | null>(null)
   const [tagInput, setTagInput]     = useState('')
   const [copyToast, setCopyToast]   = useState(false)
+  const [saveError, setSaveError]   = useState<string | null>(null)
   const [scrollPct, setScrollPct]   = useState(0)
   const contentRef = useRef<HTMLDivElement>(null)
   const rafRef     = useRef<number | null>(null)
@@ -147,8 +148,13 @@ export default function ReadingPane() {
   async function handleSaveToVault() {
     if (!item) return
     const res = await window.electronAPI.saveToVault(item.id)
-    if (res.ok) patchItem(item.id, { saved: true })
-    else alert(res.error ?? 'Failed to save')
+    if (res.ok) {
+      patchItem(item.id, { saved: true })
+      setSaveError(null)
+    } else {
+      setSaveError(res.error ?? 'Failed to save')
+      setTimeout(() => setSaveError(null), 4000)
+    }
   }
 
   async function handleToggleBookmark() {
@@ -315,7 +321,7 @@ export default function ReadingPane() {
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
               Mark all read
             </button>
-            <button onClick={handleSaveToVault} className="text-xs px-2.5 py-1 border transition-colors" style={{ background: readerMode ? '#f9fafb' : 'rgba(22,27,39,0.6)', borderColor: readerMode ? '#d1d5db' : 'rgba(42,51,71,0.5)', color: readerMode ? '#374151' : '#8b949e', borderRadius: '8px' }}>Save to Vault</button>
+            <button onClick={handleSaveToVault} className="text-xs px-2.5 py-1 border transition-colors" style={{ background: saveError ? 'rgba(248,81,73,0.12)' : readerMode ? '#f9fafb' : 'rgba(22,27,39,0.6)', borderColor: saveError ? 'rgba(248,81,73,0.3)' : readerMode ? '#d1d5db' : 'rgba(42,51,71,0.5)', color: saveError ? '#f85149' : readerMode ? '#374151' : '#8b949e', borderRadius: '8px' }} title={saveError ?? 'Save to Vault'}>{saveError ? 'Save failed' : 'Save to Vault'}</button>
             <button onClick={handleReconDesk} className="text-xs px-2.5 py-1 border transition-colors" style={{ background: 'rgba(74,158,255,0.1)', borderColor: 'rgba(74,158,255,0.25)', color: '#4a9eff', borderRadius: '8px' }} title="Extract IPs/hostnames and send to ReconDesk">+ ReconDesk</button>
           </div>
 

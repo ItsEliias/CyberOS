@@ -28,6 +28,8 @@ export default function SettingsView() {
   const [detectingPlugins, setDP]       = useState(false);
   const [resetting, setResetting]       = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [updateMsg, setUpdateMsg]       = useState<string | null>(null);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
 
   const cfg = config ?? {};
 
@@ -195,16 +197,36 @@ export default function SettingsView() {
             </span>
           </Row>
           <Row label="Check for Updates" description="">
-            <button
-              onClick={async () => {
-                const info = await window.electronAPI.checkForUpdates();
-                if (info.hasUpdate) alert(`Update available: v${info.version}`);
-                else alert('You\'re up to date!');
-              }}
-              className="px-3 py-1.5 rounded-lg text-xs border transition-all hover:bg-white/5"
-              style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
-              Check Now
-            </button>
+            <div className="flex items-center gap-2">
+              {updateMsg && (
+                <span
+                  className="text-[11px] font-mono"
+                  style={{ color: updateMsg.startsWith('Update') ? '#a371f7' : 'var(--text-muted)' }}>
+                  {updateMsg}
+                </span>
+              )}
+              <button
+                disabled={checkingUpdate}
+                onClick={async () => {
+                  setCheckingUpdate(true);
+                  setUpdateMsg(null);
+                  try {
+                    const info = await window.electronAPI.checkForUpdates();
+                    const msg = info.hasUpdate ? `Update available: v${info.version}` : 'You\'re up to date';
+                    setUpdateMsg(msg);
+                    setTimeout(() => setUpdateMsg(null), 5000);
+                  } catch (err) {
+                    setUpdateMsg('Check failed');
+                    setTimeout(() => setUpdateMsg(null), 5000);
+                  } finally {
+                    setCheckingUpdate(false);
+                  }
+                }}
+                className="px-3 py-1.5 rounded-lg text-xs border transition-all hover:bg-white/5 disabled:opacity-40"
+                style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+                {checkingUpdate ? 'Checking…' : 'Check Now'}
+              </button>
+            </div>
           </Row>
         </Section>
 
