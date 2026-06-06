@@ -21,6 +21,10 @@ const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')
 let mainWindow: BrowserWindow | null = null
 let statusInterval: NodeJS.Timeout | null = null
 let configWatcher: fs.FSWatcher | null = null
+let dataWatcher: fs.FSWatcher | null = null
+// Suppress data:updated push to renderer for a short window after our own
+// saveData() so we don't ping the renderer to re-fetch identical state.
+let suppressDataPushUntil = 0
 
 function ensureDataDir(): void {
   const dir = path.dirname(DATA_FILE)
@@ -44,6 +48,31 @@ function saveData(data: ReconDeskData): void {
   const tmp = `${DATA_FILE}.tmp`
   fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8')
   fs.renameSync(tmp, DATA_FILE)
+  // Suppress our own watcher echo for the next 500 ms.
+  suppressDataPushUntil = Date.now() + 500
+}
+
+// Watch data.json for external writes (NetworkMap recondesk:push-node,
+// SignalBoard feeds:recondesk-target) so the renderer picks them up without
+// the user having to manually refresh.
+function installDataWatcher(): void {
+  if (dataWatcher) return
+  if (!fs.existsSync(DATA_FILE)) {
+    // Ensure the file exists so fs.watch has something to watch.
+    saveData(loadData())
+  }
+  try {
+    let debounce: NodeJS.Timeout | null = null
+    dataWatcher = fs.watch(DATA_FILE, { persistent: false }, () => {
+      if (Date.now() < suppressDataPushUntil) return
+      if (debounce) clearTimeout(debounce)
+      debounce = setTimeout(() => {
+        try { mainWindow?.webContents?.send('data:updated') } catch { /* ignore */ }
+      }, 120)
+    })
+  } catch (e) {
+    console.warn('[ReconDesk] data watcher install failed:', (e as Error).message)
+  }
 }
 
 function defaultData(): ReconDeskData {
@@ -416,6 +445,7 @@ app.whenReady().then(() => {
   writeStatus(data)
   emitEvent('ReconDesk', 'app:launched', { version: APP_VERSION })
   if (mainWindow) setupConfigWatch(mainWindow)
+  installDataWatcher()
 
   // Tray-menu pending action — let the renderer mount, then dispatch.
   setTimeout(() => {
@@ -443,7 +473,10 @@ app.on('window-all-closed', () => {
   app.quit()
 })
 
-app.on('before-quit', () => { configWatcher?.close() })
+app.on('before-quit', () => {
+  configWatcher?.close()
+  dataWatcher?.close()
+})
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow()

@@ -29,6 +29,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onConfigUpdated: (cb: (data: Record<string, unknown>) => void) =>
     ipcRenderer.on('config:updated', (_e, data) => cb(data)),
 
+  // Fires when ReconDesk's own data.json is touched from outside (e.g. when
+  // SignalBoard / NetworkMap pushes a target). The renderer should re-fetch
+  // its data so the user sees the change live.
+  onDataUpdated: (cb: () => void): (() => void) => {
+    const listener = () => cb()
+    ipcRenderer.on('data:updated', listener)
+    return () => ipcRenderer.removeListener('data:updated', listener)
+  },
+
   // Feature 1 — enrichment
   enrichTarget: (ip: string, name: string): Promise<Record<string, unknown> | null> =>
     ipcRenderer.invoke('recondesk:enrich-target', ip, name),
