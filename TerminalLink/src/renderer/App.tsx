@@ -136,6 +136,15 @@ export default function App() {
   // Global keyboard shortcuts
   useEffect(() => {
     function handler(e: KeyboardEvent) {
+      // When soft-locked, swallow all shortcuts except Escape so the user
+      // can't bypass the lock by toggling the requirement from the palette.
+      if (requireSSO && ssoUnlocked === false) {
+        if (e.key !== 'Escape') return;
+        if (commandPaletteOpen) setCommandPaletteOpen(false);
+        if (toolLauncherOpen)   setToolLauncherOpen(false);
+        if (kbPanelOpen)        setKbPanelOpen(false);
+        return;
+      }
       const mod = e.metaKey || e.ctrlKey;
       // ⌘K / ⌘Shift+P → command palette (⌘K is the new primary trigger)
       if (mod && !e.shiftKey && e.key === 'k') { e.preventDefault(); setCommandPaletteOpen(true); }
@@ -157,7 +166,7 @@ export default function App() {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [broadcastMode, commandPaletteOpen, toolLauncherOpen, kbPanelOpen]);
+  }, [broadcastMode, commandPaletteOpen, toolLauncherOpen, kbPanelOpen, requireSSO, ssoUnlocked]);
 
   const handleCommand = useCallback((entry: CommandEntry) => {
     addCommand({ command: entry.command, pane: entry.pane, outputSnippet: entry.outputSnippet });
@@ -427,15 +436,15 @@ export default function App() {
         connecting={connecting}
       />
 
-      {/* Overlays */}
-      {commandPaletteOpen && (
+      {/* Overlays — suppress when soft-locked so the lockscreen stays definitive */}
+      {commandPaletteOpen && !ssoBlocked && (
         <CommandPalette
           items={paletteItems}
           onClose={() => setCommandPaletteOpen(false)}
         />
       )}
 
-      {toolLauncherOpen && (
+      {toolLauncherOpen && !ssoBlocked && (
         <ToolLauncher
           target={sharedContext?.activeTarget || sharedContext?.activeIP}
           onLaunch={cmd => { handlePasteToTerminal(`${cmd}\r`); }}
