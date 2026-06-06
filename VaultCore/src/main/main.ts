@@ -548,7 +548,13 @@ ipcMain.handle('validate-links',    async (_, fp) => {
   if (!isUnderVault(fp)) return { error: 'Path outside vault' };
   return vaulthealth.validateLinks(fp);
 });
-ipcMain.handle('generate-canvas',   async (_, sn, of_) => processor.generateCanvas(sn, of_, launcher.getVaultPath()));
+ipcMain.handle('generate-canvas',   async (_, sn, of_) => {
+  // processor.generateCanvas walks `outputFolder` reading .md files. Without
+  // a confinement check, a renderer-supplied path outside the vault would
+  // enumerate + read markdown anywhere on disk (info disclosure).
+  if (!isUnderVault(of_)) return { error: 'Path outside vault' };
+  return processor.generateCanvas(sn, of_, launcher.getVaultPath());
+});
 
 // Confine renderer file IPCs to the configured vault root. Without this a
 // compromised renderer could read SSH keys or overwrite arbitrary user files
