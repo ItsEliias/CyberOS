@@ -538,6 +538,10 @@ ipcMain.handle('read-file',  (_, fp) => {
 });
 ipcMain.handle('write-file', (_, fp, c) => {
   if (!isUnderVault(fp)) return false;
+  // A non-string content used to silently write the literal "undefined" /
+  // "[object Object]" to the file, corrupting notes for any renderer bug
+  // that forgot to stringify first.
+  if (typeof c !== 'string') return false;
   try { fs.mkdirSync(path.dirname(fp), { recursive: true }); fs.writeFileSync(fp, c, 'utf8'); return true; } catch { return false; }
 });
 ipcMain.handle('file-exists', (_, fp) => isUnderVault(fp) && fs.existsSync(fp));
