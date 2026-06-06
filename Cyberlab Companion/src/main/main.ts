@@ -53,7 +53,15 @@ function saveConfig(cfg: Record<string, unknown>): boolean {
     if (fs.existsSync(CONFIG_PATH)) {
       try { existing = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')); } catch {}
     }
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify({ ...existing, ...cfg }, null, 2), 'utf8');
+    // Atomic write: every CyberTools app writes to this same shared
+    // ~/cybertools-config.json. Direct fs.writeFileSync races against
+    // sibling apps reading mid-write (their JSON.parse throws or sees
+    // a truncated config, and they silently degrade to defaults until
+    // the next refresh). tmp+rename keeps readers seeing either the
+    // old or new bytes.
+    const tmp = CONFIG_PATH + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify({ ...existing, ...cfg }, null, 2), 'utf8');
+    fs.renameSync(tmp, CONFIG_PATH);
     return true;
   } catch (e: unknown) {
     console.error('saveConfig error:', (e as Error).message);
