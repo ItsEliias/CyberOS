@@ -1551,8 +1551,18 @@ function setupIPC(): void {
   ipcMain.handle('update:check-now', () => { checkForUpdates(); return true; });
 
   ipcMain.handle('ecosystem-read-events', () => ecosystemBus.readEvents());
-  ipcMain.handle('ecosystem-emit', (_e, appName: string, eventType: string, data: Record<string, unknown>) => {
-    ecosystemBus.emitEvent(appName, eventType, data);
+  ipcMain.handle('ecosystem-emit', (_e, appName: unknown, eventType: unknown, data: unknown) => {
+    // Validate at the IPC boundary so a renderer bug can't shovel garbage
+    // into the bus file (every CyberOS app reads this) or DoS it via a 100 MB
+    // data blob. Short hand-typed strings; small JSON payloads.
+    if (typeof appName !== 'string' || !appName || appName.length > 80)   return false;
+    if (typeof eventType !== 'string' || !eventType || eventType.length > 120) return false;
+    if (data !== undefined && (typeof data !== 'object' || data === null)) return false;
+    if (data !== undefined) {
+      const size = JSON.stringify(data).length;
+      if (size > 64 * 1024) return false;  // 64 KB hard cap per event payload
+    }
+    ecosystemBus.emitEvent(appName, eventType, (data ?? {}) as Record<string, unknown>);
     return true;
   });
 }
