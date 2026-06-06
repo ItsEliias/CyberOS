@@ -63,6 +63,17 @@ const api = {
     ipcRenderer.on('open-settings', listener);
     return () => ipcRenderer.removeListener('open-settings', listener);
   },
+  onCommandPalette    : (cb: () => void) => {
+    const listener = () => cb();
+    ipcRenderer.on('command-palette:toggle', listener);
+    return () => ipcRenderer.removeListener('command-palette:toggle', listener);
+  },
+
+  // Backup
+  backupSnapshot      : (): Promise<{ ok: boolean; file?: string; error?: string; count?: number }> =>
+                          ipcRenderer.invoke('backup-snapshot'),
+  backupImport        : (): Promise<{ ok: boolean; count?: number; error?: string }> =>
+                          ipcRenderer.invoke('backup-import'),
   onEcosystemUpdated  : (cb: (events: EcosystemEvent[]) => void) => {
     const listener = (_e: Electron.IpcRendererEvent, events: EcosystemEvent[]) => cb(events);
     ipcRenderer.on('ecosystem-events-updated', listener);

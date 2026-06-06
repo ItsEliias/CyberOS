@@ -20,6 +20,7 @@ export default function App() {
 
   // Splash: show until main sends splash-complete, then animate out
   const [showSplash, setShowSplash] = useState(true);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   const panelClassRef = useRef(false);
 
@@ -37,6 +38,7 @@ export default function App() {
       api.onEcosystemUpdated(events => setEcosystemEvents(events)),
       api.onSplashComplete(() => setShowSplash(false)),
       api.onOpenSettings(() => setSettingsOpen(true)),
+      api.onCommandPalette?.(() => setPaletteOpen(true)),
       api.onPanelShown(() => {
         if (!panelClassRef.current) {
           document.body.classList.add('panel-visible');
@@ -45,7 +47,23 @@ export default function App() {
       }),
     ];
 
-    return () => unsubs.forEach(u => u());
+    // In-renderer ⌘K (also works when the palette is closed but the panel focused)
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen(o => !o);
+      }
+    }
+    window.addEventListener('keydown', onKey);
+
+    function onPaletteOpenSettings() { setSettingsOpen(true); }
+    window.addEventListener('cmd-palette:open-settings', onPaletteOpenSettings as EventListener);
+
+    return () => {
+      unsubs.forEach(u => u && u());
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('cmd-palette:open-settings', onPaletteOpenSettings as EventListener);
+    };
   }, []);
 
   // ── Apply theme to <body> ─────────────────────────────────────────────────
@@ -128,6 +146,11 @@ export default function App() {
             config={config}
             onClose={() => setSettingsOpen(false)}
             onSave={handleSaveConfig}
+          />
+
+          <CommandPalette
+            open={paletteOpen}
+            onClose={() => setPaletteOpen(false)}
           />
 
         </>

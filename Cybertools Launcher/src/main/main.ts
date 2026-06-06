@@ -589,6 +589,113 @@ function launchApp(appKey: string): boolean {
   }
 }
 
+// ─── Backup / restore ────────────────────────────────────────────────────────
+// Snapshot all CyberOS app config locations into a single tar.gz in the
+// user-selected backup folder. No encryption yet — warn user this is plain.
+
+interface BackupResult { ok: boolean; file?: string; error?: string; count?: number }
+
+const BACKUP_PATHS = [
+  // Shared ecosystem config
+  path.join(os.homedir(), 'cybertools-config.json'),
+  // Per-app Application Support directories (lowercase forms common in macOS)
+  path.join(os.homedir(), 'Library/Application Support/CredVault'),
+  path.join(os.homedir(), 'Library/Application Support/credvault'),
+  path.join(os.homedir(), 'Library/Application Support/ghostvault'),
+  path.join(os.homedir(), 'Library/Application Support/GhostVault'),
+  path.join(os.homedir(), 'Library/Application Support/vaultcore'),
+  path.join(os.homedir(), 'Library/Application Support/VaultCore'),
+  path.join(os.homedir(), 'Library/Application Support/recondesk'),
+  path.join(os.homedir(), 'Library/Application Support/signalboard'),
+  path.join(os.homedir(), 'Library/Application Support/playbookstudio'),
+  path.join(os.homedir(), 'Library/Application Support/reportforge'),
+  path.join(os.homedir(), 'Library/Application Support/networkmap'),
+  path.join(os.homedir(), 'Library/Application Support/netlab'),
+  path.join(os.homedir(), 'Library/Application Support/cyberlab-companion'),
+  path.join(os.homedir(), 'Library/Application Support/terminallink'),
+  path.join(os.homedir(), 'Library/Application Support/CyberTools'),
+  // TermLink shell-hook log
+  path.join(os.homedir(), '.cybertools/term-log.jsonl'),
+];
+
+async function runBackupSnapshot(): Promise<BackupResult> {
+  try {
+    const cfg     = readConfig() as Record<string, { folder?: string }>;
+    const folder  = cfg.backup?.folder;
+    if (!folder || !fs.existsSync(folder)) {
+      return { ok: false, error: 'Backup folder not set or no longer exists.' };
+    }
+    const present = BACKUP_PATHS.filter(p => fs.existsSync(p));
+    if (present.length === 0) {
+      return { ok: false, error: 'Nothing to back up — no app data found.' };
+    }
+
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const file  = path.join(folder, `cyberos-backup-${stamp}.tar.gz`);
+
+    // Use macOS `tar` so we don't need extra deps. Paths recorded relative
+    // to $HOME so restore is portable.
+    const home = os.homedir();
+    const relPaths = present.map(p => p.startsWith(home + '/') ? p.slice(home.length + 1) : p);
+
+    await new Promise<void>((resolve, reject) => {
+      const child = spawn('tar', ['-czf', file, '-C', home, ...relPaths],
+        { stdio: ['ignore', 'pipe', 'pipe'] });
+      let err = '';
+      child.stderr?.on('data', d => { err += d.toString(); });
+      child.on('error', reject);
+      child.on('close', code => {
+        if (code === 0) resolve();
+        else reject(new Error(err || `tar exited ${code}`));
+      });
+    });
+
+    addActivityEntry({ type: 'launcher', text: `Backup snapshot saved (${path.basename(file)})` });
+    ecosystemBus.emitEvent('Launcher', 'launcher.backup.created', { file: path.basename(file), count: present.length });
+    return { ok: true, file, count: present.length };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+}
+
+async function runBackupImport(): Promise<BackupResult> {
+  try {
+    isDialogOpen = true;
+    const result = await dialog.showOpenDialog(panelWindow!, {
+      properties: ['openFile'],
+      filters: [{ name: 'CyberOS backup', extensions: ['gz', 'tgz', 'tar.gz'] }],
+    });
+    isDialogOpen = false;
+    if (result.canceled || !result.filePaths[0]) return { ok: false, error: '' };
+    const file = result.filePaths[0];
+
+    const home = os.homedir();
+    // List archive members first so we can report count
+    const list = await new Promise<string[]>((resolve, reject) => {
+      const child = spawn('tar', ['-tzf', file], { stdio: ['ignore', 'pipe', 'pipe'] });
+      let out = '';
+      child.stdout?.on('data', d => { out += d.toString(); });
+      child.on('error', reject);
+      child.on('close', code => code === 0 ? resolve(out.split('\n').filter(Boolean)) : reject(new Error(`tar -t exited ${code}`)));
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      const child = spawn('tar', ['-xzf', file, '-C', home], { stdio: ['ignore', 'pipe', 'pipe'] });
+      let err = '';
+      child.stderr?.on('data', d => { err += d.toString(); });
+      child.on('error', reject);
+      child.on('close', code => code === 0 ? resolve() : reject(new Error(err || `tar -x exited ${code}`)));
+    });
+
+    addActivityEntry({ type: 'launcher', text: `Backup restored from ${path.basename(file)}` });
+    ecosystemBus.emitEvent('Launcher', 'launcher.backup.restored', { file: path.basename(file), count: list.length });
+    return { ok: true, count: list.length };
+  } catch (e) {
+    isDialogOpen = false;
+    return { ok: false, error: (e as Error).message };
+  }
+}
+
 // ─── Config polling ───────────────────────────────────────────────────────────
 
 function pollConfig(): void {
@@ -967,6 +1074,14 @@ function setupIPC(): void {
   ipcMain.handle('hide-panel',     () => { hidePanel(); return true; });
   ipcMain.on('hide-after-splash',  () => hidePanel());
 
+  ipcMain.handle('backup-snapshot', async () => {
+    return await runBackupSnapshot();
+  });
+
+  ipcMain.handle('backup-import', async () => {
+    return await runBackupImport();
+  });
+
   ipcMain.handle('open-file-picker', async (_e, opts: { filters?: Electron.FileFilter[] }) => {
     isDialogOpen = true;
     try {
@@ -1074,6 +1189,17 @@ app.whenReady().then(() => {
   setupAppManagerIPC();
 
   globalShortcut.register('CommandOrControl+Shift+F', () => showSearchWindow());
+
+  // ⌘K — global command palette: show the panel if hidden, then ask the
+  // renderer to open the palette. Toggles closed if already open in the panel.
+  globalShortcut.register('CommandOrControl+K', () => {
+    if (!isPanelVisible) showPanel(tray!.getBounds());
+    setTimeout(() => {
+      if (panelWindow && !panelWindow.isDestroyed()) {
+        panelWindow.webContents.send('command-palette:toggle');
+      }
+    }, 80);
+  });
 
   configPollTimer = setInterval(pollConfig, 5000);
   pollConfig();
