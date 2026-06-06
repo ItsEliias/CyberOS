@@ -5,8 +5,8 @@ import fs from 'fs';
 import os from 'os';
 import * as ecosystemBus from './ecosystem-bus.js';
 import { consumePendingAction, installPendingActionWatcher } from './pendingActions.js'
+import { launchPeerApp } from './platform.js'
 import type {
-import { launchPeerApp } from './platform'
   Report, CyberToolsSharedConfig, ExportResult, WriteupFile, ReconDeskTarget
 } from '../shared/types.js';
 
