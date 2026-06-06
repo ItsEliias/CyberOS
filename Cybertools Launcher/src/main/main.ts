@@ -372,7 +372,7 @@ function searchReconDesk(query: string): SearchResult[] {
 }
 
 function searchCyberContext(query: string): SearchResult[] {
-  const cfgPath = path.join(os.homedir(), 'cybertools-config.json');
+  const cfgPath = sharedConfigPath();
   if (!fs.existsSync(cfgPath)) return [];
   try {
     const raw  = fs.readFileSync(cfgPath, 'utf-8');
@@ -410,7 +410,7 @@ function setupSearchIPC(): void {
 // tray menu and IPC handler share one source of truth.
 function readSSOState(): { unlocked: boolean; expiresAt?: string | null } {
   try {
-    const cfgPath = path.join(os.homedir(), 'cybertools-config.json');
+    const cfgPath = sharedConfigPath();
     if (!fs.existsSync(cfgPath)) return { unlocked: false };
     const shared = JSON.parse(fs.readFileSync(cfgPath, 'utf8')) || {};
     const sso = shared.sso as { unlocked?: boolean; expiresAt?: string | null } | undefined;
@@ -628,7 +628,7 @@ function writeSharedConfigAtomic(cfgPath: string, payload: Record<string, unknow
 // CredVault itself so its in-memory key is wiped on next focus / launch.
 function lockEcosystemSession(): void {
   try {
-    const cfgPath = path.join(os.homedir(), 'cybertools-config.json');
+    const cfgPath = sharedConfigPath();
     const shared = fs.existsSync(cfgPath)
       ? JSON.parse(fs.readFileSync(cfgPath, 'utf8'))
       : {};
@@ -648,7 +648,7 @@ function lockEcosystemSession(): void {
 
 function writePendingAction(appKey: string, actionId: string): void {
   try {
-    const cfgPath = path.join(os.homedir(), 'cybertools-config.json');
+    const cfgPath = sharedConfigPath();
     const shared = fs.existsSync(cfgPath)
       ? JSON.parse(fs.readFileSync(cfgPath, 'utf8'))
       : {};
