@@ -494,7 +494,22 @@ ipcMain.handle('write-file', (_, fp, c) => {
 ipcMain.handle('file-exists', (_, fp) => isUnderVault(fp) && fs.existsSync(fp));
 ipcMain.handle('list-vault-notes', (_, folderPath) => {
   const vp = launcher.getVaultPath();
-  const base = folderPath ? path.join(vp, folderPath) : vp;
+  if (!vp) return [];
+  // The renderer-supplied folderPath used to be path.joined onto the vault
+  // root with no further checks, so 'list-vault-notes("../..")' would walk
+  // ~/, returning '.md' files outside the configured vault. Resolve + assert
+  // the final path stays inside the vault before walking it.
+  let base: string;
+  if (folderPath && typeof folderPath === 'string') {
+    const candidate = path.resolve(vp, folderPath);
+    const root      = path.resolve(vp) + path.sep;
+    if (candidate !== path.resolve(vp) && !candidate.startsWith(root)) {
+      return [];
+    }
+    base = candidate;
+  } else {
+    base = vp;
+  }
   const notes: string[] = [];
   function walk(dir: string) {
     try {
