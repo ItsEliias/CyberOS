@@ -195,7 +195,19 @@ ipcMain.handle('data:save', (_e, data: ReconDeskData) => {
 
 ipcMain.handle('app:version', () => APP_VERSION)
 
-ipcMain.handle('shell:open', (_e, url: string) => shell.openExternal(url))
+// Allowlist URL schemes — without this, a poisoned target URL (e.g. baked
+// into a CVE link or a SignalBoard-imported note) could fire javascript:,
+// file://, or data: URIs through shell.openExternal and trigger code or
+// disclose local files via the default handler.
+const SHELL_OPEN_SCHEMES = new Set(['http:', 'https:', 'mailto:'])
+ipcMain.handle('shell:open', (_e, url: string) => {
+  try {
+    if (typeof url !== 'string' || url.length === 0) return
+    const u = new URL(url)
+    if (!SHELL_OPEN_SCHEMES.has(u.protocol)) return
+    return shell.openExternal(u.toString())
+  } catch { /* malformed URL — drop silently */ }
+})
 
 // ─── New V2 IPC handlers ──────────────────────────────────────────────────────
 
