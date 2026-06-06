@@ -598,6 +598,28 @@ const APP_TRAY_ACTIONS: Record<string, TrayAction[]> = {
   cyberlab:       [{ id: 'refresh-stats',   label: 'Refresh platform stats' }],
 };
 
+// Atomic tmp+rename writer for the shared cybertools-config.json.
+// The Launcher's writeConfig() in config.ts handles the typed CyberToolsConfig
+// shape, but the SSO + pending_actions paths below need to read+modify the
+// raw JSON (it carries extra keys other apps write). Direct writeFileSync
+// here races against concurrent readers (sibling apps polling the file)
+// and risks half-written JSON; tmp+rename is the standard fix.
+function writeSharedConfigAtomic(cfgPath: string, payload: Record<string, unknown>): void {
+  const json    = JSON.stringify(payload, null, 2);
+  const tmpPath = cfgPath + '.tmp';
+  try {
+    fs.writeFileSync(tmpPath, json, 'utf8');
+    fs.renameSync(tmpPath, cfgPath);
+  } catch (e) {
+    // Fall back so a transient rename failure doesn't leave the SSO lock
+    // in an inconsistent state. The fall-back is non-atomic by design.
+    try { fs.writeFileSync(cfgPath, json, 'utf8'); }
+    catch (e2) { throw e2; }
+    try { if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath); } catch { /* swallow */ }
+    void e;
+  }
+}
+
 // One-tap soft-lock for the whole ecosystem. Writes sso.unlocked=false
 // straight into the shared cybertools-config.json so soft-locked apps
 // (GhostVault, VaultCore, ReportForge with the setting on) flip back to
@@ -616,7 +638,7 @@ function lockEcosystemSession(): void {
       token:      null,
       source:     'credvault',
     };
-    fs.writeFileSync(cfgPath, JSON.stringify(shared, null, 2), 'utf8');
+    writeSharedConfigAtomic(cfgPath, shared);
   } catch { /* ignore */ }
   writePendingAction('credvault', 'lock-vault');
   ecosystemBus.emitEvent('Launcher', 'launcher.sso.locked', {});
@@ -638,7 +660,7 @@ function writePendingAction(appKey: string, actionId: string): void {
       requestedAt: new Date().toISOString(),
     });
     shared.pending_actions = filtered;
-    fs.writeFileSync(cfgPath, JSON.stringify(shared, null, 2), 'utf8');
+    writeSharedConfigAtomic(cfgPath, shared);
     addActivityEntry({ type: 'launcher', text: `Queued ${appKey}: ${actionId}` });
   } catch (e) {
     console.warn('[tray-action] write failed:', (e as Error).message);
