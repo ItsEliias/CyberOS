@@ -1,0 +1,14 @@
+[
+  {
+    "id": "task-shell-team-iter-6",
+    "key": "shell-team-iter-6",
+    "content": "Task completed: shell-team-iter-6",
+    "namespace": "tasks",
+    "type": "task-outcome",
+    "metadata": {
+      "success": true,
+      "quality": 0.85
+    },
+    "createdAt": 1780738247044
+  }
+]
