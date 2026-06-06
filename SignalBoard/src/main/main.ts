@@ -631,7 +631,22 @@ ipcMain.handle('cve:lookup', async (_e, cveId: string) => {
 })
 
 ipcMain.handle('app:version',       () => APP_VERSION)
-ipcMain.handle('shell:open',        (_e, url: string) => shell.openExternal(url))
+// Validate before handing to shell.openExternal — item.url comes from
+// third-party RSS feeds, so a malicious publisher could inject javascript:,
+// data:, or a custom-scheme URI handler (x-apple-*, vscode://, slack://)
+// that would shell-execute on click. Allowlist the schemes the app actually
+// uses: http(s) for article links, file: for the bundled docs path,
+// mailto: for completeness. Bare absolute .md paths are allowed because
+// OnboardingModal opens its docs file via a raw path.
+ipcMain.handle('shell:open', (_e, url: string) => {
+  if (typeof url !== 'string' || !url) return
+  if (url.startsWith('/') && url.endsWith('.md')) { shell.openExternal(url); return }
+  try {
+    const proto = new URL(url).protocol
+    if (proto !== 'http:' && proto !== 'https:' && proto !== 'file:' && proto !== 'mailto:') return
+    shell.openExternal(url)
+  } catch { /* invalid URL — silently drop */ }
+})
 ipcMain.handle('app:toggle-fullscreen', () => {
   if (!mainWindow) return
   mainWindow.setFullScreen(!mainWindow.isFullScreen())
