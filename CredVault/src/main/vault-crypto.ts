@@ -5,8 +5,9 @@ import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
+import { userDataDir } from './platform'
 
-const APP_SUPPORT = path.join(os.homedir(), 'Library', 'Application Support', 'CredVault')
+const APP_SUPPORT = userDataDir('CredVault')
 const SALT_FILE   = path.join(APP_SUPPORT, 'salt.bin')
 const VAULT_FILE  = path.join(APP_SUPPORT, 'vault.enc')
 

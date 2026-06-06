@@ -5,6 +5,7 @@ import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import os from 'os'
+import { userDataDir } from './platform'
 import { exec } from 'child_process'
 import { emitEvent } from './ecosystem-bus'
 import { consumePendingAction, installPendingActionWatcher } from './pendingActions'
@@ -12,7 +13,7 @@ import type { NetworkNode, NetworkPort, NetworkGraph, GraphSummary } from '../sh
 
 const APP_VERSION       = '1.0.0'
 const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')
-const GRAPHS_DIR        = path.join(os.homedir(), 'Library', 'Application Support', 'NetworkMap', 'graphs')
+const GRAPHS_DIR        = path.join(userDataDir('NetworkMap'), 'graphs')
 
 // ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────
 // eslint-disable-next-line @typescript-eslint/no-require-imports
