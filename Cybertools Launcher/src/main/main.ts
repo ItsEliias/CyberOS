@@ -1439,23 +1439,42 @@ function setupAppManagerIPC(): void {
 function setupIPC(): void {
   ipcMain.handle('get-config', () => readConfig());
 
-  ipcMain.handle('save-config', (_e, updates: Record<string, unknown>) =>
-    updateConfig(cfg => ({ ...cfg, ...updates }))
-  );
+  // Block any update whose key is __proto__ / constructor / prototype to
+  // foreclose prototype-pollution via the IPC boundary. The renderer
+  // never legitimately writes any of these into the shared config.
+  function isUnsafeKey(k: string): boolean {
+    return k === '__proto__' || k === 'constructor' || k === 'prototype';
+  }
+  function stripUnsafe<T extends Record<string, unknown>>(o: T): T {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(o)) {
+      if (isUnsafeKey(k)) continue;
+      out[k] = v;
+    }
+    return out as T;
+  }
 
-  ipcMain.handle('save-config-deep', (_e, updates: Record<string, unknown>) =>
-    updateConfig(cfg => {
+  ipcMain.handle('save-config', (_e, updates: unknown) => {
+    if (!updates || typeof updates !== 'object' || Array.isArray(updates)) return false;
+    const safe = stripUnsafe(updates as Record<string, unknown>);
+    return updateConfig(cfg => ({ ...cfg, ...safe }));
+  });
+
+  ipcMain.handle('save-config-deep', (_e, updates: unknown) => {
+    if (!updates || typeof updates !== 'object' || Array.isArray(updates)) return false;
+    const safe = stripUnsafe(updates as Record<string, unknown>);
+    return updateConfig(cfg => {
       const out = { ...cfg };
-      for (const [k, v] of Object.entries(updates)) {
+      for (const [k, v] of Object.entries(safe)) {
         if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
-          (out as Record<string, unknown>)[k] = { ...((out as Record<string, unknown>)[k] as object || {}), ...(v as object) };
+          (out as Record<string, unknown>)[k] = { ...((out as Record<string, unknown>)[k] as object || {}), ...stripUnsafe(v as Record<string, unknown>) };
         } else {
           (out as Record<string, unknown>)[k] = v;
         }
       }
       return out;
-    })
-  );
+    });
+  });
 
   ipcMain.handle('launch-app',     (_e, appKey: string)  => launchApp(appKey));
   ipcMain.handle('update-now',     () => {
