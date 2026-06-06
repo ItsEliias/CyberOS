@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-import type { Lab, LabProgress, NetLabPrefs } from '../shared/types'
+import type { Lab, LabProgress, NetLabPrefs, CommandSnippet } from '../shared/types'
 
 declare global {
   interface Window {
@@ -14,6 +14,14 @@ declare global {
       prefs: {
         get(): Promise<NetLabPrefs>
         set(prefs: Partial<NetLabPrefs>): Promise<void>
+      }
+      snippets: {
+        getCustom(): Promise<CommandSnippet[]>
+        saveCustom(snippets: CommandSnippet[]): Promise<boolean>
+      }
+      topologies: {
+        getAll(): Promise<unknown[]>
+        saveAll(topologies: unknown[]): Promise<boolean>
       }
       shell: {
         openExternal(url: string): Promise<void>

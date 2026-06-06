@@ -12,7 +12,7 @@ import { registerIpcHandlers, type AppRefs } from './ipc-handlers'
 import type { Playbook, PlaybookRun, SharedContext } from '../shared/types'
 
 const APP_VERSION       = '2.0.0'
-const APP_DATA_DIR      = path.join(os.homedir(), 'Library', 'Application Support', 'PlaybookStudio')
+const APP_DATA_DIR      = userDataDir('PlaybookStudio')
 const PLAYBOOKS_FILE    = path.join(APP_DATA_DIR, 'playbooks.json')
 const RUNS_FILE         = path.join(APP_DATA_DIR, 'runs.json')
 const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')

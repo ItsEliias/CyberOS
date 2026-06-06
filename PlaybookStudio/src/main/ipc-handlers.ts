@@ -27,7 +27,7 @@ export interface AppRefs {
 const MAX_VERSIONS = 10
 
 const REPORT_FORGE_DIR = path.join(
-  os.homedir(), 'Library', 'Application Support', 'ReportForge', 'pending'
+  userDataDir('ReportForge'), 'pending'
 )
 
 // ─── Playbook handlers ────────────────────────────────────────────────────────

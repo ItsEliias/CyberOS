@@ -1,6 +1,6 @@
 // NetLab — TopologyView.tsx
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useNetLabStore } from '../store'
 import type { TopologyNode, TopologyLink, Topology } from '@shared/types'
@@ -39,6 +39,16 @@ export default function TopologyView() {
   const [nodes, setNodes]         = useState<TopologyNode[]>(activeTopology?.nodes ?? [])
   const [links, setLinks]         = useState<TopologyLink[]>(activeTopology?.links ?? [])
   const [topoName, setTopoName]   = useState(activeTopology?.name ?? 'Untitled Topology')
+
+  // Re-sync the local editor state whenever the store's activeTopology
+  // changes (e.g. user opened a different saved topology). Previously the
+  // useState initializers above ran exactly once on mount, so picking a
+  // different topology from the library showed the old one until reload.
+  useEffect(() => {
+    setNodes(activeTopology?.nodes ?? [])
+    setLinks(activeTopology?.links ?? [])
+    setTopoName(activeTopology?.name ?? 'Untitled Topology')
+  }, [activeTopology?.id])
   const [selectedNode, setSelectedNode] = useState<TopologyNode | null>(null)
   const [linkStart, setLinkStart] = useState<string | null>(null)
   const [placingType, setPlacingType] = useState<DeviceType | null>(null)

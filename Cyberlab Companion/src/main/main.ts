@@ -303,8 +303,30 @@ function registerIPC() {
     }
   });
 
-  ipcMain.handle('claude-chat', async (_, payload) => {
-    try { return { success: true, data: await callClaude(payload) }; }
+  ipcMain.handle('claude-chat', async (_, payload: unknown) => {
+    // Validate the shape so a renderer bug can't crash callClaude with null
+    // deref, and so we don't ship a multi-MB messages array to Anthropic
+    // (which would burn API credit without a clear failure to the user).
+    if (!payload || typeof payload !== 'object') {
+      return { success: false, error: 'Invalid payload' };
+    }
+    const p = payload as { system?: unknown; messages?: unknown; model?: unknown };
+    if (p.system !== undefined && typeof p.system !== 'string') {
+      return { success: false, error: 'payload.system must be a string' };
+    }
+    if (p.messages !== undefined && !Array.isArray(p.messages)) {
+      return { success: false, error: 'payload.messages must be an array' };
+    }
+    if (p.model !== undefined && typeof p.model !== 'string') {
+      return { success: false, error: 'payload.model must be a string' };
+    }
+    // Cap the body size to prevent runaway API spend if the renderer somehow
+    // assembles an enormous prompt (e.g. paste-of-a-log-file).
+    const approxSize = JSON.stringify(p).length;
+    if (approxSize > 256 * 1024) {
+      return { success: false, error: `Prompt too large (${(approxSize / 1024).toFixed(0)}KB; max 256KB)` };
+    }
+    try { return { success: true, data: await callClaude(p as { system?: string; messages?: unknown[]; model?: string }) }; }
     catch (e: unknown) { return { success: false, error: (e as Error).message }; }
   });
 
@@ -359,10 +381,26 @@ function registerIPC() {
   ipcMain.handle('save-writeup', (_, { content, labName, platform, vaultPath }: { content: string; labName: string; platform: string; vaultPath: string }) => {
     try {
       if (!vaultPath) throw new Error('No vault path configured');
+      // Sanitize lab name. Previously the regex stripped `.` too, so a
+      // labName like ".." sanitized to "" and the file saved as ".md" — a
+      // hidden dotfile in the writeups dir. Fall back to 'Untitled' instead.
+      const safeName = labName.replace(/[^a-zA-Z0-9 _-]/g, '').trim() || 'Untitled';
       const dir = path.join(vaultPath, 'Writeups', platform || 'Other');
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      const fp = path.join(dir, `${labName.replace(/[^a-zA-Z0-9 -]/g, '').trim()}.md`);
-      fs.writeFileSync(fp, content, 'utf8');
+      const fp = path.join(dir, `${safeName}.md`);
+      // Confine writeup output to the configured vault root so a tampered
+      // labName / platform can't escape via path traversal (e.g.
+      // platform="../../" + labName=".ssh/authorized_keys").
+      const vaultResolved = path.resolve(vaultPath);
+      const fpResolved    = path.resolve(fp);
+      if (!fpResolved.startsWith(vaultResolved + path.sep)) {
+        throw new Error('Writeup path escapes vault directory');
+      }
+      // Atomic — a crash mid-write would leave a half-flushed writeup that
+      // VSCode / Obsidian would happily render as truncated garbage.
+      const tmp = `${fp}.tmp`;
+      fs.writeFileSync(tmp, content, 'utf8');
+      fs.renameSync(tmp, fp);
       return { success: true, path: fp };
     } catch (e: unknown) { return { success: false, error: (e as Error).message }; }
   });

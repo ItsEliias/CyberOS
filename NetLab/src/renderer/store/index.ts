@@ -147,18 +147,23 @@ export const useNetLabStore = create<NetLabState>((set, get) => ({
       ? topologies.map((x, i) => i === idx ? t : x)
       : [...topologies, t]
     set({ topologies: next, activeTopology: t })
+    // Persist to disk so topologies survive a restart.
+    window.electronAPI.topologies?.saveAll(next as unknown[]).catch(console.error)
   },
 
   addSnippet: (s) => {
     set(state => ({ snippets: [...state.snippets, s] }))
+    // Persist *only* user-created snippets — built-ins are seeded at render
+    // time so we never want to write them back to disk.
+    const custom = get().snippets.filter(x => x.id.startsWith('custom-'))
+    window.electronAPI.snippets?.saveCustom(custom).catch(console.error)
   },
 
-  // Remove a single snippet by id. No persistence layer yet (see TODO above
-  // about main.ts IPC), so this is session-only — but at least the user can
-  // get rid of a typo'd or duplicate snippet without restarting the app.
-  // Built-in snippets carry stable ids; the UI is responsible for only
-  // exposing delete for custom snippets (id prefix 'custom-').
+  // Remove a single snippet by id. Built-in snippets carry stable ids;
+  // the UI only exposes delete for custom snippets (id prefix 'custom-').
   deleteSnippet: (snippetId) => {
     set(state => ({ snippets: state.snippets.filter(s => s.id !== snippetId) }))
+    const custom = get().snippets.filter(x => x.id.startsWith('custom-'))
+    window.electronAPI.snippets?.saveCustom(custom).catch(console.error)
   },
 }))
