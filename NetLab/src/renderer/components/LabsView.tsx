@@ -21,8 +21,19 @@ function LabCard({ lab, isActive, onSelect, progress }: {
   lab: Lab
   isActive: boolean
   onSelect: () => void
-  progress?: { completedAt?: string }
+  progress?: import('@shared/types').LabProgress
 }) {
+  // Partial progress: count passed steps so the user can see at-a-glance that
+  // they've started a lab without having to open the detail pane. Detail pane
+  // already shows the full bar; here we just render a thin bar + "n/m" badge.
+  const passedCount = progress
+    ? Object.values(progress.stepResults).filter(r => r.passed).length
+    : 0
+  const total       = lab.steps.length
+  const isDone      = !!progress?.completedAt
+  const inProgress  = !isDone && passedCount > 0 && total > 0
+  const pct         = total > 0 ? Math.min(100, Math.round((passedCount / total) * 100)) : 0
+
   return (
     <motion.button
       onClick={onSelect}
@@ -34,10 +45,16 @@ function LabCard({ lab, isActive, onSelect, progress }: {
     >
       <div className="flex items-start justify-between gap-2">
         <span className="text-sm font-medium text-text-primary leading-tight">{lab.title}</span>
-        {progress?.completedAt && (
+        {isDone && (
           <span className="text-2xs px-1.5 py-0.5 rounded shrink-0"
             style={{ background: 'rgba(63,185,80,0.15)', color: '#3fb950' }}>
             Done
+          </span>
+        )}
+        {inProgress && (
+          <span className="text-2xs px-1.5 py-0.5 rounded shrink-0 font-mono tabular-nums"
+            style={{ background: 'rgba(94,196,255,0.15)', color: '#5ec4ff' }}>
+            {passedCount}/{total}
           </span>
         )}
       </div>
@@ -50,6 +67,14 @@ function LabCard({ lab, isActive, onSelect, progress }: {
         </span>
       </div>
       <p className="text-2xs text-text-muted mt-1 line-clamp-2">{lab.description}</p>
+      {inProgress && (
+        <div className="mt-2 h-0.5 rounded-full" style={{ background: '#161b27' }}>
+          <div
+            className="h-full rounded-full transition-all"
+            style={{ width: `${pct}%`, background: '#5ec4ff' }}
+          />
+        </div>
+      )}
     </motion.button>
   )
 }
