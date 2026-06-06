@@ -119,7 +119,11 @@ function saveConfig(cfg: Partial<GhostVaultConfig>): boolean {
     if (fs.existsSync(CONFIG_PATH)) {
       try { existing = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')); } catch (_) {}
     }
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify({ ...existing, ...cfg }, null, 2), 'utf8');
+    // Atomic — a crash mid-write would leave config.json corrupt and the
+    // next launch falls back to defaults, losing the user's vault path.
+    const tmp = `${CONFIG_PATH}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify({ ...existing, ...cfg }, null, 2), 'utf8');
+    fs.renameSync(tmp, CONFIG_PATH);
     return true;
   } catch (e) {
     console.error('saveConfig:', (e as Error).message);
