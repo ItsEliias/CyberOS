@@ -34,6 +34,30 @@ const SESSIONS_DIR  = path.join(os.homedir(), 'Library', 'Application Support', 
 const HISTORY_FILE  = path.join(SESSIONS_DIR, 'command-history.json');
 const EVENTS_PATH   = path.join(os.homedir(), 'Library', 'Application Support', 'CyberTools', 'ecosystem-events.json');
 
+// ─── Atomic file write ─────────────────────────────────────────────────────────
+// Every persistent state file in this module is read by some external party
+// (sibling CyberOS apps, the renderer on next mount, this process's own
+// poller). A torn write would surface as JSON.parse failing back to {} or [],
+// which silently wipes user state. Route all writers through this helper.
+function writeFileAtomic(target: string, content: string): void {
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  const tmp = `${target}.tmp-termlink-${process.pid}-${Date.now()}`;
+  const fd  = fs.openSync(tmp, 'w');
+  try {
+    fs.writeSync(fd, content, 0, 'utf8');
+    try { fs.fsyncSync(fd); } catch { /* fsync best-effort */ }
+  } finally {
+    try { fs.closeSync(fd); } catch { /* already closed */ }
+  }
+  try {
+    fs.renameSync(tmp, target);
+  } catch {
+    // Cross-device fallback — same data, just non-atomic.
+    fs.writeFileSync(target, content, { encoding: 'utf8' });
+    try { fs.unlinkSync(tmp); } catch { /* ignore */ }
+  }
+}
+
 // ─── Config helpers ─────────────────────────────────────────────────────────────
 function readConfig(): Record<string, unknown> {
   try {
@@ -46,7 +70,7 @@ function readConfig(): Record<string, unknown> {
 function writeConfig(patch: Record<string, unknown>): void {
   try {
     const current = readConfig();
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify({ ...current, ...patch }, null, 2));
+    writeFileAtomic(CONFIG_PATH, JSON.stringify({ ...current, ...patch }, null, 2));
   } catch (e) {
     console.error('[ipc/terminallink] writeConfig error:', (e as Error).message);
   }
@@ -54,7 +78,6 @@ function writeConfig(patch: Record<string, unknown>): void {
 
 function emitEcosystemEvent(event: string, data: Record<string, unknown>): void {
   try {
-    fs.mkdirSync(path.dirname(EVENTS_PATH), { recursive: true });
     let events: unknown[] = [];
     try { events = JSON.parse(fs.readFileSync(EVENTS_PATH, 'utf8')); } catch { /* empty */ }
     events.push({
@@ -65,7 +88,7 @@ function emitEcosystemEvent(event: string, data: Record<string, unknown>): void 
       id: `tl-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     });
     if (events.length > 200) events = events.slice(-200);
-    fs.writeFileSync(EVENTS_PATH, JSON.stringify(events, null, 2));
+    writeFileAtomic(EVENTS_PATH, JSON.stringify(events, null, 2));
   } catch (e) {
     console.error('[ipc/terminallink] emitEcosystemEvent error:', (e as Error).message);
   }
@@ -144,7 +167,7 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
   ipcMain.handle('terminallink:sessions:write', (_evt, sessions: unknown) => {
     try {
       fs.mkdirSync(SESSIONS_DIR, { recursive: true });
-      fs.writeFileSync(path.join(SESSIONS_DIR, 'sessions.json'), JSON.stringify(sessions, null, 2));
+      writeFileAtomic(path.join(SESSIONS_DIR, 'sessions.json'), JSON.stringify(sessions, null, 2));
       return { success: true };
     } catch (e) {
       return { error: (e as Error).message };
@@ -165,7 +188,7 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
   ipcMain.handle('terminallink:history:write', (_evt, history: unknown) => {
     try {
       fs.mkdirSync(SESSIONS_DIR, { recursive: true });
-      fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
+      writeFileAtomic(HISTORY_FILE, JSON.stringify(history, null, 2));
 
       const cfg        = readConfig();
       const prevStatus = (cfg.terminallink_status || {}) as Record<string, unknown>;
