@@ -621,7 +621,15 @@ export function registerCredVaultHandlers(): void {
   // ── Prefs ─────────────────────────────────────────────────────────────────
 
   ipcMain.handle('prefs:get', (): Record<string, unknown> => readPrefs())
-  ipcMain.handle('prefs:set', (_e, key: string, value: unknown): boolean => {
+  // Renderer-writable prefs keys. The previous unrestricted prefs:set let
+  // the renderer overwrite *any* key in PREFS_FILE — including `totp`
+  // (which would disable 2FA without the code) and `recovery` (which would
+  // wipe out the recovery-key hash). It also accepted `__proto__` etc., a
+  // classic prototype-pollution sink. Whitelist only the keys the renderer
+  // legitimately controls.
+  const ALLOWED_PREFS_KEYS = new Set(['sortOrder'])
+  ipcMain.handle('prefs:set', (_e, key: unknown, value: unknown): boolean => {
+    if (typeof key !== 'string' || !ALLOWED_PREFS_KEYS.has(key)) return false
     try {
       const p = readPrefs() as Record<string, unknown>
       p[key] = value
