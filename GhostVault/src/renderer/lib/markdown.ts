@@ -145,13 +145,15 @@ export function parseMarkdown(md: string, openNote?: (name: string) => void): st
   // Inline code
   html = html.replace(/`([^`]+)`/g, (_, c) => `<code>${escHtml(c)}</code>`);
 
-  // Headings
-  html = html.replace(/^#{6}\s+(.+)$/gm, '<h6>$1</h6>');
-  html = html.replace(/^#{5}\s+(.+)$/gm, '<h5>$1</h5>');
-  html = html.replace(/^#{4}\s+(.+)$/gm, '<h4>$1</h4>');
-  html = html.replace(/^#{3}\s+(.+)$/gm, '<h3>$1</h3>');
-  html = html.replace(/^#{2}\s+(.+)$/gm, '<h2>$1</h2>');
-  html = html.replace(/^#{1}\s+(.+)$/gm, '<h1>$1</h1>');
+  // Headings — escape the captured text so a note containing
+  // `# <img src=x onerror=alert(1)>` doesn't pop a JS exec via the
+  // dangerouslySetInnerHTML render.
+  html = html.replace(/^#{6}\s+(.+)$/gm, (_, t: string) => `<h6>${escHtml(t)}</h6>`);
+  html = html.replace(/^#{5}\s+(.+)$/gm, (_, t: string) => `<h5>${escHtml(t)}</h5>`);
+  html = html.replace(/^#{4}\s+(.+)$/gm, (_, t: string) => `<h4>${escHtml(t)}</h4>`);
+  html = html.replace(/^#{3}\s+(.+)$/gm, (_, t: string) => `<h3>${escHtml(t)}</h3>`);
+  html = html.replace(/^#{2}\s+(.+)$/gm, (_, t: string) => `<h2>${escHtml(t)}</h2>`);
+  html = html.replace(/^#{1}\s+(.+)$/gm, (_, t: string) => `<h1>${escHtml(t)}</h1>`);
 
   // Horizontal rule
   html = html.replace(/^[-*_]{3,}\s*$/gm, '<hr>');
