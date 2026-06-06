@@ -52,7 +52,10 @@ export function vaultExists(): boolean {
 export function createSalt(): Buffer {
   ensureAppDir()
   const salt = crypto.randomBytes(SALT_LENGTH)
-  fs.writeFileSync(SALT_FILE, salt)
+  // Atomic — corrupt salt = unrecoverable vault. Worth two extra syscalls.
+  const _saltTmp = `${SALT_FILE}.tmp`
+  fs.writeFileSync(_saltTmp, salt)
+  fs.renameSync(_saltTmp, SALT_FILE)
   return salt
 }
 

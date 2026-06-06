@@ -90,7 +90,11 @@ function readPrefs(): Prefs {
 function writePrefs(p: Prefs): void {
   try {
     ensureAppDir()
-    fs.writeFileSync(PREFS_FILE, JSON.stringify(p, null, 2), 'utf8')
+    // Atomic — prefs holds the TOTP secret and recovery hash; a corrupt
+    // write would lock the user out of 2FA + recovery on next launch.
+    const tmp = `${PREFS_FILE}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(p, null, 2), 'utf8')
+    fs.renameSync(tmp, PREFS_FILE)
   } catch {}
 }
 
@@ -397,7 +401,12 @@ export function registerCredVaultHandlers(): void {
         return { ok: false, error: 'Touch ID confirmation failed or was cancelled' }
       }
       ensureAppDir()
-      fs.writeFileSync(TOUCHID_FILE, safeStorage.encryptString(password))
+      // Atomic — a corrupt safeStorage blob would silently fail to decrypt
+      // on next biometric unlock attempt, and the user would have to
+      // toggle Touch ID off + back on to recover.
+      const _touchTmp = `${TOUCHID_FILE}.tmp`
+      fs.writeFileSync(_touchTmp, safeStorage.encryptString(password))
+      fs.renameSync(_touchTmp, TOUCHID_FILE)
       return { ok: true }
     } catch (e) {
       return { ok: false, error: (e as Error).message }
