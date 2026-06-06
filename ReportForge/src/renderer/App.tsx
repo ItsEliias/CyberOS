@@ -138,6 +138,23 @@ export default function App() {
     }
   }, [upsertReport, setDirty, addToast]);
 
+  // ── ⌘S save (editor only) ──────────────────────────────────────────────────
+  // Pre-empts the browser-default "save page as" prompt and gives users the
+  // native macOS save reflex. Library view leaves the default alone since
+  // there's nothing to save there.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      if (e.key.toLowerCase() !== 's') return;
+      if (view !== 'editor') return;
+      if (requireSSO && ssoUnlocked === false) return;
+      e.preventDefault();
+      void saveReport();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [view, requireSSO, ssoUnlocked, saveReport]);
+
   // ── Wizard complete ────────────────────────────────────────────────────────
   const handleWizardComplete = useCallback(async (r: Report) => {
     const ok = await window.reportforge.saveReport(r);
