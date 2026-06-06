@@ -277,6 +277,27 @@ ipcMain.handle('log-commands', (_evt, { commands }: { commands: CommandEntry[] }
 ipcMain.handle('get-version', () => app.getVersion());
 ipcMain.handle('open-external', (_e, url: string) => shell.openExternal(url));
 
+// ─── IPC: SSO soft-lock (shared with the rest of CyberOS) ────────────────────
+ipcMain.handle('get-sso', () => {
+  try {
+    const cfgPath = path.join(os.homedir(), 'cybertools-config.json');
+    if (!fs.existsSync(cfgPath)) return { unlocked: false };
+    const shared = JSON.parse(fs.readFileSync(cfgPath, 'utf8')) || {};
+    const sso = shared.sso as { unlocked?: boolean; expiresAt?: string | null; unlockedAt?: string | null } | undefined;
+    if (!sso?.unlocked) return { unlocked: false };
+    if (sso.expiresAt && new Date(sso.expiresAt).getTime() < Date.now()) return { unlocked: false };
+    return { unlocked: true, unlockedAt: sso.unlockedAt, expiresAt: sso.expiresAt };
+  } catch { return { unlocked: false }; }
+});
+
+ipcMain.handle('open-credvault', () => {
+  try {
+    const { spawn } = require('child_process') as typeof import('child_process');
+    spawn('open', ['/Applications/CredVault.app'], { detached: true, stdio: 'ignore' }).unref();
+    return true;
+  } catch { return false; }
+});
+
 // ─── IPC: Capture save ────────────────────────────────────────────────────────
 ipcMain.handle('capture:save', async (_e, payload: CapturePayload) => {
   try {

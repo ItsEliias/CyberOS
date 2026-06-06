@@ -122,6 +122,12 @@ const api = {
     ipcRenderer.on('pending-action', fn);
     return () => ipcRenderer.removeListener('pending-action', fn);
   },
+
+  // ── SSO soft-lock (shared CredVault session state) ────────────────────────
+  getSSO: (): Promise<{ unlocked: boolean; expiresAt?: string | null }> =>
+    ipcRenderer.invoke('get-sso'),
+  openCredVault: (): Promise<boolean> =>
+    ipcRenderer.invoke('open-credvault'),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', api);

@@ -14,6 +14,7 @@ import ToolLauncher   from './components/ToolLauncher';
 import AlertToast     from './components/AlertToast';
 import AiPanel        from './components/AiPanel';
 import KeyboardShortcutsPanel from './components/KeyboardShortcutsPanel';
+import SSOLockScreen          from './components/SSOLockScreen';
 import { useTerminalLinkStore } from './stores/useTerminalLinkStore';
 import type { CommandEntry } from '@shared/types';
 import OnboardingModal, { useOnboarding } from './components/OnboardingModal';
@@ -48,8 +49,30 @@ export default function App() {
   const [statusExit,  setStatusExit]  = useState<number | null>(null);
   const [kbPanelOpen, setKbPanelOpen] = useState(false);
   const [connecting,  setConnecting]  = useState(false);
+  const [ssoUnlocked, setSsoUnlocked] = useState<boolean | null>(null);
+  const [requireSSO,  setRequireSSO]  = useState(false);
   // Ref to write into active terminal (used by snippets/palette/ssh)
   const writeToTermRef = useRef<((data: string) => void) | null>(null);
+
+  // Read the "Require CredVault session" preference from localStorage so the
+  // soft lock survives reloads. Persisted under tl:requireCredVaultSession.
+  useEffect(() => {
+    try { setRequireSSO(localStorage.getItem('tl:requireCredVaultSession') === '1'); } catch { /* ignore */ }
+  }, []);
+
+  // Poll the shared CredVault session state every 5 s.
+  useEffect(() => {
+    let cancelled = false;
+    async function check() {
+      try {
+        const r = await window.electronAPI.getSSO?.();
+        if (!cancelled) setSsoUnlocked(!!r?.unlocked);
+      } catch { if (!cancelled) setSsoUnlocked(true); }
+    }
+    void check();
+    const t = setInterval(check, 5000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, []);
 
   // Apply per-app theme CSS vars to :root
   useEffect(() => {
@@ -224,6 +247,21 @@ export default function App() {
       category:    'SSH',
       action:      () => handleSshConnect(`ssh ${p.identityFile ? `-i ${p.identityFile} ` : ''}-p ${p.port} ${p.username}@${p.host}`),
     })),
+
+    // ── Security: SSO soft-lock toggle ───────────────────────────────────
+    {
+      id: 'sec-sso-toggle',
+      label: requireSSO ? 'Disable "Require CredVault session"' : 'Enable "Require CredVault session"',
+      description: requireSSO
+        ? 'TerminalLink will stay open when CredVault is locked'
+        : 'TerminalLink will soft-lock until CredVault is unlocked',
+      category: 'Security',
+      action: () => {
+        const next = !requireSSO;
+        try { localStorage.setItem('tl:requireCredVaultSession', next ? '1' : '0'); } catch { /* ignore */ }
+        setRequireSSO(next);
+      },
+    },
   ];
 
   const activeSession = sessions.find(s => s.id === activeSessionId) ?? null;
@@ -236,8 +274,18 @@ export default function App() {
   };
   const allPaneIds = [PANE_LEFT_ID, ...(splitModeEnabled ? [PANE_RIGHT_ID] : [])];
 
+  const ssoBlocked = requireSSO && ssoUnlocked === false;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden', background: 'var(--bg)', color: 'var(--text)' }}>
+    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden', background: 'var(--bg)', color: 'var(--text)' }}>
+      {ssoBlocked && (
+        <SSOLockScreen onCheck={async () => {
+          try {
+            const r = await window.electronAPI.getSSO?.();
+            setSsoUnlocked(!!r?.unlocked);
+          } catch { /* ignore */ }
+        }} />
+      )}
 
       <TitleBar
         sessionCtx={sessionCtx}
