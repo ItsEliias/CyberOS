@@ -147,6 +147,16 @@ export default function App() {
 
   const handleNewSession = useCallback(() => { createSession(); }, [createSession]);
 
+  // Subscribe to tray-menu actions fired by the CyberTools Launcher.
+  useEffect(() => {
+    const off = window.electronAPI.onPendingAction?.(action => {
+      if (action === 'new-session') {
+        handleNewSession();
+      }
+    });
+    return () => { off?.(); };
+  }, [handleNewSession]);
+
   const handleBroadcastToggle = useCallback(() => {
     if (!broadcastMode) {
       if (!confirm('Enable broadcast mode? All keystrokes will go to ALL open sessions.')) return;

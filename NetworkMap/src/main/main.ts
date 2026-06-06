@@ -7,6 +7,7 @@ import fs from 'fs'
 import os from 'os'
 import { exec } from 'child_process'
 import { emitEvent } from './ecosystem-bus'
+import { consumePendingAction } from './pendingActions'
 import type { NetworkNode, NetworkPort, NetworkGraph, GraphSummary } from '../shared/types'
 
 const APP_VERSION       = '1.0.0'
@@ -115,6 +116,11 @@ function createWindow(): void {
   mainWindow.webContents.once('did-finish-load', () => {
     writeNetworkMapStatus({ running: true })
     emitEvent('NetworkMap', 'app:launched', { version: APP_VERSION })
+    // Consume any tray-menu queued action once the renderer has had time to mount.
+    setTimeout(() => {
+      const pending = consumePendingAction('networkmap')
+      if (pending) mainWindow?.webContents?.send('pending-action', pending.action)
+    }, 800)
   })
 }
 

@@ -36,7 +36,14 @@ export default function App() {
     const unsubPrint = window.reportforge.onTriggerPrintView(r => setPrintReport(r));
     const unsubDone  = window.reportforge.onPrintDone(() => setPrintReport(null));
 
-    return () => { unsubPrint(); unsubDone(); };
+    const unsubPending = window.reportforge.onPendingAction((action) => {
+      if (action === 'new-report') {
+        // Mirrors CommandPalette's "New report" command
+        setView('wizard');
+      }
+    });
+
+    return () => { unsubPrint(); unsubDone(); unsubPending(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

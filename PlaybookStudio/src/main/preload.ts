@@ -54,6 +54,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('context:updated', (_e, d) => cb(d))
     return () => ipcRenderer.removeAllListeners('context:updated')
   },
+  onPendingAction: (cb: (action: string) => void) => {
+    ipcRenderer.on('pending-action', (_e, d) => cb(d))
+    return () => ipcRenderer.removeAllListeners('pending-action')
+  },
 
   // Shell
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('open-external', url),

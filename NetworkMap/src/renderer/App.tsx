@@ -32,6 +32,18 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKey)
   }, [])
 
+  // Tray-menu queued actions from the Launcher
+  useEffect(() => {
+    const un = window.electronAPI.onPendingAction(action => {
+      if (action === 'new-graph') {
+        handleNewEmptyGraph()
+      } else if (action === 'import-scan') {
+        setImportOpen(true)
+      }
+    })
+    return () => { un() }
+  }, [handleNewEmptyGraph])
+
   const handleNewEmptyGraph = useCallback(() => {
     const now = new Date().toISOString()
     const graph: NetworkGraph = {

@@ -115,6 +115,13 @@ const api = {
     ipcRenderer.on('externalshell:command', fn);
     return () => ipcRenderer.removeListener('externalshell:command', fn);
   },
+
+  // ── Tray pending actions (from CyberTools Launcher) ───────────────────────
+  onPendingAction: (cb: (action: string) => void): (() => void) => {
+    const fn = (_: Electron.IpcRendererEvent, action: string) => cb(action);
+    ipcRenderer.on('pending-action', fn);
+    return () => ipcRenderer.removeListener('pending-action', fn);
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', api);

@@ -98,6 +98,11 @@ const ghostvault = {
     ipcRenderer.on('vault-refresh', listener);
     return () => ipcRenderer.removeListener('vault-refresh', listener);
   },
+  onPendingAction: (cb: (action: string) => void) => {
+    const listener = (_: Electron.IpcRendererEvent, action: string) => cb(action);
+    ipcRenderer.on('pending-action', listener);
+    return () => ipcRenderer.removeListener('pending-action', listener);
+  },
 
   // SSO soft-lock: ask the main process whether CredVault has an active session.
   getSSO         : (): Promise<{ unlocked: boolean; expiresAt?: string | null }> =>

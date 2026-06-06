@@ -6,6 +6,7 @@ import path from 'path'
 import fs from 'fs'
 import os from 'os'
 import { emitEvent } from './ecosystem-bus'
+import { consumePendingAction } from './pendingActions'
 import { registerAiHandlers } from './aiHandler'
 import { registerIpcHandlers, type AppRefs } from './ipc-handlers'
 import type { Playbook, PlaybookRun, SharedContext } from '../shared/types'
@@ -153,6 +154,11 @@ app.whenReady().then(() => {
 
   mainWindow!.webContents.once('did-finish-load', () => {
     mainWindow?.webContents?.send('context:updated', lastContext)
+    // Consume any tray-menu queued action once the renderer has had time to mount.
+    setTimeout(() => {
+      const pending = consumePendingAction('playbookstudio')
+      if (pending) mainWindow?.webContents?.send('pending-action', pending.action)
+    }, 800)
   })
 
   contextTimer = setInterval(pollContext, CONTEXT_POLL_MS)

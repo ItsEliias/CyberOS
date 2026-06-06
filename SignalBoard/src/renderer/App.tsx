@@ -60,6 +60,16 @@ export default function App() {
       setActiveView('feed')
       setSelectedId(id)
     })
+    const unPendingAction = window.electronAPI.onPendingAction(action => {
+      if (action === 'refresh-feeds') {
+        window.electronAPI.refresh().catch(() => {})
+      } else if (action === 'add-custom-feed') {
+        setActiveView('settings')
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('signalboard:settings-scroll', { detail: { section: 'custom-feeds-section' } }))
+        }, 80)
+      }
+    })
 
     return () => {
       unItems()
@@ -69,6 +79,7 @@ export default function App() {
       unSources()
       unBookmarks()
       unSelectItem()
+      unPendingAction()
     }
   }, [setItems, setSources, setRefreshing, setLastRefreshed, setContext, setVersion, setSettings, setBookmarks, setBookmarkTags, setSelectedId, setActiveView])
 

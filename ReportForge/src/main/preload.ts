@@ -44,6 +44,11 @@ const reportforge = {
     ipcRenderer.on('print-done', listener);
     return () => ipcRenderer.removeListener('print-done', listener);
   },
+  onPendingAction: (cb: (action: string) => void) => {
+    const listener = (_: Electron.IpcRendererEvent, action: string) => cb(action);
+    ipcRenderer.on('pending-action', listener);
+    return () => ipcRenderer.removeListener('pending-action', listener);
+  },
 };
 
 const electronAPI = {

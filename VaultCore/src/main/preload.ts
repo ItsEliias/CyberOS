@@ -122,6 +122,11 @@ const api = {
     ipcRenderer.on('tray-pause-scrape', fn);
     return () => ipcRenderer.removeListener('tray-pause-scrape', fn);
   },
+  onPendingAction      : (cb: (action: string) => void) => {
+    const fn = (_: Electron.IpcRendererEvent, action: string) => cb(action);
+    ipcRenderer.on('pending-action', fn);
+    return () => ipcRenderer.removeListener('pending-action', fn);
+  },
 
   // ── Ecosystem ─────────────────────────────────────────────────────────────
   ecosystemEmit: (appName: string, eventType: string, data: Record<string, unknown>) =>

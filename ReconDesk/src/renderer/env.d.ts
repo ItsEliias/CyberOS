@@ -20,6 +20,8 @@ declare global {
       readConfig:    () => Promise<Record<string, unknown>>
       // fs.watch IPC bus
       onConfigUpdated?: (cb: (data: Record<string, unknown>) => void) => void
+      // Tray pending actions (from CyberTools Launcher)
+      onPendingAction?: (cb: (action: string) => void) => (() => void)
     }
   }
 }

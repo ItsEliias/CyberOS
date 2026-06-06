@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import os from 'os';
 import * as ecosystemBus from './ecosystem-bus.js';
+import { consumePendingAction } from './pendingActions.js';
 import type {
   Report, CyberToolsSharedConfig, ExportResult, WriteupFile, ReconDeskTarget
 } from '../shared/types.js';
@@ -233,7 +234,16 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
   }
 
-  mainWindow.once('ready-to-show', () => mainWindow!.show());
+  mainWindow.once('ready-to-show', () => {
+    mainWindow!.show();
+    // Give the renderer time to mount its pending-action listener
+    setTimeout(() => {
+      const result = consumePendingAction('reportforge');
+      if (result && mainWindow) {
+        mainWindow.webContents.send('pending-action', result.action);
+      }
+    }, 800);
+  });
   mainWindow.on('close', () => { mainWindow = null; });
 }
 

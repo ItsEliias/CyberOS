@@ -64,4 +64,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Feature 18 — AI next-step suggestions
   aiSuggest: (payload: { apiKey: string; ports: string[]; os: string; cves: string[]; engagement: string }): Promise<string[] | null> =>
     ipcRenderer.invoke('recondesk:ai-suggest', payload),
+
+  // Tray pending actions (from CyberTools Launcher)
+  onPendingAction: (cb: (action: string) => void): (() => void) => {
+    const fn = (_: Electron.IpcRendererEvent, action: string) => cb(action)
+    ipcRenderer.on('pending-action', fn)
+    return () => ipcRenderer.removeListener('pending-action', fn)
+  },
 })

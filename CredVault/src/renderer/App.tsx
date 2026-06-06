@@ -29,6 +29,9 @@ export default function App() {
   // ⌘K command palette
   const [paletteOpen, setPaletteOpen] = useState(false)
 
+  // Tray-menu pending action — deferred until vault is unlocked
+  const pendingActionRef = useRef<string | null>(null)
+
   // Idle timer — throttle to at most one reset per 10s
   const lastResetRef = useRef(0)
 
@@ -59,6 +62,41 @@ export default function App() {
     window.electronAPI.onVaultLocked(handler)
     return () => window.electronAPI.offVaultLocked(handler)
   }, [setUnlocked])
+
+  // Tray-menu pending action — fire directly when possible, defer when vault
+  // is still locked (the action will run after the user unlocks the vault).
+  function fireAction(action: string) {
+    switch (action) {
+      case 'add-credential':
+        window.dispatchEvent(new CustomEvent('cv:add'));      break
+      case 'generate-password':
+        window.dispatchEvent(new CustomEvent('cv:generate')); break
+      case 'run-hibp':
+        window.dispatchEvent(new CustomEvent('cv:hibp'));     break
+      case 'lock-vault':
+        void window.electronAPI.lockVault();                  break
+    }
+  }
+
+  useEffect(() => {
+    const off = window.electronAPI.onPendingAction((action) => {
+      // lock-vault works regardless of state; everything else needs an
+      // unlocked vault since VaultView is what listens for the cv:* events.
+      if (action === 'lock-vault' || isUnlocked) fireAction(action)
+      else pendingActionRef.current = action
+    })
+    return () => { off() }
+  }, [isUnlocked])
+
+  // Flush deferred tray action once vault unlocks. Small delay lets
+  // VaultView mount its event listeners before we dispatch.
+  useEffect(() => {
+    if (!isUnlocked || !pendingActionRef.current) return
+    const action = pendingActionRef.current
+    pendingActionRef.current = null
+    const t = setTimeout(() => fireAction(action), 200)
+    return () => clearTimeout(t)
+  }, [isUnlocked])
 
   // Load credentials when unlocked
   useEffect(() => {
