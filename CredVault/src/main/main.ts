@@ -85,7 +85,17 @@ function createWindow(): void {
 // Register all IPC handlers (crypto + credentials + backup + pending)
 registerCredVaultHandlers()
 
-ipcMain.handle('open-external', (_e, url: string) => shell.openExternal(url))
+ipcMain.handle('open-external', (_e, url: unknown) => {
+  // shell.openExternal forwards to the OS scheme handler. Without an
+  // allowlist a compromised renderer could open file://, javascript:, or any
+  // custom URL scheme registered on the system. CredVault's renderer only
+  // legitimately opens http/https links (HIBP help, the GitHub repo, etc.).
+  if (typeof url !== 'string' || url.length === 0) return false
+  let parsed: URL
+  try { parsed = new URL(url) } catch { return false }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false
+  return shell.openExternal(url)
+})
 
 // App lifecycle
 
