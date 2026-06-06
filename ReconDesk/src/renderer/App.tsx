@@ -30,7 +30,8 @@ const TABS: { id: ActiveTab; label: string }[] = [
 
 export default function App() {
   const onboarding      = useOnboarding()
-  const loadTargets     = useRecondeskStore(s => s.loadTargets)
+  const loadTargets          = useRecondeskStore(s => s.loadTargets)
+  const mergeExternalTargets = useRecondeskStore(s => s.mergeExternalTargets)
   const activeTargetId  = useRecondeskStore(s => s.activeTargetId)
   const activeTab       = useRecondeskStore(s => s.activeTab)
   const setActiveTab    = useRecondeskStore(s => s.setActiveTab)
@@ -104,10 +105,12 @@ export default function App() {
     })
     // Refetch when SignalBoard / NetworkMap push targets into our data.json
     // from outside this process. The watcher in main suppresses our own
-    // writes, so this only fires on real external changes.
-    const unwatch = window.electronAPI.onDataUpdated?.(() => { void loadTargets() })
+    // writes, so this only fires on real external changes. We merge (rather
+    // than wholesale-replace) so an external push can't clobber an in-progress
+    // user edit on a target the renderer already has in memory.
+    const unwatch = window.electronAPI.onDataUpdated?.(() => { void mergeExternalTargets() })
     return () => { unwatch?.() }
-  }, [loadTargets])
+  }, [loadTargets, mergeExternalTargets])
 
   const ssoBlocked = requireSSO && ssoUnlocked === false
 

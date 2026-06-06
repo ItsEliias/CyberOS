@@ -52,6 +52,11 @@ export interface RecondeskState {
   }
 
   loadTargets: () => Promise<void>
+  // Refetch data.json after an external write (SignalBoard / NetworkMap push)
+  // and merge: targets that already exist in memory are kept as-is to avoid
+  // clobbering an in-progress user edit; targets present on disk but not in
+  // memory are appended.
+  mergeExternalTargets: () => Promise<void>
   saveTargets: () => Promise<void>
   addTarget: (t: Omit<Target, 'id' | 'createdAt' | 'ports' | 'credentials' | 'attackCards' | 'timeline' | 'checklist' | 'screenshots' | 'linkedCredentialIds' | 'wordlists'>) => void
   setActiveTarget: (id: string) => void
