@@ -1,0 +1,129 @@
+# Dependabot — automatic dependency PRs per app.
+#
+# Each CyberOS app is its own npm project with an independent package-lock,
+# so Dependabot needs an entry per directory. Grouped by ecosystem so a
+# single React minor bump doesn't open 12 separate PRs.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: npm
+    directory: /CredVault
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 3
+    groups:
+      react:     { patterns: ["react", "react-dom", "@types/react*"] }
+      electron:  { patterns: ["electron", "electron-vite", "electron-builder"] }
+      types:     { patterns: ["@types/*"] }
+
+  - package-ecosystem: npm
+    directory: /VaultCore
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 3
+    groups:
+      react:    { patterns: ["react", "react-dom", "@types/react*"] }
+      electron: { patterns: ["electron", "electron-vite", "electron-builder"] }
+      types:    { patterns: ["@types/*"] }
+
+  - package-ecosystem: npm
+    directory: /GhostVault
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 3
+    groups:
+      react:    { patterns: ["react", "react-dom", "@types/react*"] }
+      electron: { patterns: ["electron", "electron-vite", "electron-builder"] }
+      types:    { patterns: ["@types/*"] }
+
+  - package-ecosystem: npm
+    directory: /SignalBoard
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 3
+    groups:
+      react:    { patterns: ["react", "react-dom", "@types/react*"] }
+      electron: { patterns: ["electron", "electron-vite", "electron-builder"] }
+      types:    { patterns: ["@types/*"] }
+
+  - package-ecosystem: npm
+    directory: /NetworkMap
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 3
+    groups:
+      react:    { patterns: ["react", "react-dom", "@types/react*"] }
+      electron: { patterns: ["electron", "electron-vite", "electron-builder"] }
+      types:    { patterns: ["@types/*"] }
+
+  - package-ecosystem: npm
+    directory: /PlaybookStudio
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 3
+    groups:
+      react:    { patterns: ["react", "react-dom", "@types/react*"] }
+      electron: { patterns: ["electron", "electron-vite", "electron-builder"] }
+      types:    { patterns: ["@types/*"] }
+
+  - package-ecosystem: npm
+    directory: /TerminalLink
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 3
+    groups:
+      react:    { patterns: ["react", "react-dom", "@types/react*"] }
+      electron: { patterns: ["electron", "electron-vite", "electron-builder"] }
+      types:    { patterns: ["@types/*"] }
+
+  - package-ecosystem: npm
+    directory: /NetLab
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 3
+    groups:
+      react:    { patterns: ["react", "react-dom", "@types/react*"] }
+      electron: { patterns: ["electron", "electron-vite", "electron-builder"] }
+      types:    { patterns: ["@types/*"] }
+
+  - package-ecosystem: npm
+    directory: /ReconDesk
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 3
+    groups:
+      react:    { patterns: ["react", "react-dom", "@types/react*"] }
+      electron: { patterns: ["electron", "electron-vite", "electron-builder"] }
+      types:    { patterns: ["@types/*"] }
+
+  - package-ecosystem: npm
+    directory: /ReportForge
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 3
+    groups:
+      react:    { patterns: ["react", "react-dom", "@types/react*"] }
+      electron: { patterns: ["electron", "electron-vite", "electron-builder"] }
+      types:    { patterns: ["@types/*"] }
+
+  - package-ecosystem: npm
+    directory: /Cyberlab Companion
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 3
+    groups:
+      react:    { patterns: ["react", "react-dom", "@types/react*"] }
+      electron: { patterns: ["electron", "electron-vite", "electron-builder"] }
+      types:    { patterns: ["@types/*"] }
+
+  - package-ecosystem: npm
+    directory: /Cybertools Launcher
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 3
+    groups:
+      react:    { patterns: ["react", "react-dom", "@types/react*"] }
+      electron: { patterns: ["electron", "electron-vite", "electron-builder"] }
+      types:    { patterns: ["@types/*"] }
+
+  - package-ecosystem: npm
+    directory: /CyberOS Dashboard
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 3
+    groups:
+      react:    { patterns: ["react", "react-dom", "@types/react*"] }
+      electron: { patterns: ["electron", "electron-vite", "electron-builder"] }
+      types:    { patterns: ["@types/*"] }

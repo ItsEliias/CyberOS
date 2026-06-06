@@ -2,9 +2,10 @@
 import path from 'path'
 import fs from 'fs'
 import os from 'os'
+import { ecosystemBusPath } from './platform'
 
-const BUS_DIR  = path.join(os.homedir(), 'Library', 'Application Support', 'CyberTools')
-const BUS_FILE = path.join(BUS_DIR, 'ecosystem-events.json')
+const BUS_FILE = ecosystemBusPath()
+const BUS_DIR  = path.dirname(BUS_FILE)
 
 function ensureDir(): void {
   if (!fs.existsSync(BUS_DIR)) fs.mkdirSync(BUS_DIR, { recursive: true })
@@ -30,6 +31,8 @@ export function emitEvent(app: string, event: string, data: Record<string, unkno
       data,
     })
     if (events.length > 150) events.splice(150)
-    fs.writeFileSync(BUS_FILE, JSON.stringify(events, null, 2), 'utf8')
+    const tmp = `${BUS_FILE}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(events, null, 2), 'utf8')
+    fs.renameSync(tmp, BUS_FILE)
   } catch (e) { console.error('[EcosystemBus]', (e as Error).message) }
 }
