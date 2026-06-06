@@ -627,6 +627,14 @@ ipcMain.handle('ai:summarise', async (_e, item: FeedItem, apiKey: string) => {
 })
 
 ipcMain.handle('cve:lookup', async (_e, cveId: string) => {
+  // Validate CVE-YYYY-NNNN[N…] shape before hitting NVD. Without this the
+  // cveCache could be poisoned with garbage keys (unbounded Map growth),
+  // and the API would be hit with junk every time the renderer asks again
+  // for the same garbage id (cache.has would still match the bad key, but
+  // an early reject also blocks the first miss from leaving the machine).
+  if (typeof cveId !== 'string' || !/^CVE-\d{4}-\d{4,}$/i.test(cveId)) {
+    return { ok: false, error: 'Invalid CVE id format' }
+  }
   if (cveCache.has(cveId)) return { ok: true, data: cveCache.get(cveId) }
   try {
     const url  = `https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=${encodeURIComponent(cveId)}`
