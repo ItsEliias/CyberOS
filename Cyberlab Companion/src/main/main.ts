@@ -682,6 +682,10 @@ app.whenReady().then(async () => {
   registerExtrasIPC();
   createWindow();
   saveConfig({ cyberlab: { installed: true, version: APP_VERSION, execPath: app.isPackaged ? app.getPath('exe') : app.getAppPath() } });
+  // Emit an app:launched event so the Launcher's activity feed picks it up
+  // alongside every other CyberOS app. Previously the Companion only emitted
+  // session / HTB / THM events, so launches were invisible in the feed.
+  try { emitEvent('CyberLab', 'app:launched', { version: APP_VERSION }); } catch { /* ignore */ }
 
   vpnCheckInterval = setInterval(() => {
     if (mainWindow) mainWindow.webContents.send('vpn-status', checkVPN());
