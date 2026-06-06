@@ -617,7 +617,17 @@ function registerIPC() {
     return null;
   });
 
-  ipcMain.handle('open-external', (_, url: string) => shell.openExternal(url));
+  ipcMain.handle('open-external', (_, url: unknown) => {
+    // Validate at the boundary — shell.openExternal will gladly hand off
+    // `file:///etc/passwd` or `javascript:`-style URLs otherwise.
+    if (typeof url !== 'string' || !url) return false;
+    try {
+      const proto = new URL(url).protocol;
+      if (proto !== 'http:' && proto !== 'https:' && proto !== 'mailto:') return false;
+    } catch { return false; }
+    void shell.openExternal(url);
+    return true;
+  });
   ipcMain.handle('get-version', () => APP_VERSION);
   ipcMain.handle('get-platform', () => process.platform);
 
