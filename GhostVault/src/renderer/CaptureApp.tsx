@@ -14,6 +14,7 @@ export default function CaptureApp() {
   const [text, setText]                   = useState('');
   const [saving, setSaving]               = useState(false);
   const [saved, setSaved]                 = useState(false);
+  const [saveError, setSaveError]         = useState<string | null>(null);
   const [watchClip, setWatchClip]         = useState(false);
   const [clipLabel, setClipLabel]         = useState(false);
   const [session, setSession]             = useState<SessionCtx | null>(null);
@@ -108,12 +109,20 @@ export default function CaptureApp() {
   async function handleSave() {
     if (!text.trim()) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const result = await window.ghostvault.saveCaptureNote({ folder, title, text });
       if (result.ok) {
         setSaved(true);
         setTimeout(() => window.ghostvault.closeCapture(), 800);
+      } else {
+        // Surface main-process rejection (no vault configured, folder
+        // escapes vault root, disk full, …) instead of silently closing
+        // with the user's note unsaved.
+        setSaveError(result.error || 'Failed to save');
       }
+    } catch (e) {
+      setSaveError((e as Error).message || 'Failed to save');
     } finally {
       setSaving(false);
     }
@@ -248,10 +257,15 @@ export default function CaptureApp() {
         <button onClick={handleSave}
           disabled={!text.trim() || saving}
           className="no-drag text-xs px-5 py-1.5 rounded-lg font-medium disabled:opacity-40 transition-all"
-          style={{ background: saved ? '#22c55e' : 'var(--accent)', color: '#fff' }}>
-          {saved ? '✓ Saved' : saving ? 'Saving…' : '⚡ Capture'}
+          style={{ background: saveError ? '#ef4444' : saved ? '#22c55e' : 'var(--accent)', color: '#fff' }}>
+          {saveError ? '✗ Failed' : saved ? '✓ Saved' : saving ? 'Saving…' : '⚡ Capture'}
         </button>
       </div>
+      {saveError ? (
+        <div className="px-3 pb-2 text-xs" style={{ color: '#ef4444' }}>
+          {saveError}
+        </div>
+      ) : null}
     </div>
   );
 }
