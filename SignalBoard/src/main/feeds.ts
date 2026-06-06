@@ -209,32 +209,44 @@ function parseRss(xml: string, source: FeedSource): FeedItem[] {
     if (atomItems) rawItems.push(...(Array.isArray(atomItems) ? atomItems : [atomItems]))
 
     const now = new Date().toISOString()
-    return (rawItems as Record<string, unknown>[]).slice(0, 30).map(item => {
-      const title   = stripHtml(String(item['title'] ?? ''))
-      const link    = resolveLink(item)
-      const summary = stripHtml(String(item['description'] ?? item['summary'] ?? item['content'] ?? ''))
-      const pubDate = String(item['pubDate'] ?? item['published'] ?? item['updated'] ?? now)
-      const id      = `${source.id}::${link || title}`
-      const score   = 0
+    const out: FeedItem[] = []
+    for (const item of (rawItems as Record<string, unknown>[]).slice(0, 30)) {
+      try {
+        const title   = stripHtml(String(item['title'] ?? ''))
+        const link    = resolveLink(item)
+        const summary = stripHtml(String(item['description'] ?? item['summary'] ?? item['content'] ?? ''))
+        const pubDate = String(item['pubDate'] ?? item['published'] ?? item['updated'] ?? now)
+        const id      = `${source.id}::${link || title}`
+        const score   = 0
 
-      const cveIds = extractCveIds(`${title} ${summary}`)
-      return {
-        id,
-        sourceId:       source.id,
-        sourceName:     source.name,
-        title,
-        url:            link,
-        summary,
-        publishedAt:    new Date(pubDate).toISOString(),
-        fetchedAt:      now,
-        tags:           [],
-        read:           false,
-        saved:          false,
-        relevanceScore: score,
-        relevanceTier:  computeTier(score),
-        cveIds:         cveIds.length ? cveIds : undefined,
-      } satisfies FeedItem
-    })
+        // Malformed RSS dates throw RangeError on .toISOString(). Fall back
+        // to the fetch time so one bad item doesn't kill the whole feed.
+        const parsedDate = new Date(pubDate)
+        const publishedAt = Number.isFinite(parsedDate.getTime())
+          ? parsedDate.toISOString() : now
+
+        const cveIds = extractCveIds(`${title} ${summary}`)
+        out.push({
+          id,
+          sourceId:       source.id,
+          sourceName:     source.name,
+          title,
+          url:            link,
+          summary,
+          publishedAt,
+          fetchedAt:      now,
+          tags:           [],
+          read:           false,
+          saved:          false,
+          relevanceScore: score,
+          relevanceTier:  computeTier(score),
+          cveIds:         cveIds.length ? cveIds : undefined,
+        } satisfies FeedItem)
+      } catch (e) {
+        console.warn(`[SignalBoard] skipping item in ${source.name}:`, (e as Error).message)
+      }
+    }
+    return out
   } catch (e) {
     console.warn(`[SignalBoard] RSS parse error (${source.name}):`, (e as Error).message)
     return []
