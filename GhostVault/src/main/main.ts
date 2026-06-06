@@ -526,8 +526,13 @@ ipcMain.handle('read-note',   (_, filePath: string)  => {
   if (!isUnderVault(filePath)) return '';
   return readNote(filePath);
 });
+// 10 MB per note. A markdown note that large is suspicious anyway; this
+// also caps disk-fill attacks via runaway saveNote loops in the renderer.
+const MAX_NOTE_BYTES = 10 * 1024 * 1024;
 ipcMain.handle('write-note',  (_, filePath: string, content: string) => {
   if (!isUnderVault(filePath)) return false;
+  if (typeof content !== 'string') return false;
+  if (content.length > MAX_NOTE_BYTES) return false;
   const result = writeNote(filePath, content);
   lastCaptureTime = new Date().toISOString();
   writeGhostVaultStatus();
@@ -846,6 +851,8 @@ ipcMain.handle('ghostvault:note:read',  (_, filePath: string)  => {
 });
 ipcMain.handle('ghostvault:note:write', (_, filePath: string, content: string) => {
   if (!isUnderVault(filePath)) return false;
+  if (typeof content !== 'string') return false;
+  if (content.length > MAX_NOTE_BYTES) return false;
   const ok = writeNote(filePath, content);
   if (ok) { lastCaptureTime = new Date().toISOString(); writeGhostVaultStatus(); }
   return ok;
