@@ -65,20 +65,26 @@ export default function App() {
     return () => { cancelled = true; clearInterval(t) }
   }, [])
 
-  // ⌘K → command palette
-  // Disabled while the SSO soft-lock is active so the requirement toggle can't
-  // be flipped from the locked screen.
+  // ⌘K → command palette, ⌘N → new target modal
+  // Both disabled while the SSO soft-lock is active so the requirement toggle
+  // can't be flipped from the locked screen and modal flows can't bypass it.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 'k') {
-        if (requireSSO && ssoUnlocked === false) return
+      if (requireSSO && ssoUnlocked === false) return
+      if (!(e.metaKey || e.ctrlKey) || e.shiftKey) return
+      if (e.key === 'k') {
         e.preventDefault()
         setPaletteOpen(v => !v)
+      } else if (e.key === 'n') {
+        // ⌘N → open the New Target modal. Same affordance as the tray-menu
+        // pending action 'new-target' so muscle memory translates cleanly.
+        e.preventDefault()
+        setNewTargetModal(true)
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [requireSSO, ssoUnlocked])
+  }, [requireSSO, ssoUnlocked, setNewTargetModal])
 
   // Tray-menu actions fired by the CyberTools Launcher.
   useEffect(() => {
