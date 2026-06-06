@@ -232,6 +232,39 @@ export default function LabStepView() {
               {/* Command block */}
               {step.command && <CommandBlock command={step.command} />}
 
+              {/* No-verification fallback: lots of CCNA/lab steps are
+                  free-form ("configure interface", "save running-config")
+                  with no machine-checkable expectedOutput. Without this
+                  button such steps could never be marked complete, and
+                  the lab's overall progress was capped at the count of
+                  verifiable steps. Lets the user self-attest. */}
+              {!step.expectedOutput && (
+                <div className="mb-4 flex items-center gap-3">
+                  <motion.button
+                    onClick={() => {
+                      updateStepResult(activeLab!.id, step.id, true)
+                      checkLabComplete(activeLab!.id, step.id, true)
+                    }}
+                    disabled={stepResult?.passed === true}
+                    className="px-4 py-1.5 rounded text-sm font-semibold transition-colors disabled:opacity-40"
+                    style={stepResult?.passed
+                      ? { background: 'rgba(63,185,80,0.18)', color: '#3fb950', border: '1px solid #3fb950' }
+                      : { background: '#5ec4ff', color: '#0a0a0f' }}
+                    whileHover={{ opacity: 0.85 }}
+                  >
+                    {stepResult?.passed ? '✓ Marked Complete' : 'Mark Step Complete'}
+                  </motion.button>
+                  {stepResult?.passed && (
+                    <button
+                      onClick={() => updateStepResult(activeLab!.id, step.id, false)}
+                      className="text-2xs text-text-muted hover:text-[#f85149] transition-colors"
+                    >
+                      undo
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* Verification section */}
               {step.expectedOutput && (
                 <div className="mb-4">
