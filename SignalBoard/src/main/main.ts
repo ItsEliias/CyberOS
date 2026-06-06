@@ -6,7 +6,7 @@ import fs from 'fs'
 import os from 'os'
 import https from 'https'
 import { emitEvent } from './ecosystem-bus'
-import { consumePendingAction } from './pendingActions'
+import { consumePendingAction, installPendingActionWatcher } from './pendingActions'
 import {
   DEFAULT_SOURCES, loadSources, saveSources,
   loadCache, saveCache, fetchAllFeeds, saveItemToVault,
@@ -657,6 +657,10 @@ app.whenReady().then(async () => {
       const pending = consumePendingAction('signalboard')
       if (pending) push('pending-action', pending.action)
     }, 800)
+    // Listen for tray-action writes while the app is already running
+    installPendingActionWatcher('signalboard', (action) => {
+      try { push('pending-action', action) } catch { /* ignore */ }
+    })
   })
 
   rescheduleRefresh()

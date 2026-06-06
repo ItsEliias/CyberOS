@@ -17,6 +17,13 @@ declare global {
       setupVault:       (pw: string, autoLockMs?: number) => Promise<UnlockResult>
       unlockVault:      (pw: string, autoLockMs?: number) => Promise<UnlockResult>
       lockVault:        () => Promise<boolean>
+
+      // Touch ID (biometric)
+      touchIdAvailable: () => Promise<boolean>
+      touchIdEnabled:   () => Promise<boolean>
+      touchIdEnable:    (pw: string) => Promise<{ ok: boolean; error?: string }>
+      touchIdDisable:   () => Promise<{ ok: boolean }>
+      touchIdPrompt:    (autoLockMs?: number) => Promise<UnlockResult>
       changePassword:   (cur: string, next: string) => Promise<UnlockResult>
 
       // Two-factor (TOTP)

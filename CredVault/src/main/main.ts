@@ -8,7 +8,7 @@ import fs from 'fs'
 import os from 'os'
 import { emitEvent } from './ecosystem-bus'
 import { registerCredVaultHandlers, setMainWindow, lockVault, writeCredVaultStatus, credCount } from './ipc/credvault'
-import { consumePendingAction } from './pendingActions'
+import { consumePendingAction, installPendingActionWatcher } from './pendingActions'
 
 const APP_KEY = 'credvault'
 
@@ -75,7 +75,11 @@ function createWindow(): void {
         mainWindow.webContents.send('pending-action', result.action)
       }
     }, 800)
-  })
+  
+    // Listen for tray-action writes while the app is already running
+    installPendingActionWatcher(APP_KEY, (action) => {
+      try { mainWindow?.webContents.send('pending-action', action) } catch { /* ignore */ }
+    })})
 }
 
 // Register all IPC handlers (crypto + credentials + backup + pending)

@@ -198,9 +198,16 @@ export default function LockScreen({ needsSetup }: Props) {
   async function handleTouchId() {
     setTouchIdLoading(true); setError('')
     try {
-      const res = await window.electronAPI.touchIdPrompt()
-      if (res.ok) { setUnlockedAnim(true); setTimeout(() => setUnlocked(true), 600) }
-      else { setError(res.error ?? 'Touch ID failed'); triggerShake() }
+      const res = await window.electronAPI.touchIdPrompt(autoLockMs)
+      if (res.ok) {
+        if (res.twoFactorRequired) {
+          setTwoFAOpen(true)
+          setOtpCode('')
+        } else {
+          setUnlockedAnim(true)
+          setTimeout(() => setUnlocked(true), 600)
+        }
+      } else { setError(res.error ?? 'Touch ID failed'); triggerShake() }
     } catch { setError('Touch ID unavailable') }
     setTouchIdLoading(false)
   }

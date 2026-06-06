@@ -7,7 +7,7 @@ import fs from 'fs';
 import type { CommandEntry, CapturePayload, SessionContext } from '../shared/types.js';
 import { registerTerminalLinkIPC } from './ipc/terminallink';
 import { stopTailing } from './externalShellHook';
-import { consumePendingAction } from './pendingActions';
+import { consumePendingAction, installPendingActionWatcher } from './pendingActions'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const _require   = createRequire(import.meta.url);
@@ -117,6 +117,10 @@ function createWindow(): void {
         mainWindow.webContents.send('pending-action', pending.action);
       }
     }, 800);
+    // Listen for tray-action writes while the app is already running
+    installPendingActionWatcher('terminallink', (action) => {
+      try { mainWindow?.webContents.send('pending-action', action) } catch { /* ignore */ }
+    })
   });
   mainWindow.on('closed', () => { mainWindow = null; });
 }

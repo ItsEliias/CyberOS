@@ -6,7 +6,7 @@ import path from 'path'
 import fs from 'fs'
 import os from 'os'
 import { emitEvent } from './ecosystem-bus'
-import { consumePendingAction } from './pendingActions'
+import { consumePendingAction, installPendingActionWatcher } from './pendingActions'
 import type { Lab, LabProgress, NetLabPrefs } from '../shared/types'
 
 const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')
@@ -77,7 +77,11 @@ function createWindow(): void {
         mainWindow.webContents.send('pending-action', pending.action)
       }
     }, 800)
-  })
+  
+    // Listen for tray-action writes while the app is already running
+    installPendingActionWatcher('netlab', (action) => {
+      try { mainWindow?.webContents.send('pending-action', action) } catch { /* ignore */ }
+    })})
 }
 
 // ─── Helpers — CyberTools config ─────────────────────────────────────────────

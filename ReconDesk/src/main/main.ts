@@ -9,7 +9,7 @@ import https from 'https'
 import { emitEvent } from './ecosystem-bus'
 import { detectCredentialChanges } from './credential-tracker'
 import { registerNetworkHandlers } from './ipc-network-handlers'
-import { consumePendingAction } from './pendingActions'
+import { consumePendingAction, installPendingActionWatcher } from './pendingActions'
 import type { ReconDeskData, ReconDeskStatus } from '../shared/types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -397,6 +397,12 @@ app.whenReady().then(() => {
       mainWindow.webContents.send('pending-action', pending.action)
     }
   }, 800)
+
+  
+    // Listen for tray-action writes while the app is already running
+    installPendingActionWatcher('recondesk', (action) => {
+      try { mainWindow?.webContents.send('pending-action', action) } catch { /* ignore */ }
+    })
 
   statusInterval = setInterval(() => {
     const d = loadData()

@@ -2,7 +2,7 @@
 // All AES-256-GCM and PBKDF2 operations run here via cryptoManager.
 // The renderer never receives raw keys or master passwords.
 
-import { ipcMain, clipboard, dialog, BrowserWindow, systemPreferences } from 'electron'
+import { ipcMain, clipboard, dialog, BrowserWindow, systemPreferences, safeStorage } from 'electron'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
@@ -359,27 +359,79 @@ export function registerCredVaultHandlers(): void {
     }
   })
 
-  ipcMain.handle('vault:touch-id-unlock', async (_e, password: string, autoLockMs?: number): Promise<UnlockResult> => {
+  const TOUCHID_FILE = path.join(APP_SUPPORT, 'touch-id.enc')
+
+  // Whether the user has previously enabled Touch ID + saved a password.
+  ipcMain.handle('vault:touch-id-enabled', (): boolean => fs.existsSync(TOUCHID_FILE))
+
+  // Enable Touch ID for an existing password. Verifies the password decrypts
+  // the vault, prompts Touch ID for confirmation, then stores the password
+  // encrypted via Electron safeStorage (backed by the macOS Keychain).
+  ipcMain.handle('vault:touch-id-enable', async (_e, password: string): Promise<{ ok: boolean; error?: string }> => {
+    try {
+      if (!saltExists()) return { ok: false, error: 'Vault not initialised' }
+      if (decryptVaultWithPassword(password) === null) {
+        return { ok: false, error: 'Password did not verify against the vault' }
+      }
+      if (!safeStorage.isEncryptionAvailable()) {
+        return { ok: false, error: 'System keychain unavailable for safeStorage' }
+      }
+      try {
+        await systemPreferences.promptTouchID('Confirm Touch ID for CredVault')
+      } catch {
+        return { ok: false, error: 'Touch ID confirmation failed or was cancelled' }
+      }
+      ensureAppDir()
+      fs.writeFileSync(TOUCHID_FILE, safeStorage.encryptString(password))
+      return { ok: true }
+    } catch (e) {
+      return { ok: false, error: (e as Error).message }
+    }
+  })
+
+  ipcMain.handle('vault:touch-id-disable', (): { ok: boolean } => {
+    try { fs.unlinkSync(TOUCHID_FILE) } catch { /* ignore */ }
+    return { ok: true }
+  })
+
+  // Renderer calls this on the lock screen. We prompt Touch ID; on success
+  // we retrieve the saved password from safeStorage and run the same unlock
+  // path the password form uses (so the vault is properly decrypted, SSO
+  // session begins, 2FA flag is honoured, etc.).
+  ipcMain.handle('vault:touch-id-prompt', async (_e, autoLockMs?: number): Promise<UnlockResult> => {
+    if (!fs.existsSync(TOUCHID_FILE)) return { ok: false, error: 'Touch ID not enabled' }
+    if (!safeStorage.isEncryptionAvailable()) return { ok: false, error: 'System keychain unavailable' }
     try {
       await systemPreferences.promptTouchID('Unlock CredVault')
     } catch {
-      return { ok: false, error: 'Touch ID authentication failed or was cancelled' }
+      return { ok: false, error: 'Touch ID failed or was cancelled' }
     }
-    // Touch ID succeeded — now unlock with stored password token
-    return ipcMain.emit('vault:unlock', null as unknown as Electron.IpcMainEvent, password, autoLockMs)
-      ? { ok: false, error: 'internal' }
-      : { ok: false, error: 'internal' }
-  })
-
-  // We use a direct call path for touch-id since it needs to call the unlock logic
-  // The renderer will call touch-id-prompt, get a success, then call unlockVault with stored token
-  ipcMain.handle('vault:touch-id-prompt', async (): Promise<{ ok: boolean; error?: string }> => {
+    let password: string
     try {
-      await systemPreferences.promptTouchID('Unlock CredVault')
-      return { ok: true }
+      password = safeStorage.decryptString(fs.readFileSync(TOUCHID_FILE))
     } catch (e) {
-      return { ok: false, error: (e as Error).message ?? 'Touch ID failed' }
+      return { ok: false, error: `Could not retrieve saved password: ${(e as Error).message}` }
     }
+
+    // Reuse the same unlock logic — but we cannot ipcMain.invoke ourselves,
+    // so inline the relevant bits. Note: we deliberately skip the lockout
+    // counter here since a successful Touch ID is itself proof of presence.
+    if (!saltExists()) return { ok: false, error: 'Vault not initialised' }
+    const plaintext = decryptVaultWithPassword(password)
+    if (plaintext === null) {
+      // Saved password no longer works — disable Touch ID so the user sees
+      // a fresh state next time.
+      try { fs.unlinkSync(TOUCHID_FILE) } catch { /* ignore */ }
+      return { ok: false, error: 'Saved password is stale; Touch ID disabled' }
+    }
+    failedAttempts = 0
+    deriveAndStoreKey(password)
+    try { vaultData = JSON.parse(plaintext) as VaultData } catch { vaultData = defaultVault() }
+    if (!getTotpEnabled()) beginSession(autoLockMs ?? 0)
+    writeCredVaultStatus(false, credCount())
+    emitEvent('CredVault', 'vault:unlocked', { method: 'touch-id' })
+    resetLockTimer(autoLockMs ?? 0)
+    return { ok: true, twoFactorRequired: getTotpEnabled() }
   })
 
   // ── Credentials CRUD ──────────────────────────────────────────────────────

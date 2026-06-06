@@ -7,7 +7,7 @@ import { createRequire } from 'module';
 import fs from 'fs';
 import os from 'os';
 import { registerSecretIpc } from './secretIpc';
-import { consumePendingAction } from './pendingActions';
+import { consumePendingAction, installPendingActionWatcher } from './pendingActions'
 
 const APP_KEY = 'vaultscraper';
 
@@ -81,6 +81,10 @@ function createWindow() {
         mainWindow.webContents.send('pending-action', result.action);
       }
     }, 800);
+    // Listen for tray-action writes while the app is already running
+    installPendingActionWatcher(APP_KEY, (action) => {
+      try { mainWindow?.webContents.send('pending-action', action) } catch { /* ignore */ }
+    })
   });
 
   mainWindow.on('closed', () => { mainWindow = null; });

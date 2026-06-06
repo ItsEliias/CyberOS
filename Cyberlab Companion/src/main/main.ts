@@ -7,7 +7,7 @@ import http from 'http';
 import { URL } from 'url';
 import { emitEvent } from './ecosystem-bus.js';
 import { registerExtrasIPC } from './ipc-extras.js';
-import { consumePendingAction } from './pendingActions.js';
+import { consumePendingAction, installPendingActionWatcher } from './pendingActions.js'
 import {
   saveTokenSecure, loadTokenSecure, clearTokenSecure,
   fetchHtbStats, fetchThmStats, writeActiveLab,
@@ -245,6 +245,10 @@ function createWindow() {
         mainWindow.webContents.send('pending-action', result.action);
       }
     }, 800);
+    // Listen for tray-action writes while the app is already running
+    installPendingActionWatcher('cyberlab', (action) => {
+      try { mainWindow?.webContents.send('pending-action', action) } catch { /* ignore */ }
+    })
   });
   mainWindow.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
   mainWindow.on('closed', () => { mainWindow = null; });

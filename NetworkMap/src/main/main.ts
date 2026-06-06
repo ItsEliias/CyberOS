@@ -7,7 +7,7 @@ import fs from 'fs'
 import os from 'os'
 import { exec } from 'child_process'
 import { emitEvent } from './ecosystem-bus'
-import { consumePendingAction } from './pendingActions'
+import { consumePendingAction, installPendingActionWatcher } from './pendingActions'
 import type { NetworkNode, NetworkPort, NetworkGraph, GraphSummary } from '../shared/types'
 
 const APP_VERSION       = '1.0.0'

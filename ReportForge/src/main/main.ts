@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import os from 'os';
 import * as ecosystemBus from './ecosystem-bus.js';
-import { consumePendingAction } from './pendingActions.js';
+import { consumePendingAction, installPendingActionWatcher } from './pendingActions.js'
 import type {
   Report, CyberToolsSharedConfig, ExportResult, WriteupFile, ReconDeskTarget
 } from '../shared/types.js';
@@ -243,6 +243,10 @@ function createWindow() {
         mainWindow.webContents.send('pending-action', result.action);
       }
     }, 800);
+    // Listen for tray-action writes while the app is already running
+    installPendingActionWatcher('reportforge', (action) => {
+      try { mainWindow?.webContents.send('pending-action', action) } catch { /* ignore */ }
+    })
   });
   mainWindow.on('close', () => { mainWindow = null; });
 }
