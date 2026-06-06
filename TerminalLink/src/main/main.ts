@@ -236,7 +236,7 @@ ipcMain.handle('pty-create', (_evt, { id, cols, rows }: { id: string; cols: numb
       name: 'xterm-256color',
       cols: safeCols,
       rows: safeRows,
-      cwd: process.env.HOME,
+      cwd: os.homedir(),
       env: ptyCreateSafeEnv({
         TARGET:    activeTarget,
         TARGET_IP: activeIP,
