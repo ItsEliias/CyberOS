@@ -913,23 +913,28 @@ async function runBackupImport(password?: string): Promise<BackupResult> {
     }
 
     const home = os.homedir();
-    const list = await new Promise<string[]>((resolve, reject) => {
-      const child = spawn('tar', ['-tzf', tarFile], { stdio: ['ignore', 'pipe', 'pipe'] });
-      let out = '';
-      child.stdout?.on('data', d => { out += d.toString(); });
-      child.on('error', reject);
-      child.on('close', code => code === 0 ? resolve(out.split('\n').filter(Boolean)) : reject(new Error(`tar -t exited ${code}`)));
-    });
+    let list: string[];
+    try {
+      list = await new Promise<string[]>((resolve, reject) => {
+        const child = spawn('tar', ['-tzf', tarFile], { stdio: ['ignore', 'pipe', 'pipe'] });
+        let out = '';
+        child.stdout?.on('data', d => { out += d.toString(); });
+        child.on('error', reject);
+        child.on('close', code => code === 0 ? resolve(out.split('\n').filter(Boolean)) : reject(new Error(`tar -t exited ${code}`)));
+      });
 
-    await new Promise<void>((resolve, reject) => {
-      const child = spawn('tar', ['-xzf', tarFile, '-C', home], { stdio: ['ignore', 'pipe', 'pipe'] });
-      let err = '';
-      child.stderr?.on('data', d => { err += d.toString(); });
-      child.on('error', reject);
-      child.on('close', code => code === 0 ? resolve() : reject(new Error(err || `tar -x exited ${code}`)));
-    });
-
-    if (cleanup) try { fs.unlinkSync(tarFile); } catch { /* ignore */ }
+      await new Promise<void>((resolve, reject) => {
+        const child = spawn('tar', ['-xzf', tarFile, '-C', home], { stdio: ['ignore', 'pipe', 'pipe'] });
+        let err = '';
+        child.stderr?.on('data', d => { err += d.toString(); });
+        child.on('error', reject);
+        child.on('close', code => code === 0 ? resolve() : reject(new Error(err || `tar -x exited ${code}`)));
+      });
+    } finally {
+      // Always remove the decrypted temp tar so it never lingers on /tmp,
+      // even if extraction failed.
+      if (cleanup) { try { fs.unlinkSync(tarFile); } catch { /* ignore */ } }
+    }
 
     addActivityEntry({ type: 'launcher', text: `Backup restored from ${path.basename(file)}` });
     ecosystemBus.emitEvent('Launcher', 'launcher.backup.restored', { file: path.basename(file), count: list.length });
