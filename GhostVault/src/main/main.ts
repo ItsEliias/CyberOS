@@ -182,6 +182,26 @@ function listVaultNotes(vaultPath: string): NoteFile[] {
   return results.sort((a, b) => b.mtime - a.mtime);
 }
 
+// ─── Path confinement ────────────────────────────────────────────────────────
+// Renderer-supplied paths must resolve inside the configured vault root.
+// Otherwise a compromised renderer can read SSH keys or overwrite shell rc
+// files via the note IPCs. Symlinks inside the vault are deliberately not
+// resolved — the user opted into them by placing them in the vault.
+function isUnderVault(filePath: string): boolean {
+  if (typeof filePath !== 'string' || !filePath) return false;
+  const vault = loadConfig().vaultPath;
+  if (!vault || typeof vault !== 'string') return false;
+  try {
+    const resolvedVault = path.resolve(vault);
+    const resolvedFile  = path.resolve(filePath);
+    if (resolvedFile === resolvedVault) return true;
+    const prefix = resolvedVault.endsWith(path.sep) ? resolvedVault : resolvedVault + path.sep;
+    return resolvedFile.startsWith(prefix);
+  } catch {
+    return false;
+  }
+}
+
 const readNote  = (filePath: string): string => {
   try { return fs.readFileSync(filePath, 'utf8'); } catch { return ''; }
 };
@@ -434,20 +454,28 @@ ipcMain.handle('load-vault', (_, vaultPath: string) => {
 });
 
 ipcMain.handle('list-notes',  (_, vaultPath: string) => listVaultNotes(vaultPath));
-ipcMain.handle('read-note',   (_, filePath: string)  => readNote(filePath));
+ipcMain.handle('read-note',   (_, filePath: string)  => {
+  if (!isUnderVault(filePath)) return '';
+  return readNote(filePath);
+});
 ipcMain.handle('write-note',  (_, filePath: string, content: string) => {
+  if (!isUnderVault(filePath)) return false;
   const result = writeNote(filePath, content);
   lastCaptureTime = new Date().toISOString();
   writeGhostVaultStatus();
   return result;
 });
 ipcMain.handle('delete-note', (_, filePath: string) => {
+  if (!isUnderVault(filePath)) return false;
   const r = deleteNote(filePath);
   vaultNoteCount = Math.max(0, vaultNoteCount - 1);
   writeGhostVaultStatus();
   return r;
 });
-ipcMain.handle('rename-note', (_, oldPath: string, newPath: string) => renameNote(oldPath, newPath));
+ipcMain.handle('rename-note', (_, oldPath: string, newPath: string) => {
+  if (!isUnderVault(oldPath) || !isUnderVault(newPath)) return false;
+  return renameNote(oldPath, newPath);
+});
 
 ipcMain.handle('new-note', async (_, vaultPath: string, folder: string, title: string): Promise<NewNoteResult> => {
   const safeName  = title.replace(/[/\\?%*:|"<>]/g, '-') || 'Untitled';
@@ -476,6 +504,7 @@ ipcMain.handle('list-folders', (_, vaultPath: string): string[] => {
 });
 
 ipcMain.handle('reveal-in-finder', (_, p: string) => {
+  if (!isUnderVault(p)) return;
   if (p && fs.existsSync(p)) shell.showItemInFolder(p);
 });
 ipcMain.handle('open-external', (_, url: string) => shell.openExternal(url));
