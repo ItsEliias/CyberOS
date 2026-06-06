@@ -318,7 +318,15 @@ ipcMain.handle('set-config',    (_, k, v) => {
 });
 ipcMain.handle('config-exists', ()       => launcher.configExists());
 ipcMain.handle('get-vault-path',()       => launcher.getVaultPath());
-ipcMain.handle('set-vault-path',(_, vp)  => { launcher.setVaultPath(vp); refreshVaultNoteCount(); return true; });
+ipcMain.handle('set-vault-path',(_, vp)  => {
+  // Without a type check, a non-string vp got written into the obsidianVaultPath
+  // config and every subsequent vault operation read undefined or '[object Object]'.
+  // Empty paths are also rejected so a misclick can't clear the configured vault.
+  if (typeof vp !== 'string' || vp.length === 0) return false;
+  launcher.setVaultPath(vp);
+  refreshVaultNoteCount();
+  return true;
+});
 ipcMain.handle('get-theme',     ()       => launcher.getTheme());
 ipcMain.handle('set-theme',     (_, t)   => launcher.setTheme(t));
 ipcMain.handle('is-cyberlab-installed', () => launcher.isCyberLabInstalled());
