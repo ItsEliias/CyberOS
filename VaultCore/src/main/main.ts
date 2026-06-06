@@ -348,6 +348,12 @@ ipcMain.handle('open-external', async (_, u) => {
 });
 
 ipcMain.handle('start-scrape', async (_, config) => {
+  // The renderer hands us a free-form config object. Without this guard a
+  // null/non-object payload crashed the main process on the first property
+  // read (`config.sourceName`).
+  if (!config || typeof config !== 'object' || Array.isArray(config)) {
+    return { error: 'Invalid scrape config' };
+  }
   if (currentScrapeState) return { error: 'A scrape is already running' };
   const vaultPath = launcher.getVaultPath();
   if (!vaultPath) return { error: 'No vault path configured' };
