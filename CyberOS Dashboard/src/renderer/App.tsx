@@ -45,13 +45,23 @@ import StyleReferenceView from './views/StyleReferenceView'
 // ─── Last Updated Chip ───────────────────────────────────────────────────────
 
 function LastUpdatedChip() {
+  // Track the freshest config/events update so the chip actually reflects
+  // when the underlying data changed, not how long the component has been
+  // mounted. Without this, the chip ticked forever even when nothing came
+  // in from the file watchers.
+  const config = useDashboardStore((s) => s.config)
+  const events = useDashboardStore((s) => s.events)
   const [elapsed, setElapsed] = useState(0)
-  const [mountTime] = useState(() => Date.now())
+  const [lastUpdate, setLastUpdate] = useState(() => Date.now())
 
   useEffect(() => {
-    const id = setInterval(() => setElapsed(Math.floor((Date.now() - mountTime) / 1000)), 1000)
+    setLastUpdate(Date.now())
+  }, [config, events])
+
+  useEffect(() => {
+    const id = setInterval(() => setElapsed(Math.floor((Date.now() - lastUpdate) / 1000)), 1000)
     return () => clearInterval(id)
-  }, [mountTime])
+  }, [lastUpdate])
 
   const fmt = (s: number) => {
     if (s < 60) return `${s}s ago`
