@@ -23,6 +23,14 @@ const CONTEXT_POLL_MS   = 10_000
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 try { require('electron').crashReporter.start({ uploadToServer: false, productName: "PlaybookStudio", companyName: 'CyberOS' }) } catch { /* unavailable */ }
 
+// ─── Top-level error handlers — log instead of crash silently ────────────────
+process.on('unhandledRejection', (reason) => {
+  console.error('[PlaybookStudio] unhandled rejection:', reason)
+})
+process.on('uncaughtException', (err) => {
+  console.error('[PlaybookStudio] uncaught exception:', err)
+})
+
 let mainWindow:      BrowserWindow | null = null
 let contextTimer:    NodeJS.Timeout | null = null
 let customPlaybooks: Playbook[]    = []

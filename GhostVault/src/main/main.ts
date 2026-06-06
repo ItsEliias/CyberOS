@@ -26,6 +26,14 @@ const VAULT_FOLDERS     = ['Notes', 'Meetings', 'Projects', 'Study', 'Tasks', 'A
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 try { require('electron').crashReporter.start({ uploadToServer: false, productName: "GhostVault", companyName: 'CyberOS' }) } catch { /* unavailable */ }
 
+// ─── Top-level error handlers — log instead of crash silently ────────────────
+process.on('unhandledRejection', (reason) => {
+  console.error('[GhostVault] unhandled rejection:', reason)
+})
+process.on('uncaughtException', (err) => {
+  console.error('[GhostVault] uncaught exception:', err)
+})
+
 let mainWindow:    BrowserWindow | null = null;
 let captureWindow: BrowserWindow | null = null;
 let statusInterval: ReturnType<typeof setInterval> | null = null;

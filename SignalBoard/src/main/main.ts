@@ -42,6 +42,14 @@ const DEFAULT_SETTINGS: AppSettings = {
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 try { require('electron').crashReporter.start({ uploadToServer: false, productName: "SignalBoard", companyName: 'CyberOS' }) } catch { /* unavailable */ }
 
+// ─── Top-level error handlers — log instead of crash silently ────────────────
+process.on('unhandledRejection', (reason) => {
+  console.error('[SignalBoard] unhandled rejection:', reason)
+})
+process.on('uncaughtException', (err) => {
+  console.error('[SignalBoard] uncaught exception:', err)
+})
+
 let mainWindow:      BrowserWindow | null = null
 let tray:            Tray | null = null
 let refreshTimer:    NodeJS.Timeout | null = null

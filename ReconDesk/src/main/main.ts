@@ -23,6 +23,14 @@ const CYBERTOOLS_CONFIG = sharedConfigPath()
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 try { require('electron').crashReporter.start({ uploadToServer: false, productName: "ReconDesk", companyName: 'CyberOS' }) } catch { /* unavailable */ }
 
+// ─── Top-level error handlers — log instead of crash silently ────────────────
+process.on('unhandledRejection', (reason) => {
+  console.error('[ReconDesk] unhandled rejection:', reason)
+})
+process.on('uncaughtException', (err) => {
+  console.error('[ReconDesk] uncaught exception:', err)
+})
+
 let mainWindow: BrowserWindow | null = null
 let statusInterval: NodeJS.Timeout | null = null
 let configWatcher: fs.FSWatcher | null = null

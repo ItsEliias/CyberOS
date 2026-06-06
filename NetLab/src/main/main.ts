@@ -7,7 +7,7 @@ import fs from 'fs'
 import os from 'os'
 import { emitEvent } from './ecosystem-bus'
 import { consumePendingAction, installPendingActionWatcher } from './pendingActions'
-import { userDataDir } from './platform'
+import { userDataDir, sharedConfigPath } from './platform'
 import type { Lab, LabProgress, NetLabPrefs } from '../shared/types'
 
 const CYBERTOOLS_CONFIG = sharedConfigPath()
@@ -27,6 +27,14 @@ const TOPOLOGIES_FILE = path.join(DATA_DIR, 'topologies.json')
 // ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 try { require('electron').crashReporter.start({ uploadToServer: false, productName: "NetLab", companyName: 'CyberOS' }) } catch { /* unavailable */ }
+
+// ─── Top-level error handlers — log instead of crash silently ────────────────
+process.on('unhandledRejection', (reason) => {
+  console.error('[NetLab] unhandled rejection:', reason)
+})
+process.on('uncaughtException', (err) => {
+  console.error('[NetLab] uncaught exception:', err)
+})
 
 let mainWindow: BrowserWindow | null = null
 
