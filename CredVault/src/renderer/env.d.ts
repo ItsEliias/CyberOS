@@ -14,7 +14,7 @@ declare global {
     electronAPI: {
       // Auth
       needsSetup:       () => Promise<boolean>
-      setupVault:       (pw: string) => Promise<UnlockResult>
+      setupVault:       (pw: string, autoLockMs?: number) => Promise<UnlockResult>
       unlockVault:      (pw: string, autoLockMs?: number) => Promise<UnlockResult>
       lockVault:        () => Promise<boolean>
       changePassword:   (cur: string, next: string) => Promise<UnlockResult>

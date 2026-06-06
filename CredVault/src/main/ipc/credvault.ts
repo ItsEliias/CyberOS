@@ -196,7 +196,7 @@ export function registerCredVaultHandlers(): void {
 
   ipcMain.handle('vault:needs-setup', () => !saltExists() || !vaultExists())
 
-  ipcMain.handle('vault:setup', (_e, password: string): UnlockResult => {
+  ipcMain.handle('vault:setup', (_e, password: string, autoLockMs?: number): UnlockResult => {
     if (password.length < 8) return { ok: false, error: 'Password must be at least 8 characters' }
     try {
       ensureAppDir()
@@ -204,6 +204,9 @@ export function registerCredVaultHandlers(): void {
       vaultData = defaultVault()
       saveVault()
       writeCredVaultStatus(false, 0)
+      // First-time setup → begin SSO session immediately so soft-locked apps
+      // (GhostVault, VaultCore) recognise the new vault as unlocked.
+      beginSession(autoLockMs ?? 0)
       emitEvent('CredVault', 'vault:unlocked', {})
       return { ok: true }
     } catch (e) {
@@ -338,6 +341,8 @@ export function registerCredVaultHandlers(): void {
     try {
       deriveAndStoreKeyWithNewSalt(newPassword)
       saveVault()
+      // Issue a fresh SSO token so other apps stay in sync with the new key
+      refreshSession(0)
       return { ok: true }
     } catch (e) {
       return { ok: false, error: (e as Error).message }

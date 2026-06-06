@@ -150,7 +150,7 @@ export default function LockScreen({ needsSetup }: Props) {
     if (pw.length < 8) { setError('Password must be at least 8 characters'); triggerShake(); return }
     if (pw !== confirm) { setError('Passwords do not match'); triggerShake(); return }
     setLoading(true); setError('')
-    const res = await window.electronAPI.setupVault(pw)
+    const res = await window.electronAPI.setupVault(pw, autoLockMs)
     setLoading(false)
     if (res.ok) { setUnlockedAnim(true); setTimeout(() => { setSetup(true); setUnlocked(true) }, 600) }
     else { setError(res.error ?? 'Setup failed'); triggerShake() }
