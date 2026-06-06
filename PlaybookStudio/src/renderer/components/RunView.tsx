@@ -25,6 +25,7 @@ export default function RunView() {
   const [exporting, setExporting]   = useState(false)
   const [paused,    setPaused]      = useState(false)
   const [runElapsed, setRunElapsed] = useState('0:00')
+  const [exportFeedback, setExportFeedback] = useState<{ kind: 'ok' | 'warn' | 'err'; msg: string } | null>(null)
   const [scrollLock, setScrollLock] = useState(true)
   const notesFocusRef = useRef<HTMLTextAreaElement>(null)
   const stepListRef   = useRef<HTMLDivElement>(null)
@@ -171,8 +172,28 @@ export default function RunView() {
 
   async function handleExportReport() {
     setExporting(true)
-    await window.electronAPI.exportRunReport(activeRun!.id)
+    // Surface the outcome — the IPC handler now returns reportForgeAvailable
+    // + pendingPath so the user can tell whether the report actually landed
+    // in ReportForge's queue or whether the save-dialog fallback was used.
+    // Without this, hitting Export was indistinguishable from a no-op.
+    try {
+      const res = await window.electronAPI.exportRunReport(activeRun!.id) as {
+        ok: boolean; error?: string; reportForgeAvailable?: boolean; pendingPath?: string | null
+      }
+      if (!res.ok) {
+        setExportFeedback({ kind: 'err', msg: `Export failed: ${res.error ?? 'unknown'}` })
+      } else if (res.reportForgeAvailable && res.pendingPath) {
+        setExportFeedback({ kind: 'ok',   msg: 'Sent to ReportForge pending queue' })
+      } else if (res.reportForgeAvailable) {
+        setExportFeedback({ kind: 'warn', msg: 'ReportForge installed but queue write failed' })
+      } else {
+        setExportFeedback({ kind: 'warn', msg: 'ReportForge not installed — saved via dialog' })
+      }
+    } catch (e) {
+      setExportFeedback({ kind: 'err', msg: `Export failed: ${(e as Error).message}` })
+    }
     setExporting(false)
+    setTimeout(() => setExportFeedback(null), 3500)
   }
 
   const playbookForVars = playbooks.find(p => p.id === activeRun.playbookId)
@@ -269,6 +290,26 @@ export default function RunView() {
               style={{ background: 'rgba(63,185,80,0.15)', color: 'var(--success)', border: '1px solid rgba(63,185,80,0.3)' }}>
               {exporting ? 'Exporting…' : 'Export to Report'}
             </button>
+            {exportFeedback && (
+              <span
+                className="text-xs px-2 py-1 rounded flex-shrink-0"
+                style={{
+                  background: exportFeedback.kind === 'ok' ? 'rgba(63,185,80,0.15)'
+                    : exportFeedback.kind === 'warn' ? 'rgba(210,153,34,0.15)'
+                    : 'rgba(248,81,73,0.15)',
+                  color: exportFeedback.kind === 'ok' ? 'var(--success)'
+                    : exportFeedback.kind === 'warn' ? 'var(--warning)'
+                    : 'var(--error)',
+                  border: `1px solid ${
+                    exportFeedback.kind === 'ok' ? 'rgba(63,185,80,0.35)'
+                    : exportFeedback.kind === 'warn' ? 'rgba(210,153,34,0.35)'
+                    : 'rgba(248,81,73,0.35)'
+                  }`,
+                }}
+              >
+                {exportFeedback.msg}
+              </span>
+            )}
             <HelpTip
               title="Export"
               body="Generate a Markdown report of this run — steps, status, notes, and timing — saved to the configured reports folder."
