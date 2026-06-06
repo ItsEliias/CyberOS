@@ -157,6 +157,14 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
       const file = path.join(SESSIONS_DIR, 'sessions.json');
       fs.mkdirSync(SESSIONS_DIR, { recursive: true });
       if (!fs.existsSync(file)) return [];
+      // A sessions.json bloated by an earlier (unpatched) build can OOM us
+      // on every launch. Refuse to load anything over 50 MB and the
+      // renderer will see an empty list — recoverable by deleting the file.
+      const stat = fs.statSync(file);
+      if (stat.size > 50 * 1024 * 1024) {
+        console.warn('[ipc/terminallink] sessions.json too large, ignoring');
+        return [];
+      }
       return JSON.parse(fs.readFileSync(file, 'utf8'));
     } catch {
       return [];
@@ -182,6 +190,13 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
   ipcMain.handle('terminallink:history:read', () => {
     try {
       if (!fs.existsSync(HISTORY_FILE)) return [];
+      // Same OOM guard as sessions:read — a 200 MB history file from an
+      // earlier unbounded build would otherwise crash the app on launch.
+      const stat = fs.statSync(HISTORY_FILE);
+      if (stat.size > 200 * 1024 * 1024) {
+        console.warn('[ipc/terminallink] history file too large, ignoring');
+        return [];
+      }
       return JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8'));
     } catch {
       return [];
