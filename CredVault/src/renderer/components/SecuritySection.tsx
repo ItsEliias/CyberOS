@@ -23,10 +23,32 @@ export default function SecuritySection() {
   const [recovery, setRecovery]           = useState<string | null>(null)
   const [recBusy, setRecBusy]             = useState(false)
 
+  // ── Touch ID state ─────────────────────────────────────────────────────
+  const [touchIdSupported, setTouchIdSupported] = useState(false)
+  const [touchIdEnabled,   setTouchIdEnabled]   = useState(false)
+  const [touchPw,          setTouchPw]          = useState('')
+  const [touchErr,         setTouchErr]         = useState<string | null>(null)
+  const [touchBusy,        setTouchBusy]        = useState(false)
+
   useEffect(() => {
     window.electronAPI.totpStatus().then(setTwoFA).catch(() => {})
     window.electronAPI.recoveryStatus().then(setRec).catch(() => {})
+    window.electronAPI.touchIdAvailable().then(setTouchIdSupported).catch(() => {})
+    window.electronAPI.touchIdEnabled().then(setTouchIdEnabled).catch(() => {})
   }, [])
+
+  async function enableTouchId() {
+    setTouchErr(null); setTouchBusy(true)
+    try {
+      const r = await window.electronAPI.touchIdEnable(touchPw)
+      if (r.ok) { setTouchIdEnabled(true); setTouchPw(''); }
+      else setTouchErr(r.error || 'Could not enable')
+    } finally { setTouchBusy(false) }
+  }
+  async function disableTouchId() {
+    await window.electronAPI.touchIdDisable()
+    setTouchIdEnabled(false)
+  }
 
   async function startTotpSetup() {
     setSetupErr(null)
@@ -263,6 +285,54 @@ export default function SecuritySection() {
           )}
         </div>
       </Card>
+
+      {touchIdSupported && (
+        <Card title="Touch ID">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {!touchIdEnabled ? (
+              <>
+                <p style={{ fontSize: 12, color: '#8b949e', marginBottom: 0, lineHeight: 1.55 }}>
+                  Unlock CredVault with your fingerprint. Your master password is stored encrypted
+                  in the macOS Keychain via Electron safeStorage; only this app — running as you,
+                  on this Mac — can read it.
+                </p>
+                <SettingRow label="Confirm password" description="One-time, used to verify before storing">
+                  <input
+                    type="password"
+                    placeholder="Master password"
+                    value={touchPw}
+                    onChange={e => setTouchPw(e.target.value)}
+                    style={{ width: 220 }}
+                  />
+                </SettingRow>
+                {touchErr && <p style={{ fontSize: 12, color: 'var(--error)' }}>{touchErr}</p>}
+                <button
+                  onClick={enableTouchId}
+                  className="btn btn-accent"
+                  style={{ alignSelf: 'flex-start', fontSize: 12 }}
+                  disabled={!touchPw || touchBusy}
+                >
+                  {touchBusy ? 'Verifying…' : 'Enable Touch ID'}
+                </button>
+              </>
+            ) : (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 6,
+                              background: 'rgba(63,185,80,0.08)', border: '1px solid rgba(63,185,80,0.25)' }}>
+                  <span style={{ width: 6, height: 6, borderRadius: 99, background: '#3fb950' }} />
+                  <span style={{ fontSize: 12, color: '#3fb950', fontWeight: 600 }}>Touch ID active</span>
+                  <span style={{ fontSize: 11, color: '#8b949e' }}>
+                    · Tap the fingerprint icon on the lock screen.
+                  </span>
+                </div>
+                <button onClick={disableTouchId} className="btn btn-ghost" style={{ alignSelf: 'flex-start', fontSize: 12 }}>
+                  Disable Touch ID
+                </button>
+              </>
+            )}
+          </div>
+        </Card>
+      )}
     </>
   )
 }

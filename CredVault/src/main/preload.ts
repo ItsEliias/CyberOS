@@ -34,7 +34,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Touch ID / biometric
   touchIdAvailable:(): Promise<boolean>                                => ipcRenderer.invoke('vault:touch-id-available'),
-  touchIdPrompt:   (): Promise<{ ok: boolean; error?: string }>        => ipcRenderer.invoke('vault:touch-id-prompt'),
+  touchIdEnabled:  (): Promise<boolean>                                => ipcRenderer.invoke('vault:touch-id-enabled'),
+  touchIdEnable:   (pw: string): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('vault:touch-id-enable', pw),
+  touchIdDisable:  (): Promise<{ ok: boolean }>                        => ipcRenderer.invoke('vault:touch-id-disable'),
+  touchIdPrompt:   (autoLockMs?: number): Promise<UnlockResult>        => ipcRenderer.invoke('vault:touch-id-prompt', autoLockMs),
 
   // Credentials CRUD
   getCredentials:  (): Promise<Credential[]>                           => ipcRenderer.invoke('vault:get-credentials'),

@@ -6,7 +6,7 @@ import path from 'path'
 import fs from 'fs'
 import os from 'os'
 import { emitEvent } from './ecosystem-bus'
-import { consumePendingAction } from './pendingActions'
+import { consumePendingAction, installPendingActionWatcher } from './pendingActions'
 import { registerAiHandlers } from './aiHandler'
 import { registerIpcHandlers, type AppRefs } from './ipc-handlers'
 import type { Playbook, PlaybookRun, SharedContext } from '../shared/types'
@@ -159,6 +159,9 @@ app.whenReady().then(() => {
       const pending = consumePendingAction('playbookstudio')
       if (pending) mainWindow?.webContents?.send('pending-action', pending.action)
     }, 800)
+    installPendingActionWatcher('playbookstudio', (action) => {
+      try { mainWindow?.webContents?.send('pending-action', action) } catch { /* ignore */ }
+    })
   })
 
   contextTimer = setInterval(pollContext, CONTEXT_POLL_MS)

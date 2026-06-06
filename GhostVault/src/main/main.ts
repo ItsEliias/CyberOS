@@ -7,7 +7,7 @@ import fs from 'fs';
 import os from 'os';
 import * as ecosystemBus from './ecosystem-bus.js';
 import { registerExtras, DEFAULT_CAPTURE_HOTKEY } from './ipc-extras.js';
-import { consumePendingAction } from './pendingActions.js';
+import { consumePendingAction, installPendingActionWatcher } from './pendingActions.js'
 import type { GhostVaultConfig, NoteFile, NewNoteResult, SaveCaptureResult } from '../shared/types.js';
 
 const APP_KEY = 'ghostvault';
@@ -316,6 +316,10 @@ function createWindow() {
         mainWindow.webContents.send('pending-action', result.action);
       }
     }, 800);
+    // Listen for tray-action writes while the app is already running
+    installPendingActionWatcher(APP_KEY, (action) => {
+      try { mainWindow?.webContents.send('pending-action', action) } catch { /* ignore */ }
+    })
   });
 
   mainWindow.on('close', () => {

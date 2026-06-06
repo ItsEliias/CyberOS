@@ -67,3 +67,44 @@ export function consumePendingAction(appKey: string): ConsumedAction | null {
     return null;
   }
 }
+
+
+// Watch ~/cybertools-config.json for new pending actions while the app is
+// already running. Debounced + de-duped: only the LATEST `requestedAt` for
+// the current appKey is acted on. The watcher fires `consumePendingAction`
+// itself so the entry is spliced out atomically.
+let watcherInstalled = false
+let lastSeenRequestedAt: string | null = null
+export function installPendingActionWatcher(
+  appKey: string,
+  send: (action: string) => void
+): void {
+  if (watcherInstalled) return
+  watcherInstalled = true
+  let debounce: NodeJS.Timeout | null = null
+  function check() {
+    try {
+      if (!fs.existsSync(CYBERTOOLS_CONFIG)) return
+      const raw = fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8')
+      const cfg = JSON.parse(raw) as Record<string, unknown>
+      const arr = (cfg as { pending_actions?: unknown }).pending_actions
+      if (!Array.isArray(arr)) return
+      const mine = arr.find(
+        (e: unknown) => !!e && typeof e === 'object' &&
+          (e as { app?: string }).app === appKey
+      ) as { action?: string; requestedAt?: string } | undefined
+      if (!mine?.action || mine.requestedAt === lastSeenRequestedAt) return
+      lastSeenRequestedAt = mine.requestedAt ?? null
+      const result = consumePendingAction(appKey)
+      if (result) send(result.action)
+    } catch { /* swallow */ }
+  }
+  try {
+    fs.watchFile(CYBERTOOLS_CONFIG, { interval: 1500 }, () => {
+      if (debounce) clearTimeout(debounce)
+      debounce = setTimeout(check, 100)
+    })
+  } catch { /* ignore */ }
+  // Initial check in case an action was queued between consume + watch.
+  setTimeout(check, 200)
+}
