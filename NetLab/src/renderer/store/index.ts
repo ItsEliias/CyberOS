@@ -75,6 +75,7 @@ interface NetLabState {
   updateLabNotes: (labId: string, notes: string) => void
   saveTopology: (t: Topology) => void
   addSnippet: (s: CommandSnippet) => void
+  deleteSnippet: (snippetId: string) => void
 }
 
 export const useNetLabStore = create<NetLabState>((set, get) => ({
@@ -150,5 +151,14 @@ export const useNetLabStore = create<NetLabState>((set, get) => ({
 
   addSnippet: (s) => {
     set(state => ({ snippets: [...state.snippets, s] }))
+  },
+
+  // Remove a single snippet by id. No persistence layer yet (see TODO above
+  // about main.ts IPC), so this is session-only — but at least the user can
+  // get rid of a typo'd or duplicate snippet without restarting the app.
+  // Built-in snippets carry stable ids; the UI is responsible for only
+  // exposing delete for custom snippets (id prefix 'custom-').
+  deleteSnippet: (snippetId) => {
+    set(state => ({ snippets: state.snippets.filter(s => s.id !== snippetId) }))
   },
 }))
