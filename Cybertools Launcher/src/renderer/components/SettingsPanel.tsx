@@ -92,14 +92,18 @@ export default function SettingsPanel({ open, config, onClose, onSave }: Props) 
                     />
                   </div>
                   {[
-                    { label: 'CyberLab Companion', field: 'cyberlab',     installed: config?.cyberlab?.installed },
-                    { label: 'VaultCore',           field: 'vaultscraper', installed: config?.vaultscraper?.installed },
-                    { label: 'GhostVault',          field: 'ghostvault',   installed: false },
-                    { label: 'ReconDesk',           field: 'recondesk',    installed: false },
-                    { label: 'SignalBoard',          field: 'signalboard',  installed: false },
-                    { label: 'CyberOS Dashboard',   field: 'cyberos',      installed: false },
-                  ].map(({ label, field, installed }) => {
+                    { label: 'CyberLab Companion', field: 'cyberlab' },
+                    { label: 'VaultCore',           field: 'vaultscraper' },
+                    { label: 'GhostVault',          field: 'ghostvault' },
+                    { label: 'ReconDesk',           field: 'recondesk' },
+                    { label: 'SignalBoard',          field: 'signalboard' },
+                    { label: 'CyberOS Dashboard',   field: 'cyberos' },
+                  ].map(({ label, field }) => {
                     const cfg = (config as Record<string, { execPath?: string; installed?: boolean }> | null)?.[field];
+                    // Treat any app with a configured execPath as installed.
+                    // The previous code hardcoded `installed: false` for 4 of
+                    // 6 entries, so the green-dot indicator was dead for them.
+                    const installed = cfg?.installed ?? !!cfg?.execPath;
                     return (
                       <div key={field}>
                         <div className="flex items-center gap-2 mb-1">
