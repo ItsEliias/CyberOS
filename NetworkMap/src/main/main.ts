@@ -181,17 +181,25 @@ ipcMain.handle('load-nmap-file-raw', async (): Promise<{ content: string; filena
   }
 })
 
-ipcMain.handle('export-svg', async (_e, svgContent: string, name: string): Promise<void> => {
+ipcMain.handle('export-svg', async (_e, svgContent: unknown, name: unknown): Promise<void> => {
   if (!mainWindow) return
+  if (typeof svgContent !== 'string' || !svgContent) return
+  // Bound the SVG body — a renderer bug could otherwise queue a 100 MB
+  // string with infinite repeating elements.
+  if (svgContent.length > 50 * 1024 * 1024) return
+  const safeName = (typeof name === 'string' ? name : 'graph').replace(/[^a-z0-9_-]/gi, '_') || 'graph'
   const result = await dialog.showSaveDialog(mainWindow, {
     title: 'Export SVG',
-    defaultPath: `${name.replace(/[^a-z0-9_-]/gi, '_')}.svg`,
+    defaultPath: `${safeName}.svg`,
     filters: [{ name: 'SVG', extensions: ['svg'] }],
   })
   if (result.canceled || !result.filePath) return
   try {
-    fs.writeFileSync(result.filePath, svgContent, 'utf8')
-    emitEvent('NetworkMap', 'graph:exported', { name, format: 'svg' })
+    // Atomic — partial SVG on crash leaves a malformed file.
+    const tmp = `${result.filePath}.tmp`
+    fs.writeFileSync(tmp, svgContent, 'utf8')
+    fs.renameSync(tmp, result.filePath)
+    emitEvent('NetworkMap', 'graph:exported', { name: safeName, format: 'svg' })
   } catch (e) {
     console.error('[NetworkMap] export-svg failed:', (e as Error).message)
   }
@@ -415,18 +423,25 @@ ipcMain.handle('recondesk:generate-graph', () => {
   }
 })
 
-ipcMain.handle('export-png', async (_e, dataUrl: string, name: string): Promise<void> => {
+ipcMain.handle('export-png', async (_e, dataUrl: unknown, name: unknown): Promise<void> => {
   if (!mainWindow) return
+  // Validate at the boundary: the dataUrl should be a small base64 PNG.
+  if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/png;base64,')) return
+  if (dataUrl.length > 50 * 1024 * 1024) return  // 50 MB cap
+  const safeName = (typeof name === 'string' ? name : 'graph').replace(/[^a-z0-9_-]/gi, '_') || 'graph'
   const result = await dialog.showSaveDialog(mainWindow, {
     title: 'Export PNG',
-    defaultPath: `${name.replace(/[^a-z0-9_-]/gi, '_')}.png`,
+    defaultPath: `${safeName}.png`,
     filters: [{ name: 'PNG', extensions: ['png'] }],
   })
   if (result.canceled || !result.filePath) return
   try {
-    const base64 = dataUrl.replace(/^data:image\/png;base64,/, '')
-    fs.writeFileSync(result.filePath, Buffer.from(base64, 'base64'))
-    emitEvent('NetworkMap', 'graph:exported', { name, format: 'png' })
+    const base64 = dataUrl.slice('data:image/png;base64,'.length)
+    // Atomic — partial PNG on crash would silently corrupt the file.
+    const tmp = `${result.filePath}.tmp`
+    fs.writeFileSync(tmp, Buffer.from(base64, 'base64'))
+    fs.renameSync(tmp, result.filePath)
+    emitEvent('NetworkMap', 'graph:exported', { name: safeName, format: 'png' })
   } catch (e) { console.error('[NetworkMap] export-png failed:', (e as Error).message) }
 })
 

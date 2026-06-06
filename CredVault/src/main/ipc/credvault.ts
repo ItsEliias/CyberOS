@@ -830,14 +830,8 @@ export function registerCredVaultHandlers(): void {
       .map(c => ({ id: c.id, service: c.service, username: c.username, ip: c.ip, targetName: c.targetName }))
   })
 
-  // ── Status helpers exposed for main.ts ────────────────────────────────────
-
-  ipcMain.handle('vault:write-status', (_e, locked: unknown) => {
-    // Coerce to a real boolean — without this a renderer call with the
-    // string "false" would mark the vault locked because of JS truthiness.
-    writeCredVaultStatus(locked === true, credCount())
-    return true
-  })
+  // (previously: vault:write-status — removed. No preload bridge ever
+  // exposed it to the renderer, so the IPC was unreachable dead code.)
 }
 
 export function isVaultLocked(): boolean {
