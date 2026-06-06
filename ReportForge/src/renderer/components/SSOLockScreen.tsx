@@ -1,6 +1,7 @@
 // ReportForge — Soft lock screen shown when "Require CredVault session" is
 // on and the shared SSO state reports CredVault as locked or expired.
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 
 interface Props {
@@ -8,8 +9,22 @@ interface Props {
 }
 
 export default function SSOLockScreen({ onCheck }: Props) {
+  const [notInstalled, setNotInstalled] = useState(false);
+  const [opening, setOpening]           = useState(false);
+
   async function openCredVault() {
-    try { await window.reportforge.openCredVault(); } catch { /* ignore */ }
+    setOpening(true);
+    let ok = false;
+    try { ok = (await window.reportforge.openCredVault()) === true; }
+    catch { ok = false; }
+    setOpening(false);
+    if (!ok) {
+      // Main returns false when /Applications/CredVault.app is missing.
+      // Surface that to the user — silent no-op is the original UX bug.
+      setNotInstalled(true);
+      return;
+    }
+    setNotInstalled(false);
     setTimeout(onCheck, 1500);
   }
 
@@ -53,18 +68,36 @@ export default function SSOLockScreen({ onCheck }: Props) {
             “Require CredVault session” in Settings.
           </span>
         </div>
+        {notInstalled && (
+          <div style={{
+            width: '100%',
+            padding: '8px 10px',
+            borderRadius: 8,
+            background: 'rgba(248,81,73,0.10)',
+            border: '1px solid rgba(248,81,73,0.35)',
+            color: '#f85149',
+            fontSize: 11,
+            lineHeight: 1.45,
+            textAlign: 'left',
+          }}>
+            CredVault is not installed. Install it from the CyberTools Launcher,
+            then click <strong>Check again</strong>.
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
           <button onClick={openCredVault}
+            disabled={opening}
             style={{
               padding: '8px 14px', borderRadius: 8,
               background: 'rgba(63,185,80,0.18)',
               border: '1px solid rgba(63,185,80,0.4)',
-              color: '#3fb950', cursor: 'pointer',
+              color: '#3fb950', cursor: opening ? 'progress' : 'pointer',
               fontSize: 12, fontWeight: 600,
+              opacity: opening ? 0.7 : 1,
             }}>
-            Open CredVault
+            {opening ? 'Opening…' : 'Open CredVault'}
           </button>
-          <button onClick={onCheck}
+          <button onClick={() => { setNotInstalled(false); onCheck(); }}
             style={{
               padding: '8px 14px', borderRadius: 8,
               background: 'transparent',
