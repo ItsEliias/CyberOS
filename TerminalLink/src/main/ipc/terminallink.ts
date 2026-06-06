@@ -287,10 +287,23 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
     try {
       const cfg = readConfig();
       const activeLab = ((cfg.shared_context as Record<string,unknown>)?.activeLab as string) ?? 'Unknown';
-      const base = path.join(
-        os.homedir(), 'Documents', 'CyberOS-Vault', 'TerminalLink',
-        folder ?? activeLab
-      );
+      // Sanitize the folder + activeLab as basename-only segments. Without
+      // this, a renderer can pass folder='../../../.ssh' (or activeLab can
+      // be poisoned via a sibling app writing the shared config) and we'd
+      // happily write outside ~/Documents/CyberOS-Vault/TerminalLink.
+      const sanitizeSegment = (s: string): string =>
+        s.replace(/[^a-zA-Z0-9_\- ]/g, '_').trim() || 'capture';
+      const baseRoot  = path.join(os.homedir(), 'Documents', 'CyberOS-Vault', 'TerminalLink');
+      const subFolder = sanitizeSegment(folder ?? activeLab);
+      const base      = path.join(baseRoot, subFolder);
+      // Defence-in-depth: resolve and confirm the final dir is still under
+      // baseRoot even after sanitization.
+      const resolvedBase = path.resolve(base);
+      const resolvedRoot = path.resolve(baseRoot);
+      const prefix = resolvedRoot.endsWith(path.sep) ? resolvedRoot : resolvedRoot + path.sep;
+      if (!resolvedBase.startsWith(prefix) && resolvedBase !== resolvedRoot) {
+        return { ok: false, path: '', error: 'folder escapes vault root' };
+      }
       fs.mkdirSync(base, { recursive: true });
       const safe = title.replace(/[^a-zA-Z0-9_\- ]/g, '_').trim() || 'capture';
       const filePath = path.join(base, `${safe}-${Date.now()}.txt`);
