@@ -416,12 +416,20 @@ ipcMain.handle('scrape-source-now',async (_, id) => {
 
 // Schedule-specific update — persists schedule + re-registers cron job and returns
 // the source with a freshly-computed nextRun. Renderer uses this from the modal.
-ipcMain.handle('update-source-schedule', (_, id: string, schedule: Record<string, unknown>) => {
+ipcMain.handle('update-source-schedule', (_, id: unknown, schedule: unknown) => {
+  // Validate at the boundary — id is used as a sourcelibrary lookup key,
+  // and schedule.cronExpression was force-cast to string before being
+  // handed to cron-parser. Both used to silently mis-behave on bad input.
+  if (typeof id !== 'string' || id.length === 0) return { error: 'Invalid id' };
+  if (schedule === null || typeof schedule !== 'object' || Array.isArray(schedule)) {
+    return { error: 'Invalid schedule payload' };
+  }
   const existing = sourcelibrary.getSourceById(id);
   if (!existing) return { error: 'Source not found' };
-  const nextRun = schedule?.enabled && schedule?.cronExpression
-    ? computeNextRun(schedule.cronExpression as string) : null;
-  const merged = { ...schedule, nextRun: nextRun ?? undefined };
+  const s = schedule as Record<string, unknown>;
+  const cron = typeof s.cronExpression === 'string' ? s.cronExpression : null;
+  const nextRun = s.enabled && cron ? computeNextRun(cron) : null;
+  const merged = { ...s, nextRun: nextRun ?? undefined };
   const updated = sourcelibrary.updateSource(id, { schedule: merged });
   scheduleSource(updated);
   return updated;
