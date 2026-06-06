@@ -761,13 +761,18 @@ ipcMain.handle('note:export:pdf', async (_, htmlContent: string, noteName: strin
 // so both naming conventions work without breaking existing renderer code.
 
 ipcMain.handle('ghostvault:vault:list', (_, vaultPath: string) => listVaultNotes(vaultPath));
-ipcMain.handle('ghostvault:note:read',  (_, filePath: string)  => readNote(filePath));
+ipcMain.handle('ghostvault:note:read',  (_, filePath: string)  => {
+  if (!isUnderVault(filePath)) return '';
+  return readNote(filePath);
+});
 ipcMain.handle('ghostvault:note:write', (_, filePath: string, content: string) => {
+  if (!isUnderVault(filePath)) return false;
   const ok = writeNote(filePath, content);
   if (ok) { lastCaptureTime = new Date().toISOString(); writeGhostVaultStatus(); }
   return ok;
 });
 ipcMain.handle('ghostvault:note:delete', (_, filePath: string) => {
+  if (!isUnderVault(filePath)) return false;
   const ok = deleteNote(filePath);
   if (ok) { vaultNoteCount = Math.max(0, vaultNoteCount - 1); writeGhostVaultStatus(); }
   return ok;
