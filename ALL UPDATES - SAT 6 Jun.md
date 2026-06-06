@@ -335,4 +335,89 @@ efd7c8b CyberOS: HelpTip "?" tooltip pass across 8 remaining apps
 d9bb5e9 CyberOS: fix black-screen rendering across 6 apps + launcher arm64
 ```
 
-— End of doc. Autonomous improvement loop continues from here.
+— End of original handoff doc.
+
+---
+
+## Autonomous improvement loop — segment 2 (Sun 7 Jun, 23 iterations)
+
+Direction: continue without prompting; ship one improvement at a time
+(change → tsc → build → install → commit → push). Direct merges to main
+were blocked by the auto-mode classifier mid-segment, so everything below
+is on `auto-design` waiting for review/merge.
+
+### SSO surface
+
+- **Launcher Header** gained a green/red SSO chip next to the VPN
+  indicator; click locks (when active) or jumps to CredVault (when
+  locked). Polls every 5 s; the chip text shows a live `SSO 12m`
+  countdown that turns amber under 2 min remaining.
+- **Launcher tray menu** now shows `CredVault session: active/locked`
+  inline and flips the next item between *Lock CredVault session* and
+  *Unlock CredVault…*. Refreshed every 7 s.
+- **Launcher** fires a desktop notification 90 s before the CredVault
+  session auto-locks, deduplicated per `expiresAt`.
+- **TermLink** got the same SSO soft-lock pattern the other sensitive
+  apps already had (lock screen + `Require CredVault session` toggle in
+  the palette under `tl:requireCredVaultSession`).
+- **TermLink, ReportForge, ReconDesk, VaultCore, GhostVault** —
+  the soft-lock could be bypassed by pressing ⌘K and toggling the
+  requirement off. Shortcuts and the command palette are now suppressed
+  while the lock screen is up, so the toggle stays out of reach until
+  the user unlocks CredVault.
+
+### Real bugs in the wild
+
+- **VaultCore "Run Update Now"** silently did nothing — the Launcher
+  was writing `vaultscraper_trigger` into the shared config, but no
+  client reads that field. Routed through the standard
+  `pending_actions: run-all-scrapes` queue VaultCore already handles.
+- **NetLab tray entry was always disabled** — `netlab` was missing from
+  `APP_FALLBACK_PRODUCTS`, so the installed-check resolved to
+  `undefined`. Added the entry plus a `launchApp` branch.
+- **`ActivityEntry` type union missed `netlab`** — the type guard
+  would reject any launcher-side activity tagged for NetLab.
+- **CredVault `vault:setup` / `vault:totp-verify`** opened a session
+  but never armed `resetLockTimer`. The vault decryption key sat in
+  memory indefinitely on first-time setup or after a 2FA verify.
+- **CredVault `refreshSession(0)`** silently wiped `expiresAt` to
+  null, so calling token rotation from `vault:change-password` turned
+  the active session into a never-expiring one. Now it preserves the
+  prior `expiresAt` when called with `autoLockMs=0`.
+- **CredVault shutdown leaked SSO state** — `window-all-closed` only
+  called `lockVault` when the window was still alive, which is never
+  the case by the time the event fires. Reworked + added a matching
+  hook to `before-quit` so Cmd+Q also tears the session down.
+- **Stale Touch ID password after password change** — `vault:change-
+  password` rotated the key but left the safeStorage-encrypted
+  password on disk. Next biometric unlock would silently fail. Now the
+  Touch ID file is deleted on change-password.
+- **Launcher backup leaked plaintext on error** — `encryptToFile` /
+  decrypted-tar paths only deleted their temp file on success.
+  Wrapped both in try/finally so the unencrypted tarball never sits in
+  `/tmp` after a failure.
+- **VaultCore backup used AES-256-CBC with no MAC** — tampering with
+  ciphertext silently produced wrong plaintext or padding errors with
+  no authentication. New exports use AES-256-GCM with a `VCBK` magic
+  header; CBC import path is kept so existing `.enc` files still
+  restore.
+- **`open-credvault` silently did nothing if CredVault wasn't
+  installed** — ReportForge, ReconDesk, VaultCore, GhostVault and
+  TermLink now check `/Applications/CredVault.app` exists before
+  spawning and return `false` otherwise.
+- **`detectVPN` flagged macOS utun0 as a live VPN** — the standard
+  Continuity / AirDrop interfaces always exist with only link-local
+  fe80:: addresses. Filter requires at least one non-loopback,
+  non-link-local address now.
+
+### Polish
+
+- **App-manager install** skips the full rebuild when the app bundle
+  already exists in `dist/`, so "Install →/Apps" on a freshly built
+  app just copies.
+- **ActivityFeed labels** — `app:launched` now shows the version when
+  present; added `app:opened` so cold-start events are friendly
+  instead of raw strings.
+
+Branch: `auto-design`. Direct merges to `main` blocked by classifier —
+merge via PR or grant a permission rule.
