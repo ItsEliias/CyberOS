@@ -30,7 +30,8 @@ const TABS: { id: ActiveTab; label: string }[] = [
 
 export default function App() {
   const onboarding      = useOnboarding()
-  const loadTargets     = useRecondeskStore(s => s.loadTargets)
+  const loadTargets         = useRecondeskStore(s => s.loadTargets)
+  const mergeExternalTargets = useRecondeskStore(s => s.mergeExternalTargets)
   const activeTargetId  = useRecondeskStore(s => s.activeTargetId)
   const activeTab       = useRecondeskStore(s => s.activeTab)
   const setActiveTab    = useRecondeskStore(s => s.setActiveTab)

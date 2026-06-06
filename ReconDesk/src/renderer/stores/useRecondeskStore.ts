@@ -78,6 +78,30 @@ export const useRecondeskStore = create<RecondeskState>((set, get) => ({
     } catch { /* first launch */ }
   },
 
+  // Reconciles the on-disk state with the in-memory state without overwriting
+  // user edits. We never replace an existing target by id — we only append
+  // new targets that an external writer (SignalBoard / NetworkMap) added.
+  // Engagements are merged the same way (append-only). activeTargetId is
+  // left alone so the user's current selection is preserved.
+  mergeExternalTargets: async () => {
+    try {
+      const data = await window.electronAPI.loadData()
+      if (!data || !Array.isArray(data.targets)) return
+      const incoming: Target[] = data.targets.map(normalizeTarget)
+      set(s => {
+        const known = new Set(s.targets.map(t => t.id))
+        const added = incoming.filter(t => !known.has(t.id))
+        const next = { targets: added.length > 0 ? [...s.targets, ...added] : s.targets } as Partial<RecondeskState>
+        if (data.engagements && Array.isArray(data.engagements)) {
+          const knownE = new Set(s.engagements.map(e => e.id))
+          const addedE = data.engagements.filter(e => !knownE.has(e.id))
+          if (addedE.length > 0) next.engagements = [...s.engagements, ...addedE]
+        }
+        return next
+      })
+    } catch { /* ignore — external watcher races are non-fatal */ }
+  },
+
   saveTargets: async () => {
     const { targets, activeTargetId, engagements } = get()
     // Strip plaintext passwords before persisting — CredVault owns encrypted storage
