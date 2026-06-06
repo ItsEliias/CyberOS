@@ -18,7 +18,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // ─── Constants ────────────────────────────────────────────────────────────────
 const APP_VERSION       = '1.0.0';
 const CONFIG_PATH       = path.join(os.homedir(), 'ghostvault-config.json');
-const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json');
+const CYBERTOOLS_CONFIG = sharedConfigPath();
 const DATA_DIR          = path.join(os.homedir(), '.ghostvault');
 const VAULT_FOLDERS     = ['Notes', 'Meetings', 'Projects', 'Study', 'Tasks', 'Archive'];
 
@@ -464,7 +464,7 @@ ipcMain.handle('get-version', ()        => APP_VERSION);
 // user has opted into "Require CredVault session".
 ipcMain.handle('get-sso', () => {
   try {
-    const cfgPath = path.join(os.homedir(), 'cybertools-config.json');
+    const cfgPath = sharedConfigPath();
     if (!fs.existsSync(cfgPath)) return { unlocked: false };
     const shared = JSON.parse(fs.readFileSync(cfgPath, 'utf8')) || {};
     const sso = shared.sso as { unlocked?: boolean; expiresAt?: string | null; unlockedAt?: string | null; token?: string | null } | undefined;

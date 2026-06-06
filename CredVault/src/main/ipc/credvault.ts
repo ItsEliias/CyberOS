@@ -5,6 +5,7 @@
 import { ipcMain, clipboard, dialog, BrowserWindow, systemPreferences, safeStorage } from 'electron'
 import fs from 'fs'
 import os from 'os'
+import { sharedConfigPath } from '../platform'
 import path from 'path'
 import https from 'https'
 import crypto from 'crypto'
@@ -29,7 +30,7 @@ import type {
 } from '../../shared/types'
 
 const APP_VERSION       = '1.0.0'
-const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')
+const CYBERTOOLS_CONFIG = sharedConfigPath()
 const APP_SUPPORT       = userDataDir('CredVault')
 const PREFS_FILE        = path.join(APP_SUPPORT, 'prefs.json')
 

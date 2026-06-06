@@ -394,7 +394,7 @@ ipcMain.handle('open-external', (_e, url: string) => {
 // ─── IPC: SSO soft-lock (shared with the rest of CyberOS) ────────────────────
 ipcMain.handle('get-sso', () => {
   try {
-    const cfgPath = path.join(os.homedir(), 'cybertools-config.json');
+    const cfgPath = sharedConfigPath();
     if (!fs.existsSync(cfgPath)) return { unlocked: false };
     const shared = JSON.parse(fs.readFileSync(cfgPath, 'utf8')) || {};
     const sso = shared.sso as { unlocked?: boolean; expiresAt?: string | null; unlockedAt?: string | null } | undefined;
@@ -421,7 +421,7 @@ ipcMain.handle('capture:save', async (_e, payload: CapturePayload) => {
 
     let savePath: string;
     if (payload.destination === 'ghostvault') {
-      const configPath = path.join(os.homedir(), 'cybertools-config.json');
+      const configPath = sharedConfigPath();
       let activeLab = 'Unknown';
       try {
         const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));

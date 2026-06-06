@@ -4,6 +4,7 @@ import { app, BrowserWindow, ipcMain, shell, Notification, Tray, nativeImage, di
 import path from 'path'
 import fs from 'fs'
 import os from 'os'
+import { sharedConfigPath } from './platform'
 import https from 'https'
 import { emitEvent } from './ecosystem-bus'
 import { consumePendingAction, installPendingActionWatcher } from './pendingActions'
@@ -17,7 +18,7 @@ import type {
 } from '../shared/types'
 
 const APP_VERSION       = '2.0.0'
-const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')
+const CYBERTOOLS_CONFIG = sharedConfigPath()
 const DATA_DIR          = path.join(os.homedir(), '.signalboard')
 const SETTINGS_FILE     = path.join(DATA_DIR, 'settings.json')
 const BOOKMARKS_FILE    = path.join(DATA_DIR, 'bookmarks.json')

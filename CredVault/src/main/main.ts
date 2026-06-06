@@ -6,6 +6,7 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import os from 'os'
+import { sharedConfigPath } from './platform'
 import { emitEvent } from './ecosystem-bus'
 import { registerCredVaultHandlers, setMainWindow, lockVault, writeCredVaultStatus, credCount, isVaultLocked } from './ipc/credvault'
 import { consumePendingAction, installPendingActionWatcher } from './pendingActions'
@@ -25,7 +26,7 @@ process.on('uncaughtException', (err) => {
 })
 
 const APP_VERSION       = '1.0.0'
-const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')
+const CYBERTOOLS_CONFIG = sharedConfigPath()
 
 // ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────
 // eslint-disable-next-line @typescript-eslint/no-require-imports
