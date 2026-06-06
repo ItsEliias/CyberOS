@@ -30,7 +30,7 @@ import type {
 
 const APP_VERSION       = '1.0.0'
 const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')
-const APP_SUPPORT       = path.join(os.homedir(), 'Library', 'Application Support', 'CredVault')
+const APP_SUPPORT       = userDataDir('CredVault')
 const PREFS_FILE        = path.join(APP_SUPPORT, 'prefs.json')
 
 // ─── In-memory vault state ────────────────────────────────────────────────────

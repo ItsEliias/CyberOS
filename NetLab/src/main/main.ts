@@ -7,13 +7,14 @@ import fs from 'fs'
 import os from 'os'
 import { emitEvent } from './ecosystem-bus'
 import { consumePendingAction, installPendingActionWatcher } from './pendingActions'
+import { userDataDir } from './platform'
 import type { Lab, LabProgress, NetLabPrefs } from '../shared/types'
 
 const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')
-const GHOSTVAULT_DIR    = path.join(os.homedir(), 'Library', 'Application Support', 'GhostVault')
+const GHOSTVAULT_DIR    = userDataDir('GhostVault')
 
 const APP_VERSION = '1.0.0'
-const DATA_DIR    = path.join(os.homedir(), 'Library', 'Application Support', 'NetLab')
+const DATA_DIR    = userDataDir('NetLab')
 const LABS_FILE   = path.join(DATA_DIR, 'labs.json')
 const PROGRESS_FILE = path.join(DATA_DIR, 'progress.json')
 const PREFS_FILE  = path.join(DATA_DIR, 'netlab-prefs.json')
