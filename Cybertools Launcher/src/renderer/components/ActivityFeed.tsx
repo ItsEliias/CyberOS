@@ -46,6 +46,13 @@ function labelFor(eventType: string, data: Record<string, unknown> | undefined):
     case 'app:launched':                 return d.version ? `Launched (v${d.version})` : 'Launched';
     case 'app:opened':                   return 'Opened';
     case 'app:closed':                   return 'Closed';
+    case 'session:started':              return 'Session started';
+    case 'capture:saved':                return d.destination
+                                                 ? `Capture saved (${d.destination})`
+                                                 : 'Capture saved';
+    case 'command:executed':             return d.commandCount
+                                                 ? `${d.commandCount} commands logged`
+                                                 : 'Command logged';
     case 'dashboard:launched':           return 'Dashboard opened';
     case 'dashboard:closed':             return 'Dashboard closed';
     case 'ghostvault.app.opened':        return 'GhostVault opened';
