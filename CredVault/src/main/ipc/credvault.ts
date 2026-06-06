@@ -624,7 +624,13 @@ export function registerCredVaultHandlers(): void {
 
   // ── HIBP breach check ─────────────────────────────────────────────────────
 
-  ipcMain.handle('vault:check-breach', async (_e, credId: string, password: string): Promise<BreachCheckResult> => {
+  ipcMain.handle('vault:check-breach', async (_e, credId: unknown, password: unknown): Promise<BreachCheckResult> => {
+    // hibpCheck hashes the password with sha1 — a non-string would throw
+    // sync inside crypto. credId is used as a cache key, which would
+    // silently coerce non-strings to '[object Object]'.
+    if (!isNonEmptyString(credId) || typeof password !== 'string') {
+      return { ok: false, error: 'Invalid credential id or password' }
+    }
     const cached = breachCache.get(credId)
     // Return cache if checked within last hour
     if (cached) {
