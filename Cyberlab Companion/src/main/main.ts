@@ -599,23 +599,28 @@ function registerIPC() {
     return true;
   });
 
-  ipcMain.handle('save-progress', (_, data: unknown) => {
-    try { fs.writeFileSync(PROGRESS_FILE, JSON.stringify(data, null, 2), 'utf8'); return true; } catch { return false; }
-  });
+  // Atomic JSON write — tmp + rename so a crash mid-write can't leave a
+  // half-written file that JSON.parse drops as null next launch, losing
+  // the user's progress / lab tracker / snippets.
+  function writeJsonAtomic(fp: string, data: unknown): boolean {
+    try {
+      const tmp = `${fp}.tmp`;
+      fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
+      fs.renameSync(tmp, fp);
+      return true;
+    } catch { return false; }
+  }
+  ipcMain.handle('save-progress', (_, data: unknown) => writeJsonAtomic(PROGRESS_FILE, data));
   ipcMain.handle('load-progress', () => {
     try { if (fs.existsSync(PROGRESS_FILE)) return JSON.parse(fs.readFileSync(PROGRESS_FILE, 'utf8')); } catch {}
     return null;
   });
-  ipcMain.handle('save-lab-tracker', (_, data: unknown) => {
-    try { fs.writeFileSync(LAB_TRACKER_FILE, JSON.stringify(data, null, 2), 'utf8'); return true; } catch { return false; }
-  });
+  ipcMain.handle('save-lab-tracker', (_, data: unknown) => writeJsonAtomic(LAB_TRACKER_FILE, data));
   ipcMain.handle('load-lab-tracker', () => {
     try { if (fs.existsSync(LAB_TRACKER_FILE)) return JSON.parse(fs.readFileSync(LAB_TRACKER_FILE, 'utf8')); } catch {}
     return null;
   });
-  ipcMain.handle('save-snippets', (_, data: unknown) => {
-    try { fs.writeFileSync(SNIPPETS_FILE, JSON.stringify(data, null, 2), 'utf8'); return true; } catch { return false; }
-  });
+  ipcMain.handle('save-snippets', (_, data: unknown) => writeJsonAtomic(SNIPPETS_FILE, data));
   ipcMain.handle('load-snippets', () => {
     try { if (fs.existsSync(SNIPPETS_FILE)) return JSON.parse(fs.readFileSync(SNIPPETS_FILE, 'utf8')); } catch {}
     return null;
@@ -635,16 +640,12 @@ function registerIPC() {
   ipcMain.handle('get-version', () => APP_VERSION);
   ipcMain.handle('get-platform', () => process.platform);
 
-  ipcMain.handle('save-knowledge-base', (_, data: unknown) => {
-    try { fs.writeFileSync(KNOWLEDGE_FILE, JSON.stringify(data, null, 2), 'utf8'); return true; } catch { return false; }
-  });
+  ipcMain.handle('save-knowledge-base', (_, data: unknown) => writeJsonAtomic(KNOWLEDGE_FILE, data));
   ipcMain.handle('load-knowledge-base', () => {
     try { if (fs.existsSync(KNOWLEDGE_FILE)) return JSON.parse(fs.readFileSync(KNOWLEDGE_FILE, 'utf8')); } catch {}
     return null;
   });
-  ipcMain.handle('save-lab-reviews', (_, data: unknown) => {
-    try { fs.writeFileSync(LAB_REVIEWS_FILE, JSON.stringify(data, null, 2), 'utf8'); return true; } catch { return false; }
-  });
+  ipcMain.handle('save-lab-reviews', (_, data: unknown) => writeJsonAtomic(LAB_REVIEWS_FILE, data));
   ipcMain.handle('load-lab-reviews', () => {
     try { if (fs.existsSync(LAB_REVIEWS_FILE)) return JSON.parse(fs.readFileSync(LAB_REVIEWS_FILE, 'utf8')); } catch {}
     return null;
