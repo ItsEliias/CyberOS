@@ -4,11 +4,24 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron';
 import fs from 'fs';
 import path from 'path';
-import { exec } from 'child_process';
+import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import crypto from 'crypto';
 
-const execAsync = promisify(exec);
+const execAsync     = promisify(exec);
+const execFileAsync = promisify(execFile);
+
+// Git branch / ref names are constrained by `git check-ref-format` rules.
+// We don't need to match those exactly — we just need to reject anything that
+// could escape a shell argument. Anything with shell metacharacters, control
+// chars, or `..` is rejected. This is paranoid by design: the renderer is the
+// only caller and it has no business sending those characters.
+function isSafeRefName(s: unknown): s is string {
+  if (typeof s !== 'string' || s.length === 0 || s.length > 200) return false;
+  // Reject anything outside printable ASCII or the safe ref-name punctuation set.
+  // Allowed: letters, digits, `-_./@+:`. Disallow ASCII control + shell metachars.
+  return /^[A-Za-z0-9_./@+:\-]+$/.test(s) && !s.includes('..');
+}
 
 const SECRET_PATTERNS = [
   { type: 'aws_key',     pattern: /AKIA[0-9A-Z]{16}/g },
@@ -97,10 +110,20 @@ export function registerSecretIpc(getWindow: () => BrowserWindow | null) {
     } catch (e) { return { error: (e as Error).message }; }
   });
 
-  ipcMain.handle('git-diff-branches', async (_, repoPath: string, b1: string, b2: string) => {
+  ipcMain.handle('git-diff-branches', async (_, repoPath: string, b1: unknown, b2: unknown) => {
     if (!repoPath) return { error: 'No repo path' };
+    // Branch names come from the renderer — refuse anything with shell
+    // metacharacters before passing to git. Use execFile (no shell) for
+    // belt-and-braces protection.
+    if (!isSafeRefName(b1) || !isSafeRefName(b2)) {
+      return { error: 'Invalid branch name' };
+    }
     try {
-      const { stdout } = await execAsync(`git diff "${b1}".."${b2}" --unified=3 --no-color`, { cwd: repoPath });
+      const { stdout } = await execFileAsync(
+        'git',
+        ['diff', `${b1}..${b2}`, '--unified=3', '--no-color'],
+        { cwd: repoPath, maxBuffer: 10 * 1024 * 1024 }
+      );
       return { diff: stdout };
     } catch (e) { return { error: (e as Error).message }; }
   });
@@ -141,9 +164,22 @@ export function registerSecretIpc(getWindow: () => BrowserWindow | null) {
     } catch (e) { return { error: (e as Error).message }; }
   });
 
-  ipcMain.handle('get-cert-expiry', async (_, certPath: string) => {
+  ipcMain.handle('get-cert-expiry', async (_, certPath: unknown) => {
+    // The renderer hands us a file path picked by the user. Validate it's a
+    // string + an existing file before shelling out, and use execFile so the
+    // path can't break out of the argv array (the old `exec("openssl ... ${path}")`
+    // was a shell-injection vector).
+    if (typeof certPath !== 'string' || certPath.length === 0) {
+      return { error: 'Invalid certificate path' };
+    }
     try {
-      const { stdout } = await execAsync(`openssl x509 -noout -enddate -in "${certPath}"`);
+      if (!fs.existsSync(certPath) || !fs.statSync(certPath).isFile()) {
+        return { error: 'Certificate file not found' };
+      }
+      const { stdout } = await execFileAsync(
+        'openssl',
+        ['x509', '-noout', '-enddate', '-in', certPath]
+      );
       const match = stdout.match(/notAfter=(.+)/);
       if (match) return { expiresAt: new Date(match[1].trim()).toISOString() };
       return { error: 'Could not parse expiry' };
