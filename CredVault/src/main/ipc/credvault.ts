@@ -802,12 +802,17 @@ export function registerCredVaultHandlers(): void {
 
   // ── Cross-app credential query ────────────────────────────────────────────
 
-  ipcMain.handle('credvault-search', (_e, query: { ip?: string; targetName?: string }): SearchResult[] => {
+  ipcMain.handle('credvault-search', (_e, query: unknown): SearchResult[] => {
     if (!vaultData) return []
+    // Sibling apps (ReconDesk, NetworkMap) call this via the ecosystem bus.
+    // A null payload used to crash on query.ip access — defend at the boundary.
+    if (!isObject(query)) return []
+    const ip         = typeof query.ip         === 'string' ? query.ip         : null
+    const targetName = typeof query.targetName === 'string' ? query.targetName : null
     return vaultData.credentials
       .filter(c => {
-        if (query.ip         && c.ip         === query.ip)         return true
-        if (query.targetName && c.targetName === query.targetName) return true
+        if (ip         && c.ip         === ip)         return true
+        if (targetName && c.targetName === targetName) return true
         return false
       })
       .map(c => ({ id: c.id, service: c.service, username: c.username, ip: c.ip, targetName: c.targetName }))
