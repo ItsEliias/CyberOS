@@ -183,6 +183,33 @@ function listVaultNotes(vaultPath: string): NoteFile[] {
 }
 
 // ─── Path confinement ────────────────────────────────────────────────────────
+// Validates a candidate vaultPath supplied via save-config. Must be an
+// absolute path strictly under the user's home directory — rejects empties,
+// relative paths, /etc, /private, /, /var, /tmp, /System, /Library, etc.
+// We allow setting the vault directly to $HOME but not to any system root.
+function isSafeVaultPath(p: unknown): boolean {
+  // Undefined / null is allowed (caller may want to unset).
+  if (p === undefined || p === null || p === '') return true;
+  if (typeof p !== 'string') return false;
+  try {
+    const resolved = path.resolve(p);
+    const home     = path.resolve(os.homedir());
+    if (!path.isAbsolute(resolved)) return false;
+    // Reject obvious system roots even if they happen to be under $HOME
+    // (unlikely, but cheap to check first).
+    const denyPrefixes = ['/etc', '/private', '/var', '/tmp', '/usr', '/bin', '/sbin', '/System', '/Library'];
+    for (const deny of denyPrefixes) {
+      if (resolved === deny || resolved.startsWith(deny + path.sep)) return false;
+    }
+    if (resolved === '/') return false;
+    // Require the candidate to be at or under the user's home directory.
+    const homePrefix = home.endsWith(path.sep) ? home : home + path.sep;
+    return resolved === home || resolved.startsWith(homePrefix);
+  } catch {
+    return false;
+  }
+}
+
 // Renderer-supplied paths must resolve inside the configured vault root.
 // Otherwise a compromised renderer can read SSH keys or overwrite shell rc
 // files via the note IPCs. Symlinks inside the vault are deliberately not
@@ -389,6 +416,15 @@ app.on('window-all-closed', () => {
 // ─── IPC ──────────────────────────────────────────────────────────────────────
 ipcMain.handle('get-config',  ()        => loadConfig());
 ipcMain.handle('save-config', (_, c: Partial<GhostVaultConfig>) => {
+  // Reject patches that try to point the vault at a system directory.
+  // Without this, a compromised renderer could set vaultPath=/etc/ and
+  // every subsequent write-note would persist under /etc.
+  if (c && Object.prototype.hasOwnProperty.call(c, 'vaultPath')) {
+    if (!isSafeVaultPath(c.vaultPath)) {
+      console.warn('[GhostVault] save-config rejected: unsafe vaultPath');
+      return false;
+    }
+  }
   const result = saveConfig(c);
   // Push theme changes to the capture window so it stays in sync
   if (c.theme && captureWindow && !captureWindow.isDestroyed()) {
