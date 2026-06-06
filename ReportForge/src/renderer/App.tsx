@@ -201,16 +201,25 @@ export default function App() {
 
   // ── Back to library ────────────────────────────────────────────────────────
   const handleBack = useCallback(async () => {
-    // Auto-save on back if dirty
+    // Auto-save on back if dirty. If the save fails (disk full, permission
+    // denied, main IPC down) we previously navigated away anyway and the
+    // in-memory dirty edits were silently lost. Stay on the editor with a
+    // visible toast so the user can retry, fix the cause, or copy the work
+    // out before losing it.
     const { activeReport: r, dirty: d } = useStore.getState();
     if (d && r) {
-      await window.reportforge.saveReport(r);
+      const ok = await window.reportforge.saveReport(r);
+      if (!ok) {
+        addToast('Save failed — stayed on editor so you can retry', 'error');
+        return;
+      }
       upsertReport(r);
+      setDirty(false);
       setLastSavedAt(new Date());
     }
     setView('library');
     setActiveReport(null);
-  }, [setView, setActiveReport, upsertReport]);
+  }, [setView, setActiveReport, upsertReport, setDirty, addToast]);
 
   // ── Export: open modal (with format pre-selected) ─────────────────────────
   const handleOpenExportModal = useCallback((format?: 'markdown' | 'pdf') => {
