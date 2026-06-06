@@ -119,11 +119,19 @@ if (!app.requestSingleInstanceLock()) {
   app.on('window-all-closed', () => {
     if (statusInterval)  clearInterval(statusInterval)
     if (pendingInterval) clearInterval(pendingInterval)
-    if (mainWindow && !mainWindow.isDestroyed()) lockVault('app closed')
+    // Always tear the session down on close — the previous guard required
+    // a still-live mainWindow, which never holds once the window is closed,
+    // so the SSO state was leaking past the app shutting down.
+    try { lockVault('app closed') } catch { /* ignore */ }
     app.quit()
   })
 
-  app.on('before-quit', () => { configWatcher?.close() })
+  app.on('before-quit', () => {
+    configWatcher?.close()
+    // Also lock on explicit Cmd+Q so the ecosystem SSO state never outlives
+    // the CredVault process.
+    try { lockVault('app quitting') } catch { /* ignore */ }
+  })
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
