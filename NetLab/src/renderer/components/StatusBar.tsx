@@ -12,12 +12,20 @@ export default function StatusBar() {
 
   useEffect(() => {
     if (!labStartTime) { setElapsed(0); return }
+    // Sync immediately so the bar doesn't display '0s' for the first
+    // second after a lab starts (or after resuming with a non-zero
+    // existing elapsed). Then tick every second.
+    setElapsed(Date.now() - labStartTime)
     const id = setInterval(() => setElapsed(Date.now() - labStartTime), 1000)
     return () => clearInterval(id)
   }, [labStartTime])
 
   function formatElapsed(ms: number): string {
-    const s = Math.floor(ms / 1000)
+    // Clamp: a backward clock jump between labStartTime and Date.now()
+    // would otherwise produce negative seconds and render '-3s' in the
+    // status bar.
+    const safe = Number.isFinite(ms) && ms > 0 ? ms : 0
+    const s = Math.floor(safe / 1000)
     const m = Math.floor(s / 60)
     const h = Math.floor(m / 60)
     if (h > 0) return `${h}h ${m % 60}m`
