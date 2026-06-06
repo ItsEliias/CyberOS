@@ -156,7 +156,12 @@ function writeCredVaultStatus(locked: boolean, count: number): void {
       locked,
     }
     shared.credvault_status = status
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8')
+    // Atomic — every sibling app polls this file every few seconds. A torn
+    // write (process killed mid-flush, disk full) corrupts JSON suite-wide
+    // and forces every running app back to the SSO lock screen.
+    const tmp = `${CYBERTOOLS_CONFIG}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(shared, null, 2), 'utf8')
+    fs.renameSync(tmp, CYBERTOOLS_CONFIG)
   } catch (e) {
     console.warn('[CredVault] status write failed:', (e as Error).message)
   }
@@ -179,7 +184,11 @@ function writePending(items: PendingCredential[]): void {
       try { shared = JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8')) } catch {}
     }
     shared.credvault_pending = items
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8')
+    // Atomic — see writeCredVaultStatus for the same rationale; every CyberOS
+    // app polls this file and a torn write corrupts SSO state suite-wide.
+    const tmp = `${CYBERTOOLS_CONFIG}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(shared, null, 2), 'utf8')
+    fs.renameSync(tmp, CYBERTOOLS_CONFIG)
   } catch (e) {
     console.warn('[CredVault] writePending failed:', (e as Error).message)
   }
@@ -738,7 +747,12 @@ export function registerCredVaultHandlers(): void {
 
   ipcMain.handle('pending:get', (): PendingCredential[] => readPending())
 
-  ipcMain.handle('pending:approve', (_e, index: number): PendingCredential | null => {
+  ipcMain.handle('pending:approve', (_e, index: unknown): PendingCredential | null => {
+    // `index` used to be 'number' but a renderer bug passing undefined
+    // would fall through both bounds checks (undefined < 0 === false,
+    // undefined >= n === false) and splice(undefined, 1) silently approves
+    // the first item. Be explicit at the boundary.
+    if (typeof index !== 'number' || !Number.isInteger(index)) return null
     const items = readPending()
     if (index < 0 || index >= items.length) return null
     const [approved] = items.splice(index, 1)
@@ -746,7 +760,8 @@ export function registerCredVaultHandlers(): void {
     return approved
   })
 
-  ipcMain.handle('pending:dismiss', (_e, index: number): boolean => {
+  ipcMain.handle('pending:dismiss', (_e, index: unknown): boolean => {
+    if (typeof index !== 'number' || !Number.isInteger(index)) return false
     const items = readPending()
     if (index < 0 || index >= items.length) return false
     items.splice(index, 1)
