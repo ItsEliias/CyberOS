@@ -643,14 +643,16 @@ export function saveItemToVault(item: FeedItem, vaultPath: string): boolean {
 
     const md = [
       '---',
-      `title: "${item.title.replace(/"/g, '\\"')}"`,
-      `source: ${item.sourceName}`,
-      `url: ${item.url}`,
+      // YAML accepts JSON-style strings — JSON.stringify handles every
+      // escape edge case (quotes, backslashes, control bytes, newlines).
+      `title: ${JSON.stringify(item.title)}`,
+      `source: ${JSON.stringify(item.sourceName)}`,
+      `url: ${JSON.stringify(item.url)}`,
       `saved_at: ${new Date().toISOString()}`,
       `published: ${item.publishedAt}`,
       `relevance_score: ${item.relevanceScore}`,
       `relevance_tier: ${item.relevanceTier}`,
-      item.tags.length ? `tags:\n${item.tags.map(t => `  - ${t}`).join('\n')}` : 'tags: []',
+      item.tags.length ? `tags:\n${item.tags.map(t => `  - ${JSON.stringify(t)}`).join('\n')}` : 'tags: []',
       '---',
       '',
       `# ${item.title}`,
@@ -664,7 +666,11 @@ export function saveItemToVault(item: FeedItem, vaultPath: string): boolean {
       `[Read full article →](${item.url})`,
     ].join('\n')
 
-    fs.writeFileSync(file, md, 'utf8')
+    // Atomic write — partial markdown on crash would render as a broken
+    // file in the user's vault that they'd have to manually clean up.
+    const tmp = `${file}.tmp`
+    fs.writeFileSync(tmp, md, 'utf8')
+    fs.renameSync(tmp, file)
     return true
   } catch (e) {
     console.error('[SignalBoard] vault save failed:', (e as Error).message)
