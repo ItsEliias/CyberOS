@@ -34,6 +34,14 @@ function loadReports(): Report[] {
   return [];
 }
 
+// Atomic write — tmp + rename so a crash mid-write can't leave a half-written
+// cybertools-config.json that breaks every cooperating CyberOS app.
+function writeSharedConfigAtomic(cfg: unknown): void {
+  const tmp = `${CYBERTOOLS_CONFIG}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(cfg, null, 2), 'utf8');
+  fs.renameSync(tmp, CYBERTOOLS_CONFIG);
+}
+
 function saveReports(reports: Report[]): boolean {
   try {
     // Atomic write — a crash mid-fs.writeFileSync used to leave a half-written
@@ -65,7 +73,7 @@ function writeReportForgeStatus() {
       lastActive  : new Date().toISOString(),
       reportCount : reports.length
     };
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8');
+    writeSharedConfigAtomic(shared);
   } catch (e) {
     console.warn('[ReportForge] status write failed:', (e as Error).message);
   }
@@ -82,7 +90,7 @@ function stopStatusWriter() {
     if (fs.existsSync(CYBERTOOLS_CONFIG)) {
       const shared = readSharedConfig();
       if (shared.reportforge_status) (shared.reportforge_status as Record<string, unknown>).active = false;
-      fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8');
+      writeSharedConfigAtomic(shared);
     }
   } catch (_) {}
 }
@@ -448,7 +456,7 @@ ipcMain.handle('reportforge:clear-ghostvault-export', (): boolean => {
   try {
     const shared = readSharedConfig();
     delete shared.ghostvault_export;
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8');
+    writeSharedConfigAtomic(shared);
     return true;
   } catch { return false; }
 });
