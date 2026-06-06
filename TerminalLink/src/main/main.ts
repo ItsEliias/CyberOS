@@ -160,6 +160,26 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 // ─── IPC: PTY ─────────────────────────────────────────────────────────────────
+// Strip env keys that can inject arbitrary code into the spawned shell. A
+// parent process that launched TerminalLink with DYLD_INSERT_LIBRARIES set
+// would otherwise have those vars flow straight into every PTY we spawn,
+// which is how dylib-injection attacks pivot from one process to a forest.
+function ptyCreateSafeEnv(extra: Record<string, string>): NodeJS.ProcessEnv {
+  const out: NodeJS.ProcessEnv = {};
+  for (const [k, v] of Object.entries(process.env)) {
+    if (v === undefined) continue;
+    if (k.startsWith('DYLD_')) continue;
+    if (k === 'LD_PRELOAD' || k === 'LD_LIBRARY_PATH' || k.startsWith('LD_AUDIT')) continue;
+    out[k] = v;
+  }
+  for (const [k, v] of Object.entries(extra)) {
+    if (k.startsWith('DYLD_')) continue;
+    if (k === 'LD_PRELOAD' || k === 'LD_LIBRARY_PATH' || k.startsWith('LD_AUDIT')) continue;
+    out[k] = v;
+  }
+  return out;
+}
+
 ipcMain.handle('pty-create', (_evt, { id, cols, rows }: { id: string; cols: number; rows: number }) => {
   try {
     const cfg = readConfig();
@@ -172,12 +192,11 @@ ipcMain.handle('pty-create', (_evt, { id, cols, rows }: { id: string; cols: numb
       cols: cols || 80,
       rows: rows || 24,
       cwd: process.env.HOME,
-      env: {
-        ...process.env,
+      env: ptyCreateSafeEnv({
         TARGET:    activeTarget,
         TARGET_IP: activeIP,
-        TERM:      'xterm-256color'
-      }
+        TERM:      'xterm-256color',
+      }),
     });
 
     proc.onData((data: string) => {
