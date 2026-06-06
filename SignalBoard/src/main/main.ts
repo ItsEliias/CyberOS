@@ -94,6 +94,20 @@ function writeStatus(items: FeedItem[], lastRefresh: string): void {
   } catch { /* non-critical */ }
 }
 
+// IPC boundary: only http(s) URLs may be added/probed/updated as feed sources.
+// Without this, a malformed renderer message (or a poisoned import file later
+// on) could persist `file://`, `javascript:`, `data:`, or other schemes into
+// sources.json — at best they'd silently fail to fetch, at worst they'd be a
+// vector for local file disclosure if fetchUrl ever switches to a generic
+// client. Validate at the boundary, not at the parser.
+function isSafeFeedUrl(url: unknown): url is string {
+  if (typeof url !== 'string' || !url.trim()) return false
+  try {
+    const u = new URL(url.trim())
+    return u.protocol === 'http:' || u.protocol === 'https:'
+  } catch { return false }
+}
+
 function loadSettings(): AppSettings {
   try {
     ensureDir()
@@ -373,6 +387,13 @@ ipcMain.handle('feeds:toggle-source', (_e, id: string) => {
 })
 
 ipcMain.handle('feeds:update-source', (_e, id: string, patch: Partial<FeedSource>) => {
+  // If the patch tries to change `url`, validate it the same way as add-source.
+  // Existing source.type is used to allow GitHub slug updates.
+  if (patch && 'url' in patch) {
+    const existing = sources.find(s => s.id === id)
+    const effectiveType = patch.type ?? existing?.type
+    if (effectiveType !== 'github' && !isSafeFeedUrl(patch.url)) return sources
+  }
   sources = sources.map(s => s.id === id ? { ...s, ...patch } : s)
   saveSources(sources)
   schedulePerSourceTimers()
@@ -380,6 +401,9 @@ ipcMain.handle('feeds:update-source', (_e, id: string, patch: Partial<FeedSource
 })
 
 ipcMain.handle('feeds:add-source', (_e, src: Omit<FeedSource, 'id' | 'color' | 'itemCount' | 'errorCount'>) => {
+  // GitHub feeds store the repo slug ("owner/repo"), not a URL — let those
+  // through. Everything else must be http(s).
+  if (src?.type !== 'github' && !isSafeFeedUrl(src?.url)) return sources
   const id = `custom-${Date.now()}`
   const newSource: FeedSource = { ...src, id, color: '#ff6b6b', itemCount: 0, errorCount: 0 }
   sources = [...sources, newSource]
@@ -428,6 +452,7 @@ ipcMain.handle('feeds:test-source', async (_e, url: string) => {
 // Probe a custom-feed URL: returns {ok, type, title, count} so the Custom Feeds UI can
 // auto-detect rss/atom and seed the source name from the feed's own <title>.
 ipcMain.handle('feeds:probe-feed', async (_e, url: string) => {
+  if (!isSafeFeedUrl(url)) return { ok: false as const, error: 'Only http(s) URLs are supported.' }
   return probeFeed(url)
 })
 
