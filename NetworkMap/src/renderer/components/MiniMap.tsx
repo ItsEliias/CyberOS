@@ -1,5 +1,5 @@
 // NetworkMap — MiniMap.tsx — Feature 7: 160x120 mini-map with viewport rect + node type legend
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { NetworkNode } from '@shared/types'
 
@@ -49,6 +49,13 @@ export default function MiniMap({ nodes, transform, canvasW, canvasH, onPan }: P
       return next
     })
   }
+
+  // Allow the command palette to toggle the minimap remotely
+  useEffect(() => {
+    function onToggle() { toggleCollapse() }
+    window.addEventListener('networkmap:toggle-minimap', onToggle)
+    return () => window.removeEventListener('networkmap:toggle-minimap', onToggle)
+  }, [])
 
   if (nodes.length === 0) return null
 

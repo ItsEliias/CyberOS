@@ -368,15 +368,15 @@ function StatusDot({ connected, error }: { connected: boolean; error: boolean })
 
 export default function ApiConnections({ onChange }: { onChange?: () => void }) {
   return (
-    <div className="space-y-3">
+    <div id="api-connections" className="space-y-3">
       <div className="flex items-center gap-2">
         <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-dim)' }}>
           API Connections
         </h3>
         <HelpIcon text="Connect to HackTheBox and TryHackMe to auto-sync your stats, active machines, and recent activity. All tokens are encrypted at rest with Electron safeStorage and never leave this machine." label="About API Connections" />
       </div>
-      <HtbCard onChange={onChange} />
-      <ThmCard onChange={onChange} />
+      <div id="api-connections-htb"><HtbCard onChange={onChange} /></div>
+      <div id="api-connections-thm"><ThmCard onChange={onChange} /></div>
     </div>
   );
 }

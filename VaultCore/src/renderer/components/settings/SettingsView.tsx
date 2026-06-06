@@ -9,6 +9,30 @@ import type { SourceInterval, TagRule } from '../../types/vaultcore';
 
 const INTERVALS: SourceInterval[] = ['hourly', 'daily', 'weekly', 'manual'];
 
+function SSORequireToggle() {
+  const config = useStore(s => s.config);
+  const setConfig = useStore(s => s.setConfig);
+  const enabled = (config as { requireCredVaultSession?: boolean } | null)?.requireCredVaultSession === true;
+  const onToggle = async () => {
+    const next = !enabled;
+    await window.electronAPI.setConfig('requireCredVaultSession', next);
+    if (config) setConfig({ ...(config as Record<string, unknown>), requireCredVaultSession: next } as unknown as never);
+  };
+  return (
+    <button
+      onClick={onToggle}
+      className="px-3 py-1.5 rounded-lg text-xs border transition-colors"
+      style={{
+        background: enabled ? 'rgba(63,185,80,0.15)' : 'transparent',
+        borderColor: enabled ? 'rgba(63,185,80,0.4)' : 'var(--border)',
+        color: enabled ? '#3fb950' : 'var(--text-muted)',
+      }}
+    >
+      {enabled ? 'ON' : 'OFF'}
+    </button>
+  );
+}
+
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
@@ -397,6 +421,15 @@ export default function SettingsView() {
                 Import Backup
               </button>
             </div>
+          </Row>
+        </Section>
+
+        <Section title="Security">
+          <Row
+            label="Require CredVault session"
+            description="Soft-lock VaultCore until CredVault is unlocked. Status re-checks every 5 seconds; the lock screen offers a one-click jump back to CredVault."
+          >
+            <SSORequireToggle />
           </Row>
         </Section>
       </div>

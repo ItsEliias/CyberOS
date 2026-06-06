@@ -16,6 +16,8 @@ import SecretDetectionView from './components/secrets/SecretDetectionView';
 import type { CoreTheme, PersonalityTheme } from '@shared/types';
 import type { ScrapingSource } from './types/vaultcore';
 import OnboardingModal, { useOnboarding } from './components/OnboardingModal';
+import CommandPalette from './components/CommandPalette';
+import SSOLockScreen from './components/SSOLockScreen';
 
 function applyTheme(core: CoreTheme | string, personality: PersonalityTheme | string) {
   document.documentElement.setAttribute('data-core', core as string);
@@ -39,7 +41,35 @@ export default function App() {
 
   const [ready, setReady] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [ssoUnlocked, setSsoUnlocked] = useState<boolean | null>(null);
+
+  // SSO soft-lock poll — every 5s, see if CredVault has a live session.
+  useEffect(() => {
+    let cancelled = false;
+    async function check() {
+      try {
+        const r = await window.electronAPI.getSSO();
+        if (!cancelled) setSsoUnlocked(!!r.unlocked);
+      } catch { if (!cancelled) setSsoUnlocked(true); }
+    }
+    void check();
+    const t = setInterval(check, 5000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, []);
   const onboarding = useOnboarding();
+
+  // ⌘K command palette toggle
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen(v => !v);
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // ── Boot ──────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -180,8 +210,17 @@ export default function App() {
 
   if (showWizard) return <SetupWizard onComplete={handleWizardComplete} />;
 
+  const requireSSO = (config as { requireCredVaultSession?: boolean } | null)?.requireCredVaultSession === true;
+  const ssoBlocked = requireSSO && ssoUnlocked === false;
+
   return (
     <div className="w-full h-full flex flex-col overflow-hidden" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
+      {ssoBlocked && (
+        <SSOLockScreen onCheck={async () => {
+          const r = await window.electronAPI.getSSO();
+          setSsoUnlocked(!!r.unlocked);
+        }} />
+      )}
       <Header onHelp={onboarding.open} />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
@@ -222,6 +261,7 @@ export default function App() {
       )}
       <TagReviewModal />
       {onboarding.show && <OnboardingModal onClose={onboarding.close} />}
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   );
 }

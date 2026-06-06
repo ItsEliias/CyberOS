@@ -112,6 +112,13 @@ export default function GraphCanvas({ graph: initialGraph, savedGraphs, allScans
     setDiffResult(computeDiff(allScans[diffBase]?.nodes ?? [], allScans[diffLatest]?.nodes ?? []))
   }, [compareMode, diffBase, diffLatest, allScans])
 
+  // Listen for palette-dispatched "clear all filters"
+  useEffect(() => {
+    function onClear() { setFilters(EMPTY_FILTERS) }
+    window.addEventListener('networkmap:clear-filters', onClear)
+    return () => window.removeEventListener('networkmap:clear-filters', onClear)
+  }, [])
+
   // ─── Derived state ─────────────────────────────────────────────────────────
   const searchMatches = useMemo(() => {
     if (!searchQuery.trim()) return null

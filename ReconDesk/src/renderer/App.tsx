@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRecondeskStore } from './stores/useRecondeskStore'
 import Sidebar from './components/layout/Sidebar'
@@ -12,6 +12,7 @@ import TimelineTab from './components/target/TimelineTab'
 import ExportTab from './components/target/ExportTab'
 import SettingsPanel from './components/target/SettingsPanel'
 import GlobalSearch from './components/GlobalSearch'
+import CommandPalette from './components/CommandPalette'
 import CalendarView from './components/CalendarView'
 import OnboardingModal, { useOnboarding } from './components/OnboardingModal'
 import type { ActiveTab } from './stores/useRecondeskStore'
@@ -38,6 +39,21 @@ export default function App() {
   const dismissToast    = useRecondeskStore(s => s.dismissToast)
 
   const activeTarget    = targets.find(t => t.id === activeTargetId)
+
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  const closePalette = useCallback(() => setPaletteOpen(false), [])
+
+  // ⌘K → command palette
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 'k') {
+        e.preventDefault()
+        setPaletteOpen(v => !v)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   useEffect(() => {
     loadTargets()
@@ -147,8 +163,11 @@ export default function App() {
 
       <StatusBar />
 
-      {/* Global Search (Cmd+K) */}
+      {/* Global Search (Cmd+Shift+F) */}
       <GlobalSearch />
+
+      {/* Command Palette (Cmd+K) */}
+      <CommandPalette open={paletteOpen} onClose={closePalette} />
 
       {/* Toast stack */}
       <div className="fixed bottom-8 right-4 z-50 flex flex-col gap-2 items-end">

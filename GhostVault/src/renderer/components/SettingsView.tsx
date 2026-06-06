@@ -251,6 +251,19 @@ export default function SettingsView({ ollamaModels, onOllamaRefresh }: Props) {
               <div className="text-[11px]" style={{ color: 'var(--text-dim)' }}>Keep GhostVault above other windows</div>
             </div>
           </label>
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox"
+              defaultChecked={(config as { requireCredVaultSession?: boolean } | undefined)?.requireCredVaultSession === true}
+              onChange={e => { void window.ghostvault.saveConfig({ requireCredVaultSession: e.target.checked } as never); }}
+              className="w-4 h-4" />
+            <div>
+              <div className="text-sm flex items-center gap-1.5" style={{ color: 'var(--text)' }}>
+                Require CredVault session
+                <HelpTip body="Soft-locks GhostVault when CredVault is locked or its session has expired. Re-checks every 5 seconds. The lock screen offers a one-click jump back to CredVault." />
+              </div>
+              <div className="text-[11px]" style={{ color: 'var(--text-dim)' }}>Single-sign-on style — one unlock everywhere</div>
+            </div>
+          </label>
         </div>
       </section>
 

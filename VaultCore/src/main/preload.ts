@@ -163,6 +163,12 @@ const api = {
 
   credvaultPush: (entries: unknown[]) =>
     ipcRenderer.invoke('credvault-push', entries) as Promise<{ success?: boolean; error?: string }>,
+
+  // SSO soft-lock: ask main whether CredVault has an active session.
+  getSSO       : () =>
+    ipcRenderer.invoke('get-sso') as Promise<{ unlocked: boolean; expiresAt?: string | null }>,
+  openCredVault: () =>
+    ipcRenderer.invoke('open-credvault') as Promise<boolean>,
 };
 
 contextBridge.exposeInMainWorld('electronAPI', api);

@@ -8,6 +8,7 @@ import type { AppConfig } from '@shared/types';
 import SetupWizard from './components/SetupWizard';
 import MainLayout from './components/MainLayout';
 import OnboardingModal, { useOnboarding } from './components/OnboardingModal';
+import CommandPalette from './components/CommandPalette';
 
 let ghostVaultToastCb: ((msg: string) => void) | null = null;
 export function setGhostVaultToastCb(cb: (msg: string) => void) { ghostVaultToastCb = cb; }
@@ -40,6 +41,7 @@ export default function App() {
   const { setConfig, setSetupComplete, setApiKeyConfigured, setProgressData, setLabsData, setSnippetsData, setupComplete, apiKeyConfigured, config } = useStore();
   const [loading, setLoading] = useState(true);
   const [ghostVaultToast, setGhostVaultToast] = useState('');
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onboarding = useOnboarding();
 
@@ -50,6 +52,18 @@ export default function App() {
       toastTimer.current = setTimeout(() => setGhostVaultToast(''), 3000);
     });
     return () => { if (toastTimer.current) clearTimeout(toastTimer.current); };
+  }, []);
+
+  // ── ⌘K command palette ─────────────────────────────────────────────────────
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen(o => !o);
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
   useEffect(() => {
@@ -195,6 +209,7 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </>
   );
 }

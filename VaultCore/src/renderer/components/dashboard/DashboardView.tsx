@@ -206,6 +206,20 @@ export default function DashboardView() {
     window.electronAPI.stopScrape();
   }
 
+  // ── Command palette wiring ──────────────────────────────────────────────
+  // The ⌘K palette dispatches these events. We re-bind on every render so the
+  // handlers always close over the latest `handleScrapeAll`/`handleRefreshStats`.
+  useEffect(() => {
+    const runAll  = () => { void handleScrapeAll(); };
+    const refresh = () => { void handleRefreshStats(); };
+    window.addEventListener('vc:run-all',        runAll);
+    window.addEventListener('vc:refresh-stats',  refresh);
+    return () => {
+      window.removeEventListener('vc:run-all',        runAll);
+      window.removeEventListener('vc:refresh-stats',  refresh);
+    };
+  });
+
   const noVault = !vaultPath;
 
   return (

@@ -360,6 +360,30 @@ ipcMain.handle('save-config', (_, c: Partial<GhostVaultConfig>) => {
 });
 ipcMain.handle('get-version', ()        => APP_VERSION);
 
+// ─── SSO state (read from shared cybertools-config.json) ─────────────────────
+// Returns the CredVault SSO state so the renderer can soft-lock when the
+// user has opted into "Require CredVault session".
+ipcMain.handle('get-sso', () => {
+  try {
+    const cfgPath = path.join(os.homedir(), 'cybertools-config.json');
+    if (!fs.existsSync(cfgPath)) return { unlocked: false };
+    const shared = JSON.parse(fs.readFileSync(cfgPath, 'utf8')) || {};
+    const sso = shared.sso as { unlocked?: boolean; expiresAt?: string | null; unlockedAt?: string | null; token?: string | null } | undefined;
+    if (!sso?.unlocked) return { unlocked: false };
+    if (sso.expiresAt && new Date(sso.expiresAt).getTime() < Date.now()) return { unlocked: false };
+    return { unlocked: true, unlockedAt: sso.unlockedAt, expiresAt: sso.expiresAt };
+  } catch { return { unlocked: false }; }
+});
+
+// Cross-app: open CredVault from the lock screen.
+ipcMain.handle('open-credvault', () => {
+  try {
+    const { spawn } = require('child_process') as typeof import('child_process');
+    spawn('open', ['/Applications/CredVault.app'], { detached: true, stdio: 'ignore' }).unref();
+    return true;
+  } catch { return false; }
+});
+
 ipcMain.handle('ecosystem-emit', (_, appName: string, eventType: string, data: Record<string, unknown>) => {
   ecosystemBus.emitEvent(appName, eventType, data);
   return true;

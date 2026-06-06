@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useStore } from './store'
 import { playAutoLock } from './utils/audioNotify'
 import LockScreen from './components/LockScreen'
@@ -9,6 +9,7 @@ import VaultView from './components/VaultView'
 import ImportView from './components/ImportView'
 import SettingsView from './components/SettingsView'
 import OnboardingModal, { useOnboarding } from './components/OnboardingModal'
+import CommandPalette from './components/CommandPalette'
 
 const IDLE_EVENTS = ['mousemove', 'mousedown', 'keydown', 'wheel', 'touchstart'] as const
 
@@ -25,8 +26,23 @@ export default function App() {
   const setVersion      = useStore(s => s.setVersion)
   const setPendingCount = useStore(s => s.setPendingCount)
 
+  // ⌘K command palette
+  const [paletteOpen, setPaletteOpen] = useState(false)
+
   // Idle timer — throttle to at most one reset per 10s
   const lastResetRef = useRef(0)
+
+  // Global ⌘K listener — only when vault is unlocked
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setPaletteOpen(v => !v)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   // Bootstrap: check if vault needs first-time setup
   useEffect(() => {
@@ -103,6 +119,7 @@ export default function App() {
       </div>
       <StatusBar />
       {onboarding.show && <OnboardingModal onClose={onboarding.close} />}
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   )
 }
