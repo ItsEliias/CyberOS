@@ -257,6 +257,11 @@ ipcMain.handle('pty-create', (_evt, { id, cols, rows }: { id: string; cols: numb
 });
 
 ipcMain.on('pty-write', (_evt, { id, data }: { id: string; data: string }) => {
+  // Cap per-call data at 1 MB. A normal keystroke is a few bytes; a paste
+  // is usually <100 KB. Anything larger is a renderer trying to flood the
+  // PTY buffer (which then back-pressures the entire main process).
+  if (typeof data !== 'string') return;
+  if (data.length > 1024 * 1024) return;
   ptys.get(id)?.write(data);
 });
 
