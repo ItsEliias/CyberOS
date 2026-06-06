@@ -77,6 +77,9 @@ function labelFor(eventType: string, data: Record<string, unknown> | undefined):
 
     case 'signalboard.item.saved':       return `Bookmarked: ${d.title || ''}`;
     case 'signalboard.feed.added':       return `Feed added: ${d.url || ''}`;
+    case 'feeds:refreshed':              return d.count != null
+                                                ? `Feeds refreshed (${d.count} items)` : 'Feeds refreshed';
+    case 'note:saved':                   return `Saved to vault${d.title ? `: ${d.title}` : ''}`;
 
     case 'credvault.vault.unlocked':
     case 'vault:unlocked':               return 'Vault unlocked';
