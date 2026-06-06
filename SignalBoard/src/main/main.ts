@@ -488,9 +488,49 @@ ipcMain.handle('feeds:recondesk-target', (_e, itemId: string) => {
   const ips   = [...text.matchAll(ipRegex)].map(m => m[0])
   const hosts = [...text.matchAll(hostRegex)].map(m => m[0]).filter(h => !h.match(/^\d/) && h.includes('.'))
   const targets = [...new Set([...ips, ...hosts])].slice(0, 10)
-  // Emit ecosystem event for ReconDesk
-  emitEvent('SignalBoard', 'recondesk:add-target', { targets, sourceTitle: item.title, sourceUrl: item.url })
-  return { ok: true, targets }
+
+  // Previously this only emitted a bus event that ReconDesk never
+  // subscribed to. Write the targets straight into ReconDesk's data.json
+  // (atomic) so the user actually sees them on next ReconDesk launch.
+  let appended = 0
+  try {
+    const recondeskData = path.join(os.homedir(), '.recondesk', 'data.json')
+    if (fs.existsSync(recondeskData)) {
+      const data = JSON.parse(fs.readFileSync(recondeskData, 'utf8')) as {
+        targets?: Array<{ id: string; ip?: string; host?: string; name?: string; ports?: unknown[]; notes?: string; createdAt?: string; updatedAt?: string }>
+      }
+      data.targets = data.targets || []
+      const now = new Date().toISOString()
+      for (const t of targets) {
+        const isIp = ipRegex.test(t)
+        ipRegex.lastIndex = 0
+        const exists = data.targets.some(x => (isIp ? x.ip === t : x.host === t))
+        if (exists) continue
+        data.targets.push({
+          id: `sb-${Date.now()}-${appended}`,
+          name: t,
+          ...(isIp ? { ip: t } : { host: t }),
+          ports: [],
+          notes: `From SignalBoard: ${item.title}\n${item.url}`,
+          createdAt: now,
+          updatedAt: now,
+        })
+        appended++
+      }
+      if (appended > 0) {
+        const tmp = `${recondeskData}.tmp`
+        fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8')
+        fs.renameSync(tmp, recondeskData)
+      }
+    }
+  } catch (e) {
+    console.warn('[SignalBoard] recondesk push failed:', (e as Error).message)
+  }
+
+  emitEvent('SignalBoard', 'recondesk:add-target', {
+    targets, sourceTitle: item.title, sourceUrl: item.url, appended,
+  })
+  return { ok: true, targets, appended }
 })
 
 ipcMain.handle('settings:get', () => settings)
