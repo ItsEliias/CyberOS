@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
+import { ecosystemBusPath } from './platform.js';
 import type { EcosystemEvent } from '../shared/types.js';
 
 const EVENTS_PATH = ecosystemBusPath();
