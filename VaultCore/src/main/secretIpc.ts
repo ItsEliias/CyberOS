@@ -156,10 +156,30 @@ export function registerSecretIpc(getWindow: () => BrowserWindow | null) {
     return { conflictFiles };
   });
 
-  ipcMain.handle('resolve-conflict-file', async (_, filePath: string, resolvedContent: string) => {
+  ipcMain.handle('resolve-conflict-file', async (_, filePath: unknown, resolvedContent: unknown) => {
+    // The renderer hands us a path + content from the merge-conflict UI.
+    // Both used to be trusted: `git add "${filePath}"` was a shell-injection
+    // sink (filePath = `";rm -rf ~/;"` would execute), and the writeFileSync
+    // would happily clobber anywhere on disk. Validate types, ensure the file
+    // already exists (so we can only resolve files git knows about), and use
+    // execFile to remove the shell from the path.
+    if (typeof filePath !== 'string' || filePath.length === 0) {
+      return { error: 'Invalid file path' };
+    }
+    if (typeof resolvedContent !== 'string') {
+      return { error: 'Resolved content must be a string' };
+    }
     try {
+      // Only allow overwriting an existing file — the conflict-resolve flow
+      // can't legitimately create new files (it acts on git-tracked paths
+      // already detected by git-find-conflicts).
+      if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+        return { error: 'Target file does not exist' };
+      }
       fs.writeFileSync(filePath, resolvedContent, 'utf8');
-      await execAsync(`git add "${filePath}"`, { cwd: path.dirname(filePath) }).catch(() => {});
+      await execFileAsync('git', ['add', '--', filePath], {
+        cwd: path.dirname(filePath)
+      }).catch(() => {});
       return { success: true };
     } catch (e) { return { error: (e as Error).message }; }
   });
