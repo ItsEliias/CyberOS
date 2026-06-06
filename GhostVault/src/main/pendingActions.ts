@@ -17,6 +17,24 @@ interface PendingActionEntry {
 }
 
 /**
+ * Atomic write: serialize, write to tmp sibling, fsync, rename over target.
+ * Prevents readers (other CyberOS apps, this app's own watcher) from observing
+ * a torn / half-written JSON file if the process is killed mid-write.
+ */
+function writeConfigAtomic(cfg: Record<string, unknown>): void {
+  const json = JSON.stringify(cfg, null, 2);
+  const tmp  = `${CYBERTOOLS_CONFIG}.tmp-${process.pid}-${Date.now()}`;
+  const fd   = fs.openSync(tmp, 'w');
+  try {
+    fs.writeSync(fd, json, 0, 'utf8');
+    try { fs.fsyncSync(fd); } catch { /* fsync best-effort */ }
+  } finally {
+    try { fs.closeSync(fd); } catch { /* already closed */ }
+  }
+  fs.renameSync(tmp, CYBERTOOLS_CONFIG);
+}
+
+/**
  * Read pending_actions, splice out the first entry whose `app` matches
  * `appKey`, write the config back, return the splice'd action id. Returns
  * null on any error or when no matching entry exists.
@@ -46,14 +64,14 @@ export function consumePendingAction(appKey: string): { action: string } | null 
       if (Number.isFinite(age) && age > STALE_MS) {
         list.splice(idx, 1)
         cfg.pending_actions = list
-        try { fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(cfg, null, 2), 'utf8') } catch {}
+        try { writeConfigAtomic(cfg) } catch {}
         return null
       }
     }
 
     list.splice(idx, 1);
     cfg.pending_actions = list;
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(cfg, null, 2), 'utf8');
+    writeConfigAtomic(cfg);
     return { action: entry.action };
   } catch {
     return null;
