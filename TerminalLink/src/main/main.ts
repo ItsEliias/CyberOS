@@ -245,7 +245,11 @@ ipcMain.handle('log-commands', (_evt, { commands }: { commands: CommandEntry[] }
     try { existing = JSON.parse(fs.readFileSync(sessionFile, 'utf8')); } catch { /* empty */ }
 
     const merged = [...existing, ...commands];
-    fs.writeFileSync(sessionFile, JSON.stringify(merged, null, 2));
+    // Atomic — current.json is appended every keystroke; a crash mid-write
+    // would lose every command in the current session.
+    const tmp = `${sessionFile}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(merged, null, 2));
+    fs.renameSync(tmp, sessionFile);
 
     const cfg = readConfig();
     const prevStatus = (cfg.terminallink_status || {}) as Record<string, unknown>;
