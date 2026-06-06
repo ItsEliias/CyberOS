@@ -1439,23 +1439,42 @@ function setupAppManagerIPC(): void {
 function setupIPC(): void {
   ipcMain.handle('get-config', () => readConfig());
 
-  ipcMain.handle('save-config', (_e, updates: Record<string, unknown>) =>
-    updateConfig(cfg => ({ ...cfg, ...updates }))
-  );
+  // Block any update whose key is __proto__ / constructor / prototype to
+  // foreclose prototype-pollution via the IPC boundary. The renderer
+  // never legitimately writes any of these into the shared config.
+  function isUnsafeKey(k: string): boolean {
+    return k === '__proto__' || k === 'constructor' || k === 'prototype';
+  }
+  function stripUnsafe<T extends Record<string, unknown>>(o: T): T {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(o)) {
+      if (isUnsafeKey(k)) continue;
+      out[k] = v;
+    }
+    return out as T;
+  }
 
-  ipcMain.handle('save-config-deep', (_e, updates: Record<string, unknown>) =>
-    updateConfig(cfg => {
+  ipcMain.handle('save-config', (_e, updates: unknown) => {
+    if (!updates || typeof updates !== 'object' || Array.isArray(updates)) return false;
+    const safe = stripUnsafe(updates as Record<string, unknown>);
+    return updateConfig(cfg => ({ ...cfg, ...safe }));
+  });
+
+  ipcMain.handle('save-config-deep', (_e, updates: unknown) => {
+    if (!updates || typeof updates !== 'object' || Array.isArray(updates)) return false;
+    const safe = stripUnsafe(updates as Record<string, unknown>);
+    return updateConfig(cfg => {
       const out = { ...cfg };
-      for (const [k, v] of Object.entries(updates)) {
+      for (const [k, v] of Object.entries(safe)) {
         if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
-          (out as Record<string, unknown>)[k] = { ...((out as Record<string, unknown>)[k] as object || {}), ...(v as object) };
+          (out as Record<string, unknown>)[k] = { ...((out as Record<string, unknown>)[k] as object || {}), ...stripUnsafe(v as Record<string, unknown>) };
         } else {
           (out as Record<string, unknown>)[k] = v;
         }
       }
       return out;
-    })
-  );
+    });
+  });
 
   ipcMain.handle('launch-app',     (_e, appKey: string)  => launchApp(appKey));
   ipcMain.handle('update-now',     () => {
@@ -1520,34 +1539,61 @@ function setupIPC(): void {
   ipcMain.handle('add-activity',   (_e, entry) => addActivityEntry(entry));
   ipcMain.handle('get-version',    () => APP_VERSION);
 
-  ipcMain.handle('add-custom-slot', (_e, slot) =>
-    updateConfig(cfg => {
+  // Reject malformed custom-slot payloads at the boundary so a renderer
+  // bug can't insert garbage that breaks the tray-menu / app-grid render.
+  function isValidSlot(s: unknown): s is { name: string; execPath: string; icon?: string } {
+    if (!s || typeof s !== 'object') return false;
+    const o = s as Record<string, unknown>;
+    return typeof o.name === 'string' && o.name.length > 0 && o.name.length < 100
+        && typeof o.execPath === 'string' && o.execPath.length > 0 && o.execPath.length < 2048;
+  }
+
+  ipcMain.handle('add-custom-slot', (_e, slot: unknown) => {
+    if (!isValidSlot(slot)) return false;
+    return updateConfig(cfg => {
       const slots = cfg.launcher.customSlots || [];
       if (slots.length >= 4) return cfg;
       cfg.launcher.customSlots = [...slots, slot];
       return cfg;
-    })
-  );
+    });
+  });
 
-  ipcMain.handle('remove-custom-slot', (_e, index: number) =>
-    updateConfig(cfg => {
+  ipcMain.handle('remove-custom-slot', (_e, index: unknown) => {
+    if (typeof index !== 'number' || !Number.isInteger(index) || index < 0) return false;
+    return updateConfig(cfg => {
       const slots = [...(cfg.launcher.customSlots || [])];
+      if (index >= slots.length) return cfg;
       slots.splice(index, 1);
       cfg.launcher.customSlots = slots;
       return cfg;
-    })
-  );
+    });
+  });
 
-  ipcMain.handle('update-custom-slot', (_e, { index, slot }: { index: number; slot: unknown }) =>
-    updateConfig(cfg => {
+  ipcMain.handle('update-custom-slot', (_e, payload: unknown) => {
+    if (!payload || typeof payload !== 'object') return false;
+    const { index, slot } = payload as { index?: unknown; slot?: unknown };
+    if (typeof index !== 'number' || !Number.isInteger(index) || index < 0) return false;
+    if (!isValidSlot(slot)) return false;
+    return updateConfig(cfg => {
       const slots = [...(cfg.launcher.customSlots || [])];
-      if (index >= 0 && index < slots.length) slots[index] = slot as typeof slots[0];
+      if (index >= slots.length) return cfg;
+      slots[index] = slot;
       cfg.launcher.customSlots = slots;
       return cfg;
-    })
-  );
+    });
+  });
 
-  ipcMain.handle('open-external',   (_e, url: string) => { shell.openExternal(url); return true; });
+  ipcMain.handle('open-external', (_e, url: unknown) => {
+    // Tightened from "open anything" — a compromised renderer could open
+    // `javascript:`, `file:///etc/passwd`, or any custom URI handler.
+    if (typeof url !== 'string' || !url) return false;
+    try {
+      const proto = new URL(url).protocol;
+      if (proto !== 'http:' && proto !== 'https:' && proto !== 'mailto:') return false;
+    } catch { return false; }
+    shell.openExternal(url);
+    return true;
+  });
   ipcMain.handle('update:check-now', () => { checkForUpdates(); return true; });
 
   ipcMain.handle('ecosystem-read-events', () => ecosystemBus.readEvents());

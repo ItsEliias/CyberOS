@@ -143,7 +143,17 @@ function createWindow(): void {
 // ─── App-level IPC ────────────────────────────────────────────────────────────
 
 ipcMain.handle('app:version', () => APP_VERSION)
-ipcMain.handle('open-external', (_e, url: string) => shell.openExternal(url))
+ipcMain.handle('open-external', (_e, url: unknown) => {
+  // Validate at the boundary — shell.openExternal will gladly hand off
+  // `file:///etc/passwd` or `javascript:`-style URLs to the OS otherwise.
+  if (typeof url !== 'string' || !url) return false
+  try {
+    const proto = new URL(url).protocol
+    if (proto !== 'http:' && proto !== 'https:' && proto !== 'mailto:') return false
+  } catch { return false }
+  void shell.openExternal(url)
+  return true
+})
 ipcMain.handle('context:get', () => getSharedContext())
 ipcMain.handle('app:get-state', () => ({
   playbooks: customPlaybooks,
