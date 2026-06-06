@@ -768,9 +768,18 @@ ipcMain.handle('ghostvault:note:unlock', async (_, notePath: string, password: s
 
 // ─── Export as HTML ───────────────────────────────────────────────────────────
 ipcMain.handle('note:export:html', async (_, html: string, noteName: string): Promise<boolean> => {
+  if (typeof html !== 'string') return false;
+  // Cap exported HTML at 50 MB. A note that big is almost certainly the
+  // renderer trying to make us OOM via dialog.showSaveDialog stack.
+  if (html.length > 50 * 1024 * 1024) return false;
+  // Sanitize noteName for the default path — Electron will quote it, but
+  // path separators in defaultPath have historically influenced the dialog.
+  const safeName = (typeof noteName === 'string' ? noteName : 'note')
+    .replace(/[/\\?%*:|"<>]/g, '-')
+    .slice(0, 128);
   const result = await dialog.showSaveDialog(mainWindow!, {
     title: 'Export as HTML',
-    defaultPath: `${noteName}.html`,
+    defaultPath: `${safeName}.html`,
     filters: [{ name: 'HTML', extensions: ['html'] }],
   });
   if (result.canceled || !result.filePath) return false;
