@@ -71,6 +71,17 @@ export default function Header({ onSettingsClick }: Props) {
               stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
           </svg>
         </button>
+
+        <button
+          onClick={() => window.api.hidePanel()}
+          className="w-6 h-6 rounded flex items-center justify-center transition-all hover:bg-white/5"
+          style={{ color: '#4a5568' }}
+          title="Minimise (re-open from tray icon)"
+        >
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+            <line x1="3" y1="10.5" x2="11" y2="10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        </button>
       </div>
     </div>
   );

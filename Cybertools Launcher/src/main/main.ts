@@ -439,7 +439,7 @@ function refreshContextMenu(): void {
     // Workflow & lab
     appItem('playbookstudio', 'PlaybookStudio'),
     appItem('reportforge',    'ReportForge'),
-    appItem('terminallink',   'TerminalLink'),
+    appItem('terminallink',   'TermLink'),
     appItem('cyberlab',       'CyberLab Companion'),
     { type: 'separator' },
     {
@@ -473,8 +473,8 @@ function refreshContextMenu(): void {
 // Fallback install paths (productName) per appKey — used when config has no
 // recorded execPath. Matches the productName each app's electron-builder uses.
 const APP_FALLBACK_PRODUCTS: Record<string, string> = {
-  cyberlab:       'CYBERLAB COMPANION',
-  vaultscraper:   'VAULTCORE',
+  cyberlab:       'CyberLab Companion',
+  vaultscraper:   'VaultCore',
   ghostvault:     'GhostVault',
   recondesk:      'ReconDesk',
   signalboard:    'SignalBoard',
@@ -482,7 +482,7 @@ const APP_FALLBACK_PRODUCTS: Record<string, string> = {
   credvault:      'CredVault',
   playbookstudio: 'PlaybookStudio',
   reportforge:    'ReportForge',
-  terminallink:   'TerminalLink',
+  terminallink:   'TermLink',
   networkmap:     'NetworkMap',
 };
 
@@ -523,7 +523,7 @@ function launchApp(appKey: string): boolean {
     appName  = 'ReportForge';
   } else if (appKey === 'terminallink') {
     execPath = (config as Record<string,{execPath?:string}>).terminallink?.execPath || '';
-    appName  = 'TerminalLink';
+    appName  = 'TermLink';
   } else if (appKey === 'networkmap') {
     execPath = (config as Record<string,{execPath?:string}>).networkmap?.execPath || '';
     appName  = 'NetworkMap';

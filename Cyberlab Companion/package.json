@@ -1,7 +1,7 @@
 {
   "name": "cyberlab-companion",
   "version": "1.0.0",
-  "description": "AI-assisted cybersecurity workflow environment — CYBERTOOLS",
+  "description": "AI-assisted cybersecurity workflow environment \u2014 CYBERTOOLS",
   "main": "out/main/index.js",
   "type": "module",
   "author": "ItsEliias",
@@ -48,8 +48,8 @@
   },
   "build": {
     "appId": "com.itsEliias.cyberlab-companion",
-    "productName": "CYBERLAB COMPANION",
-    "copyright": "Copyright © 2025 ItsEliias",
+    "productName": "CyberLab Companion",
+    "copyright": "Copyright \u00a9 2025 ItsEliias",
     "directories": {
       "output": "dist"
     },
