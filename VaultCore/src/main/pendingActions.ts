@@ -37,6 +37,20 @@ export function consumePendingAction(appKey: string): { action: string } | null 
     const entry = list[idx] as PendingActionEntry;
     if (!entry?.action || typeof entry.action !== 'string') return null;
 
+    // Skip stale entries (>30 min) — likely the user clicked the tray
+    // ages ago and no longer wants the action. Still splice it out so it
+    // doesn't pile up in the queue.
+    const STALE_MS = 30 * 60 * 1000
+    if (entry.requestedAt) {
+      const age = Date.now() - new Date(entry.requestedAt).getTime()
+      if (Number.isFinite(age) && age > STALE_MS) {
+        list.splice(idx, 1)
+        cfg.pending_actions = list
+        try { fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(cfg, null, 2), 'utf8') } catch {}
+        return null
+      }
+    }
+
     list.splice(idx, 1);
     cfg.pending_actions = list;
     fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(cfg, null, 2), 'utf8');
