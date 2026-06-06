@@ -307,7 +307,15 @@ ipcMain.handle('open-credvault', () => {
 });
 
 ipcMain.handle('get-config',    ()       => launcher.readConfig() || {});
-ipcMain.handle('set-config',    (_, k, v) => { const u: Record<string,unknown> = {}; u[k] = v; return launcher.writeConfig(u); });
+ipcMain.handle('set-config',    (_, k, v) => {
+  // Block prototype-pollution keys + non-string keys. Without these,
+  // `electronAPI.setConfig('__proto__', {...})` could poison Object.prototype
+  // for the main process, and a non-string key silently becomes the literal
+  // 'undefined' / '[object Object]' config entry.
+  if (typeof k !== 'string' || k.length === 0) return false;
+  if (k === '__proto__' || k === 'constructor' || k === 'prototype') return false;
+  const u: Record<string,unknown> = {}; u[k] = v; return launcher.writeConfig(u);
+});
 ipcMain.handle('config-exists', ()       => launcher.configExists());
 ipcMain.handle('get-vault-path',()       => launcher.getVaultPath());
 ipcMain.handle('set-vault-path',(_, vp)  => { launcher.setVaultPath(vp); refreshVaultNoteCount(); return true; });
