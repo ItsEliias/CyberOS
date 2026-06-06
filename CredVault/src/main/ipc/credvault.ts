@@ -207,6 +207,10 @@ export function registerCredVaultHandlers(): void {
       // First-time setup → begin SSO session immediately so soft-locked apps
       // (GhostVault, VaultCore) recognise the new vault as unlocked.
       beginSession(autoLockMs ?? 0)
+      // Arm the in-memory auto-lock timer so the vault key is cleared after
+      // the configured idle window. Without this the freshly-set-up vault
+      // would stay decrypted in CredVault's main process indefinitely.
+      resetLockTimer(autoLockMs ?? 0)
       emitEvent('CredVault', 'vault:unlocked', {})
       return { ok: true }
     } catch (e) {
@@ -300,6 +304,10 @@ export function registerCredVaultHandlers(): void {
     if (!secret) return { ok: false, error: 'TOTP not configured' }
     if (!verifyTotp(secret, code)) return { ok: false, error: 'Code did not verify' }
     beginSession(autoLockMs ?? 0)
+    // The matching vault:unlock path skipped resetLockTimer when 2FA was
+    // pending; arm it here once the TOTP code is verified so the in-memory
+    // vault key gets cleared on idle.
+    resetLockTimer(autoLockMs ?? 0)
     return { ok: true }
   })
 
