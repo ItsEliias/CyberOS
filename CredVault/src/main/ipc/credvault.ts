@@ -108,6 +108,28 @@ function uid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 }
 
+// ─── Boundary validation ─────────────────────────────────────────────────────
+// IPC handlers accept arbitrary JSON from the renderer. A malformed payload
+// (null, array, wrong type) used to crash the main process with a TypeError
+// because handlers assumed shape without checking. These guards keep all
+// crashes inside the handler — the IPC contract returns a sane error/null
+// instead of taking the whole vault process down.
+
+function isObject(v: unknown): v is Record<string, unknown> {
+  return v !== null && typeof v === 'object' && !Array.isArray(v)
+}
+
+function isNonEmptyString(v: unknown): v is string {
+  return typeof v === 'string' && v.length > 0
+}
+
+function isCredentialInput(v: unknown): v is Omit<Credential, 'id' | 'createdAt' | 'updatedAt'> {
+  if (!isObject(v)) return false
+  // `service` + `source` are the fields the rest of the code reads
+  // unconditionally (emitEvent, stats, etc.). Other fields are optional.
+  return isNonEmptyString(v.service) && isNonEmptyString(v.source)
+}
+
 function defaultVault(): VaultData {
   return { credentials: [], version: APP_VERSION }
 }
@@ -465,8 +487,9 @@ export function registerCredVaultHandlers(): void {
     return vaultData.credentials
   })
 
-  ipcMain.handle('vault:add-credential', (_e, cred: Omit<Credential, 'id' | 'createdAt' | 'updatedAt'>): Credential | null => {
+  ipcMain.handle('vault:add-credential', (_e, cred: unknown): Credential | null => {
     if (!vaultData || !hasKey()) return null
+    if (!isCredentialInput(cred)) return null
     const now  = new Date().toISOString()
     const full: Credential = { ...cred, id: uid(), createdAt: now, updatedAt: now }
     vaultData.credentials.push(full)
@@ -476,17 +499,27 @@ export function registerCredVaultHandlers(): void {
     return full
   })
 
-  ipcMain.handle('vault:update-credential', (_e, id: string, patch: Partial<Credential>): boolean => {
+  ipcMain.handle('vault:update-credential', (_e, id: unknown, patch: unknown): boolean => {
     if (!vaultData || !hasKey()) return false
+    if (!isNonEmptyString(id)) return false
+    if (!isObject(patch)) return false
     const idx = vaultData.credentials.findIndex(c => c.id === id)
     if (idx === -1) return false
-    vaultData.credentials[idx] = { ...vaultData.credentials[idx], ...patch, updatedAt: new Date().toISOString() }
+    // Whitelist patch — strip id/createdAt so a malicious renderer can't
+    // overwrite identity fields or forge createdAt timestamps.
+    const { id: _stripId, createdAt: _stripCreated, ...safePatch } = patch as Partial<Credential>
+    vaultData.credentials[idx] = {
+      ...vaultData.credentials[idx],
+      ...safePatch,
+      updatedAt: new Date().toISOString()
+    }
     saveVault()
     return true
   })
 
-  ipcMain.handle('vault:delete-credential', (_e, id: string): boolean => {
+  ipcMain.handle('vault:delete-credential', (_e, id: unknown): boolean => {
     if (!vaultData || !hasKey()) return false
+    if (!isNonEmptyString(id)) return false
     const before = vaultData.credentials.length
     vaultData.credentials = vaultData.credentials.filter(c => c.id !== id)
     if (vaultData.credentials.length === before) return false
@@ -495,11 +528,13 @@ export function registerCredVaultHandlers(): void {
     return true
   })
 
-  ipcMain.handle('vault:import-credentials', (_e, creds: Omit<Credential, 'id' | 'createdAt' | 'updatedAt'>[]): number => {
+  ipcMain.handle('vault:import-credentials', (_e, creds: unknown): number => {
     if (!vaultData || !hasKey()) return 0
+    if (!Array.isArray(creds)) return 0
     const now  = new Date().toISOString()
     let added  = 0
     for (const c of creds) {
+      if (!isCredentialInput(c)) continue
       vaultData.credentials.push({ ...c, id: uid(), createdAt: now, updatedAt: now })
       added++
     }
@@ -511,8 +546,9 @@ export function registerCredVaultHandlers(): void {
 
   // ── Usage tracking ────────────────────────────────────────────────────────
 
-  ipcMain.handle('vault:record-usage', (_e, id: string): boolean => {
+  ipcMain.handle('vault:record-usage', (_e, id: unknown): boolean => {
     if (!vaultData || !hasKey()) return false
+    if (!isNonEmptyString(id)) return false
     const idx = vaultData.credentials.findIndex(c => c.id === id)
     if (idx === -1) return false
     const cred = vaultData.credentials[idx]
@@ -547,11 +583,13 @@ export function registerCredVaultHandlers(): void {
 
   // ── Clipboard ─────────────────────────────────────────────────────────────
 
-  ipcMain.handle('clipboard:copy-secure', (_e, text: string, clearAfterMs?: number): boolean => {
+  ipcMain.handle('clipboard:copy-secure', (_e, text: unknown, clearAfterMs?: unknown): boolean => {
+    if (typeof text !== 'string') return false
     try {
       clipboard.writeText(text)
-      if (clearAfterMs && clearAfterMs > 0) {
-        setTimeout(() => { clipboard.clear() }, clearAfterMs)
+      const ms = typeof clearAfterMs === 'number' ? clearAfterMs : 0
+      if (ms > 0) {
+        setTimeout(() => { clipboard.clear() }, ms)
       }
       return true
     } catch {
