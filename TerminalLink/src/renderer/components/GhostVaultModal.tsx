@@ -13,6 +13,7 @@ export default function GhostVaultModal({ text, initialContent, onClose }: Props
   const [folder, setFolder] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved,  setSaved]  = useState<string | null>(null);
+  const [error,  setError]  = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -25,11 +26,20 @@ export default function GhostVaultModal({ text, initialContent, onClose }: Props
   async function handleSave() {
     if (saving) return;
     setSaving(true);
+    setError(null);
     try {
       const result = await window.electronAPI.saveToGhostVault(title, content, folder || undefined);
-      if (result.ok) setSaved(result.path);
+      if (result.ok) {
+        setSaved(result.path);
+      } else {
+        // Main rejected the save (folder escaped vault root, disk full, …).
+        // Without surfacing this the user sees the modal sit there as if
+        // nothing happened.
+        setError('Save failed — folder may be invalid or disk unavailable.');
+      }
     } catch (e) {
       console.error('[GhostVaultModal]', e);
+      setError((e as Error).message || 'Save failed');
     } finally {
       setSaving(false);
     }
@@ -117,6 +127,11 @@ export default function GhostVaultModal({ text, initialContent, onClose }: Props
               </>
             )}
           </div>
+          {error ? (
+            <div style={{ fontSize: 11, color: '#ef4444', padding: '4px 0' }}>
+              {error}
+            </div>
+          ) : null}
         </motion.div>
       </motion.div>
     </AnimatePresence>
