@@ -299,8 +299,10 @@ ipcMain.handle('get-sso', () => {
 
 ipcMain.handle('open-credvault', () => {
   try {
+    const target = '/Applications/CredVault.app'
+    if (!fs.existsSync(target)) return false
     const { spawn } = require('child_process') as typeof import('child_process')
-    spawn('open', ['/Applications/CredVault.app'], { detached: true, stdio: 'ignore' }).unref()
+    spawn('open', [target], { detached: true, stdio: 'ignore' }).unref()
     return true
   } catch { return false }
 })
