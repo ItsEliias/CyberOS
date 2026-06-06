@@ -603,9 +603,26 @@ export function saveItemToVault(item: FeedItem, vaultPath: string): boolean {
     const dir  = path.join(vaultPath, 'SignalBoard')
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
 
-    const safe = item.title.replace(/[<>:"/\\|?*]/g, '-').slice(0, 80)
+    // Feed titles come from arbitrary RSS publishers — a malicious title
+    // like "../../../etc/something" would survive the old regex (it only
+    // stripped /\<>:"|?*) and path.join would normalize the `..` segments,
+    // escaping the vault dir. Also strip `..` runs, leading dots, and null
+    // bytes, then re-verify the resolved file is under `dir`.
+    let safe = item.title
+      .replace(/[<>:"/\\|?*\x00-\x1f]/g, '-')  // banned chars + control bytes
+      .replace(/\.{2,}/g, '-')                   // collapse any run of dots (kills ..)
+      .replace(/^\.+/, '')                        // strip leading dots
+      .trim()
+      .slice(0, 80) || 'untitled'
     const date = new Date(item.publishedAt).toISOString().slice(0, 10)
     const file = path.join(dir, `${date} ${safe}.md`)
+    // Defence-in-depth: confirm the resolved path is still inside `dir`.
+    const dirReal  = path.resolve(dir) + path.sep
+    const fileReal = path.resolve(file)
+    if (!fileReal.startsWith(dirReal)) {
+      console.error('[SignalBoard] vault save blocked: path escapes vault dir')
+      return false
+    }
 
     const aiSection = item.aiSummary?.length
       ? `\n## AI Summary\n\n${item.aiSummary.map(b => `- ${b}`).join('\n')}\n`
