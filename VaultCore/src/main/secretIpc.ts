@@ -92,8 +92,11 @@ function walkDir(dir: string, depth: number, results: Array<{ filePath: string; 
 }
 
 export function registerSecretIpc(getWindow: () => BrowserWindow | null) {
-  ipcMain.handle('scan-directory', async (_, dirPath: string) => {
-    if (!dirPath || !fs.existsSync(dirPath)) return { error: 'Directory not found' };
+  ipcMain.handle('scan-directory', async (_, dirPath: unknown) => {
+    if (typeof dirPath !== 'string' || dirPath.length === 0) {
+      return { error: 'Directory not found' };
+    }
+    if (!fs.existsSync(dirPath)) return { error: 'Directory not found' };
     const results: Array<{ filePath: string; lineNumber: number; patternType: string; rawValue: string }> = [];
     const filesScanned = { n: 0 };
     const startTime = Date.now();
