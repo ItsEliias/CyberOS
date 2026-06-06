@@ -559,7 +559,24 @@ ipcMain.handle('reveal-in-finder', (_, p: string) => {
   if (!isUnderVault(p)) return;
   if (p && fs.existsSync(p)) shell.showItemInFolder(p);
 });
-ipcMain.handle('open-external', (_, url: string) => shell.openExternal(url));
+ipcMain.handle('open-external', (_, url: string) => {
+  // shell.openExternal will happily hand any URL scheme to the OS — `file://`
+  // opens local files, custom schemes can launch handler apps with attacker-
+  // controlled args. Restrict to the three schemes a notes app legitimately
+  // needs and drop everything else on the floor.
+  if (typeof url !== 'string' || !url) return;
+  try {
+    const parsed = new URL(url);
+    const scheme = parsed.protocol.toLowerCase();
+    if (scheme !== 'http:' && scheme !== 'https:' && scheme !== 'mailto:') {
+      console.warn('[GhostVault] open-external rejected:', scheme);
+      return;
+    }
+    shell.openExternal(url);
+  } catch {
+    // Malformed URL — silently drop.
+  }
+});
 
 ipcMain.handle('pick-vault-dir', async (_, opts: { skipFolderCreate?: boolean } = {}) => {
   const result = await dialog.showOpenDialog(mainWindow!, {
