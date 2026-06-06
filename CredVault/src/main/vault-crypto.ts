@@ -55,7 +55,10 @@ export function encryptVault(plaintext: string, password: string): void {
 
   // Layout: [iv (12)] [tag (16)] [ciphertext (N)]
   const combined = Buffer.concat([iv, tag, encrypted])
-  fs.writeFileSync(VAULT_FILE, combined)
+  // Atomic write — see cryptoManager.encryptVaultWithKey for full rationale.
+  const tmp = `${VAULT_FILE}.tmp`
+  fs.writeFileSync(tmp, combined)
+  fs.renameSync(tmp, VAULT_FILE)
 }
 
 export function decryptVault(password: string): string | null {
