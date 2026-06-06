@@ -16,7 +16,7 @@ import {
   addActivityEntry, clearActivityFeed, writeTrigger
 } from './config.js';
 import * as ecosystemBus from './ecosystem-bus.js';
-import { peerAppPath } from './platform.js';
+import { peerAppPath, userDataDir, sharedConfigPath } from './platform.js';
 import type { VpnStatus } from '../shared/types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -849,26 +849,26 @@ function isEncryptedBackup(file: string): boolean {
   } catch { return false; }
 }
 
+// Apps whose per-app data directory we want to capture in a backup. Both the
+// CamelCase and lowercase variants are tried because different apps used
+// different casing historically. Cross-platform: userDataDir() returns the
+// macOS / Linux XDG / Windows APPDATA path as appropriate.
+const BACKUP_APP_NAMES = [
+  'CredVault', 'GhostVault', 'VaultCore', 'ReconDesk', 'SignalBoard',
+  'PlaybookStudio', 'ReportForge', 'NetworkMap', 'NetLab',
+  'cyberlab-companion', 'TerminalLink', 'CyberTools',
+];
+
 const BACKUP_PATHS = [
-  // Shared ecosystem config
-  path.join(os.homedir(), 'cybertools-config.json'),
-  // Per-app Application Support directories (lowercase forms common in macOS)
-  path.join(os.homedir(), 'Library/Application Support/CredVault'),
-  path.join(os.homedir(), 'Library/Application Support/credvault'),
-  path.join(os.homedir(), 'Library/Application Support/ghostvault'),
-  path.join(os.homedir(), 'Library/Application Support/GhostVault'),
-  path.join(os.homedir(), 'Library/Application Support/vaultcore'),
-  path.join(os.homedir(), 'Library/Application Support/VaultCore'),
-  path.join(os.homedir(), 'Library/Application Support/recondesk'),
-  path.join(os.homedir(), 'Library/Application Support/signalboard'),
-  path.join(os.homedir(), 'Library/Application Support/playbookstudio'),
-  path.join(os.homedir(), 'Library/Application Support/reportforge'),
-  path.join(os.homedir(), 'Library/Application Support/networkmap'),
-  path.join(os.homedir(), 'Library/Application Support/netlab'),
-  path.join(os.homedir(), 'Library/Application Support/cyberlab-companion'),
-  path.join(os.homedir(), 'Library/Application Support/terminallink'),
-  path.join(os.homedir(), 'Library/Application Support/CyberTools'),
-  // TermLink shell-hook log
+  // Shared ecosystem config (~/cybertools-config.json on macOS;
+  // APPDATA / XDG-equivalent on other platforms).
+  sharedConfigPath(),
+  // Per-app data dirs, both cases (filtered by existsSync at backup time).
+  ...BACKUP_APP_NAMES.flatMap(name => [
+    userDataDir(name),
+    userDataDir(name.toLowerCase()),
+  ]),
+  // TermLink shell-hook log — same path on every OS (~/.cybertools/).
   path.join(os.homedir(), '.cybertools/term-log.jsonl'),
 ];
 
