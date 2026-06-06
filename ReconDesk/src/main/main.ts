@@ -317,23 +317,40 @@ ipcMain.handle('recondesk:capture-screenshot', async (_e, label: string) => {
 
 // ─── PDF export ───────────────────────────────────────────────────────────────
 
-ipcMain.handle('recondesk:export-pdf', async (_e, payload: { html: string; defaultName: string }) => {
+ipcMain.handle('recondesk:export-pdf', async (_e, payload: unknown) => {
+  // Validate at the IPC boundary — payload may be malformed and the rest
+  // of this handler assumes its shape.
+  if (!payload || typeof payload !== 'object') return { ok: false, error: 'Invalid payload' }
+  const { html, defaultName } = payload as { html?: unknown; defaultName?: unknown }
+  if (typeof html !== 'string' || !html) return { ok: false, error: 'Missing html' }
+  // Cap the HTML body so a runaway export can't queue 100MB into the
+  // offscreen renderer.
+  if (html.length > 20 * 1024 * 1024) return { ok: false, error: 'HTML too large (20MB max)' }
+  const safeName = typeof defaultName === 'string' && defaultName
+    ? defaultName.replace(/[/\\?%*:|"<>]/g, '-') : 'report.pdf'
+
   const win = BrowserWindow.getFocusedWindow()
   const { filePath, canceled } = await dialog.showSaveDialog(win!, {
     title: 'Export PDF Report',
-    defaultPath: payload.defaultName,
+    defaultPath: safeName,
     filters: [{ name: 'PDF', extensions: ['pdf'] }],
   })
   if (canceled || !filePath) return { ok: false }
 
   const offscreen = new BrowserWindow({
     show: false,
-    webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: false },
+    // sandbox: true — the offscreen window only renders HTML for print-to-PDF
+    // and never needs Node / preload access. Hardens against scripts inside
+    // the HTML payload doing anything beyond render.
+    webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true },
   })
   try {
-    await offscreen.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(payload.html)}`)
+    await offscreen.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
     const pdfBuffer = await offscreen.webContents.printToPDF({ printBackground: true, pageSize: 'A4' })
-    fs.writeFileSync(filePath, pdfBuffer)
+    // Atomic write — partial PDF on crash would silently corrupt the file.
+    const tmp = `${filePath}.tmp`
+    fs.writeFileSync(tmp, pdfBuffer)
+    fs.renameSync(tmp, filePath)
     return { ok: true, filePath }
   } catch (e) {
     return { ok: false, error: (e as Error).message }
