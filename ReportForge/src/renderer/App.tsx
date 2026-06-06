@@ -36,6 +36,13 @@ export default function App() {
     try { setRequireSSO(localStorage.getItem('rf:requireCredVaultSession') === '1'); } catch { /* ignore */ }
   }, []);
 
+  // Safety: editor view requires an activeReport. If somehow (deletion race,
+  // bad deep-link, future bug) we land in 'editor' without one, the renderer
+  // shows a blank pane — bounce back to the library instead.
+  useEffect(() => {
+    if (view === 'editor' && !activeReport) setView('library');
+  }, [view, activeReport, setView]);
+
   // Poll the SSO state every 5 s.
   useEffect(() => {
     let cancelled = false;
