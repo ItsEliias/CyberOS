@@ -629,12 +629,19 @@ ipcMain.handle('config:write-keywords', (_e, keywords: string[]) => {
   } catch { return false }
 })
 
-ipcMain.handle('ai:summarise', async (_e, item: FeedItem, apiKey: string) => {
-  if (!apiKey) return { ok: false, error: 'No API key configured' }
+ipcMain.handle('ai:summarise', async (_e, item: unknown, apiKey: unknown) => {
+  // Validate at the boundary so a renderer bug can't crash the main process
+  // deep inside callClaudeApi (null deref on item.title / summary).
+  if (typeof apiKey !== 'string' || !apiKey) return { ok: false, error: 'No API key configured' }
+  if (!item || typeof item !== 'object') return { ok: false, error: 'Invalid item payload' }
+  const it = item as { id?: unknown; title?: unknown; summary?: unknown }
+  if (typeof it.id !== 'string' || typeof it.title !== 'string') {
+    return { ok: false, error: 'item.id and item.title must be strings' }
+  }
   try {
-    const bullets = await callClaudeApi(item, apiKey)
+    const bullets = await callClaudeApi(item as FeedItem, apiKey)
     cachedItems = cachedItems.map(i =>
-      i.id === item.id ? { ...i, aiSummary: bullets } : i
+      i.id === it.id ? { ...i, aiSummary: bullets } : i
     )
     saveCache(cachedItems)
     return { ok: true, bullets }
@@ -775,7 +782,10 @@ async function callClaudeApi(item: FeedItem, apiKey: string): Promise<string[]> 
       res.on('error', reject)
     })
     req.on('error',   reject)
-    req.on('timeout', () => { req.destroy(); reject(new Error('AI request timeout')) })
+    // The previous code attached a `timeout` listener but never called
+    // req.setTimeout(), so the listener never fired and a hung Anthropic
+    // request would lock up the IPC indefinitely. Set an explicit 30 s.
+    req.setTimeout(30_000, () => { req.destroy(); reject(new Error('AI request timeout')) })
     req.write(body)
     req.end()
   })
