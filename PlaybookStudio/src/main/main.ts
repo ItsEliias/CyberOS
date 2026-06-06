@@ -18,6 +18,10 @@ const RUNS_FILE         = path.join(APP_DATA_DIR, 'runs.json')
 const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')
 const CONTEXT_POLL_MS   = 10_000
 
+// ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+try { require('electron').crashReporter.start({ uploadToServer: false, productName: "PlaybookStudio", companyName: 'CyberOS' }) } catch { /* unavailable */ }
+
 let mainWindow:      BrowserWindow | null = null
 let contextTimer:    NodeJS.Timeout | null = null
 let customPlaybooks: Playbook[]    = []

@@ -15,6 +15,10 @@ const _require   = createRequire(import.meta.url);
 const pty        = _require('node-pty');
 
 // ─── Globals ──────────────────────────────────────────────────────────────────
+// ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+try { require('electron').crashReporter.start({ uploadToServer: false, productName: "TerminalLink", companyName: 'CyberOS' }) } catch { /* unavailable */ }
+
 let mainWindow: BrowserWindow | null = null;
 const ptys = new Map<string, ReturnType<typeof pty.spawn>>();
 

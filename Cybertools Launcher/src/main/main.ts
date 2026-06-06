@@ -1572,6 +1572,10 @@ function setupIPC(): void {
 
 // ─── App lifecycle ────────────────────────────────────────────────────────────
 
+// ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+try { require('electron').crashReporter.start({ uploadToServer: false, productName: "CybertoolsLauncher", companyName: 'CyberOS' }) } catch { /* unavailable */ }
+
 app.whenReady().then(() => {
   const PROJECT_BASE  = path.join(os.homedir(), 'Documents', 'Claude', 'Projects');
   const CYBER_APPS    = path.join(PROJECT_BASE, 'Cyber Apps');

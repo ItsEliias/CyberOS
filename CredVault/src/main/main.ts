@@ -27,6 +27,10 @@ process.on('uncaughtException', (err) => {
 const APP_VERSION       = '1.0.0'
 const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')
 
+// ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+try { require('electron').crashReporter.start({ uploadToServer: false, productName: "CredVault", companyName: 'CyberOS' }) } catch { /* unavailable */ }
+
 let mainWindow:      BrowserWindow | null = null
 let statusInterval:  NodeJS.Timeout | null = null
 let pendingInterval: NodeJS.Timeout | null = null

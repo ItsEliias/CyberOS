@@ -37,6 +37,10 @@ const DEFAULT_SETTINGS: AppSettings = {
   readerLightMode:      false,
 }
 
+// ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+try { require('electron').crashReporter.start({ uploadToServer: false, productName: "SignalBoard", companyName: 'CyberOS' }) } catch { /* unavailable */ }
+
 let mainWindow:      BrowserWindow | null = null
 let tray:            Tray | null = null
 let refreshTimer:    NodeJS.Timeout | null = null

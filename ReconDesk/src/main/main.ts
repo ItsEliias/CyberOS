@@ -19,6 +19,10 @@ const APP_VERSION       = '1.0.0'
 const DATA_FILE         = path.join(os.homedir(), '.recondesk', 'data.json')
 const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')
 
+// ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+try { require('electron').crashReporter.start({ uploadToServer: false, productName: "ReconDesk", companyName: 'CyberOS' }) } catch { /* unavailable */ }
+
 let mainWindow: BrowserWindow | null = null
 let statusInterval: NodeJS.Timeout | null = null
 let configWatcher: fs.FSWatcher | null = null

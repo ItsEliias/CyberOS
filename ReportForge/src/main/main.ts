@@ -18,6 +18,10 @@ const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json');
 const DATA_DIR          = path.join(os.homedir(), 'Library', 'Application Support', 'ReportForge');
 const REPORTS_FILE      = path.join(DATA_DIR, 'reports.json');
 
+// ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+try { require('electron').crashReporter.start({ uploadToServer: false, productName: "ReportForge", companyName: 'CyberOS' }) } catch { /* unavailable */ }
+
 let mainWindow: BrowserWindow | null = null;
 let statusInterval: ReturnType<typeof setInterval> | null = null;
 let printReadyResolver: (() => void) | null = null;

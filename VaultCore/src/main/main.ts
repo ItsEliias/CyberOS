@@ -48,6 +48,10 @@ function computeNextRun(cronExpression: string | null | undefined): string | nul
 }
 
 // ─── Globals ──────────────────────────────────────────────────────────────────
+// ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+try { require('electron').crashReporter.start({ uploadToServer: false, productName: "VaultCore", companyName: 'CyberOS' }) } catch { /* unavailable */ }
+
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let currentScrapeState: { sourceName: string; progress: number; startTime: number; paused?: boolean } | null = null;

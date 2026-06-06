@@ -14,6 +14,10 @@ const APP_VERSION       = '1.0.0'
 const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')
 const GRAPHS_DIR        = path.join(os.homedir(), 'Library', 'Application Support', 'NetworkMap', 'graphs')
 
+// ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+try { require('electron').crashReporter.start({ uploadToServer: false, productName: "NetworkMap", companyName: 'CyberOS' }) } catch { /* unavailable */ }
+
 let mainWindow: BrowserWindow | null = null
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

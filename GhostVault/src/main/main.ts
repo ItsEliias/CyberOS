@@ -22,6 +22,10 @@ const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json');
 const DATA_DIR          = path.join(os.homedir(), '.ghostvault');
 const VAULT_FOLDERS     = ['Notes', 'Meetings', 'Projects', 'Study', 'Tasks', 'Archive'];
 
+// ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+try { require('electron').crashReporter.start({ uploadToServer: false, productName: "GhostVault", companyName: 'CyberOS' }) } catch { /* unavailable */ }
+
 let mainWindow:    BrowserWindow | null = null;
 let captureWindow: BrowserWindow | null = null;
 let statusInterval: ReturnType<typeof setInterval> | null = null;
