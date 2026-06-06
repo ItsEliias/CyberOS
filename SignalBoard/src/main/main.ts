@@ -90,7 +90,11 @@ function writeStatus(items: FeedItem[], lastRefresh: string): void {
         topItem:      top?.title ?? null,
       },
     }
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(patch, null, 2), 'utf8')
+    // Atomic: every CyberTools app polls this file. A crash mid-write would
+    // leave a truncated file that JSON.parse-throws in every reader.
+    const tmp = `${CYBERTOOLS_CONFIG}.${process.pid}.${Date.now()}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(patch, null, 2), 'utf8')
+    fs.renameSync(tmp, CYBERTOOLS_CONFIG)
   } catch { /* non-critical */ }
 }
 
