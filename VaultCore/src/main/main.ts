@@ -499,7 +499,19 @@ ipcMain.handle('run-dead-link-check', async () => {
   if (!vp) return { error: 'No vault path' };
   return vaulthealth.findDeadLinks(vp, (p: unknown) => { if (mainWindow) mainWindow.webContents.send('vault-health-progress', p); });
 });
-ipcMain.handle('clean-markdown',         async (_, opts)     => vaulthealth.cleanMarkdown(opts, launcher.getVaultPath()));
+ipcMain.handle('clean-markdown',         async (_, opts)     => {
+  // cleanMarkdown destructures `opts` and (depending on scope) reads
+  // opts.filePath or opts.folderPath from disk. Null opts crashes the
+  // destructure; renderer-supplied paths outside the vault would let a
+  // compromised renderer read arbitrary files. Validate at the boundary.
+  if (opts === null || typeof opts !== 'object' || Array.isArray(opts)) {
+    return { error: 'Invalid options' };
+  }
+  const o = opts as Record<string, unknown>;
+  if (typeof o.filePath   === 'string' && !isUnderVault(o.filePath))   return { error: 'Path outside vault' };
+  if (typeof o.folderPath === 'string' && !isUnderVault(o.folderPath)) return { error: 'Path outside vault' };
+  return vaulthealth.cleanMarkdown(opts, launcher.getVaultPath());
+});
 ipcMain.handle('split-note',             async (_, fp, sp)   => {
   if (!isUnderVault(fp)) return { error: 'Path outside vault' };
   return vaulthealth.splitNote(fp, sp, launcher.getVaultPath());
