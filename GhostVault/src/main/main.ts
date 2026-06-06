@@ -834,9 +834,19 @@ ipcMain.handle('ghostvault:note:search', async (_, vaultPath: string, query: str
   return results;
 });
 ipcMain.handle('ghostvault:config:read', () => {
+  // The full shared config is intentionally NOT returned to the renderer:
+  // it contains the SSO session (CredVault unlock token + expiry), every
+  // sibling app's status block, and TerminalLink's chosen shell binary.
+  // A compromised renderer would otherwise have a one-shot read of the
+  // whole CyberOS state. Project only the keys this renderer actually
+  // needs to drive its capture / status UI.
   try {
     if (!fs.existsSync(CYBERTOOLS_CONFIG)) return {};
-    return JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8'));
+    const raw = JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8')) as Record<string, unknown>;
+    return {
+      shared_context:    raw.shared_context     ?? null,
+      ghostvault_status: raw.ghostvault_status  ?? null,
+    };
   } catch { return {}; }
 });
 ipcMain.handle('ghostvault:event:emit', (_, event: { appName: string; eventType: string; data: Record<string, unknown> }) => {
