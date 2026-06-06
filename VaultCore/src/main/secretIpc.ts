@@ -215,8 +215,16 @@ export function registerSecretIpc(getWindow: () => BrowserWindow | null) {
   const VC_BACKUP_MAGIC = Buffer.from('VCBK');
   const VC_BACKUP_VERSION = 2;
 
-  ipcMain.handle('export-backup', async (_, secrets: unknown[], password: string) => {
-    if (!password) return { error: 'Password required' };
+  ipcMain.handle('export-backup', async (_, secrets: unknown, password: unknown) => {
+    // Validate at the boundary — a non-string password would throw deep
+    // inside scryptSync, surfacing a confusing OpenSSL error to the user.
+    // Secrets must be an array since we JSON.stringify it as backup payload.
+    if (typeof password !== 'string' || password.length === 0) {
+      return { error: 'Password required' };
+    }
+    if (!Array.isArray(secrets)) {
+      return { error: 'Invalid secrets payload' };
+    }
     const win = getWindow();
     if (!win) return { error: 'No window' };
     const r = await dialog.showSaveDialog(win, { title: 'Export VaultCore Backup', defaultPath: 'vaultcore-backup.enc', filters: [{ name: 'Encrypted Backup', extensions: ['enc'] }] });
@@ -237,7 +245,10 @@ export function registerSecretIpc(getWindow: () => BrowserWindow | null) {
     } catch (e) { return { error: (e as Error).message }; }
   });
 
-  ipcMain.handle('import-backup', async (_, password: string) => {
+  ipcMain.handle('import-backup', async (_, password: unknown) => {
+    if (typeof password !== 'string' || password.length === 0) {
+      return { error: 'Password required' };
+    }
     const win = getWindow();
     if (!win) return { error: 'No window' };
     const r = await dialog.showOpenDialog(win, { title: 'Import VaultCore Backup', filters: [{ name: 'Encrypted Backup', extensions: ['enc'] }], properties: ['openFile'] });
