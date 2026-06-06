@@ -828,10 +828,24 @@ ipcMain.handle('note:export:pdf', async (_, htmlContent: string, noteName: strin
   // leaves the BrowserWindow alive and accumulating on every retry.
   let pdfWin: BrowserWindow | null = null;
   try {
-    pdfWin = new BrowserWindow({ show: false, webPreferences: { offscreen: true } });
+    // sandbox: true + contextIsolation: true so any inline scripts in the
+    // user's note HTML can't reach Node / preload. The window only exists
+    // long enough to render the HTML and emit the PDF.
+    pdfWin = new BrowserWindow({
+      show: false,
+      webPreferences: {
+        offscreen: true,
+        sandbox: true,
+        contextIsolation: true,
+        nodeIntegration: false,
+      },
+    });
     await pdfWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
     const data = await pdfWin.webContents.printToPDF({ printBackground: true });
-    fs.writeFileSync(result.filePath, data);
+    // Atomic write — partial PDF on crash would silently corrupt the file.
+    const tmp = `${result.filePath}.tmp`;
+    fs.writeFileSync(tmp, data);
+    fs.renameSync(tmp, result.filePath);
     return true;
   } catch { return false; }
   finally {
