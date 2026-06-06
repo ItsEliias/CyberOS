@@ -146,7 +146,21 @@ ipcMain.handle('ghostvault:save-note', (_e, { labTitle, vendor, tags, content }:
     const cfg = readCyberToolsConfig()
     const vaultPath = (cfg['ghostvault_status'] as Record<string, unknown>)?.['vaultPath'] as string | undefined
     const baseDir   = vaultPath ?? path.join(os.homedir(), 'GhostVault')
-    const labDir    = path.join(baseDir, 'NetLab', labTitle.replace(/[^a-zA-Z0-9 _-]/g, '').trim())
+    const netlabRoot = path.resolve(baseDir, 'NetLab')
+    // Strip any character that isn't alnum / space / underscore / dash.
+    // Dots and slashes are stripped — so '..', '../..', and 'foo/../bar'
+    // all collapse to safe forms. Fall back to 'Untitled' when the title
+    // is empty after sanitization so we never silently write notes into
+    // the NetLab parent dir.
+    const safeTitle = labTitle.replace(/[^a-zA-Z0-9 _-]/g, '').trim() || 'Untitled'
+    const labDir    = path.resolve(netlabRoot, safeTitle)
+    // Path-confinement: even though the regex strips traversal characters,
+    // assert the resolved labDir is still inside netlabRoot. Belt + braces;
+    // catches any future regex regression that re-admits '.' or '/'.
+    const rel = path.relative(netlabRoot, labDir)
+    if (rel.startsWith('..') || path.isAbsolute(rel) || rel === '') {
+      return { ok: false, reason: 'Invalid lab title' }
+    }
     ensureDataDir()
     if (!fs.existsSync(labDir)) fs.mkdirSync(labDir, { recursive: true })
     const ts       = new Date().toISOString().replace(/[:.]/g, '-')
