@@ -8,7 +8,7 @@ import type { CommandEntry, CapturePayload, SessionContext } from '../shared/typ
 import { registerTerminalLinkIPC } from './ipc/terminallink';
 import { stopTailing } from './externalShellHook';
 import { consumePendingAction, installPendingActionWatcher } from './pendingActions'
-import { launchPeerApp } from './platform'
+import { launchPeerApp, userDataDir, sharedConfigPath, ecosystemBusPath } from './platform'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const _require   = createRequire(import.meta.url);
@@ -22,10 +22,10 @@ try { require('electron').crashReporter.start({ uploadToServer: false, productNa
 let mainWindow: BrowserWindow | null = null;
 const ptys = new Map<string, ReturnType<typeof pty.spawn>>();
 
-const CONFIG_PATH     = path.join(process.env.HOME!, 'cybertools-config.json');
+const CONFIG_PATH     = sharedConfigPath();
 let _lastCommandAt    = '';
-const EVENTS_PATH     = path.join(process.env.HOME!, 'Library', 'Application Support', 'CyberTools', 'ecosystem-events.json');
-const SESSIONS_DIR    = path.join(process.env.HOME!, 'Library', 'Application Support', 'TerminalLink', 'sessions');
+const EVENTS_PATH     = ecosystemBusPath();
+const SESSIONS_DIR    = path.join(userDataDir('TerminalLink'), 'sessions');
 
 const preloadFile = fs.existsSync(path.join(__dirname, '..', 'preload', 'preload.mjs'))
   ? 'preload.mjs' : 'preload.js';

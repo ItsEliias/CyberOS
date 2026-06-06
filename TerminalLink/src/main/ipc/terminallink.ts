@@ -10,6 +10,7 @@ import { ipcMain, dialog, BrowserWindow } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { userDataDir, sharedConfigPath, ecosystemBusPath } from '../platform';
 import {
   spawnPty,
   writePty,
@@ -29,10 +30,10 @@ import {
 import type { ExternalShellId } from '../../shared/types.js';
 
 // ─── Paths ─────────────────────────────────────────────────────────────────────
-const CONFIG_PATH   = path.join(os.homedir(), 'cybertools-config.json');
-const SESSIONS_DIR  = path.join(os.homedir(), 'Library', 'Application Support', 'TerminalLink', 'sessions');
+const CONFIG_PATH   = sharedConfigPath();
+const SESSIONS_DIR  = path.join(userDataDir('TerminalLink'), 'sessions');
 const HISTORY_FILE  = path.join(SESSIONS_DIR, 'command-history.json');
-const EVENTS_PATH   = path.join(os.homedir(), 'Library', 'Application Support', 'CyberTools', 'ecosystem-events.json');
+const EVENTS_PATH   = ecosystemBusPath();
 
 // ─── Atomic file write ─────────────────────────────────────────────────────────
 // Every persistent state file in this module is read by some external party
