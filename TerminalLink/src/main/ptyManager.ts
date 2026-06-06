@@ -11,6 +11,7 @@ import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import process from 'process';
+import os from 'os';
 import fs from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -158,7 +159,7 @@ export function spawnPty(
       name: 'xterm-256color',
       cols: cols || 80,
       rows: rows || 24,
-      cwd: process.env.HOME ?? '/tmp',
+      cwd: os.homedir(),
       env: mergedEnv,
     });
   } catch {
@@ -167,7 +168,7 @@ export function spawnPty(
       name: 'xterm-256color',
       cols: cols || 80,
       rows: rows || 24,
-      cwd: process.env.HOME ?? '/tmp',
+      cwd: os.homedir(),
       env: mergedEnv,
     });
   }
