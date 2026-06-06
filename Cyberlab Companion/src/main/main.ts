@@ -63,11 +63,13 @@ function saveConfig(cfg: Record<string, unknown>): boolean {
 
 function saveApiKeySecure(key: string): boolean {
   try {
-    if (safeStorage.isEncryptionAvailable()) {
-      fs.writeFileSync(ENCRYPTED_KEY_FILE, safeStorage.encryptString(key));
-    } else {
-      fs.writeFileSync(ENCRYPTED_KEY_FILE + '.b64', Buffer.from(key).toString('base64'));
+    if (!safeStorage.isEncryptionAvailable()) {
+      // Base64 is NOT encryption — refuse rather than storing the Claude
+      // API key in effectively plaintext. Same rationale as platforms.ts.
+      console.warn('[CyberLab] safeStorage unavailable — refusing to save API key in cleartext');
+      return false;
     }
+    fs.writeFileSync(ENCRYPTED_KEY_FILE, safeStorage.encryptString(key));
     apiKey = key;
     return true;
   } catch (e: unknown) { console.error('saveApiKey error:', (e as Error).message); return false; }
@@ -78,8 +80,15 @@ function loadApiKeySecure(): string | null {
     if (fs.existsSync(ENCRYPTED_KEY_FILE) && safeStorage.isEncryptionAvailable()) {
       return safeStorage.decryptString(fs.readFileSync(ENCRYPTED_KEY_FILE));
     }
+    // Migration: older releases fell back to a base64 file. If one exists,
+    // surface its value once and remove it so we don't keep reading from an
+    // insecure source.
     const b64 = ENCRYPTED_KEY_FILE + '.b64';
-    if (fs.existsSync(b64)) return Buffer.from(fs.readFileSync(b64, 'utf8'), 'base64').toString('utf8');
+    if (fs.existsSync(b64)) {
+      const value = Buffer.from(fs.readFileSync(b64, 'utf8'), 'base64').toString('utf8');
+      try { fs.unlinkSync(b64); } catch { /* ignore */ }
+      return value;
+    }
   } catch {}
   return null;
 }
