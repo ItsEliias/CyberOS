@@ -477,8 +477,13 @@ ipcMain.handle('get-sso', () => {
 // Cross-app: open CredVault from the lock screen.
 ipcMain.handle('open-credvault', () => launchPeerApp('CredVault'))
 
-ipcMain.handle('ecosystem-emit', (_, appName: string, eventType: string, data: Record<string, unknown>) => {
-  ecosystemBus.emitEvent(appName, eventType, data);
+ipcMain.handle('ecosystem-emit', (_, appName: unknown, eventType: unknown, data: unknown) => {
+  // Validate at the boundary — see Launcher for rationale.
+  if (typeof appName !== 'string' || !appName || appName.length > 80) return false;
+  if (typeof eventType !== 'string' || !eventType || eventType.length > 120) return false;
+  if (data !== undefined && (typeof data !== 'object' || data === null)) return false;
+  if (data !== undefined && JSON.stringify(data).length > 64 * 1024) return false;
+  ecosystemBus.emitEvent(appName, eventType, (data ?? {}) as Record<string, unknown>);
   return true;
 });
 

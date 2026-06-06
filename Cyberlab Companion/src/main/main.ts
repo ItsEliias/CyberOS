@@ -590,7 +590,11 @@ function registerIPC() {
     } catch {}
   });
 
-  ipcMain.handle('ecosystem-emit', (_, appName: string, eventType: string, data: unknown) => {
+  ipcMain.handle('ecosystem-emit', (_, appName: unknown, eventType: unknown, data: unknown) => {
+    if (typeof appName !== 'string' || !appName || appName.length > 80) return false;
+    if (typeof eventType !== 'string' || !eventType || eventType.length > 120) return false;
+    if (data !== undefined && (typeof data !== 'object' || data === null)) return false;
+    if (data !== undefined && JSON.stringify(data).length > 64 * 1024) return false;
     emitEvent(appName, eventType, data as Record<string, unknown>);
     return true;
   });

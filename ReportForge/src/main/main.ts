@@ -380,8 +380,22 @@ ipcMain.handle('list-writeup-files', (): WriteupFile[] => {
   } catch { return []; }
 });
 
-ipcMain.handle('read-writeup-file', (_, filePath: string): string => {
-  try { return fs.readFileSync(filePath, 'utf8'); } catch { return ''; }
+ipcMain.handle('read-writeup-file', (_, filePath: unknown): string => {
+  // Confine reads to the configured obsidian vault. Without this check, a
+  // renderer could call this IPC with `/etc/passwd` and exfiltrate any
+  // file the main process can read.
+  if (typeof filePath !== 'string' || !filePath) return '';
+  try {
+    const cfg = readSharedConfig();
+    const vaultPath = (cfg.cyberlab as { obsidianVault?: string } | undefined)?.obsidianVault
+      || cfg.obsidianVaultPath as string | undefined;
+    if (!vaultPath) return '';
+    const vaultResolved = path.resolve(vaultPath) + path.sep;
+    const fileResolved  = path.resolve(filePath);
+    if (!fileResolved.startsWith(vaultResolved)) return '';
+    if (!filePath.endsWith('.md')) return '';  // writeups are .md only
+    return fs.readFileSync(filePath, 'utf8');
+  } catch { return ''; }
 });
 
 // Export
@@ -470,8 +484,13 @@ ipcMain.handle('reportforge:clear-ghostvault-export', (): boolean => {
   } catch { return false; }
 });
 
-// Ecosystem emit from renderer
-ipcMain.handle('ecosystem-emit', (_, appName: string, event: string, data: Record<string, unknown>) => {
-  ecosystemBus.emitEvent(appName, event, data);
+// Ecosystem emit from renderer — validate at the boundary so a renderer
+// bug can't shovel garbage / huge payloads into the shared event bus.
+ipcMain.handle('ecosystem-emit', (_, appName: unknown, event: unknown, data: unknown) => {
+  if (typeof appName !== 'string' || !appName || appName.length > 80) return false;
+  if (typeof event !== 'string' || !event || event.length > 120) return false;
+  if (data !== undefined && (typeof data !== 'object' || data === null)) return false;
+  if (data !== undefined && JSON.stringify(data).length > 64 * 1024) return false;
+  ecosystemBus.emitEvent(appName, event, (data ?? {}) as Record<string, unknown>);
   return true;
 });
