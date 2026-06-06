@@ -792,9 +792,16 @@ ipcMain.handle('note:export:html', async (_, html: string, noteName: string): Pr
 // ─── Export as PDF ────────────────────────────────────────────────────────────
 ipcMain.handle('note:export:pdf', async (_, htmlContent: string, noteName: string): Promise<boolean> => {
   if (!mainWindow) return false;
+  if (typeof htmlContent !== 'string') return false;
+  // 50 MB ceiling — encodeURIComponent triples size, and BrowserWindow.loadURL
+  // chokes on data: URIs much above this anyway.
+  if (htmlContent.length > 50 * 1024 * 1024) return false;
+  const safeName = (typeof noteName === 'string' ? noteName : 'note')
+    .replace(/[/\\?%*:|"<>]/g, '-')
+    .slice(0, 128);
   const result = await dialog.showSaveDialog(mainWindow, {
     title: 'Export as PDF',
-    defaultPath: `${noteName}.pdf`,
+    defaultPath: `${safeName}.pdf`,
     filters: [{ name: 'PDF', extensions: ['pdf'] }],
   });
   if (result.canceled || !result.filePath) return false;
