@@ -32,18 +32,6 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKey)
   }, [])
 
-  // Tray-menu queued actions from the Launcher
-  useEffect(() => {
-    const un = window.electronAPI.onPendingAction(action => {
-      if (action === 'new-graph') {
-        handleNewEmptyGraph()
-      } else if (action === 'import-scan') {
-        setImportOpen(true)
-      }
-    })
-    return () => { un() }
-  }, [handleNewEmptyGraph])
-
   const handleNewEmptyGraph = useCallback(() => {
     const now = new Date().toISOString()
     const graph: NetworkGraph = {
@@ -57,6 +45,19 @@ export default function App() {
     setActiveGraph(graph)
     setView('canvas')
   }, [])
+
+  // Tray-menu queued actions from the Launcher. Defined after
+  // handleNewEmptyGraph so the dep reference isn't in the temporal dead zone.
+  useEffect(() => {
+    const un = window.electronAPI.onPendingAction(action => {
+      if (action === 'new-graph') {
+        handleNewEmptyGraph()
+      } else if (action === 'import-scan') {
+        setImportOpen(true)
+      }
+    })
+    return () => { un() }
+  }, [handleNewEmptyGraph])
 
   const refreshGraphs = useCallback(() => {
     window.electronAPI.loadGraphs().then(setSavedGraphs).catch(console.error)
