@@ -412,8 +412,38 @@ function setupTray(): void {
   tray.on('double-click', () => tray!.popUpContextMenu());
   refreshContextMenu();
   // Re-poll SSO state every 7 s so the menu's status line stays accurate
-  // when CredVault is locked/unlocked from another app.
-  setInterval(() => { try { refreshContextMenu(); } catch { /* ignore */ } }, 7000);
+  // when CredVault is locked/unlocked from another app. Also drives the
+  // pre-expiry warning notification.
+  setInterval(() => {
+    try { refreshContextMenu(); } catch { /* ignore */ }
+    try { ssoExpiryWatcher(); } catch { /* ignore */ }
+  }, 7000);
+}
+
+// ─── SSO pre-expiry warning ──────────────────────────────────────────────────
+// Fires a single desktop notification when the CredVault session is within
+// 90 s of expiry. Resets once the session is re-unlocked or fully expires so
+// the next renewal cycle can warn again.
+let ssoExpiryNotifiedFor: string | null = null;
+
+function ssoExpiryWatcher(): void {
+  const sso = readSSOState();
+  if (!sso.unlocked || !sso.expiresAt) {
+    // Session locked / re-unlocked / no expiry — clear so the next session can warn.
+    ssoExpiryNotifiedFor = null;
+    return;
+  }
+  const ms = new Date(sso.expiresAt).getTime() - Date.now();
+  if (ms <= 0) { ssoExpiryNotifiedFor = null; return; }
+  if (ms > 90_000) return;
+  if (ssoExpiryNotifiedFor === sso.expiresAt) return;
+  ssoExpiryNotifiedFor = sso.expiresAt;
+  const seconds = Math.max(1, Math.round(ms / 1000));
+  notify(
+    'CredVault session expiring',
+    `Auto-lock in ~${seconds}s. Click to renew.`,
+    () => launchApp('credvault'),
+  );
 }
 
 function refreshContextMenu(): void {
