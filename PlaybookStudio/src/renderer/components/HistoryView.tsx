@@ -229,6 +229,7 @@ export default function HistoryView() {
   const [resultFilter,  setResultFilter]   = useState<ResultFilter>('all')
   const [dateFrom,      setDateFrom]       = useState('')
   const [dateTo,        setDateTo]         = useState('')
+  const [exportStatus,  setExportStatus]   = useState<{ kind: 'idle' | 'ok' | 'err'; text?: string }>({ kind: 'idle' })
 
   function handleRowClick(run: PlaybookRun, e: React.MouseEvent) {
     if (e.shiftKey) {
@@ -281,10 +282,38 @@ export default function HistoryView() {
             <button onClick={() => { setActiveRun(selected); setView('run') }} className="text-xs px-3 py-1 rounded font-medium" style={{ background: 'var(--warning)', color: '#000' }}>Resume</button>
           )}
           {selected.status === 'completed' && (
-            <button onClick={() => window.electronAPI.exportRunReport(selected.id)} className="text-xs px-3 py-1 rounded font-medium"
-              style={{ background: 'rgba(63,185,80,0.15)', color: 'var(--success)', border: '1px solid rgba(63,185,80,0.3)' }}>
-              Export Report
-            </button>
+            <>
+              <button
+                onClick={async () => {
+                  // Previously this fired the IPC silently and discarded the
+                  // result, so the user couldn't tell if export had worked,
+                  // failed, or been cancelled. Now we surface the outcome.
+                  setExportStatus({ kind: 'idle' })
+                  try {
+                    const r = await window.electronAPI.exportRunReport(selected.id) as { ok?: boolean; reportFile?: string; error?: string }
+                    if (r?.ok) {
+                      setExportStatus({ kind: 'ok', text: r.reportFile ? `Saved: ${r.reportFile}` : 'Saved' })
+                    } else {
+                      setExportStatus({ kind: 'err', text: r?.error || 'Export failed' })
+                    }
+                  } catch (e) {
+                    setExportStatus({ kind: 'err', text: (e as Error).message })
+                  }
+                  setTimeout(() => setExportStatus({ kind: 'idle' }), 4000)
+                }}
+                className="text-xs px-3 py-1 rounded font-medium"
+                style={{ background: 'rgba(63,185,80,0.15)', color: 'var(--success)', border: '1px solid rgba(63,185,80,0.3)' }}>
+                Export Report
+              </button>
+              {exportStatus.kind !== 'idle' && (
+                <span className="text-[11px] px-2 py-0.5 rounded" style={{
+                  color: exportStatus.kind === 'ok' ? 'var(--success)' : 'var(--danger)',
+                  background: exportStatus.kind === 'ok' ? 'rgba(63,185,80,0.10)' : 'rgba(248,81,73,0.10)',
+                }}>
+                  {exportStatus.text}
+                </span>
+              )}
+            </>
           )}
         </div>
         <div className="flex-1 overflow-y-auto p-4"><RunDetail run={selected} /></div>
