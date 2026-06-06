@@ -112,6 +112,20 @@ export default function CommandPalette({ open, onClose }: Props) {
       { id: 'nav:settings',   label: 'Open Settings',     group: 'Navigation', keywords: ['settings', 'preferences'], run: () => { setSettingsOpen(true); onClose() } },
     )
 
+    // Security: toggle require-CredVault-session preference
+    const requireSSO = (() => { try { return localStorage.getItem('rd:requireCredVaultSession') === '1' } catch { return false } })()
+    list.push({
+      id: 'security:require-sso',
+      label: requireSSO ? 'Disable: Require CredVault session' : 'Enable: Require CredVault session',
+      hint:  requireSSO ? 'Soft-lock off' : 'Soft-lock ReconDesk until CredVault is unlocked',
+      group: 'Action',
+      keywords: ['sso', 'lock', 'credvault', 'session', 'security'],
+      run: () => {
+        try { localStorage.setItem('rd:requireCredVaultSession', requireSSO ? '0' : '1') } catch { /* ignore */ }
+        location.reload()
+      },
+    })
+
     // Dynamic: filter targets by name + IP → "Open: <name> (<ip>)"
     for (const t of targets) {
       list.push({

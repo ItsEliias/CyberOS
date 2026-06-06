@@ -13,6 +13,7 @@ import ExportTab from './components/target/ExportTab'
 import SettingsPanel from './components/target/SettingsPanel'
 import GlobalSearch from './components/GlobalSearch'
 import CommandPalette from './components/CommandPalette'
+import SSOLockScreen from './components/SSOLockScreen'
 import CalendarView from './components/CalendarView'
 import OnboardingModal, { useOnboarding } from './components/OnboardingModal'
 import type { ActiveTab } from './stores/useRecondeskStore'
@@ -43,6 +44,25 @@ export default function App() {
 
   const [paletteOpen, setPaletteOpen] = useState(false)
   const closePalette = useCallback(() => setPaletteOpen(false), [])
+  const [ssoUnlocked, setSsoUnlocked] = useState<boolean | null>(null)
+  const [requireSSO,  setRequireSSO]  = useState(false)
+
+  useEffect(() => {
+    try { setRequireSSO(localStorage.getItem('rd:requireCredVaultSession') === '1') } catch { /* ignore */ }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    async function check() {
+      try {
+        const r = await window.electronAPI.getSSO()
+        if (!cancelled) setSsoUnlocked(!!r.unlocked)
+      } catch { if (!cancelled) setSsoUnlocked(true) }
+    }
+    void check()
+    const t = setInterval(check, 5000)
+    return () => { cancelled = true; clearInterval(t) }
+  }, [])
 
   // ⌘K → command palette
   useEffect(() => {
@@ -81,8 +101,16 @@ export default function App() {
     })
   }, [loadTargets])
 
+  const ssoBlocked = requireSSO && ssoUnlocked === false
+
   return (
-    <div className="flex flex-col h-full" style={{ background: 'var(--surface-0)', color: 'var(--text-primary)' }}>
+    <div className="flex flex-col h-full" style={{ background: 'var(--surface-0)', color: 'var(--text-primary)', position: 'relative' }}>
+      {ssoBlocked && (
+        <SSOLockScreen onCheck={async () => {
+          const r = await window.electronAPI.getSSO()
+          setSsoUnlocked(!!r.unlocked)
+        }} />
+      )}
       <TitleBar onHelp={onboarding.open} />
 
       <div className="flex flex-1 min-h-0">
