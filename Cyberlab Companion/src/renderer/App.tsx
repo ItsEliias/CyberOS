@@ -170,9 +170,21 @@ export default function App() {
       useStore.getState().setVpnStatus(status as never);
     });
 
+    const pendingCleanup = window.electronAPI.onPendingAction(async (action: string) => {
+      if (action === 'refresh-stats') {
+        // Mirrors CommandPalette's "Refresh platform stats" command
+        const api = window.electronAPI as unknown as Record<string, (...a: unknown[]) => Promise<unknown>>;
+        try { await api.fetchHtbStats?.(); } catch { /* ignore */ }
+        try { await api.fetchThmStats?.(); } catch { /* ignore */ }
+        const { activeTabId, setActivePanel } = useStore.getState();
+        if (activeTabId) setActivePanel(activeTabId, 'progress');
+      }
+    });
+
     return () => {
       autosaveCleanup?.();
       vpnCleanup?.();
+      pendingCleanup?.();
     };
   }, []);
 

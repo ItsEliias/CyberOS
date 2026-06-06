@@ -40,4 +40,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openExternal:           (url: string): Promise<void>                                                => ipcRenderer.invoke('open-external', url),
   setTerminalLinkTarget:  (ip: string): Promise<void>                                                 => ipcRenderer.invoke('terminallink:set-target', ip),
   runNmap:                (ip: string): Promise<void>                                                  => ipcRenderer.invoke('nmap:run', ip),
+  onPendingAction:        (cb: (action: string) => void): (() => void) => {
+    ipcRenderer.on('pending-action', (_e, d) => cb(d))
+    return () => ipcRenderer.removeAllListeners('pending-action')
+  },
 })

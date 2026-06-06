@@ -7,7 +7,10 @@ import fs from 'fs';
 import os from 'os';
 import * as ecosystemBus from './ecosystem-bus.js';
 import { registerExtras, DEFAULT_CAPTURE_HOTKEY } from './ipc-extras.js';
+import { consumePendingAction } from './pendingActions.js';
 import type { GhostVaultConfig, NoteFile, NewNoteResult, SaveCaptureResult } from '../shared/types.js';
+
+const APP_KEY = 'ghostvault';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -302,6 +305,17 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     mainWindow!.show();
     if (cfg.alwaysOnTop) mainWindow!.setAlwaysOnTop(true, 'floating');
+  });
+
+  // Tray-menu action dispatch — after the renderer mounts, forward any
+  // pending action queued by the Launcher to the renderer.
+  mainWindow.webContents.once('did-finish-load', () => {
+    setTimeout(() => {
+      const result = consumePendingAction(APP_KEY);
+      if (result && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('pending-action', result.action);
+      }
+    }, 800);
   });
 
   mainWindow.on('close', () => {

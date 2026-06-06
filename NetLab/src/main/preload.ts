@@ -37,4 +37,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     sendEcosystemEvent: (event: string, data: Record<string, unknown>): Promise<void> =>
       ipcRenderer.invoke('ecosystem:send', event, data),
   },
+
+  // ── Tray pending actions (from CyberTools Launcher) ───────────────────────
+  onPendingAction: (cb: (action: string) => void): (() => void) => {
+    const fn = (_: Electron.IpcRendererEvent, action: string) => cb(action)
+    ipcRenderer.on('pending-action', fn)
+    return () => ipcRenderer.removeListener('pending-action', fn)
+  },
 })

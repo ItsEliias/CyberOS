@@ -7,6 +7,7 @@ import http from 'http';
 import { URL } from 'url';
 import { emitEvent } from './ecosystem-bus.js';
 import { registerExtrasIPC } from './ipc-extras.js';
+import { consumePendingAction } from './pendingActions.js';
 import {
   saveTokenSecure, loadTokenSecure, clearTokenSecure,
   fetchHtbStats, fetchThmStats, writeActiveLab,
@@ -235,7 +236,16 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   }
 
-  mainWindow.once('ready-to-show', () => mainWindow!.show());
+  mainWindow.once('ready-to-show', () => {
+    mainWindow!.show();
+    // Give the renderer time to mount its pending-action listener
+    setTimeout(() => {
+      const result = consumePendingAction('cyberlab');
+      if (result && mainWindow) {
+        mainWindow.webContents.send('pending-action', result.action);
+      }
+    }, 800);
+  });
   mainWindow.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
   mainWindow.on('closed', () => { mainWindow = null; });
 }

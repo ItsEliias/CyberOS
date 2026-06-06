@@ -131,6 +131,24 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ── Tray-menu pending action ──────────────────────────────────────────────
+  // Forward action ids queued by the Launcher. `gv:new-note` is already
+  // listened for above (line 124); quick-capture mirrors the palette flow.
+  useEffect(() => {
+    const off = window.ghostvault.onPendingAction((action) => {
+      switch (action) {
+        case 'new-note':
+          window.dispatchEvent(new CustomEvent('gv:new-note'));
+          break;
+        case 'quick-capture':
+          // Same path the palette uses to toggle the floating capture window.
+          void window.ghostvault.toggleCapture();
+          break;
+      }
+    });
+    return () => { off(); };
+  }, []);
+
   // ── SSO soft-lock poll ─────────────────────────────────────────────────────
   // Re-reads the CredVault SSO state every 5s. When the user has opted into
   // "Require CredVault session" in Settings, this drives the SSOLockScreen.

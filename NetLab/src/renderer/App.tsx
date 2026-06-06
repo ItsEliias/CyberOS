@@ -19,10 +19,11 @@ import SearchModal   from './components/SearchModal'
 import CommandPalette from './components/CommandPalette'
 
 export default function App() {
-  const activeView  = useNetLabStore(s => s.activeView)
-  const setLabs     = useNetLabStore(s => s.setLabs)
-  const setProgress = useNetLabStore(s => s.setProgress)
-  const setSnippets = useNetLabStore(s => s.setSnippets)
+  const activeView    = useNetLabStore(s => s.activeView)
+  const setActiveView = useNetLabStore(s => s.setActiveView)
+  const setLabs       = useNetLabStore(s => s.setLabs)
+  const setProgress   = useNetLabStore(s => s.setProgress)
+  const setSnippets   = useNetLabStore(s => s.setSnippets)
 
   const [searchOpen,   setSearchOpen]   = useState(false)
   const [paletteOpen,  setPaletteOpen]  = useState(false)
@@ -30,6 +31,16 @@ export default function App() {
   const openSearch   = useCallback(() => setSearchOpen(true),  [])
   const closeSearch  = useCallback(() => setSearchOpen(false), [])
   const closePalette = useCallback(() => setPaletteOpen(false), [])
+
+  // Tray-menu actions fired by the CyberTools Launcher.
+  useEffect(() => {
+    const off = window.electronAPI.onPendingAction?.(action => {
+      if (action === 'new-lab') {
+        setActiveView('labs')
+      }
+    })
+    return () => { off?.() }
+  }, [setActiveView])
 
   // ⌘K → command palette (actions). ⌘Shift+F → SearchModal (content search).
   useEffect(() => {

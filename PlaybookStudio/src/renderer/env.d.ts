@@ -31,6 +31,7 @@ declare global {
 
       // Push events
       onContextUpdated: (cb: (sc: SharedContext) => void) => () => void
+      onPendingAction:  (cb: (action: string) => void) => () => void
 
       // Shell
       openExternal: (url: string) => Promise<void>

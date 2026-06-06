@@ -176,6 +176,21 @@ export default function App() {
     return () => { offProgress(); offComplete(); offError(); offUpdate(); offHealth(); };
   }, []);
 
+  // ── Tray-menu pending action ──────────────────────────────────────────────
+  // Forward action ids queued by the Launcher to the existing window-event
+  // wiring DashboardView already listens for.
+  useEffect(() => {
+    const off = window.electronAPI.onPendingAction((action) => {
+      switch (action) {
+        case 'run-all-scrapes':
+          window.dispatchEvent(new CustomEvent('vc:run-all'));        break;
+        case 'refresh-stats':
+          window.dispatchEvent(new CustomEvent('vc:refresh-stats'));  break;
+      }
+    });
+    return () => { off(); };
+  }, []);
+
   // ── Wizard complete ───────────────────────────────────────────────────────
   async function handleWizardComplete(vp: string, theme: { core: CoreTheme; personality: PersonalityTheme }) {
     await window.electronAPI.setVaultPath(vp);

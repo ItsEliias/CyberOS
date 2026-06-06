@@ -37,6 +37,7 @@ export default function App() {
   const targets         = useRecondeskStore(s => s.targets)
   const toasts          = useRecondeskStore(s => s.toasts)
   const dismissToast    = useRecondeskStore(s => s.dismissToast)
+  const setNewTargetModal = useRecondeskStore(s => s.setNewTargetModal)
 
   const activeTarget    = targets.find(t => t.id === activeTargetId)
 
@@ -54,6 +55,16 @@ export default function App() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+
+  // Tray-menu actions fired by the CyberTools Launcher.
+  useEffect(() => {
+    const off = window.electronAPI.onPendingAction?.(action => {
+      if (action === 'new-target') {
+        setNewTargetModal(true)
+      }
+    })
+    return () => { off?.() }
+  }, [setNewTargetModal])
 
   useEffect(() => {
     loadTargets()

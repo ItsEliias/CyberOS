@@ -9,6 +9,7 @@ import https from 'https'
 import { emitEvent } from './ecosystem-bus'
 import { detectCredentialChanges } from './credential-tracker'
 import { registerNetworkHandlers } from './ipc-network-handlers'
+import { consumePendingAction } from './pendingActions'
 import type { ReconDeskData, ReconDeskStatus } from '../shared/types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -388,6 +389,14 @@ app.whenReady().then(() => {
   writeStatus(data)
   emitEvent('ReconDesk', 'app:launched', { version: APP_VERSION })
   if (mainWindow) setupConfigWatch(mainWindow)
+
+  // Tray-menu pending action — let the renderer mount, then dispatch.
+  setTimeout(() => {
+    const pending = consumePendingAction('recondesk')
+    if (pending && mainWindow) {
+      mainWindow.webContents.send('pending-action', pending.action)
+    }
+  }, 800)
 
   statusInterval = setInterval(() => {
     const d = loadData()

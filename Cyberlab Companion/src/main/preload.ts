@@ -89,6 +89,11 @@ const api = {
     ipcRenderer.on('vpn-status', listener);
     return () => ipcRenderer.removeListener('vpn-status', listener);
   },
+  onPendingAction: (cb: (action: string) => void) => {
+    const listener = (_: unknown, action: string) => cb(action);
+    ipcRenderer.on('pending-action', listener);
+    return () => ipcRenderer.removeListener('pending-action', listener);
+  },
 
   ecosystemEmit: (appName: string, eventType: string, data: unknown) =>
     ipcRenderer.invoke('ecosystem-emit', appName, eventType, data),

@@ -408,11 +408,21 @@ function refreshContextMenu(): void {
 
   const appItem = (key: string, label: string, accelerator?: string) => {
     const installed = installedKey(key);
+    const actions = APP_TRAY_ACTIONS[key] || [];
+    if (!installed || actions.length === 0) {
+      return { label, accelerator, enabled: installed, click: () => { launchApp(key); } };
+    }
+    // Submenu: open + per-app actions. Clicking "Open" launches with no action.
     return {
-      label,
-      accelerator,
-      enabled: installed,
-      click: () => { launchApp(key); }
+      label, accelerator, enabled: installed,
+      submenu: [
+        { label: 'Open', click: () => { launchApp(key); } },
+        { type: 'separator' as const },
+        ...actions.map(a => ({
+          label: a.label,
+          click: () => { writePendingAction(key, a.id); launchApp(key); },
+        })),
+      ],
     };
   };
 
@@ -469,6 +479,56 @@ function refreshContextMenu(): void {
     }
   ]);
   tray!.setContextMenu(menu);
+}
+
+// ─── Tray-menu per-app quick actions ─────────────────────────────────────────
+// When a user picks a submenu item, we write `pending_action` into the shared
+// cybertools-config.json, then launch the target app. The target app reads
+// the pending entry on startup (filtered by appKey), runs it, and clears it.
+
+interface TrayAction { id: string; label: string }
+
+const APP_TRAY_ACTIONS: Record<string, TrayAction[]> = {
+  credvault:      [{ id: 'add-credential', label: 'Add credential…' },
+                   { id: 'generate-password', label: 'Generate password…' },
+                   { id: 'run-hibp',        label: 'Run HIBP breach check' },
+                   { id: 'lock-vault',      label: 'Lock vault' }],
+  vaultscraper:   [{ id: 'run-all-scrapes', label: 'Run all scrapes now' },
+                   { id: 'refresh-stats',   label: 'Refresh stats' }],
+  ghostvault:     [{ id: 'new-note',        label: 'New note…' },
+                   { id: 'quick-capture',   label: 'Quick capture' }],
+  signalboard:    [{ id: 'refresh-feeds',   label: 'Refresh all feeds' },
+                   { id: 'add-custom-feed', label: 'Add custom feed…' }],
+  networkmap:     [{ id: 'new-graph',       label: 'New empty graph' },
+                   { id: 'import-scan',     label: 'Import scan…' }],
+  playbookstudio: [{ id: 'new-playbook',    label: 'New playbook…' }],
+  terminallink:   [{ id: 'new-session',     label: 'New session' }],
+  netlab:         [{ id: 'new-lab',         label: 'New lab…' }],
+  recondesk:      [{ id: 'new-target',      label: 'New target…' }],
+  reportforge:    [{ id: 'new-report',      label: 'New report…' }],
+  cyberlab:       [{ id: 'refresh-stats',   label: 'Refresh platform stats' }],
+};
+
+function writePendingAction(appKey: string, actionId: string): void {
+  try {
+    const cfgPath = path.join(os.homedir(), 'cybertools-config.json');
+    const shared = fs.existsSync(cfgPath)
+      ? JSON.parse(fs.readFileSync(cfgPath, 'utf8'))
+      : {};
+    const queue = (shared.pending_actions as Record<string, unknown>[] | undefined) || [];
+    // Replace any existing queued action for the same appKey so we don't pile up.
+    const filtered = queue.filter(q => (q as { app?: string }).app !== appKey);
+    filtered.push({
+      app: appKey,
+      action: actionId,
+      requestedAt: new Date().toISOString(),
+    });
+    shared.pending_actions = filtered;
+    fs.writeFileSync(cfgPath, JSON.stringify(shared, null, 2), 'utf8');
+    addActivityEntry({ type: 'launcher', text: `Queued ${appKey}: ${actionId}` });
+  } catch (e) {
+    console.warn('[tray-action] write failed:', (e as Error).message);
+  }
 }
 
 // Fallback install paths (productName) per appKey — used when config has no

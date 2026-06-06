@@ -33,6 +33,7 @@ declare global {
         onEcosystemEvent(cb: (event: unknown) => void): void
         sendEcosystemEvent(event: string, data: Record<string, unknown>): Promise<void>
       }
+      onPendingAction(cb: (action: string) => void): (() => void)
     }
   }
 }

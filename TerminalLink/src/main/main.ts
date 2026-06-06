@@ -7,6 +7,7 @@ import fs from 'fs';
 import type { CommandEntry, CapturePayload, SessionContext } from '../shared/types.js';
 import { registerTerminalLinkIPC } from './ipc/terminallink';
 import { stopTailing } from './externalShellHook';
+import { consumePendingAction } from './pendingActions';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const _require   = createRequire(import.meta.url);
@@ -109,6 +110,13 @@ function createWindow(): void {
     mainWindow!.show();
     // Register the dedicated IPC module (spec deliverable)
     registerTerminalLinkIPC(mainWindow!);
+    // Tray-menu pending action — let the renderer mount, then dispatch.
+    setTimeout(() => {
+      const pending = consumePendingAction('terminallink');
+      if (pending && mainWindow) {
+        mainWindow.webContents.send('pending-action', pending.action);
+      }
+    }, 800);
   });
   mainWindow.on('closed', () => { mainWindow = null; });
 }

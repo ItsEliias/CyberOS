@@ -125,14 +125,16 @@ function Sidebar() {
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const onboarding   = useOnboarding()
-  const view         = useStore(s => s.view)
-  const setPlaybooks = useStore(s => s.setPlaybooks)
-  const setRuns      = useStore(s => s.setRuns)
-  const setContext   = useStore(s => s.setContext)
-  const setActiveRun = useStore(s => s.setActiveRun)
-  const activeRun    = useStore(s => s.activeRun)
-  const theme        = useStore(s => s.theme)
+  const onboarding        = useOnboarding()
+  const view              = useStore(s => s.view)
+  const setView           = useStore(s => s.setView)
+  const setPlaybooks      = useStore(s => s.setPlaybooks)
+  const setRuns           = useStore(s => s.setRuns)
+  const setContext        = useStore(s => s.setContext)
+  const setActiveRun      = useStore(s => s.setActiveRun)
+  const setActivePlaybook = useStore(s => s.setActivePlaybook)
+  const activeRun         = useStore(s => s.activeRun)
+  const theme             = useStore(s => s.theme)
   const [paletteOpen, setPaletteOpen] = useState(false)
 
   // Apply theme on mount
@@ -166,8 +168,26 @@ export default function App() {
     })
 
     const unCtx = window.electronAPI.onContextUpdated(setContext)
-    return () => { unCtx() }
-  }, [setPlaybooks, setRuns, setContext, setActiveRun])
+    const unPending = window.electronAPI.onPendingAction(action => {
+      if (action === 'new-playbook') {
+        const now = new Date().toISOString()
+        setActivePlaybook({
+          id:          `custom-${Date.now()}`,
+          name:        'New Playbook',
+          description: '',
+          category:    'custom',
+          tags:        [],
+          version:     '1.0',
+          createdAt:   now,
+          updatedAt:   now,
+          steps:       [],
+          isBuiltIn:   false,
+        })
+        setView('editor')
+      }
+    })
+    return () => { unCtx(); unPending() }
+  }, [setPlaybooks, setRuns, setContext, setActiveRun, setActivePlaybook, setView])
 
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--bg)', color: 'var(--text)' }}>

@@ -64,4 +64,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('feeds:bookmarks', (_e, d) => cb(d))
     return () => ipcRenderer.removeAllListeners('feeds:bookmarks')
   },
+  onPendingAction: (cb: (action: string) => void) => {
+    ipcRenderer.on('pending-action', (_e, d) => cb(d))
+    return () => ipcRenderer.removeAllListeners('pending-action')
+  },
 })

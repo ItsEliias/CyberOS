@@ -78,6 +78,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onVaultLocked:   (cb: () => void) => ipcRenderer.on('vault:locked', cb),
   offVaultLocked:  (cb: () => void) => ipcRenderer.removeListener('vault:locked', cb),
 
+  // Tray-menu pending action push from main (one-shot per launch)
+  onPendingAction: (cb: (action: string) => void) => {
+    const fn = (_: Electron.IpcRendererEvent, action: string) => cb(action)
+    ipcRenderer.on('pending-action', fn)
+    return () => ipcRenderer.removeListener('pending-action', fn)
+  },
+
   // Cross-app search
   credvaultSearch: (q: { ip?: string; targetName?: string }) => ipcRenderer.invoke('credvault-search', q) as Promise<SearchResult[]>,
 

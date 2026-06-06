@@ -6,6 +6,7 @@ import fs from 'fs'
 import os from 'os'
 import https from 'https'
 import { emitEvent } from './ecosystem-bus'
+import { consumePendingAction } from './pendingActions'
 import {
   DEFAULT_SOURCES, loadSources, saveSources,
   loadCache, saveCache, fetchAllFeeds, saveItemToVault,
@@ -651,6 +652,11 @@ app.whenReady().then(async () => {
     // Send bookmarks state on boot
     const bm = loadBookmarks()
     push('feeds:bookmarks', bm)
+    // Consume any tray-menu queued action once the renderer has had time to mount.
+    setTimeout(() => {
+      const pending = consumePendingAction('signalboard')
+      if (pending) push('pending-action', pending.action)
+    }, 800)
   })
 
   rescheduleRefresh()

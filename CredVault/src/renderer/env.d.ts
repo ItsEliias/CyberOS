@@ -62,6 +62,9 @@ declare global {
       onVaultLocked:    (cb: () => void) => void
       offVaultLocked:   (cb: () => void) => void
 
+      // Tray-menu pending action (one-shot per launch)
+      onPendingAction:  (cb: (action: string) => void) => () => void
+
       // Cross-app search
       credvaultSearch:  (q: { ip?: string; targetName?: string }) => Promise<SearchResult[]>
 

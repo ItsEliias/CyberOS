@@ -8,6 +8,9 @@ import fs from 'fs'
 import os from 'os'
 import { emitEvent } from './ecosystem-bus'
 import { registerCredVaultHandlers, setMainWindow, lockVault, writeCredVaultStatus, credCount } from './ipc/credvault'
+import { consumePendingAction } from './pendingActions'
+
+const APP_KEY = 'credvault'
 
 const APP_VERSION       = '1.0.0'
 const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')
@@ -62,6 +65,17 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
   }
+
+  // Tray-menu action dispatch — after the renderer mounts, forward any
+  // pending action queued by the Launcher to the renderer.
+  mainWindow.webContents.once('did-finish-load', () => {
+    setTimeout(() => {
+      const result = consumePendingAction(APP_KEY)
+      if (result && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('pending-action', result.action)
+      }
+    }, 800)
+  })
 }
 
 // Register all IPC handlers (crypto + credentials + backup + pending)

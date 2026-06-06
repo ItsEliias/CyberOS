@@ -5,7 +5,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import fs from 'fs';
+import os from 'os';
 import { registerSecretIpc } from './secretIpc';
+import { consumePendingAction } from './pendingActions';
+
+const APP_KEY = 'vaultscraper';
 
 const __dirname  = path.dirname(fileURLToPath(import.meta.url));
 const _require   = createRequire(import.meta.url);
@@ -67,6 +71,17 @@ function createWindow() {
   }
 
   mainWindow.once('ready-to-show', () => { mainWindow!.show(); });
+
+  // Tray-menu action dispatch — after the renderer mounts, forward any
+  // pending action queued by the Launcher to the renderer.
+  mainWindow.webContents.once('did-finish-load', () => {
+    setTimeout(() => {
+      const result = consumePendingAction(APP_KEY);
+      if (result && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('pending-action', result.action);
+      }
+    }, 800);
+  });
 
   mainWindow.on('closed', () => { mainWindow = null; });
 }

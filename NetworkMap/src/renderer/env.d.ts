@@ -52,6 +52,7 @@ declare global {
       openExternal(url: string): Promise<void>
       setTerminalLinkTarget(ip: string): Promise<void>
       runNmap(ip: string): Promise<void>
+      onPendingAction(cb: (action: string) => void): () => void
     }
   }
 }

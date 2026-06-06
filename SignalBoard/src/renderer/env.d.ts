@@ -37,6 +37,7 @@ declare global {
       onBookmarks:     (cb: (bm: { ids: string[]; tags: Record<string, string[]> }) => void) => () => void
       onDigest:        (cb: (items: FeedItem[]) => void) => () => void
       onSelectItem:    (cb: (id: string) => void) => () => void
+      onPendingAction: (cb: (action: string) => void) => () => void
     }
   }
 }

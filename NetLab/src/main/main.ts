@@ -6,6 +6,7 @@ import path from 'path'
 import fs from 'fs'
 import os from 'os'
 import { emitEvent } from './ecosystem-bus'
+import { consumePendingAction } from './pendingActions'
 import type { Lab, LabProgress, NetLabPrefs } from '../shared/types'
 
 const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')
@@ -69,6 +70,13 @@ function createWindow(): void {
 
   mainWindow.webContents.once('did-finish-load', () => {
     emitEvent('NetLab', 'app:launched', { version: APP_VERSION })
+    // Tray-menu pending action — let the renderer mount, then dispatch.
+    setTimeout(() => {
+      const pending = consumePendingAction('netlab')
+      if (pending && mainWindow) {
+        mainWindow.webContents.send('pending-action', pending.action)
+      }
+    }, 800)
   })
 }
 
