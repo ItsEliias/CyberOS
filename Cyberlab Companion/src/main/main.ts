@@ -298,14 +298,30 @@ function registerIPC() {
 
   ipcMain.handle('save-session',(_, data: { id: string; name?: string; labName?: string }) => {
     try {
-      const fp = path.join(SESSIONS_DIR, `session_${data.id}.json`);
-      fs.writeFileSync(fp, JSON.stringify(data, null, 2), 'utf8');
+      // Sanity-check id so a renderer can't traverse out of SESSIONS_DIR
+      // via "id" like "../../../something". Session ids are short
+      // alphanumeric strings (uuid/nanoid-style) in normal use.
+      if (!data?.id || typeof data.id !== 'string' || !/^[A-Za-z0-9_-]+$/.test(data.id)) {
+        return { success: false, error: 'Invalid session id' };
+      }
+      if (!fs.existsSync(SESSIONS_DIR)) fs.mkdirSync(SESSIONS_DIR, { recursive: true });
+      const fp  = path.join(SESSIONS_DIR, `session_${data.id}.json`);
+      // Atomic write: tmp + rename. A crash or kill mid-writeFileSync
+      // of an active session leaves a truncated/half-parsed JSON that
+      // load-session quietly drops as null next launch — the user
+      // loses their lab notes for no reason.
+      const tmp = fp + '.tmp';
+      fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
+      fs.renameSync(tmp, fp);
       emitEvent('CyberLab', 'cyberlab.session.started', { name: data.name || data.labName || data.id });
       return { success: true, path: fp };
     } catch (e: unknown) { return { success: false, error: (e as Error).message }; }
   });
   ipcMain.handle('load-session', (_, id: string) => {
     try {
+      // Same id format guard as save-session — block traversal /
+      // accidental read of arbitrary JSON files in SESSIONS_DIR's parent.
+      if (typeof id !== 'string' || !/^[A-Za-z0-9_-]+$/.test(id)) return null;
       const fp = path.join(SESSIONS_DIR, `session_${id}.json`);
       if (!fs.existsSync(fp)) return null;
       return JSON.parse(fs.readFileSync(fp, 'utf8'));
@@ -320,6 +336,8 @@ function registerIPC() {
   });
   ipcMain.handle('delete-session', (_, id: string) => {
     try {
+      // Same id format guard as save-session — block traversal.
+      if (typeof id !== 'string' || !/^[A-Za-z0-9_-]+$/.test(id)) return false;
       const fp = path.join(SESSIONS_DIR, `session_${id}.json`);
       if (fs.existsSync(fp)) fs.unlinkSync(fp);
       return true;
