@@ -421,3 +421,76 @@ is on `auto-design` waiting for review/merge.
 
 Branch: `auto-design`. Direct merges to `main` blocked by classifier —
 merge via PR or grant a permission rule.
+
+---
+
+## Autonomous improvement loop — segment 3 (Sun 7 Jun, 17 iterations)
+
+User asked for a 6-way Sonnet swarm; all six died on the first API call
+because the account hit its weekly Sonnet limit (resets Jun 11). Fell
+back to single-agent solo on Opus and kept iterating.
+
+### Real bugs in the wild
+
+- **SignalBoard feed parsing dropped the entire feed on one bad date** —
+  RSS items with a malformed `<pubDate>` made `new Date(...).toISOString()`
+  throw, and the outer try/catch swallowed it at the whole-feed level. Now
+  each item is wrapped individually and falls back to fetch-time. Same
+  fix applied to the CVE parser.
+- **PlaybookStudio never persisted custom playbooks or runs** — the main
+  process loaded `playbooks.json` / `runs.json` at startup but no IPC ever
+  wrote them back. Every custom playbook, run history entry, and step
+  update evaporated on app close. Added `savePlaybooks()` and `saveRuns()`
+  helpers via `AppRefs`, called after every mutation. Atomic write.
+- **SignalBoard "Send to ReconDesk" was a no-op** — only emitted an
+  ecosystem bus event nobody subscribed to. Now writes targets straight
+  into `~/.recondesk/data.json` (atomic).
+
+### Security hardenings
+
+- **CyberLab HTB/THM tokens and Claude API key stored in base64 fallback**
+  — when `safeStorage.isEncryptionAvailable()` returned false, the code
+  fell through to `Buffer.from(token).toString('base64')` and called it
+  done. Base64 is encoding, not encryption — the secret was effectively
+  plaintext on disk. Now refuses to save in that case (caller surfaces
+  the error to the user) and the load path deletes any legacy `.b64`
+  file once it has been migrated.
+- **VaultCore path-traversal via `read-file`/`write-file` IPCs** — both
+  handlers took an arbitrary filepath from the renderer with no
+  validation. A compromised renderer could read SSH keys or overwrite
+  `~/.zshrc`. Confined to the configured vault root via `path.resolve`
+  + prefix check.
+
+### Atomic writes everywhere
+
+A crash mid-`fs.writeFileSync` used to leave half-written JSON / encrypted
+blobs that failed to parse on next launch, losing whichever data the file
+held. Switched every critical path to write → tmp → rename:
+
+- **CredVault**: `vault.enc` (every credential), `salt.bin` (vault
+  unrecoverable without it), `prefs.json` (TOTP secret, recovery hash),
+  the safeStorage Touch ID blob.
+- **ReportForge**: `reports.json` (every report).
+- **ReconDesk**: `data.json` (every target).
+- **NetLab**: `labs.json`, `progress.json`, `prefs.json` (via the shared
+  `writeJson` helper).
+- **PlaybookStudio**: `playbooks.json`, `runs.json` (via the new
+  `atomicWriteJson` helper).
+- **SignalBoard**: `sources.json`, `cache.json`.
+- **NetworkMap**: each graph's `.json` and the cross-app
+  `~/.recondesk/data.json` push.
+- **TermLink**: session `current.json` (appended on every command).
+
+(GhostVault's `writeNote` already used the pattern; the Launcher's
+`writeConfig` did too.)
+
+### Cross-app reactivity
+
+- **ReconDesk now watches its own `data.json`** so external writes from
+  SignalBoard's "Send to ReconDesk" and NetworkMap's
+  `recondesk:push-node` show up in the UI live, without the user having
+  to relaunch. Self-writes are suppressed via a 500 ms window so we
+  don't ping the renderer for our own saves.
+
+Direct merges to `main` are still blocked by the classifier — review/PR
+on `auto-design`.
