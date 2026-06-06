@@ -307,18 +307,37 @@ ipcMain.handle('get-session-context', () => {
 });
 
 // ─── IPC: Log commands ────────────────────────────────────────────────────────
+// Cap individual command length AND the merged history. Without this a
+// renderer could call log-commands every keystroke with multi-MB strings
+// and current.json grows unboundedly; subsequent reads would OOM.
+const MAX_COMMAND_LEN  = 16 * 1024;          // 16 KB per command
+const MAX_LOGGED_ENTRY = 200 * 1024 * 1024;  // 200 MB serialized cap
+const MAX_HISTORY_ROWS = 10_000;             // hard row cap to bound the array
 ipcMain.handle('log-commands', (_evt, { commands }: { commands: CommandEntry[] }) => {
   try {
+    if (!Array.isArray(commands)) return { error: 'commands must be an array' };
+    // Reject any per-command field that exceeds the per-entry cap.
+    const accepted: CommandEntry[] = [];
+    for (const c of commands) {
+      if (!c || typeof c !== 'object') continue;
+      if (typeof c.command !== 'string' || c.command.length > MAX_COMMAND_LEN) continue;
+      accepted.push(c);
+    }
     fs.mkdirSync(SESSIONS_DIR, { recursive: true });
     const sessionFile = path.join(SESSIONS_DIR, 'current.json');
     let existing: CommandEntry[] = [];
     try { existing = JSON.parse(fs.readFileSync(sessionFile, 'utf8')); } catch { /* empty */ }
+    if (!Array.isArray(existing)) existing = [];
 
-    const merged = [...existing, ...commands];
+    let merged = [...existing, ...accepted];
+    // Drop oldest entries first to keep the array bounded.
+    if (merged.length > MAX_HISTORY_ROWS) merged = merged.slice(-MAX_HISTORY_ROWS);
+    const json = JSON.stringify(merged, null, 2);
+    if (json.length > MAX_LOGGED_ENTRY) return { error: 'history too large' };
     // Atomic — current.json is appended every keystroke; a crash mid-write
     // would lose every command in the current session.
     const tmp = `${sessionFile}.tmp`;
-    fs.writeFileSync(tmp, JSON.stringify(merged, null, 2));
+    fs.writeFileSync(tmp, json);
     fs.renameSync(tmp, sessionFile);
 
     const cfg = readConfig();
@@ -333,10 +352,10 @@ ipcMain.handle('log-commands', (_evt, { commands }: { commands: CommandEntry[] }
       }
     });
 
-    if (commands.length > 0) {
+    if (accepted.length > 0) {
       emitEcosystemEvent('command:executed', {
-        commandCount: commands.length,
-        lastCommand: commands[commands.length - 1].command
+        commandCount: accepted.length,
+        lastCommand: accepted[accepted.length - 1].command
       });
     }
 
