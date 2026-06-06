@@ -20,7 +20,12 @@ export default function OnboardingModal({ onClose }: Props) {
   }
 
   function handleMoreInfo() {
-    window.electronAPI.openExternal(DOCS_PATH)
+    // DOCS_PATH is a local .md file. open-external is scheme-allowlisted to
+    // http/https/mailto in main, so route through the canonical VaultCore
+    // GitHub docs page instead. The local-file constant is kept as a
+    // fallback reference but not used at runtime.
+    const docsUrl = 'https://github.com/ItsEliias/CyberOS#vaultcore'
+    void window.electronAPI.openExternal(docsUrl)
   }
 
   return (
