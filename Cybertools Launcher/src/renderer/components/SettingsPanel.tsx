@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { CyberToolsConfig } from '@shared/types';
+import HelpTip from './ui/HelpTip';
+import BackupSection from './BackupSection';
 
 interface Props {
   open: boolean;
@@ -13,7 +15,7 @@ const CORES        = ['stealth', 'graphite', 'frost', 'oled'] as const;
 const PERSONALITIES= ['neutral', 'cyberpunk', 'terminal', 'threat'] as const;
 
 export default function SettingsPanel({ open, config, onClose, onSave }: Props) {
-  const [tab, setTab] = useState<'apps' | 'vault' | 'theme'>('apps');
+  const [tab, setTab] = useState<'apps' | 'vault' | 'theme' | 'backup'>('apps');
 
   async function pickFile(field: string, nested: string) {
     const picked = await window.api.openFilePicker();
@@ -64,7 +66,7 @@ export default function SettingsPanel({ open, config, onClose, onSave }: Props) 
 
             {/* Tabs */}
             <div className="flex border-b" style={{ borderColor: 'var(--border)' }}>
-              {(['apps', 'vault', 'theme'] as const).map(t => (
+              {(['apps', 'vault', 'theme', 'backup'] as const).map(t => (
                 <button key={t}
                   onClick={() => setTab(t)}
                   className="flex-1 py-2 text-[11px] uppercase tracking-wider font-medium capitalize transition-colors"
@@ -82,8 +84,12 @@ export default function SettingsPanel({ open, config, onClose, onSave }: Props) 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {tab === 'apps' && (
                 <>
-                  <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--text-dim)' }}>
+                  <div className="text-[10px] uppercase tracking-wider mb-1 inline-flex items-center gap-1.5" style={{ color: 'var(--text-dim)' }}>
                     Core
+                    <HelpTip
+                      title="Core apps"
+                      body="The primary CyberOS apps. Use 'Locate app…' to point the Launcher at where each app's executable lives if auto-detect didn't find it."
+                    />
                   </div>
                   {[
                     { label: 'CyberLab Companion', field: 'cyberlab',     installed: config?.cyberlab?.installed },
@@ -114,8 +120,12 @@ export default function SettingsPanel({ open, config, onClose, onSave }: Props) 
                     );
                   })}
 
-                  <div className="text-[10px] uppercase tracking-wider mt-3 mb-1" style={{ color: 'var(--text-dim)' }}>
+                  <div className="text-[10px] uppercase tracking-wider mt-3 mb-1 inline-flex items-center gap-1.5" style={{ color: 'var(--text-dim)' }}>
                     Tools
+                    <HelpTip
+                      title="Tool apps"
+                      body="Supporting CyberOS tools. Configure their executable paths here so the Launcher can spawn them when you click Open."
+                    />
                   </div>
                   {[
                     { label: 'CredVault',       field: 'credvault' },
@@ -150,8 +160,12 @@ export default function SettingsPanel({ open, config, onClose, onSave }: Props) 
 
               {tab === 'vault' && (
                 <div>
-                  <div className="text-xs font-semibold mb-1" style={{ color: 'var(--text)' }}>
+                  <div className="text-xs font-semibold mb-1 inline-flex items-center gap-1.5" style={{ color: 'var(--text)' }}>
                     Obsidian Vault
+                    <HelpTip
+                      title="Obsidian vault"
+                      body="Where CyberOS apps write notes, reports, and exports. Point this at your Obsidian vault folder to keep everything in one searchable place."
+                    />
                   </div>
                   <div className="text-[10px] mb-1.5 truncate" style={{ color: 'var(--text-dim)' }}>
                     {config?.obsidianVaultPath || 'Not set'}
@@ -169,8 +183,12 @@ export default function SettingsPanel({ open, config, onClose, onSave }: Props) 
               {tab === 'theme' && (
                 <>
                   <div>
-                    <div className="text-[10px] uppercase tracking-wider mb-2" style={{ color: 'var(--text-dim)' }}>
+                    <div className="text-[10px] uppercase tracking-wider mb-2 inline-flex items-center gap-1.5" style={{ color: 'var(--text-dim)' }}>
                       Core Theme
+                      <HelpTip
+                        title="Core theme"
+                        body="The base palette every CyberOS app inherits. Switching this restyles the Launcher and broadcasts to other apps that are listening."
+                      />
                     </div>
                     <div className="grid grid-cols-2 gap-1.5">
                       {CORES.map(core => (
@@ -189,8 +207,12 @@ export default function SettingsPanel({ open, config, onClose, onSave }: Props) 
                   </div>
 
                   <div>
-                    <div className="text-[10px] uppercase tracking-wider mb-2" style={{ color: 'var(--text-dim)' }}>
+                    <div className="text-[10px] uppercase tracking-wider mb-2 inline-flex items-center gap-1.5" style={{ color: 'var(--text-dim)' }}>
                       Personality
+                      <HelpTip
+                        title="Personality"
+                        body="Modulates accent colors, copy tone, and small UI flourishes on top of the core theme — pick the vibe that matches the work you're doing."
+                      />
                     </div>
                     <div className="grid grid-cols-2 gap-1.5">
                       {PERSONALITIES.map(p => (
@@ -208,6 +230,16 @@ export default function SettingsPanel({ open, config, onClose, onSave }: Props) 
                     </div>
                   </div>
                 </>
+              )}
+
+              {tab === 'backup' && (
+                <BackupSection
+                  backup={(config as Record<string, unknown> | null)?.backup as
+                    { enabled?: boolean; folder?: string; lastRun?: string; frequency?: 'manual' | 'daily' | 'weekly' } | undefined}
+                  cloud={(config as Record<string, unknown> | null)?.cloudSync as
+                    { enabled?: boolean; provider?: 'icloud' | 'dropbox' | 'google' } | undefined}
+                  onSave={onSave}
+                />
               )}
             </div>
           </motion.div>
