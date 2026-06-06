@@ -2,9 +2,10 @@
 import path from 'path'
 import fs from 'fs'
 import os from 'os'
+import { ecosystemBusPath } from './platform'
 
-const BUS_DIR  = path.join(os.homedir(), 'Library', 'Application Support', 'CyberTools')
-const BUS_FILE = path.join(BUS_DIR, 'ecosystem-events.json')
+const BUS_FILE = ecosystemBusPath()
+const BUS_DIR  = path.dirname(BUS_FILE)
 const MAX_EVENTS = 150
 
 interface EcosystemEvent {
@@ -41,7 +42,9 @@ export function emitEvent(appName: string, eventType: string, data: Record<strin
       data
     })
     if (events.length > MAX_EVENTS) events.splice(MAX_EVENTS)
-    fs.writeFileSync(BUS_FILE, JSON.stringify(events, null, 2), 'utf8')
+    const tmp = `${BUS_FILE}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(events, null, 2), 'utf8')
+    fs.renameSync(tmp, BUS_FILE)
   } catch (e) {
     console.error('[EcosystemBus] emit error:', (e as Error).message)
   }
