@@ -434,11 +434,27 @@ ipcMain.handle('generate-knowledge-gap-report', async () => {
 ipcMain.handle('validate-links',    async (_, fp) => vaulthealth.validateLinks(fp || launcher.getVaultPath()));
 ipcMain.handle('generate-canvas',   async (_, sn, of_) => processor.generateCanvas(sn, of_, launcher.getVaultPath()));
 
-ipcMain.handle('read-file',  (_, fp) => { try { return fs.readFileSync(fp, 'utf8'); } catch { return null; } });
+// Confine renderer file IPCs to the configured vault root. Without this a
+// compromised renderer could read SSH keys or overwrite arbitrary user files
+// via `electronAPI.readFile('/etc/passwd')` etc.
+function isUnderVault(fp: unknown): fp is string {
+  if (typeof fp !== 'string' || !fp) return false;
+  const root = launcher.getVaultPath();
+  if (!root) return false;
+  const resolved = path.resolve(fp);
+  const resolvedRoot = path.resolve(root) + path.sep;
+  return resolved === path.resolve(root) || resolved.startsWith(resolvedRoot);
+}
+
+ipcMain.handle('read-file',  (_, fp) => {
+  if (!isUnderVault(fp)) return null;
+  try { return fs.readFileSync(fp, 'utf8'); } catch { return null; }
+});
 ipcMain.handle('write-file', (_, fp, c) => {
+  if (!isUnderVault(fp)) return false;
   try { fs.mkdirSync(path.dirname(fp), { recursive: true }); fs.writeFileSync(fp, c, 'utf8'); return true; } catch { return false; }
 });
-ipcMain.handle('file-exists', (_, fp) => fs.existsSync(fp));
+ipcMain.handle('file-exists', (_, fp) => isUnderVault(fp) && fs.existsSync(fp));
 ipcMain.handle('list-vault-notes', (_, folderPath) => {
   const vp = launcher.getVaultPath();
   const base = folderPath ? path.join(vp, folderPath) : vp;
