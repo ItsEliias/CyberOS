@@ -271,7 +271,15 @@ app.whenReady().then(async () => {
 
 app.on('second-instance', () => { if (mainWindow) { mainWindow.show(); mainWindow.focus(); } });
 app.on('window-all-closed', () => { app.quit(); });
-app.on('before-quit', () => { launcher.stopStatusWriter(); stopAllSchedules(); });
+app.on('before-quit', () => {
+  launcher.stopStatusWriter();
+  stopAllSchedules();
+  // Stop any in-flight scrape — `runScrape` spawns a Playwright Chromium
+  // child; without an explicit stopScrape() here the child outlives the
+  // VaultCore process when the user Cmd-Qs mid-scrape, leaving an orphan
+  // browser eating memory + a stale `_scrape_state.json` on disk.
+  try { scraper.stopScrape(); } catch { /* best-effort */ }
+});
 
 // ─── IPC Handlers ─────────────────────────────────────────────────────────────
 
