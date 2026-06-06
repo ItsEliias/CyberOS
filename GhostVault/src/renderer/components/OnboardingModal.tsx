@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 
 const STORAGE_KEY = 'onboarding_dismissed_GhostVault'
-const DOCS_PATH   = '/Users/codyliddell/Documents/Claude/Projects/CyberOS/Manus-Prompts/04_GhostVault.md'
+const DOCS_PATH   = 'https://github.com/ItsEliias/CyberOS/blob/main/Manus-Prompts/04_GhostVault.md'
 const ACCENT      = '#7bb8ff'
 
 interface Props {

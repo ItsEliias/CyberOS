@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 
 const STORAGE_KEY = 'onboarding_dismissed_TerminalLink'
-const DOCS_PATH   = '/Users/codyliddell/Documents/Claude/Projects/CyberOS/Manus-Prompts/10_TerminalLink.md'
+const DOCS_PATH   = 'https://github.com/ItsEliias/CyberOS/blob/main/Manus-Prompts/10_TerminalLink.md'
 const ACCENT      = '#00ff41'
 
 interface Props {

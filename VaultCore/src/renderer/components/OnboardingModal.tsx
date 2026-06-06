@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 
 const STORAGE_KEY = 'onboarding_dismissed_VaultCore'
-const DOCS_PATH   = '/Users/codyliddell/Documents/Claude/Projects/CyberOS/Manus-Prompts/07_VaultCore.md'
+const DOCS_PATH   = 'https://github.com/ItsEliias/CyberOS/blob/main/Manus-Prompts/07_VaultCore.md'
 const ACCENT      = '#3fb950'
 
 interface Props {

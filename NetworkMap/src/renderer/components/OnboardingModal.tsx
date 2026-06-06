@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 
 const STORAGE_KEY = 'onboarding_dismissed_NetworkMap'
-const DOCS_PATH   = '/Users/codyliddell/Documents/Claude/Projects/CyberOS/Manus-Prompts/12_NetworkMap.md'
+const DOCS_PATH   = 'https://github.com/ItsEliias/CyberOS/blob/main/Manus-Prompts/12_NetworkMap.md'
 const ACCENT      = '#d29922'
 
 interface Props {

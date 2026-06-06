@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 
 const STORAGE_KEY = 'onboarding_dismissed_SignalBoard'
-const DOCS_PATH   = '/Users/codyliddell/Documents/Claude/Projects/CyberOS/Manus-Prompts/06_SignalBoard.md'
+const DOCS_PATH   = 'https://github.com/ItsEliias/CyberOS/blob/main/Manus-Prompts/06_SignalBoard.md'
 const ACCENT      = '#ff6b6b'
 
 interface Props {
