@@ -638,6 +638,10 @@ ipcMain.handle('ghostvault:export-notes', (_, payload: { sessionName: string; no
 
 // ─── Move note ────────────────────────────────────────────────────────────────
 ipcMain.handle('move-note', (_, srcPath: string, destFolder: string): boolean => {
+  // Both src and dest must live under the configured vault. Without this a
+  // renderer could move a vault note out to e.g. /tmp, or pull an arbitrary
+  // host file into the vault for later exfiltration through the notes UI.
+  if (!isUnderVault(srcPath) || !isUnderVault(destFolder)) return false;
   try {
     const filename = path.basename(srcPath);
     const newPath  = path.join(destFolder, filename);
@@ -654,6 +658,7 @@ function getVersionsPath(notePath: string): string {
 }
 
 ipcMain.handle('note:versions:list', (_, notePath: string): import('../shared/types.js').NoteVersion[] => {
+  if (!isUnderVault(notePath)) return [];
   const vp = getVersionsPath(notePath);
   try {
     if (fs.existsSync(vp)) return JSON.parse(fs.readFileSync(vp, 'utf8'));
@@ -662,6 +667,7 @@ ipcMain.handle('note:versions:list', (_, notePath: string): import('../shared/ty
 });
 
 ipcMain.handle('note:versions:save', (_, notePath: string, content: string): void => {
+  if (!isUnderVault(notePath)) return;
   const vp = getVersionsPath(notePath);
   let versions: import('../shared/types.js').NoteVersion[] = [];
   try {
@@ -676,6 +682,11 @@ ipcMain.handle('note:versions:save', (_, notePath: string, content: string): voi
 const crypto = await import('crypto');
 
 ipcMain.handle('ghostvault:note:lock', async (_, notePath: string, password: string): Promise<{ ok: boolean; error?: string }> => {
+  // Path confinement matters more here than anywhere else — without it a
+  // compromised renderer could pass `~/.ssh/id_rsa` and we'd encrypt the
+  // user's SSH key in place with an attacker-known password. Equivalent
+  // to ransomware.
+  if (!isUnderVault(notePath)) return { ok: false, error: 'path outside vault' };
   try {
     const content = readNote(notePath);
     const salt    = crypto.randomBytes(16);
@@ -692,6 +703,7 @@ ipcMain.handle('ghostvault:note:lock', async (_, notePath: string, password: str
 });
 
 ipcMain.handle('ghostvault:note:unlock', async (_, notePath: string, password: string): Promise<{ ok: boolean; content?: string; error?: string }> => {
+  if (!isUnderVault(notePath)) return { ok: false, error: 'path outside vault' };
   try {
     const raw = readNote(notePath);
     if (!raw.startsWith('GHOSTVAULT_ENCRYPTED_V1:')) return { ok: false, error: 'Not encrypted' };
