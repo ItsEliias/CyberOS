@@ -89,9 +89,10 @@ export default function CommandPalette({ open, onClose }: Props) {
   const [query, setQuery]       = useState('');
   const [activeIdx, setActive]  = useState(0);
   const [installed, setInstalled] = useState<Record<string, boolean>>({});
+  const [ssoUnlocked, setSsoUnlocked] = useState<boolean | null>(null);
   const inputRef                = useRef<HTMLInputElement | null>(null);
 
-  // Refresh installed map whenever palette opens
+  // Refresh installed map + SSO state whenever palette opens.
   useEffect(() => {
     if (!open) return;
     window.api.appManager.getStatus()
@@ -104,6 +105,9 @@ export default function CommandPalette({ open, onClose }: Props) {
         setInstalled(map);
       })
       .catch(() => {});
+    window.api.getSSO?.()
+      .then(r => setSsoUnlocked(!!r.unlocked))
+      .catch(() => setSsoUnlocked(null));
   }, [open]);
 
   // ── Build command list ─────────────────────────────────────────────────
@@ -153,12 +157,24 @@ export default function CommandPalette({ open, onClose }: Props) {
       },
       {
         id:       'action:lock-ecosystem',
-        label:    'Lock CredVault session',
-        hint:     '⌘L · Soft-locks every app that requires the session',
+        // Label adapts to current state: lock when active, unlock when locked.
+        // Avoids the user picking "Lock" only for nothing to happen because
+        // the session was already locked.
+        label:    ssoUnlocked === false ? 'Unlock CredVault…' : 'Lock CredVault session',
+        hint:     ssoUnlocked === false
+                    ? 'Opens CredVault so you can unlock the ecosystem session'
+                    : '⌘L · Soft-locks every app that requires the session',
         group:    'Action',
-        keywords: ['lock', 'sso', 'credvault', 'session', 'logout'],
+        keywords: ['lock', 'unlock', 'sso', 'credvault', 'session', 'logout'],
         accent:   '#f78166',
-        run:      async () => { await window.api.lockEcosystem(); onClose(); },
+        run:      async () => {
+          if (ssoUnlocked === false) {
+            await window.api.launchApp('credvault');
+          } else {
+            await window.api.lockEcosystem();
+          }
+          onClose();
+        },
       },
     ];
 
