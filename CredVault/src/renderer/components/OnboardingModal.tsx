@@ -20,7 +20,11 @@ export default function OnboardingModal({ onClose }: Props) {
   }
 
   function handleMoreInfo() {
-    window.electronAPI.openExternal(DOCS_PATH)
+    // DOCS_PATH is a local .md file. open-external (now scheme-allowlisted to
+    // http/https) rejects it, so route through the canonical CredVault GitHub
+    // docs page instead. Falls back silently if there's no API at runtime.
+    const docsUrl = 'https://github.com/ItsEliias/CyberOS#credvault'
+    void window.electronAPI.openExternal(docsUrl)
   }
 
   return (
