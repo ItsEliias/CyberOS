@@ -959,6 +959,28 @@ async function runBackupImport(password?: string): Promise<BackupResult> {
         child.on('close', code => code === 0 ? resolve(out.split('\n').filter(Boolean)) : reject(new Error(`tar -t exited ${code}`)));
       });
 
+      // Tar-slip guard. Before extraction, validate every member path
+      // resolves *inside* the user's home directory. A backup is just a
+      // user-supplied file — without this, a malicious .cyberos-backup
+      // could embed `../../etc/...` or absolute paths and overwrite
+      // anywhere the user can write.
+      const resolvedHome = path.resolve(home);
+      const homePrefix   = resolvedHome.endsWith(path.sep) ? resolvedHome : resolvedHome + path.sep;
+      for (const rawMember of list) {
+        const member = rawMember.replace(/\/+$/, ''); // strip trailing slash on dirs
+        if (!member) continue;
+        if (path.isAbsolute(member)) {
+          throw new Error(`Backup rejected — absolute path entry: ${member}`);
+        }
+        if (member.split('/').some(seg => seg === '..')) {
+          throw new Error(`Backup rejected — parent-traversal entry: ${member}`);
+        }
+        const resolved = path.resolve(home, member);
+        if (resolved !== resolvedHome && !resolved.startsWith(homePrefix)) {
+          throw new Error(`Backup rejected — entry escapes home: ${member}`);
+        }
+      }
+
       await new Promise<void>((resolve, reject) => {
         const child = spawn('tar', ['-xzf', tarFile, '-C', home], { stdio: ['ignore', 'pipe', 'pipe'] });
         let err = '';
