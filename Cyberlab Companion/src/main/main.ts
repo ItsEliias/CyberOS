@@ -34,6 +34,14 @@ const UPDATE_CHECK_URL   = 'https://api.github.com/repos/ItsEliias/cyberlab-comp
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 try { require('electron').crashReporter.start({ uploadToServer: false, productName: "CyberlabCompanion", companyName: 'CyberOS' }) } catch { /* unavailable */ }
 
+// ─── Top-level error handlers — log instead of crash silently ────────────────
+process.on('unhandledRejection', (reason) => {
+  console.error('[CyberLab] unhandled rejection:', reason)
+})
+process.on('uncaughtException', (err) => {
+  console.error('[CyberLab] uncaught exception:', err)
+})
+
 let mainWindow: BrowserWindow | null = null;
 let apiKey: string | null = null;
 let autosaveInterval: ReturnType<typeof setInterval> | null = null;

@@ -19,6 +19,14 @@ const pty        = _require('node-pty');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 try { require('electron').crashReporter.start({ uploadToServer: false, productName: "TerminalLink", companyName: 'CyberOS' }) } catch { /* unavailable */ }
 
+// ─── Top-level error handlers — log instead of crash silently ────────────────
+process.on('unhandledRejection', (reason) => {
+  console.error('[TermLink] unhandled rejection:', reason)
+})
+process.on('uncaughtException', (err) => {
+  console.error('[TermLink] uncaught exception:', err)
+})
+
 let mainWindow: BrowserWindow | null = null;
 const ptys = new Map<string, ReturnType<typeof pty.spawn>>();
 

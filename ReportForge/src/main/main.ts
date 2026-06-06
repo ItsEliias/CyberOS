@@ -22,6 +22,14 @@ const REPORTS_FILE      = path.join(DATA_DIR, 'reports.json');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 try { require('electron').crashReporter.start({ uploadToServer: false, productName: "ReportForge", companyName: 'CyberOS' }) } catch { /* unavailable */ }
 
+// ─── Top-level error handlers — log instead of crash silently ────────────────
+process.on('unhandledRejection', (reason) => {
+  console.error('[ReportForge] unhandled rejection:', reason)
+})
+process.on('uncaughtException', (err) => {
+  console.error('[ReportForge] uncaught exception:', err)
+})
+
 let mainWindow: BrowserWindow | null = null;
 let statusInterval: ReturnType<typeof setInterval> | null = null;
 let printReadyResolver: (() => void) | null = null;

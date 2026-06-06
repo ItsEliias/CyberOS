@@ -19,6 +19,14 @@ const GRAPHS_DIR        = path.join(userDataDir('NetworkMap'), 'graphs')
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 try { require('electron').crashReporter.start({ uploadToServer: false, productName: "NetworkMap", companyName: 'CyberOS' }) } catch { /* unavailable */ }
 
+// ─── Top-level error handlers — log instead of crash silently ────────────────
+process.on('unhandledRejection', (reason) => {
+  console.error('[NetworkMap] unhandled rejection:', reason)
+})
+process.on('uncaughtException', (err) => {
+  console.error('[NetworkMap] uncaught exception:', err)
+})
+
 let mainWindow: BrowserWindow | null = null
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

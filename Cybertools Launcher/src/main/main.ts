@@ -32,6 +32,14 @@ app.on('second-instance', () => {
 
 // ─── Globals ──────────────────────────────────────────────────────────────────
 
+// ─── Top-level error handlers — log instead of crash silently ────────────────
+process.on('unhandledRejection', (reason) => {
+  console.error('[Launcher] unhandled rejection:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[Launcher] uncaught exception:', err);
+});
+
 let tray:           Tray | null           = null;
 let panelWindow:    BrowserWindow | null  = null;
 let searchWindow:   BrowserWindow | null  = null;
