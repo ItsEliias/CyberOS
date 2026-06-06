@@ -1341,11 +1341,18 @@ function setupAppManagerIPC(): void {
       // and the "Install →/Apps" button is just for the copy step.
       const existing = findAppBundle(path.join(dir, 'dist'), 4)
         ?? findAppBundle(path.join(dir, 'release'), 4);
-      if (existing) {
+      // Only fast-path an arm64 bundle on Apple Silicon. An x86_64 bundle
+      // would otherwise be installed on an arm64 user and silently run
+      // through Rosetta (slow, and breaks native deps like node-pty).
+      const looksArm64 = !!existing && /\b(mac-arm64|arm64)\b/i.test(existing);
+      if (existing && (process.arch !== 'arm64' || looksArm64)) {
         send(`Copying existing ${path.basename(existing)} to /Applications/...`);
         await spawnAsync('cp', ['-R', existing, `/Applications/${productName}.app`], '/', send);
         send('Installed successfully.');
         return { success: true };
+      }
+      if (existing && process.arch === 'arm64' && !looksArm64) {
+        send('Existing bundle is not arm64 — rebuilding for native performance.');
       }
 
       if (!fs.existsSync(path.join(dir, 'node_modules'))) {
