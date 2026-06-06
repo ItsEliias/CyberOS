@@ -24,6 +24,34 @@ release/
 !.env.example
 *.local
 
+# Secrets / credentials — never commit these
+*.pem
+*.key
+*.p12
+*.pfx
+*.cert
+*.crt
+secrets/
+.aws/
+.gnupg/
+id_rsa
+id_ed25519
+*_rsa
+*_ed25519
+known_hosts
+authorized_keys
+
+# CyberOS-specific encrypted blobs (defensive — they shouldn't be in the
+# repo anyway, but block accidental adds)
+vault.enc
+salt.bin
+touch-id.enc
+apikey.enc
+htb-token.enc
+thm-token.enc
+backup-key.enc
+*.cyberos-backup
+
 # OS
 .DS_Store
 .DS_Store?
