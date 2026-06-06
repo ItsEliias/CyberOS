@@ -15,6 +15,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     get: (): Promise<NetLabPrefs>                                => ipcRenderer.invoke('prefs:get'),
     set: (prefs: Partial<NetLabPrefs>): Promise<void>           => ipcRenderer.invoke('prefs:set', prefs),
   },
+  snippets: {
+    // Custom (user-added) snippets only — built-ins are seeded in the renderer.
+    getCustom:  (): Promise<unknown[]>                          => ipcRenderer.invoke('snippets:getCustom'),
+    saveCustom: (snippets: unknown[]): Promise<boolean>         => ipcRenderer.invoke('snippets:saveCustom', snippets),
+  },
   shell: {
     openExternal: (url: string): Promise<void>                  => ipcRenderer.invoke('shell:openExternal', url),
   },

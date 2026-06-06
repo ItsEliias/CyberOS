@@ -79,8 +79,16 @@ export default function App() {
     }
     init()
 
-    // Load built-in snippets
+    // Load built-in snippets first, then merge in any user-saved custom
+    // snippets persisted to disk so they survive a restart.
     setSnippets(BUILTIN_SNIPPETS)
+    window.electronAPI.snippets?.getCustom().then(custom => {
+      if (Array.isArray(custom) && custom.length > 0) {
+        const builtinIds = new Set(BUILTIN_SNIPPETS.map(s => s.id))
+        const merged = [...BUILTIN_SNIPPETS, ...custom.filter(s => !builtinIds.has(s.id))]
+        setSnippets(merged)
+      }
+    }).catch(console.error)
   }, [setLabs, setProgress, setSnippets])
 
   return (

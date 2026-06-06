@@ -17,6 +17,9 @@ const DATA_DIR    = path.join(os.homedir(), 'Library', 'Application Support', 'N
 const LABS_FILE   = path.join(DATA_DIR, 'labs.json')
 const PROGRESS_FILE = path.join(DATA_DIR, 'progress.json')
 const PREFS_FILE  = path.join(DATA_DIR, 'netlab-prefs.json')
+// Custom user snippets. Only persists the user-added ones; the renderer
+// merges these with the built-in seed list on load.
+const SNIPPETS_FILE = path.join(DATA_DIR, 'snippets.json')
 
 // ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -136,6 +139,24 @@ ipcMain.handle('prefs:get', (): NetLabPrefs => {
 ipcMain.handle('prefs:set', (_e, patch: Partial<NetLabPrefs>): void => {
   const existing = readJson<NetLabPrefs>(PREFS_FILE, { ghostVaultAutoSave: false })
   writeJson(PREFS_FILE, { ...existing, ...patch })
+})
+
+// ─── IPC — Custom snippets ────────────────────────────────────────────────────
+// Custom snippets used to evaporate on app close because the renderer kept
+// them in zustand only (see the TODO in store/index.ts). These IPCs let the
+// store mirror snippets to disk so they survive a restart.
+
+ipcMain.handle('snippets:getCustom', (): unknown[] => {
+  return readJson<unknown[]>(SNIPPETS_FILE, [])
+})
+
+ipcMain.handle('snippets:saveCustom', (_e, snippets: unknown): boolean => {
+  if (!Array.isArray(snippets)) return false
+  // Cap the persisted list so a runaway addSnippet loop in the renderer
+  // can't drop a multi-MB blob into the data dir.
+  if (snippets.length > 500) return false
+  writeJson(SNIPPETS_FILE, snippets)
+  return true
 })
 
 // ─── IPC — GhostVault ─────────────────────────────────────────────────────────
