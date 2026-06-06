@@ -98,7 +98,7 @@ export function detectCredentialChanges(prev: ReconDeskData, data: ReconDeskData
       try {
         const path = require('path') as typeof import('path')
         const os   = require('os')   as typeof import('os')
-        const BUS  = path.join(os.homedir(), 'Library', 'Application Support', 'CyberTools', 'ecosystem-events.json')
+        const BUS  = ecosystemBusPath()
         const events = fs.existsSync(BUS) ? JSON.parse(fs.readFileSync(BUS, 'utf8')) : []
         for (const c of newCreds) {
           events.unshift({

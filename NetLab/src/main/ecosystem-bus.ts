@@ -2,9 +2,10 @@
 import path from 'path'
 import fs from 'fs'
 import os from 'os'
+import { ecosystemBusPath } from './platform'
 
-const BUS_DIR  = path.join(os.homedir(), 'Library', 'Application Support', 'CyberTools')
-const BUS_FILE = path.join(BUS_DIR, 'ecosystem-events.json')
+const BUS_FILE = ecosystemBusPath()
+const BUS_DIR  = path.dirname(BUS_FILE)
 
 function ensureDir(): void {
   if (!fs.existsSync(BUS_DIR)) fs.mkdirSync(BUS_DIR, { recursive: true })

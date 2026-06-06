@@ -3,9 +3,7 @@ import path from 'path';
 import os from 'os';
 import type { EcosystemEvent } from '../shared/types.js';
 
-const EVENTS_PATH = path.join(
-  os.homedir(), 'Library', 'Application Support', 'CyberTools', 'ecosystem-events.json'
-);
+const EVENTS_PATH = ecosystemBusPath();
 const MAX_EVENTS = 150;
 const DEBOUNCE_MS = 80;
 
