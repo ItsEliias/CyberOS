@@ -687,48 +687,35 @@ const APP_FALLBACK_PRODUCTS: Record<string, string> = {
 
 // ─── App launching ────────────────────────────────────────────────────────────
 
+// Static metadata for the built-in app keys. The execPath comes from the
+// matching config field (same name as the key). Replaces ~50 lines of
+// hand-rolled if/else that were error-prone to extend.
+const BUILTIN_APP_META: Record<string, { displayName: string }> = {
+  cyberlab:       { displayName: 'CyberLab Companion' },
+  vaultscraper:   { displayName: 'VaultCore' },
+  ghostvault:     { displayName: 'GhostVault' },
+  recondesk:      { displayName: 'ReconDesk' },
+  signalboard:    { displayName: 'SignalBoard' },
+  cyberos:        { displayName: 'CyberOS Dashboard' },
+  credvault:      { displayName: 'CredVault' },
+  playbookstudio: { displayName: 'PlaybookStudio' },
+  reportforge:    { displayName: 'ReportForge' },
+  terminallink:   { displayName: 'TermLink' },
+  networkmap:     { displayName: 'NetworkMap' },
+  netlab:         { displayName: 'NetLab' },
+};
+
 function launchApp(appKey: string): boolean {
   const config   = readConfig();
   let execPath   = '';
   let appName    = '';
   let args: string[] = ['--launcher-open'];
 
-  if (appKey === 'cyberlab') {
-    execPath = config.cyberlab?.execPath || '';
-    appName  = 'CyberLab Companion';
-  } else if (appKey === 'vaultscraper') {
-    execPath = config.vaultscraper?.execPath || '';
-    appName  = 'VaultCore';
-  } else if (appKey === 'ghostvault') {
-    execPath = config.ghostvault?.execPath || '';
-    appName  = 'GhostVault';
-  } else if (appKey === 'recondesk') {
-    execPath = config.recondesk?.execPath || '';
-    appName  = 'ReconDesk';
-  } else if (appKey === 'signalboard') {
-    execPath = config.signalboard?.execPath || '';
-    appName  = 'SignalBoard';
-  } else if (appKey === 'cyberos') {
-    execPath = config.cyberos?.execPath || '';
-    appName  = 'CyberOS Dashboard';
-  } else if (appKey === 'credvault') {
-    execPath = (config as Record<string,{execPath?:string}>).credvault?.execPath || '';
-    appName  = 'CredVault';
-  } else if (appKey === 'playbookstudio') {
-    execPath = (config as Record<string,{execPath?:string}>).playbookstudio?.execPath || '';
-    appName  = 'PlaybookStudio';
-  } else if (appKey === 'reportforge') {
-    execPath = (config as Record<string,{execPath?:string}>).reportforge?.execPath || '';
-    appName  = 'ReportForge';
-  } else if (appKey === 'terminallink') {
-    execPath = (config as Record<string,{execPath?:string}>).terminallink?.execPath || '';
-    appName  = 'TermLink';
-  } else if (appKey === 'networkmap') {
-    execPath = (config as Record<string,{execPath?:string}>).networkmap?.execPath || '';
-    appName  = 'NetworkMap';
-  } else if (appKey === 'netlab') {
-    execPath = (config as Record<string,{execPath?:string}>).netlab?.execPath || '';
-    appName  = 'NetLab';
+  const builtin = BUILTIN_APP_META[appKey];
+  if (builtin) {
+    const cfgEntry = (config as Record<string, { execPath?: string }>)[appKey];
+    execPath = cfgEntry?.execPath || '';
+    appName  = builtin.displayName;
   } else if (appKey.startsWith('custom_')) {
     const idx  = parseInt(appKey.replace('custom_', ''), 10);
     const slot = config.launcher?.customSlots?.[idx];
