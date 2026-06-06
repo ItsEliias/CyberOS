@@ -203,10 +203,22 @@ export default function App() {
   const saveNote = useCallback(async () => {
     const { activeNote, editorContent } = useStore.getState();
     if (!activeNote) return;
-    await window.ghostvault.saveNote(activeNote.path, editorContent);
+    let ok = false;
+    try {
+      ok = await window.ghostvault.saveNote(activeNote.path, editorContent);
+    } catch {
+      ok = false;
+    }
+    if (!ok) {
+      // Don't clear dirty state — user's work is still unsaved on disk and
+      // a silent failure (path outside vault, disk full, file locked, etc.)
+      // would otherwise let them close the app thinking it persisted.
+      addToast('Failed to save note', 'error');
+      return;
+    }
     setDirty(false);
     await refreshVault();
-  }, [setDirty, refreshVault]);
+  }, [setDirty, refreshVault, addToast]);
 
   // ── Create note ────────────────────────────────────────────────────────────
   const createNote = useCallback(async (folder: string, title: string) => {
