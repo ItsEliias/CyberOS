@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useStore } from '../../store'
 import type { PlaybookStep, StepStatus, StepNote, StepType } from '@shared/types'
 
@@ -60,6 +60,10 @@ function resolveCmd(cmd: string, vars: Record<string, string>, targetIP: string)
 }
 
 function fmtDuration(ms: number): string {
+  // Negative durations happen when the user's clock jumps backward between
+  // startedAt and completedAt, or when bad data ends up in the run JSON.
+  // Don't render '-5s' next to the step title.
+  if (!Number.isFinite(ms) || ms < 0) return '0s'
   const s = Math.floor(ms / 1000)
   if (s < 60) return `${s}s`
   const m = Math.floor(s / 60)
@@ -221,7 +225,40 @@ export default function StepDetail({ step, runId, targetIP, playbookTitle, varia
   const status = step.status ?? 'todo'
   const typeColor = STEP_TYPE_BORDER[step.stepType ?? 'action']
 
-  useEffect(() => { setNotes(step.operatorNotes ?? '') }, [step.id, step.operatorNotes])
+  // Mirror the current textarea value into a ref so the step-switch
+  // cleanup below can read it without taking a dep on `notes` (which
+  // would re-run the effect — and reset the textarea — on every
+  // keystroke).
+  const notesRef = useRef(notes)
+  notesRef.current = notes
+
+  // Sync the quick-note textarea only when the step itself changes
+  // (different id). The old deps array included step.operatorNotes, which
+  // meant every save round-trip from the store would resync — fine when
+  // the values matched, but in flight a peer save could overwrite the
+  // user's in-progress keystrokes. Keying solely on step.id keeps local
+  // typing sovereign until the user explicitly switches steps.
+  //
+  // Persist any pending edits on step-switch (cleanup phase) so jumping
+  // between steps with the keyboard doesn't silently drop the quick note.
+  useEffect(() => {
+    const original       = step.operatorNotes ?? ''
+    setNotes(original)
+    const capturedRunId  = runId
+    const capturedStepId = step.id
+    return () => {
+      const current = notesRef.current
+      if (current !== original) {
+        window.electronAPI
+          .updateStep(capturedRunId, capturedStepId, { operatorNotes: current })
+          .then(res => { if (res.ok && res.run) updateRun(res.run) })
+          .catch(() => { /* best-effort autosave on step-switch */ })
+      }
+    }
+    // updateRun is stable from zustand; runId/step.operatorNotes intentionally
+    // captured-and-frozen for the cleanup snapshot.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step.id])
 
   async function setStatus(next: StepStatus) {
     if (next === status) return
