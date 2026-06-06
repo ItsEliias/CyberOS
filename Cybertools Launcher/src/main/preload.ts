@@ -83,6 +83,8 @@ const api = {
 
   // Lock the whole ecosystem (used by the ⌘K palette).
   lockEcosystem       : (): Promise<boolean> => ipcRenderer.invoke('lock-ecosystem'),
+  getSSO              : (): Promise<{ unlocked: boolean; expiresAt?: string | null }> =>
+                          ipcRenderer.invoke('get-sso'),
 
   onEcosystemUpdated  : (cb: (events: EcosystemEvent[]) => void) => {
     const listener = (_e: Electron.IpcRendererEvent, events: EcosystemEvent[]) => cb(events);
