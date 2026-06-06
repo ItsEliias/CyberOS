@@ -166,8 +166,12 @@ export function registerTerminalLinkIPC(win: BrowserWindow): void {
   // ── Sessions: write ─────────────────────────────────────────────────────────
   ipcMain.handle('terminallink:sessions:write', (_evt, sessions: unknown) => {
     try {
-      fs.mkdirSync(SESSIONS_DIR, { recursive: true });
-      writeFileAtomic(path.join(SESSIONS_DIR, 'sessions.json'), JSON.stringify(sessions, null, 2));
+      // sessions.json is read into memory in full on every app launch;
+      // cap it so a hostile renderer can't push it past 50 MB and then
+      // OOM us on the next start.
+      const json = JSON.stringify(sessions, null, 2);
+      if (json.length > 50 * 1024 * 1024) return { error: 'sessions payload too large' };
+      writeFileAtomic(path.join(SESSIONS_DIR, 'sessions.json'), json);
       return { success: true };
     } catch (e) {
       return { error: (e as Error).message };
