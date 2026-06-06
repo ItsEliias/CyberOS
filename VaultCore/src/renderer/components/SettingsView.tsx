@@ -71,7 +71,13 @@ export default function SettingsView() {
   }
 
   async function doFactoryReset() {
-    if (!confirmReset) { setConfirmReset(true); return; }
+    if (!confirmReset) {
+      setConfirmReset(true);
+      // Auto-clear the armed state if the user walks away without confirming
+      // — otherwise the "Click again to confirm" prompt is a permanent landmine.
+      setTimeout(() => setConfirmReset(false), 5000);
+      return;
+    }
     setResetting(true);
     await window.electronAPI.factoryReset();
     window.location.reload();
