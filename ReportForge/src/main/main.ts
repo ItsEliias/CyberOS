@@ -484,8 +484,13 @@ ipcMain.handle('reportforge:clear-ghostvault-export', (): boolean => {
   } catch { return false; }
 });
 
-// Ecosystem emit from renderer
-ipcMain.handle('ecosystem-emit', (_, appName: string, event: string, data: Record<string, unknown>) => {
-  ecosystemBus.emitEvent(appName, event, data);
+// Ecosystem emit from renderer — validate at the boundary so a renderer
+// bug can't shovel garbage / huge payloads into the shared event bus.
+ipcMain.handle('ecosystem-emit', (_, appName: unknown, event: unknown, data: unknown) => {
+  if (typeof appName !== 'string' || !appName || appName.length > 80) return false;
+  if (typeof event !== 'string' || !event || event.length > 120) return false;
+  if (data !== undefined && (typeof data !== 'object' || data === null)) return false;
+  if (data !== undefined && JSON.stringify(data).length > 64 * 1024) return false;
+  ecosystemBus.emitEvent(appName, event, (data ?? {}) as Record<string, unknown>);
   return true;
 });
