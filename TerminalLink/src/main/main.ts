@@ -26,6 +26,28 @@ const preloadFile = fs.existsSync(path.join(__dirname, '..', 'preload', 'preload
   ? 'preload.mjs' : 'preload.js';
 const preloadPath = path.join(__dirname, '..', 'preload', preloadFile);
 
+// ─── Atomic JSON write ────────────────────────────────────────────────────────
+// CONFIG_PATH and EVENTS_PATH are both polled by sibling CyberOS apps. A
+// torn write surfaces as JSON.parse() returning empty state and silently
+// wiping prior contents.
+function writeFileAtomic(target: string, content: string): void {
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  const tmp = `${target}.tmp-termlink-${process.pid}-${Date.now()}`;
+  const fd  = fs.openSync(tmp, 'w');
+  try {
+    fs.writeSync(fd, content, 0, 'utf8');
+    try { fs.fsyncSync(fd); } catch { /* fsync best-effort */ }
+  } finally {
+    try { fs.closeSync(fd); } catch { /* already closed */ }
+  }
+  try {
+    fs.renameSync(tmp, target);
+  } catch {
+    fs.writeFileSync(target, content, { encoding: 'utf8' });
+    try { fs.unlinkSync(tmp); } catch { /* ignore */ }
+  }
+}
+
 // ─── Config helpers ───────────────────────────────────────────────────────────
 function readConfig(): Record<string, unknown> {
   try {
@@ -38,7 +60,7 @@ function readConfig(): Record<string, unknown> {
 function writeConfig(patch: Record<string, unknown>): void {
   try {
     const current = readConfig();
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify({ ...current, ...patch }, null, 2));
+    writeFileAtomic(CONFIG_PATH, JSON.stringify({ ...current, ...patch }, null, 2));
   } catch (e) {
     console.error('[terminallink] writeConfig error:', (e as Error).message);
   }
@@ -46,7 +68,6 @@ function writeConfig(patch: Record<string, unknown>): void {
 
 function emitEcosystemEvent(event: string, data: Record<string, unknown>): void {
   try {
-    fs.mkdirSync(path.dirname(EVENTS_PATH), { recursive: true });
     let events: unknown[] = [];
     try { events = JSON.parse(fs.readFileSync(EVENTS_PATH, 'utf8')); } catch { /* empty */ }
     events.push({
@@ -58,7 +79,7 @@ function emitEcosystemEvent(event: string, data: Record<string, unknown>): void 
     });
     // Keep last 200 events
     if (events.length > 200) events = events.slice(-200);
-    fs.writeFileSync(EVENTS_PATH, JSON.stringify(events, null, 2));
+    writeFileAtomic(EVENTS_PATH, JSON.stringify(events, null, 2));
   } catch (e) {
     console.error('[terminallink] emitEcosystemEvent error:', (e as Error).message);
   }
