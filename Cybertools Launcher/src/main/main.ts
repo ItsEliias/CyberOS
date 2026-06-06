@@ -399,59 +399,52 @@ function setupTray(): void {
 }
 
 function refreshContextMenu(): void {
+  // Only surface apps that are actually installed
+  const installedKey = (key: string) => {
+    const fallback = APP_FALLBACK_PRODUCTS[key];
+    return !!(fallback && fs.existsSync(`/Applications/${fallback}.app`));
+  };
+
+  const appItem = (key: string, label: string, accelerator?: string) => {
+    const installed = installedKey(key);
+    return {
+      label,
+      accelerator,
+      enabled: installed,
+      click: () => { launchApp(key); }
+    };
+  };
+
   const menu = Menu.buildFromTemplate([
     {
-      label: 'Open Launcher', accelerator: 'CommandOrControl+O',
+      label: 'Launcher', accelerator: 'CommandOrControl+O',
       click: () => showPanel(tray!.getBounds())
     },
     {
-      label: 'Open CyberLab Companion', accelerator: 'CommandOrControl+1',
-      click: () => launchApp('cyberlab')
-    },
-    {
-      label: 'Open VaultCore', accelerator: 'CommandOrControl+2',
-      click: () => launchApp('vaultscraper')
-    },
-    {
-      label: 'Open GhostVault', accelerator: 'CommandOrControl+3',
-      click: () => launchApp('ghostvault')
-    },
-    {
-      label: 'Open ReconDesk', accelerator: 'CommandOrControl+4',
-      click: () => launchApp('recondesk')
-    },
-    {
-      label: 'Open SignalBoard', accelerator: 'CommandOrControl+5',
-      click: () => launchApp('signalboard')
-    },
-    {
-      label: 'Open CyberOS Dashboard', accelerator: 'CommandOrControl+6',
-      click: () => launchApp('cyberos')
+      label: 'CyberOS Dashboard', accelerator: 'CommandOrControl+6',
+      enabled: installedKey('cyberos'),
+      click: () => { launchApp('cyberos'); }
     },
     { type: 'separator' },
-    {
-      label: 'Open CredVault',
-      click: () => launchApp('credvault')
-    },
-    {
-      label: 'Open PlaybookStudio',
-      click: () => launchApp('playbookstudio')
-    },
-    {
-      label: 'Open ReportForge',
-      click: () => launchApp('reportforge')
-    },
-    {
-      label: 'Open TerminalLink',
-      click: () => launchApp('terminallink')
-    },
-    {
-      label: 'Open NetworkMap',
-      click: () => launchApp('networkmap')
-    },
+    // Vaults & secrets
+    appItem('credvault',      'CredVault',          'CommandOrControl+1'),
+    appItem('ghostvault',     'GhostVault',         'CommandOrControl+2'),
+    appItem('vaultscraper',   'VaultCore',          'CommandOrControl+3'),
+    { type: 'separator' },
+    // Recon & network
+    appItem('recondesk',      'ReconDesk',          'CommandOrControl+4'),
+    appItem('signalboard',    'SignalBoard',        'CommandOrControl+5'),
+    appItem('networkmap',     'NetworkMap'),
+    { type: 'separator' },
+    // Workflow & lab
+    appItem('playbookstudio', 'PlaybookStudio'),
+    appItem('reportforge',    'ReportForge'),
+    appItem('terminallink',   'TerminalLink'),
+    appItem('cyberlab',       'CyberLab Companion'),
     { type: 'separator' },
     {
       label: 'Run VaultCore Update Now',
+      enabled: installedKey('vaultscraper'),
       click: () => {
         writeTrigger({ action: 'update_now' });
         addActivityEntry({ type: 'launcher', text: 'VaultCore update triggered from tray menu' });
@@ -476,6 +469,22 @@ function refreshContextMenu(): void {
   ]);
   tray!.setContextMenu(menu);
 }
+
+// Fallback install paths (productName) per appKey — used when config has no
+// recorded execPath. Matches the productName each app's electron-builder uses.
+const APP_FALLBACK_PRODUCTS: Record<string, string> = {
+  cyberlab:       'CYBERLAB COMPANION',
+  vaultscraper:   'VAULTCORE',
+  ghostvault:     'GhostVault',
+  recondesk:      'ReconDesk',
+  signalboard:    'SignalBoard',
+  cyberos:        'CyberOS Dashboard',
+  credvault:      'CredVault',
+  playbookstudio: 'PlaybookStudio',
+  reportforge:    'ReportForge',
+  terminallink:   'TerminalLink',
+  networkmap:     'NetworkMap',
+};
 
 // ─── App launching ────────────────────────────────────────────────────────────
 
@@ -525,6 +534,17 @@ function launchApp(appKey: string): boolean {
       execPath = slot.execPath || '';
       appName  = slot.name    || 'App';
       args     = [];
+    }
+  }
+
+  // Fall back to /Applications/{productName}.app if config has no execPath
+  if (!execPath || !fs.existsSync(execPath)) {
+    const product = APP_FALLBACK_PRODUCTS[appKey];
+    if (product) {
+      const fallback = `/Applications/${product}.app`;
+      if (fs.existsSync(fallback)) {
+        execPath = fallback;
+      }
     }
   }
 

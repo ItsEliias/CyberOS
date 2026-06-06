@@ -6,6 +6,8 @@ import { fuzzyMatch } from '../utils/fuzzySearch'
 import { scorePassword } from '../utils/passwordStrength'
 import { FilterChip, Empty, NoResults } from './VaultViewStates'
 import CredentialDetailPanel from './CredentialDetailPanel'
+import VaultDashboard from './VaultDashboard'
+import PasswordGeneratorModal from './PasswordGeneratorModal'
 
 const SORT_OPTIONS: { value: SortOrder; label: string }[] = [
   { value: null,        label: 'Default'   },
@@ -66,6 +68,8 @@ export default function VaultView() {
   const [showModal, setShowModal]   = useState(false)
   const [editCred, setEditCred]     = useState<Credential | null>(null)
   const [selected, setSelected]     = useState<Credential | null>(null)
+  const [showGenerator, setShowGenerator] = useState(false)
+  const [seedPassword, setSeedPassword]   = useState<string | null>(null)
   const [scopeTab, setScopeTab]     = useState<ScopeTab>('All')
   const [breachMap, setBreachMap]   = useState<Record<string, BreachCheckResult>>({})
   const [breachRunning, setBreachRunning] = useState(false)
@@ -303,28 +307,49 @@ export default function VaultView() {
         </div>
       </div>
 
-      {/* ── Right panel (flex-1): detail card ───────────────────────────── */}
-      <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: 16 }}>
+      {/* ── Right panel (flex-1): detail card or dashboard ──────────────── */}
+      <div style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}>
         {selected ? (
-          <CredentialDetailPanel
-            cred={selected}
-            breachResult={breachMap[selected.id]}
-            onEdit={c => setEditCred(c)}
-            onDelete={handleDelete}
-            onRotate={handleRotate}
-          />
-        ) : (
-          <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(42,51,71,0.6)" strokeWidth="1.5" strokeLinecap="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
-            <span style={{ fontSize: 12, color: '#4a5568' }}>Select a credential to view details</span>
+          <div style={{ padding: 16 }}>
+            <CredentialDetailPanel
+              cred={selected}
+              breachResult={breachMap[selected.id]}
+              onEdit={c => setEditCred(c)}
+              onDelete={handleDelete}
+              onRotate={handleRotate}
+            />
           </div>
+        ) : (
+          <VaultDashboard
+            onAddClick={() => setShowModal(true)}
+            onGenerateClick={() => setShowGenerator(true)}
+            onImportClick={() => useStore.getState().setView('import')}
+            onHibpClick={runBreachCheck}
+            hibpRunning={breachRunning}
+            breachedCount={breachedCount}
+            onSelectCred={c => setSelected(c)}
+          />
         )}
       </div>
 
-      {showModal && <CredentialModal onSave={handleAdd} onClose={() => setShowModal(false)} />}
+      {showModal && (
+        <CredentialModal
+          initial={seedPassword ? { password: seedPassword } : undefined}
+          onSave={async (data) => { await handleAdd(data); setSeedPassword(null) }}
+          onClose={() => { setShowModal(false); setSeedPassword(null) }}
+        />
+      )}
       {editCred  && <CredentialModal initial={editCred} onSave={handleEditSave} onClose={() => setEditCred(null)} />}
+      {showGenerator && (
+        <PasswordGeneratorModal
+          onClose={() => setShowGenerator(false)}
+          onUse={(pw) => {
+            setSeedPassword(pw)
+            setShowGenerator(false)
+            setShowModal(true)
+          }}
+        />
+      )}
     </div>
   )
 }
