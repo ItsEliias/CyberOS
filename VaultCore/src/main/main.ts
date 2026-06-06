@@ -511,7 +511,17 @@ ipcMain.handle('delete-note',            async (_, fp)       => {
   return vaulthealth.deleteNote(fp);
 });
 ipcMain.handle('export-dead-links-csv',  async (_, r)        => vaulthealth.exportDeadLinksCsv(r, launcher.getVaultPath()));
-ipcMain.handle('archive-wayback',        async (_, url)      => { await shell.openExternal(`https://web.archive.org/web/${url}`); return true; });
+ipcMain.handle('archive-wayback',        async (_, url)      => {
+  // The renderer-supplied URL gets concatenated into a Wayback Machine link.
+  // A non-string crashes shell.openExternal with a sync TypeError; only
+  // allow http/https targets (the only URLs Wayback actually archives).
+  if (typeof url !== 'string' || url.length === 0) return false;
+  let parsed: URL;
+  try { parsed = new URL(url); } catch { return false; }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+  await shell.openExternal(`https://web.archive.org/web/${url}`);
+  return true;
+});
 ipcMain.handle('generate-knowledge-gap-report', async () => {
   const vp = launcher.getVaultPath();
   return vp ? vaulthealth.generateKnowledgeGapReport(vp) : { error: 'No vault path' };
