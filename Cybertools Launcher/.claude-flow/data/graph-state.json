@@ -1,0 +1,119 @@
+{
+  "version": 1,
+  "updatedAt": 1780641796853,
+  "nodeCount": 6,
+  "nodes": {
+    "task-launcher-unified-control-center": {
+      "id": "task-launcher-unified-control-center",
+      "category": "tasks",
+      "confidence": 0.6400000000000001,
+      "accessCount": 4,
+      "createdAt": 1780637972687
+    },
+    "insight-1780638975101-06kp": {
+      "id": "insight-1780638975101-06kp",
+      "category": "insights",
+      "confidence": 1,
+      "accessCount": 14,
+      "createdAt": 1780638975101
+    },
+    "insight-1780638975101-btkq": {
+      "id": "insight-1780638975101-btkq",
+      "category": "insights",
+      "confidence": 1,
+      "accessCount": 16,
+      "createdAt": 1780638975101
+    },
+    "insight-1780638975101-15wv": {
+      "id": "insight-1780638975101-15wv",
+      "category": "insights",
+      "confidence": 1,
+      "accessCount": 17,
+      "createdAt": 1780638975101
+    },
+    "insight-1780638975101-pmju": {
+      "id": "insight-1780638975101-pmju",
+      "category": "insights",
+      "confidence": 1,
+      "accessCount": 17,
+      "createdAt": 1780638975101
+    },
+    "insight-1780638975101-4rm5": {
+      "id": "insight-1780638975101-4rm5",
+      "category": "insights",
+      "confidence": 1,
+      "accessCount": 17,
+      "createdAt": 1780638975101
+    }
+  },
+  "edges": [
+    {
+      "sourceId": "insight-1780638975101-06kp",
+      "targetId": "insight-1780638975101-btkq",
+      "type": "similar",
+      "weight": 0.8673469387755102
+    },
+    {
+      "sourceId": "insight-1780638975101-06kp",
+      "targetId": "insight-1780638975101-15wv",
+      "type": "similar",
+      "weight": 0.77
+    },
+    {
+      "sourceId": "insight-1780638975101-06kp",
+      "targetId": "insight-1780638975101-pmju",
+      "type": "similar",
+      "weight": 0.8910891089108911
+    },
+    {
+      "sourceId": "insight-1780638975101-06kp",
+      "targetId": "insight-1780638975101-4rm5",
+      "type": "similar",
+      "weight": 0.7685185185185185
+    },
+    {
+      "sourceId": "insight-1780638975101-btkq",
+      "targetId": "insight-1780638975101-15wv",
+      "type": "similar",
+      "weight": 0.8850574712643678
+    },
+    {
+      "sourceId": "insight-1780638975101-btkq",
+      "targetId": "insight-1780638975101-pmju",
+      "type": "similar",
+      "weight": 0.8936170212765957
+    },
+    {
+      "sourceId": "insight-1780638975101-btkq",
+      "targetId": "insight-1780638975101-4rm5",
+      "type": "similar",
+      "weight": 0.8736842105263158
+    },
+    {
+      "sourceId": "insight-1780638975101-15wv",
+      "targetId": "insight-1780638975101-pmju",
+      "type": "similar",
+      "weight": 0.8105263157894737
+    },
+    {
+      "sourceId": "insight-1780638975101-15wv",
+      "targetId": "insight-1780638975101-4rm5",
+      "type": "similar",
+      "weight": 0.8105263157894737
+    },
+    {
+      "sourceId": "insight-1780638975101-pmju",
+      "targetId": "insight-1780638975101-4rm5",
+      "type": "similar",
+      "weight": 0.8058252427184466
+    }
+  ],
+  "pageRanks": {
+    "task-launcher-unified-control-center": 0.0901874460615465,
+    "insight-1780638975101-06kp": 0.0901874460615465,
+    "insight-1780638975101-btkq": 0.10935229648623004,
+    "insight-1780638975101-15wv": 0.14033546603447106,
+    "insight-1780638975101-pmju": 0.19997804345602838,
+    "insight-1780638975101-4rm5": 0.3699593019001777
+  }
+}

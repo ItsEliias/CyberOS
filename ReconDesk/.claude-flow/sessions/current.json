@@ -1,0 +1,12 @@
+{
+  "id": "session-1780574534136",
+  "startedAt": "2026-06-04T12:02:14.136Z",
+  "cwd": "/Users/codyliddell/Documents/Claude/Projects/CyberOS/ReconDesk",
+  "context": {},
+  "metrics": {
+    "edits": 13,
+    "commands": 0,
+    "tasks": 0,
+    "errors": 0
+  }
+}

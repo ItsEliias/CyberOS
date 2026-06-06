@@ -1,0 +1,23 @@
+{
+  "id": "session-1780639119089",
+  "startedAt": "2026-06-05T05:58:39.089Z",
+  "cwd": "/Users/codyliddell/Documents/Claude/Projects/CyberOS/Cybertools Launcher",
+  "context": {
+    "lastMatchedPatterns": [
+      "insight-1780638975101-4rm5",
+      "insight-1780638975101-pmju",
+      "insight-1780638975101-15wv",
+      "insight-1780638975101-btkq",
+      "insight-1780638975101-06kp"
+    ]
+  },
+  "metrics": {
+    "edits": 0,
+    "commands": 0,
+    "tasks": 0,
+    "errors": 0
+  },
+  "updatedAt": "2026-06-05T06:37:51.588Z",
+  "endedAt": "2026-06-05T06:41:08.949Z",
+  "duration": 2549861
+}

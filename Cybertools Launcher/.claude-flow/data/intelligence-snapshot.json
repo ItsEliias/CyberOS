@@ -1,0 +1,134 @@
+[
+  {
+    "timestamp": 1780638975103,
+    "nodes": 6,
+    "edges": 10,
+    "pageRankSum": 1,
+    "confidences": [
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5
+    ],
+    "accessCounts": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "topPatterns": [
+      {
+        "id": "insight-1780638975101-4rm5",
+        "summary": "Frequently edited: globals.css (3x)",
+        "confidence": 0.5,
+        "pageRank": 0.3699593019001777,
+        "accessCount": 0
+      },
+      {
+        "id": "insight-1780638975101-pmju",
+        "summary": "Frequently edited: Header.tsx (4x)",
+        "confidence": 0.5,
+        "pageRank": 0.19997804345602838,
+        "accessCount": 0
+      },
+      {
+        "id": "insight-1780638975101-15wv",
+        "summary": "Frequently edited: main.ts (7x)",
+        "confidence": 0.5,
+        "pageRank": 0.14033546603447106,
+        "accessCount": 0
+      },
+      {
+        "id": "insight-1780638975101-btkq",
+        "summary": "Frequently edited: App.tsx (9x)",
+        "confidence": 0.5,
+        "pageRank": 0.10935229648623004,
+        "accessCount": 0
+      },
+      {
+        "id": "task-launcher-unified-control-center",
+        "summary": "launcher-unified-control-center",
+        "confidence": 0.5,
+        "pageRank": 0.0901874460615465,
+        "accessCount": 0
+      },
+      {
+        "id": "insight-1780638975101-06kp",
+        "summary": "Frequently edited: AppManager.tsx (3x)",
+        "confidence": 0.5,
+        "pageRank": 0.0901874460615465,
+        "accessCount": 0
+      }
+    ]
+  },
+  {
+    "timestamp": 1780641668948,
+    "nodes": 6,
+    "edges": 10,
+    "pageRankSum": 1,
+    "confidences": [
+      0.5,
+      0.6300000000000001,
+      0.6300000000000001,
+      0.6000000000000001,
+      0.6000000000000001,
+      0.6000000000000001
+    ],
+    "accessCounts": [
+      0,
+      3,
+      3,
+      2,
+      2,
+      2
+    ],
+    "topPatterns": [
+      {
+        "id": "insight-1780638975101-4rm5",
+        "summary": "Frequently edited: globals.css (3x)",
+        "confidence": 0.6000000000000001,
+        "pageRank": 0.3699593019001777,
+        "accessCount": 2
+      },
+      {
+        "id": "insight-1780638975101-pmju",
+        "summary": "Frequently edited: Header.tsx (4x)",
+        "confidence": 0.6000000000000001,
+        "pageRank": 0.19997804345602838,
+        "accessCount": 2
+      },
+      {
+        "id": "insight-1780638975101-15wv",
+        "summary": "Frequently edited: main.ts (7x)",
+        "confidence": 0.6000000000000001,
+        "pageRank": 0.14033546603447106,
+        "accessCount": 2
+      },
+      {
+        "id": "insight-1780638975101-btkq",
+        "summary": "Frequently edited: App.tsx (9x)",
+        "confidence": 0.6300000000000001,
+        "pageRank": 0.10935229648623004,
+        "accessCount": 3
+      },
+      {
+        "id": "insight-1780638975101-06kp",
+        "summary": "Frequently edited: AppManager.tsx (3x)",
+        "confidence": 0.6300000000000001,
+        "pageRank": 0.0901874460615465,
+        "accessCount": 3
+      },
+      {
+        "id": "task-launcher-unified-control-center",
+        "summary": "launcher-unified-control-center",
+        "confidence": 0.5,
+        "pageRank": 0.0901874460615465,
+        "accessCount": 0
+      }
+    ]
+  }
+]
