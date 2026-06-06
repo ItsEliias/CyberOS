@@ -19,8 +19,15 @@ function readShared(): Record<string, unknown> {
 }
 
 function writeShared(shared: Record<string, unknown>): void {
-  try { fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8') }
-  catch (e) { console.warn('[CredVault security] writeShared failed:', (e as Error).message) }
+  try {
+    // Atomic — every app polls cybertools-config.json for SSO state. A
+    // partial write would make them all read corrupted SSO and bounce
+    // through the lock screens. The Launcher's writeConfig already uses
+    // the tmp+rename pattern; matching it here.
+    const tmp = `${CYBERTOOLS_CONFIG}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(shared, null, 2), 'utf8')
+    fs.renameSync(tmp, CYBERTOOLS_CONFIG)
+  } catch (e) { console.warn('[CredVault security] writeShared failed:', (e as Error).message) }
 }
 
 // ─── SSO state ────────────────────────────────────────────────────────────────
