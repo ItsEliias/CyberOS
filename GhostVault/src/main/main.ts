@@ -33,6 +33,22 @@ function ensureDirs() {
 }
 
 // ─── Shared status writer ─────────────────────────────────────────────────────
+// Atomic write to the shared cybertools-config.json. Every sibling app polls
+// this file every few seconds; a torn read (mid-write JSON.parse failing or
+// returning {}) would silently clobber state across the whole CyberOS suite.
+function writeCyberToolsConfigAtomic(shared: Record<string, unknown>): void {
+  const json = JSON.stringify(shared, null, 2);
+  const tmp  = `${CYBERTOOLS_CONFIG}.tmp-${process.pid}-${Date.now()}`;
+  const fd   = fs.openSync(tmp, 'w');
+  try {
+    fs.writeSync(fd, json, 0, 'utf8');
+    try { fs.fsyncSync(fd); } catch { /* fsync best-effort */ }
+  } finally {
+    try { fs.closeSync(fd); } catch { /* already closed */ }
+  }
+  fs.renameSync(tmp, CYBERTOOLS_CONFIG);
+}
+
 function writeGhostVaultStatus() {
   try {
     let shared: Record<string, unknown> = {};
@@ -45,7 +61,7 @@ function writeGhostVaultStatus() {
       lastCapture : lastCaptureTime,
       noteCount   : vaultNoteCount
     };
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8');
+    writeCyberToolsConfigAtomic(shared);
   } catch (e) {
     console.warn('[GhostVault] status write failed:', (e as Error).message);
   }
@@ -62,7 +78,7 @@ function stopStatusWriter() {
     if (fs.existsSync(CYBERTOOLS_CONFIG)) {
       const shared = JSON.parse(fs.readFileSync(CYBERTOOLS_CONFIG, 'utf8'));
       if (shared.ghostvault_status) shared.ghostvault_status.active = false;
-      fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8');
+      writeCyberToolsConfigAtomic(shared);
     }
   } catch (_) {}
 }
@@ -595,7 +611,7 @@ ipcMain.handle('ghostvault:export-notes', (_, payload: { sessionName: string; no
       notes      : payload.notes,
       exportedAt : new Date().toISOString()
     };
-    fs.writeFileSync(CYBERTOOLS_CONFIG, JSON.stringify(shared, null, 2), 'utf8');
+    writeCyberToolsConfigAtomic(shared);
     return true;
   } catch (e) {
     console.error('[GhostVault] export-notes failed:', (e as Error).message);

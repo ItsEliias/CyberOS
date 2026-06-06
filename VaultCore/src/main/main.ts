@@ -440,10 +440,34 @@ ipcMain.handle('run-dead-link-check', async () => {
   return vaulthealth.findDeadLinks(vp, (p: unknown) => { if (mainWindow) mainWindow.webContents.send('vault-health-progress', p); });
 });
 ipcMain.handle('clean-markdown',         async (_, opts)     => vaulthealth.cleanMarkdown(opts, launcher.getVaultPath()));
-ipcMain.handle('split-note',             async (_, fp, sp)   => vaulthealth.splitNote(fp, sp, launcher.getVaultPath()));
-ipcMain.handle('analyse-note-headings',  async (_, fp)       => vaulthealth.analyseNoteHeadings(fp));
-ipcMain.handle('merge-notes',            async (_, a, b, kp) => vaulthealth.mergeNotes(a, b, kp));
-ipcMain.handle('delete-note',            async (_, fp)       => vaulthealth.deleteNote(fp));
+ipcMain.handle('split-note',             async (_, fp, sp)   => {
+  // splitNote reads + writes the source path and creates siblings under it.
+  // Block any path outside the configured vault root.
+  if (!isUnderVault(fp)) return { error: 'Path outside vault' };
+  return vaulthealth.splitNote(fp, sp, launcher.getVaultPath());
+});
+ipcMain.handle('analyse-note-headings',  async (_, fp)       => {
+  // Reading + analysing a note must stay inside the vault — without this a
+  // compromised renderer could analyse-note-headings('~/.ssh/id_rsa') etc.
+  if (!isUnderVault(fp)) return { error: 'Path outside vault' };
+  return vaulthealth.analyseNoteHeadings(fp);
+});
+ipcMain.handle('merge-notes',            async (_, a, b, kp) => {
+  // merge-notes deletes `b` and writes to `keepPath`. Confine all three to
+  // the vault root to prevent arbitrary delete + write outside the vault.
+  if (!isUnderVault(a) || !isUnderVault(b) || !isUnderVault(kp)) {
+    return { error: 'One or more paths are outside the vault' };
+  }
+  return vaulthealth.mergeNotes(a, b, kp);
+});
+ipcMain.handle('delete-note',            async (_, fp)       => {
+  // delete-note unlinks the path it's given. Without confinement a
+  // compromised renderer could delete arbitrary user files. The .deleted_*
+  // backup the helper writes alongside the file is also outside the vault
+  // if the source is — same risk.
+  if (!isUnderVault(fp)) return { error: 'Path outside vault' };
+  return vaulthealth.deleteNote(fp);
+});
 ipcMain.handle('export-dead-links-csv',  async (_, r)        => vaulthealth.exportDeadLinksCsv(r, launcher.getVaultPath()));
 ipcMain.handle('archive-wayback',        async (_, url)      => { await shell.openExternal(`https://web.archive.org/web/${url}`); return true; });
 ipcMain.handle('generate-knowledge-gap-report', async () => {
