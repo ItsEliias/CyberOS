@@ -16,6 +16,7 @@ import {
   addActivityEntry, clearActivityFeed, writeTrigger
 } from './config.js';
 import * as ecosystemBus from './ecosystem-bus.js';
+import { peerAppPath } from './platform.js';
 import type { VpnStatus } from '../shared/types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -738,14 +739,14 @@ function launchApp(appKey: string): boolean {
     }
   }
 
-  // Fall back to /Applications/{productName}.app if config has no execPath
+  // Fall back to the OS-conventional install path if config has no execPath.
+  // Cross-platform via peerAppPath: /Applications/X.app on macOS,
+  // %LOCALAPPDATA%\Programs\X\X.exe on Windows, /usr/local/bin/x on Linux.
   if (!execPath || !fs.existsSync(execPath)) {
     const product = APP_FALLBACK_PRODUCTS[appKey];
     if (product) {
-      const fallback = `/Applications/${product}.app`;
-      if (fs.existsSync(fallback)) {
-        execPath = fallback;
-      }
+      const fallback = peerAppPath(product);
+      if (fallback) execPath = fallback;
     }
   }
 
