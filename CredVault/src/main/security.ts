@@ -74,9 +74,14 @@ export function endSession(): SSOState {
 export function refreshSession(autoLockMs: number): SSOState | null {
   if (!_sessionToken) return null
   const now = Date.now()
-  const expiresAt = autoLockMs > 0 ? new Date(now + autoLockMs).toISOString() : null
   const shared = readShared()
   const prev = (shared.sso as SSOState | undefined) || null
+  // When the caller passes 0 and there is already an active expiry, preserve
+  // it. Otherwise the change-password / token-rotation path would silently
+  // clear auto-lock and the session would never expire.
+  const expiresAt =
+    autoLockMs > 0 ? new Date(now + autoLockMs).toISOString()
+    : prev?.expiresAt ?? null
   const state: SSOState = {
     unlocked:   true,
     unlockedAt: prev?.unlockedAt || new Date(now).toISOString(),
