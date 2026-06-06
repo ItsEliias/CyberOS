@@ -791,7 +791,15 @@ ipcMain.handle('ghostvault:note:delete', (_, filePath: string) => {
   return ok;
 });
 ipcMain.handle('ghostvault:note:search', async (_, vaultPath: string, query: string) => {
-  if (!query.trim()) return [];
+  // Bound the query — a multi-MB query would burn CPU on every note
+  // toLowerCase + indexOf. 256 chars covers every legitimate search.
+  if (typeof query !== 'string' || !query.trim() || query.length > 256) return [];
+  // Require the searched vault to match the configured one — otherwise a
+  // renderer could ask us to walk `/` and list every file on the system.
+  if (typeof vaultPath !== 'string' || !vaultPath) return [];
+  const cfg = loadConfig();
+  if (!cfg.vaultPath) return [];
+  if (path.resolve(vaultPath) !== path.resolve(cfg.vaultPath)) return [];
   const notes = listVaultNotes(vaultPath);
   const lower = query.toLowerCase();
   const results: { path: string; name: string; snippet: string }[] = [];
