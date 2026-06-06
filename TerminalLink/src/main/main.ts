@@ -203,6 +203,25 @@ function ptyCreateSafeEnv(extra: Record<string, string>): NodeJS.ProcessEnv {
 
 ipcMain.handle('pty-create', (_evt, { id, cols, rows }: { id: string; cols: number; rows: number }) => {
   try {
+    // Validate id — empty / non-string / too long means we'd index the ptys
+    // map by garbage and leak processes that can't be killed afterwards.
+    if (typeof id !== 'string' || !id || id.length > 64) {
+      return { error: 'invalid pane id' };
+    }
+    if (!/^[a-zA-Z0-9_\-]+$/.test(id)) {
+      return { error: 'invalid pane id' };
+    }
+    // Re-creating with the same id while one is alive is a resource leak:
+    // the old proc has no handle to be killed afterwards. Kill it first.
+    const existing = ptys.get(id);
+    if (existing) {
+      try { existing.kill(); } catch { /* already dead */ }
+      ptys.delete(id);
+    }
+    // Bound geometry to a sane range so a hostile resize can't OOM us.
+    const safeCols = Math.min(Math.max(Number(cols) || 80, 8), 500);
+    const safeRows = Math.min(Math.max(Number(rows) || 24, 4), 200);
+
     const cfg = readConfig();
     const sharedCtx = (cfg.shared_context || cfg.recondesk_status || {}) as Record<string, unknown>;
     const activeTarget = (sharedCtx.activeTarget || sharedCtx.active_target || '') as string;
@@ -210,8 +229,8 @@ ipcMain.handle('pty-create', (_evt, { id, cols, rows }: { id: string; cols: numb
 
     const proc = pty.spawn('/bin/zsh', [], {
       name: 'xterm-256color',
-      cols: cols || 80,
-      rows: rows || 24,
+      cols: safeCols,
+      rows: safeRows,
       cwd: process.env.HOME,
       env: ptyCreateSafeEnv({
         TARGET:    activeTarget,
