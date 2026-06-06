@@ -36,7 +36,11 @@ function loadReports(): Report[] {
 
 function saveReports(reports: Report[]): boolean {
   try {
-    fs.writeFileSync(REPORTS_FILE, JSON.stringify(reports, null, 2), 'utf8');
+    // Atomic write — a crash mid-fs.writeFileSync used to leave a half-written
+    // reports.json that failed to parse on next launch, losing every report.
+    const tmp = `${REPORTS_FILE}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(reports, null, 2), 'utf8');
+    fs.renameSync(tmp, REPORTS_FILE);
     return true;
   } catch (e) {
     console.error('[ReportForge] saveReports:', (e as Error).message);
