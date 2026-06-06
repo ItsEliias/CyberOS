@@ -15,6 +15,24 @@ interface PendingActionEntry {
 }
 
 /**
+ * Atomic write: serialize, write to tmp sibling, fsync, rename over target.
+ * Prevents readers (other CyberOS apps, this app's own watcher) from observing
+ * a torn / half-written JSON file if the process is killed mid-write.
+ */
+function writeConfigAtomic(cfg: Record<string, unknown>): void {
+  const json = JSON.stringify(cfg, null, 2);
+  const tmp  = `${CONFIG_PATH}.tmp-${process.pid}-${Date.now()}`;
+  const fd   = fs.openSync(tmp, 'w');
+  try {
+    fs.writeSync(fd, json, 0, 'utf8');
+    try { fs.fsyncSync(fd); } catch { /* fsync best-effort */ }
+  } finally {
+    try { fs.closeSync(fd); } catch { /* already closed */ }
+  }
+  fs.renameSync(tmp, CONFIG_PATH);
+}
+
+/**
  * Find the first pending_actions entry whose `app` matches the given key,
  * remove it from the array, persist the config, and return the matched entry.
  *
