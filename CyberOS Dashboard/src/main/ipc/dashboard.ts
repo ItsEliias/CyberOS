@@ -6,11 +6,12 @@ import fs from 'fs'
 import path from 'path'
 import os from 'os'
 import { execFile } from 'child_process'
+import { sharedConfigPath, ecosystemBusPath } from '../platform'
 import type { EcosystemConfig } from '../../shared/types'
 
-const CYBERTOOLS_CONFIG = path.join(os.homedir(), 'cybertools-config.json')
-const EVENTS_DIR = path.join(os.homedir(), 'Library', 'Application Support', 'CyberTools')
-const EVENTS_FILE = path.join(EVENTS_DIR, 'ecosystem-events.json')
+const CYBERTOOLS_CONFIG = sharedConfigPath()
+const EVENTS_FILE = ecosystemBusPath()
+const EVENTS_DIR = path.dirname(EVENTS_FILE)
 
 // How long without a heartbeat before an app is considered offline
 const OFFLINE_THRESHOLD = 30_000
