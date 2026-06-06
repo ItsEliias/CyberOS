@@ -4,7 +4,10 @@
   "description": "Network topology mapper — CYBERTOOLS",
   "main": "out/main/main.js",
   "type": "module",
-  "author": "ItsEliias",
+  "author": {
+    "name": "ItsEliias",
+    "email": "ItsEliias@users.noreply.github.com"
+  },
   "license": "MIT",
   "scripts": {
     "start": "electron-vite dev",
@@ -81,6 +84,13 @@
       ],
       "icon": "assets/icon.png",
       "category": "Development"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": true
     }
-  }
+  },
+  "homepage": "https://github.com/ItsEliias/CyberOS"
 }

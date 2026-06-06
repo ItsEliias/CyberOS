@@ -1,10 +1,13 @@
 {
   "name": "cyberlab-companion",
   "version": "1.0.0",
-  "description": "AI-assisted cybersecurity workflow environment \u2014 CYBERTOOLS",
+  "description": "AI-assisted cybersecurity workflow environment — CYBERTOOLS",
   "main": "out/main/index.js",
   "type": "module",
-  "author": "ItsEliias",
+  "author": {
+    "name": "ItsEliias",
+    "email": "ItsEliias@users.noreply.github.com"
+  },
   "license": "MIT",
   "scripts": {
     "dev": "electron-vite dev",
@@ -49,7 +52,7 @@
   "build": {
     "appId": "com.itsEliias.cyberlab-companion",
     "productName": "CyberLab Companion",
-    "copyright": "Copyright \u00a9 2025 ItsEliias",
+    "copyright": "Copyright © 2025 ItsEliias",
     "directories": {
       "output": "dist"
     },
@@ -95,5 +98,6 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
     }
-  }
+  },
+  "homepage": "https://github.com/ItsEliias/CyberOS"
 }

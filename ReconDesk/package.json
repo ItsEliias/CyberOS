@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "description": "Recon & attack surface workspace — CYBERTOOLS",
   "main": "out/main/main.js",
-  "author": "ItsEliias",
+  "author": {
+    "name": "ItsEliias",
+    "email": "ItsEliias@users.noreply.github.com"
+  },
   "license": "MIT",
   "scripts": {
     "start": "electron-vite dev",
@@ -85,5 +88,6 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
     }
-  }
+  },
+  "homepage": "https://github.com/ItsEliias/CyberOS"
 }

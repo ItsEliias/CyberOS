@@ -4,7 +4,10 @@
   "description": "Threat intelligence & security feed aggregator — CYBERTOOLS",
   "main": "out/main/main.js",
   "type": "module",
-  "author": "ItsEliias",
+  "author": {
+    "name": "ItsEliias",
+    "email": "ItsEliias@users.noreply.github.com"
+  },
   "license": "MIT",
   "scripts": {
     "dev": "electron-vite dev",
@@ -79,6 +82,13 @@
       ],
       "icon": "assets/icon.png",
       "category": "Development"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": true
     }
-  }
+  },
+  "homepage": "https://github.com/ItsEliias/CyberOS"
 }

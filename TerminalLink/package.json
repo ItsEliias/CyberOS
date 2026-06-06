@@ -1,7 +1,7 @@
 {
   "name": "terminallink",
   "version": "1.0.0",
-  "description": "Dual-pane terminal emulator with CyberOS session logging \u2014 CYBERTOOLS",
+  "description": "Dual-pane terminal emulator with CyberOS session logging — CYBERTOOLS",
   "main": "out/main/index.js",
   "scripts": {
     "start": "electron-vite dev",
@@ -41,7 +41,7 @@
   "build": {
     "appId": "com.itsEliias.terminallink",
     "productName": "TermLink",
-    "copyright": "Copyright \u00a9 2024 ItsEliias",
+    "copyright": "Copyright © 2024 ItsEliias",
     "directories": {
       "output": "dist",
       "buildResources": "assets"
@@ -84,15 +84,22 @@
       ],
       "icon": "assets/logo.png",
       "category": "Utility"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": true
     }
   },
   "author": {
     "name": "ItsEliias",
-    "email": "itseliiasstudy@gmail.com"
+    "email": "ItsEliias@users.noreply.github.com"
   },
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
-  }
+  },
+  "homepage": "https://github.com/ItsEliias/CyberOS"
 }
