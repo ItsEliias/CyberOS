@@ -294,7 +294,24 @@ ipcMain.handle('delete-graph', (_e, id: string): void => {
 })
 
 ipcMain.handle('app:version', () => APP_VERSION)
-ipcMain.handle('open-external', (_e, url: string) => shell.openExternal(url))
+
+// Validate before handing to shell.openExternal — the renderer process is
+// less trusted than main, and a malformed IPC payload (or a future XSS via
+// an imported nmap XML field rendered as a link) could shell-execute
+// arbitrary URI handlers via custom schemes (x-apple-*, vscode://, etc.).
+// Allow only the schemes the app actually uses: http(s) for external links,
+// file: for the bundled docs path, and mailto:. Bare absolute paths to .md
+// files are also allowed (OnboardingModal opens a docs path directly).
+ipcMain.handle('open-external', (_e, url: string) => {
+  if (typeof url !== 'string' || !url) return
+  // Bare absolute path to a markdown docs file — OnboardingModal does this.
+  if (url.startsWith('/') && url.endsWith('.md')) { shell.openExternal(url); return }
+  try {
+    const proto = new URL(url).protocol
+    if (proto !== 'http:' && proto !== 'https:' && proto !== 'file:' && proto !== 'mailto:') return
+    shell.openExternal(url)
+  } catch { /* invalid URL — silently drop */ }
+})
 
 // ─── ReconDesk Sync Handlers ──────────────────────────────────────────────────
 
