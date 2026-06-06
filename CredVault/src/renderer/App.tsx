@@ -49,8 +49,8 @@ export default function App() {
 
   // Bootstrap: check if vault needs first-time setup
   useEffect(() => {
-    window.electronAPI.needsSetup().then(needs => setSetup(!needs))
-    window.electronAPI.getVersion().then(setVersion)
+    window.electronAPI.needsSetup().then(needs => setSetup(!needs)).catch(console.error)
+    window.electronAPI.getVersion().then(setVersion).catch(console.error)
   }, [setSetup, setVersion])
 
   // Listen for vault:locked push event from main
@@ -101,13 +101,13 @@ export default function App() {
   // Load credentials when unlocked
   useEffect(() => {
     if (!isUnlocked) { setCredentials([]); setStats(null); return }
-    window.electronAPI.getCredentials().then(setCredentials)
-    window.electronAPI.getStats().then(setStats)
+    window.electronAPI.getCredentials().then(setCredentials).catch(console.error)
+    window.electronAPI.getStats().then(setStats).catch(console.error)
   }, [isUnlocked, setCredentials, setStats])
 
   // Subscribe to live pending-count push from main and seed on mount
   useEffect(() => {
-    window.electronAPI.pending.get().then(items => setPendingCount(items.length))
+    window.electronAPI.pending.get().then(items => setPendingCount(items.length)).catch(console.error)
     const handler = (count: number) => setPendingCount(count)
     window.electronAPI.pending.on(handler)
     return () => window.electronAPI.pending.off(handler)
