@@ -679,10 +679,16 @@ ipcMain.handle('app:version',       () => APP_VERSION)
 // OnboardingModal opens its docs file via a raw path.
 ipcMain.handle('shell:open', (_e, url: string) => {
   if (typeof url !== 'string' || !url) return
-  if (url.startsWith('/') && url.endsWith('.md')) { shell.openExternal(url); return }
+  // Previously this allowed:
+  //   1) any absolute path ending in `.md` (intended for an onboarding
+  //      file shipped at a hardcoded developer path that no end user
+  //      has anyway), and
+  //   2) `file:` URLs in shell.openExternal — which let a compromised
+  //      renderer point at any local file (`file:///etc/passwd`).
+  // Both bypasses are dropped; only network-routable schemes are allowed.
   try {
     const proto = new URL(url).protocol
-    if (proto !== 'http:' && proto !== 'https:' && proto !== 'file:' && proto !== 'mailto:') return
+    if (proto !== 'http:' && proto !== 'https:' && proto !== 'mailto:') return
     shell.openExternal(url)
   } catch { /* invalid URL — silently drop */ }
 })
