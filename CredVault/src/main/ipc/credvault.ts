@@ -311,8 +311,10 @@ export function registerCredVaultHandlers(): void {
     return generateTotpSecret()
   })
 
-  ipcMain.handle('vault:totp-confirm', (_e, secret: string, code: string): { ok: boolean; error?: string } => {
-    if (!secret || !code) return { ok: false, error: 'Missing secret or code' }
+  ipcMain.handle('vault:totp-confirm', (_e, secret: unknown, code: unknown): { ok: boolean; error?: string } => {
+    if (!isNonEmptyString(secret) || !isNonEmptyString(code)) {
+      return { ok: false, error: 'Missing secret or code' }
+    }
     if (!verifyTotp(secret, code)) return { ok: false, error: 'Code did not verify — check your authenticator clock' }
     const p = readPrefs()
     p.totp = { enabled: true, secret }
@@ -321,10 +323,15 @@ export function registerCredVaultHandlers(): void {
     return { ok: true }
   })
 
-  ipcMain.handle('vault:totp-disable', (_e, code: string): { ok: boolean; error?: string } => {
+  ipcMain.handle('vault:totp-disable', (_e, code: unknown): { ok: boolean; error?: string } => {
     const p = readPrefs()
     const secret = p.totp?.secret
     if (!secret) { p.totp = { enabled: false }; writePrefs(p); return { ok: true } }
+    // Before this guard, an undefined/non-string code threw inside verifyTotp
+    // and the IPC returned a confusing OpenSSL error to the user. An empty
+    // string fell through to verifyTotp returning false → "Code did not
+    // verify". Both should be the same clean "Missing code" path.
+    if (!isNonEmptyString(code)) return { ok: false, error: 'Missing code' }
     if (!verifyTotp(secret, code)) return { ok: false, error: 'Code did not verify' }
     p.totp = { enabled: false }
     writePrefs(p)
@@ -334,15 +341,17 @@ export function registerCredVaultHandlers(): void {
 
   // Called after the password unlock when twoFactorRequired was returned.
   // Completes the SSO session on success.
-  ipcMain.handle('vault:totp-verify', (_e, code: string, autoLockMs?: number): { ok: boolean; error?: string } => {
+  ipcMain.handle('vault:totp-verify', (_e, code: unknown, autoLockMs?: unknown): { ok: boolean; error?: string } => {
+    if (!isNonEmptyString(code)) return { ok: false, error: 'Missing code' }
+    const lockMs = typeof autoLockMs === 'number' ? autoLockMs : 0
     const secret = readPrefs().totp?.secret
     if (!secret) return { ok: false, error: 'TOTP not configured' }
     if (!verifyTotp(secret, code)) return { ok: false, error: 'Code did not verify' }
-    beginSession(autoLockMs ?? 0)
+    beginSession(lockMs)
     // The matching vault:unlock path skipped resetLockTimer when 2FA was
     // pending; arm it here once the TOTP code is verified so the in-memory
     // vault key gets cleared on idle.
-    resetLockTimer(autoLockMs ?? 0)
+    resetLockTimer(lockMs)
     return { ok: true }
   })
 
