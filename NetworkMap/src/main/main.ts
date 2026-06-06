@@ -415,18 +415,25 @@ ipcMain.handle('recondesk:generate-graph', () => {
   }
 })
 
-ipcMain.handle('export-png', async (_e, dataUrl: string, name: string): Promise<void> => {
+ipcMain.handle('export-png', async (_e, dataUrl: unknown, name: unknown): Promise<void> => {
   if (!mainWindow) return
+  // Validate at the boundary: the dataUrl should be a small base64 PNG.
+  if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/png;base64,')) return
+  if (dataUrl.length > 50 * 1024 * 1024) return  // 50 MB cap
+  const safeName = (typeof name === 'string' ? name : 'graph').replace(/[^a-z0-9_-]/gi, '_') || 'graph'
   const result = await dialog.showSaveDialog(mainWindow, {
     title: 'Export PNG',
-    defaultPath: `${name.replace(/[^a-z0-9_-]/gi, '_')}.png`,
+    defaultPath: `${safeName}.png`,
     filters: [{ name: 'PNG', extensions: ['png'] }],
   })
   if (result.canceled || !result.filePath) return
   try {
-    const base64 = dataUrl.replace(/^data:image\/png;base64,/, '')
-    fs.writeFileSync(result.filePath, Buffer.from(base64, 'base64'))
-    emitEvent('NetworkMap', 'graph:exported', { name, format: 'png' })
+    const base64 = dataUrl.slice('data:image/png;base64,'.length)
+    // Atomic — partial PNG on crash would silently corrupt the file.
+    const tmp = `${result.filePath}.tmp`
+    fs.writeFileSync(tmp, Buffer.from(base64, 'base64'))
+    fs.renameSync(tmp, result.filePath)
+    emitEvent('NetworkMap', 'graph:exported', { name: safeName, format: 'png' })
   } catch (e) { console.error('[NetworkMap] export-png failed:', (e as Error).message) }
 })
 
