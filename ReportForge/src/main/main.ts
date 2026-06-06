@@ -441,7 +441,19 @@ ipcMain.handle('signal-print-ready', () => {
   return true;
 });
 
-ipcMain.handle('open-external', (_, url: string) => shell.openExternal(url));
+// Allowlist URL schemes — without this, a poisoned URL baked into a
+// shared_context payload or imported writeup file could fire javascript:,
+// file://, or data: URIs through shell.openExternal and trigger code or
+// disclose local files via the default handler.
+const OPEN_EXTERNAL_SCHEMES = new Set(['http:', 'https:', 'mailto:']);
+ipcMain.handle('open-external', (_, url: string) => {
+  try {
+    if (typeof url !== 'string' || url.length === 0) return;
+    const u = new URL(url);
+    if (!OPEN_EXTERNAL_SCHEMES.has(u.protocol)) return;
+    return shell.openExternal(u.toString());
+  } catch { /* malformed URL — drop silently */ }
+});
 
 // GhostVault export check
 ipcMain.handle('reportforge:check-ghostvault', (): Record<string, unknown> | null => {
