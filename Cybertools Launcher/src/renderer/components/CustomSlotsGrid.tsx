@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import type { CustomSlot } from '@shared/types';
+import HelpTip from './ui/HelpTip';
 
 interface Props {
   slots: CustomSlot[];
@@ -12,8 +13,14 @@ export default function CustomSlotsGrid({ slots, onLaunch, onAdd, onEdit }: Prop
   return (
     <div>
       <div className="flex items-center justify-between px-1 mb-2">
-        <span className="text-[10px] uppercase tracking-wider font-semibold"
-          style={{ color: 'var(--text-dim)' }}>Pinned</span>
+        <span className="text-[10px] uppercase tracking-wider font-semibold inline-flex items-center gap-1.5"
+          style={{ color: 'var(--text-dim)' }}>
+          Pinned
+          <HelpTip
+            title="Custom slots"
+            body="Up to four shortcuts to any executable, URL, or command on your machine. Use them as one-click launchers for tools that aren't part of the CyberOS ecosystem."
+          />
+        </span>
         {slots.length < 4 && (
           <button
             onClick={onAdd}

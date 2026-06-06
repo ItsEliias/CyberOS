@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import type { AppStatus } from '@shared/types';
+import HelpTip from './ui/HelpTip';
 
 // ─── Category colors per app ──────────────────────────────────────────────────
 
@@ -242,8 +243,12 @@ export default function AppManager() {
       {/* Section header */}
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: '#4a5568' }}>
+          <div className="text-[10px] uppercase tracking-widest font-semibold inline-flex items-center gap-1.5" style={{ color: '#4a5568' }}>
             CyberOS Ecosystem
+            <HelpTip
+              title="App grid"
+              body="Every CyberOS app the Launcher knows about. Status dots show whether each is built and installed — click Install/Open/Remove to manage them."
+            />
           </div>
           {!loading && (
             <div className="text-[9px] font-mono mt-0.5" style={{ color: '#8b949e' }}>
