@@ -382,8 +382,13 @@ export function registerCredVaultHandlers(): void {
 
   // ── SSO state read (for activity feed / debugging) ────────────────────────
 
-  ipcMain.handle('sso:refresh', (_e, autoLockMs: number) => {
-    return refreshSession(autoLockMs ?? 0)
+  ipcMain.handle('sso:refresh', (_e, autoLockMs: unknown) => {
+    // Coerce non-numbers to 0 so refreshSession's expiresAt math (Date.now()
+    // + autoLockMs) never produces an Invalid Date. A renderer bug passing
+    // NaN here used to bake 'NaN' into the shared SSO state, breaking every
+    // sibling app's session-validity check.
+    const ms = typeof autoLockMs === 'number' && Number.isFinite(autoLockMs) ? autoLockMs : 0
+    return refreshSession(ms)
   })
 
   ipcMain.handle('vault:change-password', (_e, currentPassword: unknown, newPassword: unknown): UnlockResult => {
