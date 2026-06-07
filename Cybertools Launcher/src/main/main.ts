@@ -1145,6 +1145,7 @@ function checkNotifications(prev: typeof currentConfig, curr: typeof currentConf
     ['reportforge',    'ReportForge',    'reportforge'],
     ['terminallink',   'TerminalLink',   'terminallink'],
     ['networkmap',     'NetworkMap',     'networkmap'],
+    ['netlab',         'NetLab',         'netlab'],
   ];
   for (const [key, label, appKey] of newApps) {
     if (!p[key]?.execPath && c[key]?.execPath) {
