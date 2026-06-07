@@ -12,17 +12,27 @@ export default function CaptureView({ onSaved }: Props) {
   const [title, setTitle]   = useState('');
   const [text, setText]     = useState('');
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   async function handleSave() {
     if (!text.trim()) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const result = await window.ghostvault.saveCaptureNote({ folder, title, text });
       if (result.ok) {
         setTitle('');
         setText('');
         onSaved();
+      } else {
+        // Without this, a failed save (no vault, perms, disk full) left
+        // the textarea full of unsaved text and no signal to the user.
+        setSaveError(result.error || 'Failed to save');
+        setTimeout(() => setSaveError(null), 6000);
       }
+    } catch (e) {
+      setSaveError((e as Error).message || 'Failed to save');
+      setTimeout(() => setSaveError(null), 6000);
     } finally {
       setSaving(false);
     }
@@ -72,6 +82,13 @@ export default function CaptureView({ onSaved }: Props) {
           style={{ background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', lineHeight: '1.7', minHeight: 200 }}
         />
       </div>
+
+      {saveError && (
+        <div className="px-3 py-2 rounded-lg border text-xs"
+          style={{ borderColor: 'rgba(248,81,73,0.4)', background: 'rgba(248,81,73,0.1)', color: '#f85149' }}>
+          {saveError}
+        </div>
+      )}
 
       <div className="flex justify-end gap-3">
         <button onClick={() => { setTitle(''); setText(''); }}
