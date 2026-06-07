@@ -9,10 +9,11 @@ export default function Header() {
 
   const unread = items.filter(i => !i.read).length
 
+  const isMac = window.electronAPI.platform === 'darwin'
   return (
     <header className="drag-region h-12 flex items-center justify-between px-5 border-b border-border flex-shrink-0">
       <div className="flex items-center gap-3">
-        <div className="w-[72px]" />
+        {isMac && <div className="w-[72px]" /> /* macOS traffic-light spacer */}
         <span className="text-sm font-semibold tracking-wide text-text">SIGNALBOARD</span>
         {/* Total unread badge */}
         <AnimatePresence>

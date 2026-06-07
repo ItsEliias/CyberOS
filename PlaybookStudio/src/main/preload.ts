@@ -5,6 +5,10 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type { Playbook, PlaybookRun, PlaybookStep, SharedContext, AppState } from '../shared/types'
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  // Platform — synchronously available so renderer can adapt layout
+  // (e.g. macOS traffic-light spacer) without an IPC round-trip.
+  platform: process.platform,
+
   getVersion:  (): Promise<string>    => ipcRenderer.invoke('app:version'),
   getState:    (): Promise<AppState>  => ipcRenderer.invoke('app:get-state'),
   getContext:  (): Promise<SharedContext> => ipcRenderer.invoke('context:get'),

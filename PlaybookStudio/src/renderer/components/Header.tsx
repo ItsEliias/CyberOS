@@ -41,6 +41,7 @@ export default function Header() {
   const view      = useStore(s => s.view)
   const setView   = useStore(s => s.setView)
   const activeRun = useStore(s => s.activeRun)
+  const isMac     = window.electronAPI.platform === 'darwin'
 
   return (
     <div
@@ -51,8 +52,8 @@ export default function Header() {
         borderBottom: '1px solid rgba(42,51,71,0.5)',
       }}
     >
-      {/* Left spacer for macOS traffic lights */}
-      <div className="w-20" />
+      {/* macOS traffic-light spacer — wasted space on Linux/Windows */}
+      {isMac && <div className="w-20" />}
 
       {/* Center nav tabs */}
       <div className="no-drag flex items-center gap-0.5 absolute left-1/2 -translate-x-1/2">

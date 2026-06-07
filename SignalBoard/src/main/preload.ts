@@ -5,6 +5,10 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type { FeedItem, FeedSource, FeedState, RelevanceContext, AppSettings } from '../shared/types'
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  // Platform — synchronously available so renderer can adapt layout
+  // (e.g. macOS traffic-light spacer) without an IPC round-trip.
+  platform: process.platform,
+
   // State
   getState:       (): Promise<FeedState>         => ipcRenderer.invoke('feeds:get-state'),
   refresh:        (): Promise<boolean>           => ipcRenderer.invoke('feeds:refresh'),
