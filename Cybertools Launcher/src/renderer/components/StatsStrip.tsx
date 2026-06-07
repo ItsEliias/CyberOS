@@ -2,7 +2,7 @@ import { useLauncherStore } from '../store';
 
 const ALL_APP_KEYS = [
   'cyberlab', 'vaultscraper', 'ghostvault', 'recondesk', 'signalboard', 'cyberos',
-  'credvault', 'playbookstudio', 'reportforge', 'terminallink', 'networkmap',
+  'credvault', 'playbookstudio', 'reportforge', 'terminallink', 'networkmap', 'netlab',
 ] as const;
 
 export default function StatsStrip() {
@@ -22,7 +22,7 @@ export default function StatsStrip() {
     { label: 'Streak',  value: streak    > 0 ? `${streak}d`  : '—' },
     { label: 'Labs',    value: labsDone  > 0 ? `${labsDone}` : '—' },
     { label: 'Notes',   value: noteCount > 0 ? `${noteCount}` : '—' },
-    { label: 'Apps',    value: `${configuredCount}/11` },
+    { label: 'Apps',    value: `${configuredCount}/${ALL_APP_KEYS.length}` },
   ];
 
   return (
