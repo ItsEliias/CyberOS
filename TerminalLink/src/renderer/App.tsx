@@ -152,6 +152,14 @@ export default function App() {
       if (mod && e.shiftKey && e.key === 'b') { e.preventDefault(); handleBroadcastToggle(); }
       if (mod && e.key === 'l') { e.preventDefault(); setToolLauncherOpen(true); }
       if (mod && e.key === 't') { e.preventDefault(); handleNewSession(); }
+      // ⌘W → close active session (matches the in-app shortcut docs)
+      if (mod && !e.shiftKey && e.key === 'w' && activeSessionId) {
+        e.preventDefault();
+        removeSession(activeSessionId);
+      }
+      // ⌘Shift+H / ⌘Shift+S → toggle history / snippets panels
+      if (mod && e.shiftKey && (e.key === 'h' || e.key === 'H')) { e.preventDefault(); toggleHistoryPanel(); }
+      if (mod && e.shiftKey && (e.key === 's' || e.key === 'S')) { e.preventDefault(); toggleSnippetsPanel(); }
       // ⌘? (Cmd+Shift+/ or Cmd+?) → keyboard shortcuts panel
       if (mod && (e.key === '?' || (e.shiftKey && e.key === '/'))) {
         e.preventDefault();
@@ -166,7 +174,7 @@ export default function App() {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [broadcastMode, commandPaletteOpen, toolLauncherOpen, kbPanelOpen, requireSSO, ssoUnlocked]);
+  }, [broadcastMode, commandPaletteOpen, toolLauncherOpen, kbPanelOpen, requireSSO, ssoUnlocked, activeSessionId]);
 
   const handleCommand = useCallback((entry: CommandEntry) => {
     addCommand({ command: entry.command, pane: entry.pane, outputSnippet: entry.outputSnippet });

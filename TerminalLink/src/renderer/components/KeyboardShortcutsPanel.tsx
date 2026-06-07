@@ -10,48 +10,48 @@ interface ShortcutGroup {
   shortcuts: Array<{ keys: string[]; label: string }>;
 }
 
+// NOTE: every entry here is verified against the actual key handlers in
+// App.tsx, TerminalPane.tsx, and HistoryPanel.tsx. Do not list shortcuts
+// that aren't wired — they make the app feel broken when users try them.
 const SHORTCUT_GROUPS: ShortcutGroup[] = [
   {
     title: 'Sessions',
     shortcuts: [
-      { keys: ['⌘', 'T'],        label: 'New session' },
-      { keys: ['⌘', 'W'],        label: 'Close active session' },
-      { keys: ['⌘', '⌥', '←'],  label: 'Previous tab' },
-      { keys: ['⌘', '⌥', '→'],  label: 'Next tab' },
-      { keys: ['Dbl-click tab'], label: 'Rename session' },
+      { keys: ['⌘', 'T'],          label: 'New session' },
+      { keys: ['⌘', 'W'],          label: 'Close active session' },
+      { keys: ['Dbl-click tab'],   label: 'Rename session' },
       { keys: ['Right-click tab'], label: 'Session options' },
     ],
   },
   {
     title: 'Terminal',
     shortcuts: [
-      { keys: ['Ctrl', 'F'],     label: 'Search in terminal' },
+      { keys: ['Ctrl', 'F'],       label: 'Search in terminal' },
       { keys: ['⌘', 'Shift', 'B'], label: 'Toggle broadcast mode' },
-      { keys: ['⌘', 'Shift', '\\'], label: 'Toggle split pane' },
-      { keys: ['⌘', 'L'],       label: 'Open tool launcher' },
+      { keys: ['⌘', 'L'],          label: 'Open tool launcher' },
     ],
   },
   {
-    title: 'Panels',
+    title: 'Palette & Panels',
     shortcuts: [
+      { keys: ['⌘', 'K'],          label: 'Command palette' },
+      { keys: ['⌘', 'Shift', 'P'], label: 'Command palette (alt)' },
       { keys: ['⌘', 'Shift', 'H'], label: 'Toggle history panel' },
       { keys: ['⌘', 'Shift', 'S'], label: 'Toggle snippets panel' },
-      { keys: ['⌘', 'Shift', 'P'], label: 'Command palette' },
-      { keys: ['⌘', '?'],        label: 'This shortcut panel' },
+      { keys: ['⌘', '?'],          label: 'This shortcut panel' },
     ],
   },
   {
     title: 'History',
     shortcuts: [
-      { keys: ['⌘', 'F'],        label: 'Focus history search' },
-      { keys: ['Click row'],     label: 'Copy command' },
+      { keys: ['⌘', 'F'],          label: 'Focus history search' },
+      { keys: ['Click row'],       label: 'Copy command' },
     ],
   },
   {
     title: 'Global',
     shortcuts: [
-      { keys: ['Escape'],        label: 'Close overlay / cancel' },
-      { keys: ['⌘', 'K'],       label: 'Clear terminal' },
+      { keys: ['Escape'],          label: 'Close overlay / cancel' },
     ],
   },
 ];
