@@ -75,9 +75,15 @@ export default function CredentialsTab({ targetId }: { targetId: string }) {
   }
 
   async function copyToClipboard(text: string, id: string) {
-    await navigator.clipboard.writeText(text).catch(() => {})
-    setCopied(id)
-    setTimeout(() => setCopied(null), 1500)
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(id)
+      setTimeout(() => setCopied(null), 1500)
+    } catch {
+      // Don't flash a fake "copied" indicator when the write actually
+      // failed (focus loss, missing permission, etc.) — the user would
+      // paste old clipboard contents and not know why.
+    }
   }
 
   function submitAdd(e: React.FormEvent) {

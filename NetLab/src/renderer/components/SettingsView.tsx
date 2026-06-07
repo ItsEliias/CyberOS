@@ -44,6 +44,7 @@ export default function SettingsView() {
   const [prefs, setPrefs] = useState<NetLabPrefs>({ ghostVaultAutoSave: false })
   const [saved, setSaved] = useState(false)
   const [version, setVersion] = useState('1.0.0')
+  const [resetArmed, setResetArmed] = useState(false)
 
   useEffect(() => {
     window.electronAPI.prefs.get().then(setPrefs).catch(console.error)
@@ -68,8 +69,13 @@ export default function SettingsView() {
   }
 
   function resetProgress() {
-    if (!confirm('Reset all progress? This cannot be undone.')) return
+    if (!resetArmed) {
+      setResetArmed(true)
+      setTimeout(() => setResetArmed(false), 5000)
+      return
+    }
     setProgress({})
+    setResetArmed(false)
   }
 
   return (
@@ -173,10 +179,14 @@ export default function SettingsView() {
               <motion.button
                 onClick={resetProgress}
                 className="px-3 py-1.5 rounded text-xs font-medium transition-colors"
-                style={{ background: 'rgba(248,81,73,0.1)', color: '#f85149', border: '1px solid rgba(248,81,73,0.3)' }}
+                style={{
+                  background: resetArmed ? 'rgba(248,81,73,0.25)' : 'rgba(248,81,73,0.1)',
+                  color: '#f85149',
+                  border: `1px solid ${resetArmed ? 'rgba(248,81,73,0.6)' : 'rgba(248,81,73,0.3)'}`,
+                }}
                 whileHover={{ opacity: 0.85 }}
               >
-                Reset All
+                {resetArmed ? 'Click again to confirm' : 'Reset All'}
               </motion.button>
             </SettingRow>
           </div>
