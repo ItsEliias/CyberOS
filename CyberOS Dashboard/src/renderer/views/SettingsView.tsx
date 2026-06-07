@@ -1,6 +1,7 @@
 // CyberOS Dashboard — Settings View
 // General, Notifications, Display, Config Paths
 
+import { useState } from 'react'
 import { useDashboardStore } from '../stores/useDashboardStore'
 
 export default function SettingsView() {
@@ -170,12 +171,17 @@ function ToggleRow({
 // ─── Path Row ────────────────────────────────────────────────────────────────
 
 function PathRow({ label, path }: { label: string; path: string }) {
+  const [copied, setCopied] = useState(false)
   const handleReveal = () => {
     window.electronAPI.openUrl(`file://${path.replace('~', '')}`)
   }
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(path)
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(path)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1400)
+    } catch { /* clipboard write rejected — show no fake confirmation */ }
   }
 
   return (
@@ -187,9 +193,10 @@ function PathRow({ label, path }: { label: string; path: string }) {
       <div className="flex items-center gap-2">
         <button
           onClick={handleCopy}
-          className="text-[10px] text-text-secondary hover:text-text-primary px-2 py-1 rounded hover:bg-bg-interactive transition-colors"
+          className="text-[10px] px-2 py-1 rounded hover:bg-bg-interactive transition-colors"
+          style={{ color: copied ? '#3fb950' : undefined }}
         >
-          Copy
+          {copied ? 'Copied ✓' : 'Copy'}
         </button>
         <button
           onClick={handleReveal}
