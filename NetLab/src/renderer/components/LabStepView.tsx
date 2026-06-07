@@ -9,9 +9,11 @@ function CommandBlock({ command }: { command: string }) {
   const [copied, setCopied] = useState(false)
 
   async function copy() {
-    await navigator.clipboard.writeText(command)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
+    try {
+      await navigator.clipboard.writeText(command)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch { /* clipboard rejected — leave indicator off */ }
   }
 
   return (

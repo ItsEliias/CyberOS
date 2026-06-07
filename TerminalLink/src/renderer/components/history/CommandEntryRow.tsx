@@ -162,9 +162,11 @@ export default function CommandEntryRow({ entry, query }: Props) {
   const [hovered, setHovered] = useState(false);
 
   async function copy() {
-    await navigator.clipboard.writeText(entry.command);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1400);
+    try {
+      await navigator.clipboard.writeText(entry.command);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1400);
+    } catch { /* clipboard rejected — leave indicator off */ }
   }
 
   return (
