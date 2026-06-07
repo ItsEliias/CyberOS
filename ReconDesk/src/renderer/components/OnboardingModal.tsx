@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 
 const STORAGE_KEY = 'onboarding_dismissed_ReconDesk'
-const DOCS_PATH   = 'https://github.com/ItsEliias/CyberOS/blob/main/Manus-Prompts/03_ReconDesk.md'
+const DOCS_PATH   = 'https://github.com/ItsEliias/CyberOS#the-apps'
 const ACCENT      = '#d29922'
 
 interface Props {

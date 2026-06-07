@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 
 const STORAGE_KEY = 'onboarding_dismissed_PlaybookStudio'
-const DOCS_PATH   = 'https://github.com/ItsEliias/CyberOS/blob/main/Manus-Prompts/08_PlaybookStudio.md'
+const DOCS_PATH   = 'https://github.com/ItsEliias/CyberOS#the-apps'
 const ACCENT      = '#2dd4bf'
 
 interface Props {
