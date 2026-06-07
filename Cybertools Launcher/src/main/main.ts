@@ -1271,6 +1271,7 @@ const APP_MANAGER_APPS: Array<{ id: string; description: string }> = [
   { id: 'ReconDesk',         description: 'Recon workflow & OSINT aggregator' },
   { id: 'ReportForge',       description: 'Security report generation' },
   { id: 'Cyberlab Companion', description: 'HTB / CTF lab companion & flag tracker' },
+  { id: 'CyberOS Dashboard', description: 'Unified ecosystem operations dashboard' },
 ];
 
 const CYBERTOOLS_BASE = path.join(
