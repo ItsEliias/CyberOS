@@ -192,6 +192,7 @@ export default function AppManager() {
   const [progress, setProgress]     = useState<Record<string, string>>({});
   const [loading, setLoading]       = useState(true);
   const [uninstallArmed, setUninstallArmed] = useState<string | null>(null);
+  const [filter, setFilter]         = useState<'all' | 'installed' | 'available'>('all');
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const armTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -260,6 +261,10 @@ export default function AppManager() {
   }
 
   const installedCount = apps.filter(a => a.installed).length;
+  const filteredApps =
+    filter === 'installed' ? apps.filter(a => a.installed)
+    : filter === 'available' ? apps.filter(a => !a.installed)
+    : apps;
 
   return (
     <div className="flex flex-col gap-3">
@@ -275,22 +280,47 @@ export default function AppManager() {
             </div>
           )}
         </div>
-        <button
-          onClick={refresh}
-          disabled={loading}
-          className="text-[10px] px-2.5 py-1 rounded transition-all hover:opacity-80 disabled:opacity-40 font-mono"
-          style={{ color: '#8b949e', border: '1px solid rgba(42,51,71,0.6)', background: 'rgba(22,27,39,0.5)' }}
-        >
-          Refresh
-        </button>
+        <div className="flex items-center gap-1.5">
+          {/* Filter pills */}
+          {!loading && (
+            <div className="flex items-center gap-0.5 rounded p-0.5"
+              style={{ background: 'rgba(22,27,39,0.5)', border: '1px solid rgba(42,51,71,0.6)' }}>
+              {(['all', 'installed', 'available'] as const).map(f => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className="text-[9px] px-2 py-0.5 rounded transition-all font-mono"
+                  style={{
+                    background: filter === f ? 'rgba(210,153,34,0.15)' : 'transparent',
+                    color: filter === f ? '#d29922' : '#8b949e',
+                  }}
+                >
+                  {f === 'all' ? 'All' : f === 'installed' ? 'Installed' : 'Available'}
+                </button>
+              ))}
+            </div>
+          )}
+          <button
+            onClick={refresh}
+            disabled={loading}
+            className="text-[10px] px-2.5 py-1 rounded transition-all hover:opacity-80 disabled:opacity-40 font-mono"
+            style={{ color: '#8b949e', border: '1px solid rgba(42,51,71,0.6)', background: 'rgba(22,27,39,0.5)' }}
+          >
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Grid */}
       {loading ? (
         <FullSpinner />
+      ) : filteredApps.length === 0 ? (
+        <div className="text-[10px] font-mono text-center py-8" style={{ color: '#4a5568' }}>
+          {filter === 'installed' ? 'No apps installed yet.' : 'All apps installed.'}
+        </div>
       ) : (
         <div className="grid grid-cols-3 gap-2">
-          {apps.map(app => (
+          {filteredApps.map(app => (
             <AppManagerCard
               key={app.id}
               app={app}
