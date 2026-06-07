@@ -1,6 +1,6 @@
 // CyberOS Dashboard — Config Inspector
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useDashboardStore } from '../../stores/useDashboardStore'
 
 /** Tokenize a JSON string for syntax highlighting */
@@ -66,7 +66,14 @@ export default function ConfigInspector() {
     return JSON.stringify(preview, null, 2)
   }, [config])
 
-  const handleCopyPath = () => { navigator.clipboard.writeText(configPath) }
+  const [pathCopied, setPathCopied] = useState(false)
+  async function handleCopyPath() {
+    try {
+      await navigator.clipboard.writeText(configPath)
+      setPathCopied(true)
+      setTimeout(() => setPathCopied(false), 1400)
+    } catch { /* clipboard write rejected — show no fake confirmation */ }
+  }
   const handleOpenInEditor = () => { window.electronAPI.openUrl(`file://${configPath.replace('~', '')}`) }
 
   return (
@@ -96,13 +103,20 @@ export default function ConfigInspector() {
             </code>
             <button
               onClick={handleCopyPath}
-              className="text-text-muted hover:text-text-primary transition-colors"
-              title="Copy path"
+              className="transition-colors"
+              style={{ color: pathCopied ? '#3fb950' : undefined }}
+              title={pathCopied ? 'Copied!' : 'Copy path'}
             >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-              </svg>
+              {pathCopied ? (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              ) : (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-muted hover:text-text-primary">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+              )}
             </button>
           </div>
         </Row>

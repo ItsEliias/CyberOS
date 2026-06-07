@@ -47,9 +47,15 @@ export default function NodeContextMenu({ node, x, y, onClose, onAnnotate, onSch
     return () => document.removeEventListener('mousedown', handler)
   }, [onClose])
 
-  function copyNmapOneliner() {
-    navigator.clipboard.writeText(`nmap -sV -sC ${node.ip}`).catch(console.error)
-    onClose()
+  async function copyNmapOneliner() {
+    try {
+      await navigator.clipboard.writeText(`nmap -sV -sC ${node.ip}`)
+      onClose()
+    } catch (err) {
+      console.error('copy failed', err)
+      // Keep the menu open so the user can right-click again and try
+      // another action, rather than silently dismissing.
+    }
   }
 
   function submitAnnotation() {
