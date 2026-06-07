@@ -44,6 +44,17 @@ export default function ReportLibrary({ onNew, onOpen, onDelete, onDuplicate }: 
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SortKey>('recent');
   const [loading, setLoading] = useState(true);
+  const [deleteArmed, setDeleteArmed] = useState<string | null>(null);
+
+  function armOrDelete(id: string) {
+    if (deleteArmed === id) {
+      onDelete(id);
+      setDeleteArmed(null);
+    } else {
+      setDeleteArmed(id);
+      setTimeout(() => setDeleteArmed(prev => prev === id ? null : prev), 4000);
+    }
+  }
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     try { return (localStorage.getItem('rf-view-mode') as ViewMode) ?? 'grid'; } catch { return 'grid'; }
   });
@@ -208,7 +219,8 @@ export default function ReportLibrary({ onNew, onOpen, onDelete, onDuplicate }: 
                 index={i}
                 onOpen={() => onOpen(r)}
                 onDuplicate={() => onDuplicate(r.id)}
-                onDelete={() => { if (confirm(`Delete "${r.title}"?`)) onDelete(r.id); }}
+                onDelete={() => armOrDelete(r.id)}
+                deleteArmed={deleteArmed === r.id}
               />
             ))}
           </div>
@@ -221,7 +233,8 @@ export default function ReportLibrary({ onNew, onOpen, onDelete, onDuplicate }: 
                 index={i}
                 onOpen={() => onOpen(r)}
                 onDuplicate={() => onDuplicate(r.id)}
-                onDelete={() => { if (confirm(`Delete "${r.title}"?`)) onDelete(r.id); }}
+                onDelete={() => armOrDelete(r.id)}
+                deleteArmed={deleteArmed === r.id}
               />
             ))}
           </div>

@@ -35,6 +35,7 @@ export interface CardProps {
   onOpen: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  deleteArmed?: boolean;
 }
 
 export type ReportTypeBadge = { label: string; color: string; bg: string; border: string };
@@ -139,7 +140,7 @@ export function EmptyState({ onNew }: { onNew: () => void }) {
   );
 }
 
-export function ReportCard({ report: r, index, onOpen, onDuplicate, onDelete }: CardProps) {
+export function ReportCard({ report: r, index, onOpen, onDuplicate, onDelete, deleteArmed }: CardProps) {
   const reportType = getReportType(r.platform || '');
   const critCount  = r.findings.filter(f => f.severity === 'critical').length;
   const highCount  = r.findings.filter(f => f.severity === 'high').length;
@@ -211,7 +212,7 @@ export function ReportCard({ report: r, index, onOpen, onDuplicate, onDelete }: 
         <div className="flex gap-1.5 mt-0.5" onClick={e => e.stopPropagation()}>
           <button onClick={onOpen} className="flex-1 h-7 text-xs font-semibold transition-all" style={{ background: 'rgba(74,158,255,0.12)', color: '#4a9eff', border: '1px solid rgba(74,158,255,0.25)', borderRadius: 8 }} onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(74,158,255,0.22)'; }} onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(74,158,255,0.12)'; }}>Open</button>
           <button onClick={onDuplicate} title="Duplicate" className="h-7 px-3 text-xs font-medium transition-all" style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid rgba(42,51,71,0.7)', borderRadius: 8 }} onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-2)'; }} onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}>Copy</button>
-          <button onClick={onDelete} title="Delete" className="h-7 px-2.5 text-xs transition-all" style={{ background: 'rgba(248,81,73,0.08)', color: '#f85149', border: '1px solid rgba(248,81,73,0.20)', borderRadius: 8 }} onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(248,81,73,0.18)'; }} onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(248,81,73,0.08)'; }}>✕</button>
+          <button onClick={onDelete} title={deleteArmed ? 'Click to confirm' : 'Delete'} className="h-7 px-2.5 text-xs transition-all" style={{ background: deleteArmed ? 'rgba(248,81,73,0.28)' : 'rgba(248,81,73,0.08)', color: '#f85149', border: `1px solid ${deleteArmed ? 'rgba(248,81,73,0.55)' : 'rgba(248,81,73,0.20)'}`, borderRadius: 8, fontWeight: deleteArmed ? 700 : 400 }}>{deleteArmed ? '✕✕' : '✕'}</button>
         </div>
       </div>
     </motion.div>
@@ -219,7 +220,7 @@ export function ReportCard({ report: r, index, onOpen, onDuplicate, onDelete }: 
 }
 
 /** Compact list-row layout for list view mode */
-export function ReportListRow({ report: r, index, onOpen, onDuplicate, onDelete }: CardProps) {
+export function ReportListRow({ report: r, index, onOpen, onDuplicate, onDelete, deleteArmed }: CardProps) {
   const reportType = getReportType(r.platform || '');
   const critCount  = r.findings.filter(f => f.severity === 'critical').length;
   const highCount  = r.findings.filter(f => f.severity === 'high').length;
@@ -247,7 +248,7 @@ export function ReportListRow({ report: r, index, onOpen, onDuplicate, onDelete 
       <StatusPill status={r.status} />
       <div style={{ display: 'flex', gap: 4 }} onClick={e => e.stopPropagation()}>
         <button onClick={onOpen} style={{ height: 24, padding: '0 8px', fontSize: 10, fontWeight: 600, borderRadius: 4, cursor: 'pointer', background: 'rgba(74,158,255,0.12)', color: '#4a9eff', border: '1px solid rgba(74,158,255,0.25)' }}>Open</button>
-        <button onClick={onDelete} style={{ height: 24, padding: '0 7px', fontSize: 10, borderRadius: 4, cursor: 'pointer', background: 'rgba(248,81,73,0.08)', color: '#f85149', border: '1px solid rgba(248,81,73,0.20)' }}>✕</button>
+        <button onClick={onDelete} title={deleteArmed ? 'Click to confirm' : 'Delete'} style={{ height: 24, padding: '0 7px', fontSize: 10, borderRadius: 4, cursor: 'pointer', background: deleteArmed ? 'rgba(248,81,73,0.28)' : 'rgba(248,81,73,0.08)', color: '#f85149', border: `1px solid ${deleteArmed ? 'rgba(248,81,73,0.55)' : 'rgba(248,81,73,0.20)'}`, fontWeight: deleteArmed ? 700 : 400 }}>{deleteArmed ? '✕✕' : '✕'}</button>
       </div>
     </motion.div>
   );
