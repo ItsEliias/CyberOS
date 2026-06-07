@@ -21,6 +21,7 @@ export default function FindingsPanel() {
   const [groupBySev, setGroupBySev] = useState(false);
   const [collapsedSevs, setCollapsedSevs] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteArmed, setDeleteArmed] = useState<string | null>(null);
 
   function toggleSevCollapse(sev: string) {
     setCollapsedSevs(prev => {
@@ -249,18 +250,29 @@ export default function FindingsPanel() {
                     </td>
                     <td style={{ padding: '9px 8px', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
                       <button
-                        onClick={() => { if (confirm(`Delete "${f.title}"?`)) removeFinding(f.id); }}
-                        style={{
-                          background: 'none', border: 'none',
-                          color: 'var(--text-muted)', cursor: 'pointer',
-                          padding: '2px 6px', fontSize: 13, borderRadius: 3,
-                          transition: 'color 0.15s',
+                        onClick={() => {
+                          if (deleteArmed === f.id) {
+                            removeFinding(f.id);
+                            setDeleteArmed(null);
+                          } else {
+                            setDeleteArmed(f.id);
+                            setTimeout(() => setDeleteArmed(prev => prev === f.id ? null : prev), 4000);
+                          }
                         }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#f85149'; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; }}
-                        title="Delete finding"
+                        style={{
+                          background: deleteArmed === f.id ? 'rgba(248,81,73,0.18)' : 'none',
+                          border: 'none',
+                          color: deleteArmed === f.id ? '#f85149' : 'var(--text-muted)',
+                          cursor: 'pointer',
+                          padding: '2px 6px', fontSize: 13, borderRadius: 3,
+                          transition: 'color 0.15s, background 0.15s',
+                          fontWeight: deleteArmed === f.id ? 700 : 400,
+                        }}
+                        onMouseEnter={e => { if (deleteArmed !== f.id) (e.currentTarget as HTMLButtonElement).style.color = '#f85149'; }}
+                        onMouseLeave={e => { if (deleteArmed !== f.id) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; }}
+                        title={deleteArmed === f.id ? 'Click again to confirm' : 'Delete finding'}
                       >
-                        ✕
+                        {deleteArmed === f.id ? '✕✕' : '✕'}
                       </button>
                     </td>
                   </tr>
