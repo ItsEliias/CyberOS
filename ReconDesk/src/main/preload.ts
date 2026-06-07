@@ -5,6 +5,10 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type { ReconDeskData, CveResult } from '../shared/types'
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  // Platform — synchronously available so renderer can adapt layout
+  // (e.g. macOS traffic-light spacer) without an IPC round-trip.
+  platform: process.platform,
+
   loadData:      (): Promise<ReconDeskData>        => ipcRenderer.invoke('data:load'),
   saveData:      (data: ReconDeskData): Promise<boolean> => ipcRenderer.invoke('data:save', data),
   getVersion:    (): Promise<string>               => ipcRenderer.invoke('app:version'),

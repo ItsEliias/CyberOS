@@ -16,6 +16,7 @@ export default function TitleBar({ onHelp }: TitleBarProps) {
 
   const [toolsOpen, setToolsOpen] = useState(false)
   const active = targets.find(t => t.id === activeTargetId)
+  const isMac = window.electronAPI.platform === 'darwin'
 
   function openSearch() {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))
@@ -36,9 +37,9 @@ export default function TitleBar({ onHelp }: TitleBarProps) {
           style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(210,153,34,0.18) 35%, rgba(210,153,34,0.18) 65%, transparent 100%)' }}
         />
 
-        {/* Left: traffic light spacer + brand */}
+        {/* Left: macOS traffic-light spacer (hidden off-mac) + brand */}
         <div className="flex items-center gap-2.5 no-drag">
-          <div className="w-[72px]" />
+          {isMac && <div className="w-[72px]" />}
           <div style={{ filter: 'drop-shadow(0 0 5px rgba(210,153,34,0.5))' }}>
             <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ color: '#d29922' }}>
               <path d="M8 1L14.5 4.75V11.25L8 15L1.5 11.25V4.75L8 1Z" stroke="currentColor" strokeWidth="1.5" fill="none" />

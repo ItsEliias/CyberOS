@@ -5,6 +5,10 @@ import type {
 } from '../shared/types.js';
 
 const ghostvault = {
+  // Platform — synchronously available so renderer can adapt layout
+  // (e.g. macOS traffic-light spacer) without an IPC round-trip.
+  platform: process.platform,
+
   getConfig      : ()                                    => ipcRenderer.invoke('get-config') as Promise<GhostVaultConfig>,
   saveConfig     : (cfg: Partial<GhostVaultConfig>)      => ipcRenderer.invoke('save-config', cfg) as Promise<boolean>,
   getVersion     : ()                                    => ipcRenderer.invoke('get-version') as Promise<string>,

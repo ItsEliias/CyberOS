@@ -13,6 +13,7 @@ export default function TitleBar({ onAdd, onHelp }: Props) {
   const setUnlocked = useStore(s => s.setUnlocked)
   const credentials = useStore(s => s.credentials)
   const [locking, setLocking] = useState(false)
+  const isMac = window.electronAPI.platform === 'darwin'
 
   async function handleLock() {
     setLocking(true)
@@ -32,8 +33,8 @@ export default function TitleBar({ onAdd, onHelp }: Props) {
         style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(247,129,102,0.22) 35%, rgba(247,129,102,0.22) 65%, transparent 100%)' }}
       />
 
-      {/* Traffic light spacer */}
-      <div className="w-[70px] no-drag" />
+      {/* macOS traffic-light spacer — hidden on Linux/Windows */}
+      {isMac && <div className="w-[70px] no-drag" />}
 
       {/* Brand */}
       <div className="flex items-center gap-2 no-drag">

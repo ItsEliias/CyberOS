@@ -11,6 +11,10 @@ interface ExportOptions {
 }
 
 const reportforge = {
+  // Platform — synchronously available so renderer can adapt layout
+  // (e.g. macOS traffic-light spacer) without an IPC round-trip.
+  platform: process.platform,
+
   getVersion     : ()                         => ipcRenderer.invoke('get-version') as Promise<string>,
   minimizeWindow : ()                         => ipcRenderer.invoke('minimize-window') as Promise<void>,
   closeWindow    : ()                         => ipcRenderer.invoke('close-window') as Promise<void>,

@@ -8,6 +8,10 @@ import type {
 } from '../shared/types'
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  // Platform — synchronously available so renderer can adapt layout
+  // (e.g. macOS traffic-light spacer) without an IPC round-trip.
+  platform: process.platform,
+
   // Vault auth
   needsSetup:      (): Promise<boolean>                                => ipcRenderer.invoke('vault:needs-setup'),
   setupVault:      (pw: string, autoLockMs?: number): Promise<UnlockResult> => ipcRenderer.invoke('vault:setup', pw, autoLockMs),
