@@ -17,9 +17,11 @@ function SnippetCard({ snippet, onDelete }: { snippet: CommandSnippet; onDelete?
   const isCustom = snippet.id.startsWith('custom-')
 
   async function copy() {
-    await navigator.clipboard.writeText(snippet.command)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
+    try {
+      await navigator.clipboard.writeText(snippet.command)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch { /* clipboard rejected — leave indicator off */ }
   }
 
   return (

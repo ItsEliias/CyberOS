@@ -99,11 +99,13 @@ export default function ReplayView({ commands, onExit }: Props) {
     }
   }, [index, total, autoPlay]);
 
-  function handleCopy() {
+  async function handleCopy() {
     if (!current) return;
-    navigator.clipboard.writeText(current.command);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1400);
+    try {
+      await navigator.clipboard.writeText(current.command);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1400);
+    } catch { /* clipboard rejected — leave indicator off */ }
   }
 
   if (total === 0) {
