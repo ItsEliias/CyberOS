@@ -59,10 +59,11 @@ export default function Header({ alertCount, onBellClick }: HeaderProps) {
     await window.electronAPI.toggleFullscreen()
   }
 
+  const isMac = window.electronAPI.platform === 'darwin'
   return (
     <header className="drag-region h-12 flex items-center justify-between px-5 border-b border-border flex-shrink-0">
       <div className="flex items-center gap-3">
-        <div className="w-[72px]" /> {/* macOS traffic lights */}
+        {isMac && <div className="w-[72px]" /> /* macOS traffic-light spacer */}
         <span className="text-sm font-semibold tracking-wide text-text">CYBEROS</span>
         <span className="text-xs text-muted font-light">// ItsEliias</span>
         <span className="text-[10px] text-muted/50 ml-1">v{version}</span>

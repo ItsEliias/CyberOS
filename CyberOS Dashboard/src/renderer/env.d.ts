@@ -6,6 +6,9 @@
 declare global {
   interface Window {
     electronAPI: {
+      // Platform — synchronously available, mirrors node's process.platform
+      platform: NodeJS.Platform
+
       // Config & State
       getState: () => Promise<any>
       getEvents: () => Promise<any[]>

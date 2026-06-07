@@ -5,6 +5,11 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  // ─── Platform ──────────────────────────────────────────────────────────────
+  // Exposed synchronously so the renderer can adapt layout (e.g. macOS
+  // traffic-light spacer) without an extra IPC round-trip.
+  platform: process.platform,
+
   // ─── Config & State ────────────────────────────────────────────────────────
   getState: (): Promise<any> => ipcRenderer.invoke('ecosystem:state'),
   getEvents: (): Promise<any[]> => ipcRenderer.invoke('ecosystem:events'),

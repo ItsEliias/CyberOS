@@ -70,8 +70,8 @@ export default function SettingsView() {
         <h2 className="text-sm font-semibold text-text-primary mb-4">Notifications</h2>
         <div className="space-y-4">
           <ToggleRow
-            label="macOS Notifications"
-            description="Show system notifications for ecosystem events"
+            label="System Notifications"
+            description="Show OS notifications for ecosystem events"
             checked={settings.notifications}
             onChange={(v) => updateSettings({ notifications: v })}
           />
