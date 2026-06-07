@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 
 const STORAGE_KEY = 'onboarding_dismissed_CyberlabCompanion'
-const DOCS_PATH   = 'https://github.com/ItsEliias/CyberOS/blob/main/Manus-Prompts/05_CyberLab_Companion.md'
+const DOCS_PATH   = 'https://github.com/ItsEliias/CyberOS#the-apps'
 const ACCENT      = '#b44fff'
 
 interface Props {

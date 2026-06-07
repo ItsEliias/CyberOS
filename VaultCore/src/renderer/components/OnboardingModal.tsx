@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 
 const STORAGE_KEY = 'onboarding_dismissed_VaultCore'
-const DOCS_PATH   = 'https://github.com/ItsEliias/CyberOS/blob/main/Manus-Prompts/07_VaultCore.md'
+const DOCS_PATH   = 'https://github.com/ItsEliias/CyberOS#the-apps'
 const ACCENT      = '#3fb950'
 
 interface Props {
@@ -20,12 +20,7 @@ export default function OnboardingModal({ onClose }: Props) {
   }
 
   function handleMoreInfo() {
-    // DOCS_PATH is a local .md file. open-external is scheme-allowlisted to
-    // http/https/mailto in main, so route through the canonical VaultCore
-    // GitHub docs page instead. The local-file constant is kept as a
-    // fallback reference but not used at runtime.
-    const docsUrl = 'https://github.com/ItsEliias/CyberOS#vaultcore'
-    void window.electronAPI.openExternal(docsUrl)
+    void window.electronAPI.openExternal(DOCS_PATH)
   }
 
   return (

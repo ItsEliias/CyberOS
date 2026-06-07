@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 
 const STORAGE_KEY = 'onboarding_dismissed_CredVault'
-const DOCS_PATH   = 'https://github.com/ItsEliias/CyberOS/blob/main/Manus-Prompts/11_CredVault.md'
+const DOCS_PATH   = 'https://github.com/ItsEliias/CyberOS#the-apps'
 const ACCENT      = '#f78166'
 
 interface Props {
@@ -20,11 +20,7 @@ export default function OnboardingModal({ onClose }: Props) {
   }
 
   function handleMoreInfo() {
-    // DOCS_PATH is a local .md file. open-external (now scheme-allowlisted to
-    // http/https) rejects it, so route through the canonical CredVault GitHub
-    // docs page instead. Falls back silently if there's no API at runtime.
-    const docsUrl = 'https://github.com/ItsEliias/CyberOS#credvault'
-    void window.electronAPI.openExternal(docsUrl)
+    void window.electronAPI.openExternal(DOCS_PATH)
   }
 
   return (
