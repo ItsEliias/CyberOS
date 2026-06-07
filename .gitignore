@@ -77,3 +77,7 @@ yarn-error.log*
 
 # Electron packager
 app-builds/
+
+# Claude-flow / Ruflo coordinator scratch data — not source
+.claude-flow/
+**/.claude-flow/
