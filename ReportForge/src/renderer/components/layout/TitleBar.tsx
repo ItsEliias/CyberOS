@@ -15,6 +15,7 @@ interface Props {
 export default function TitleBar({ onNew, onExportMd, onExportPdf, onSave, onHelp, exporting }: Props) {
   const { view, activeReport, dirty } = useStore()
   const [showExport, setShowExport] = useState(false)
+  const isMac = window.reportforge.platform === 'darwin'
 
   return (
     <div
@@ -30,8 +31,8 @@ export default function TitleBar({ onNew, onExportMd, onExportPdf, onSave, onHel
         style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(74,158,255,0.18) 40%, rgba(74,158,255,0.18) 60%, transparent 100%)' }}
       />
 
-      {/* Traffic-light spacer */}
-      <div className="w-[70px] no-drag" />
+      {/* macOS traffic-light spacer — hidden on Linux/Windows */}
+      {isMac && <div className="w-[70px] no-drag" />}
 
       {/* Brand */}
       <div className="flex items-center gap-2 no-drag">

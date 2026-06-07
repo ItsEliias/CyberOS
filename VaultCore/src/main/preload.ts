@@ -6,6 +6,10 @@ import type {
 } from '../shared/types.js';
 
 const api = {
+  // Platform — synchronously available so renderer can adapt layout
+  // (e.g. macOS traffic-light spacer) without an IPC round-trip.
+  platform: process.platform,
+
   // ── Config ────────────────────────────────────────────────────────────────
   getConfig      : ()          => ipcRenderer.invoke('get-config') as Promise<VaultCoreConfig>,
   setConfig      : (k: string, v: unknown) => ipcRenderer.invoke('set-config', k, v) as Promise<boolean>,

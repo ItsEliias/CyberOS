@@ -21,6 +21,7 @@ const LAYOUT_LABELS: Record<LayoutMode, string> = {
 
 export default function TitleBar({ onHelp }: TitleBarProps) {
   const { notes, vaultPath, alwaysOnTop, layoutMode, setLayoutMode } = useStore();
+  const isMac = window.ghostvault.platform === 'darwin';
 
   return (
     <div
@@ -32,8 +33,8 @@ export default function TitleBar({ onHelp }: TitleBarProps) {
         WebkitBackdropFilter: 'blur(12px)',
       }}
     >
-      {/* macOS traffic light spacer */}
-      <div className="w-[70px] shrink-0 no-drag" />
+      {/* macOS traffic-light spacer — hidden on Linux/Windows */}
+      {isMac && <div className="w-[70px] shrink-0 no-drag" />}
 
       {/* Brand */}
       <div className="flex items-center gap-2 no-drag">

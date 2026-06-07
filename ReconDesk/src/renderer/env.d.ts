@@ -5,6 +5,7 @@ import type { ReconDeskData, CveResult } from '../shared/types'
 declare global {
   interface Window {
     electronAPI: {
+      platform:      NodeJS.Platform
       loadData:      () => Promise<ReconDeskData>
       saveData:      (data: ReconDeskData) => Promise<boolean>
       getVersion:    () => Promise<string>

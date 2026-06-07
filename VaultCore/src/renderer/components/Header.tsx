@@ -16,6 +16,7 @@ interface HeaderProps {
 
 export default function Header({ onHelp }: HeaderProps) {
   const { isScraping, progress, updateInfo, theme, setTheme, vaultPath } = useStore();
+  const isMac = window.electronAPI.platform === 'darwin';
 
   async function changeCore(core: CoreTheme) {
     const next = { ...theme, core };
@@ -45,8 +46,8 @@ export default function Header({ onHelp }: HeaderProps) {
         style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(63,185,80,0.18) 35%, rgba(63,185,80,0.18) 65%, transparent 100%)' }}
       />
 
-      {/* Traffic light spacer */}
-      <div className="w-[70px] no-drag" />
+      {/* macOS traffic-light spacer — hidden on Linux/Windows */}
+      {isMac && <div className="w-[70px] no-drag" />}
 
       {/* Brand */}
       <div className="flex items-center gap-2 shrink-0 no-drag">

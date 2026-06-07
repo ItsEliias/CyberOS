@@ -12,6 +12,8 @@ import type {
 declare global {
   interface Window {
     electronAPI: {
+      platform:         NodeJS.Platform
+
       // Auth
       needsSetup:       () => Promise<boolean>
       setupVault:       (pw: string, autoLockMs?: number) => Promise<UnlockResult>
