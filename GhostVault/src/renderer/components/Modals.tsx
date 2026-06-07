@@ -185,14 +185,21 @@ export function QuickCaptureModal({ open, onClose, onSaved }: {
   const [folder, setFolder]   = useState(folders[0] || 'Notes');
   const [title, setTitle]     = useState('');
   const [text, setText]       = useState('');
+  const [saveError, setSaveError] = useState<string | null>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => { if (open) { setText(''); setTitle(''); setTimeout(() => textRef.current?.focus(), 80); } }, [open]);
+  useEffect(() => { if (open) { setText(''); setTitle(''); setSaveError(null); setTimeout(() => textRef.current?.focus(), 80); } }, [open]);
 
   async function handleSave() {
     if (!text.trim() || !vaultPath) return;
+    setSaveError(null);
     const result = await window.ghostvault.saveCaptureNote({ folder, title, text });
     if (result.ok) { onClose(); onSaved(); }
+    else {
+      // Without this, a failed save dismissed neither the modal nor
+      // surfaced any indication — user had to guess why nothing happened.
+      setSaveError(result.error || 'Failed to save');
+    }
   }
 
   return (
@@ -221,6 +228,11 @@ export function QuickCaptureModal({ open, onClose, onSaved }: {
               rows={6}
               className="w-full px-3 py-2.5 rounded-xl text-sm font-mono resize-none mb-3 input-glow"
               style={{ ...INPUT_STYLE, outline: 'none', lineHeight: '1.7' }} />
+            {saveError && (
+              <div className="mb-2 px-3 py-1.5 rounded-lg text-xs" style={{ background: 'rgba(248,81,73,0.1)', border: '1px solid rgba(248,81,73,0.35)', color: '#f85149' }}>
+                {saveError}
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-mono" style={{ color: 'var(--text-dim)' }}>⌘↵ save · Esc close</span>
               <div className="flex gap-2">
