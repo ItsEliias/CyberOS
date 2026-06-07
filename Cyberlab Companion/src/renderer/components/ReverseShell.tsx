@@ -24,10 +24,12 @@ export default function ReverseShell() {
   const stab = getStabilisationCommands();
 
   async function copy(text: string, which: 'payload' | 'listener') {
-    await navigator.clipboard.writeText(text);
-    SOUNDS.click();
-    if (which === 'payload') { setCopiedPayload(true); setTimeout(() => setCopiedPayload(false), 1500); }
-    else { setCopiedListener(true); setTimeout(() => setCopiedListener(false), 1500); }
+    try {
+      await navigator.clipboard.writeText(text);
+      SOUNDS.click();
+      if (which === 'payload') { setCopiedPayload(true); setTimeout(() => setCopiedPayload(false), 1500); }
+      else { setCopiedListener(true); setTimeout(() => setCopiedListener(false), 1500); }
+    } catch { /* clipboard rejected — leave indicator off */ }
   }
 
   return (
