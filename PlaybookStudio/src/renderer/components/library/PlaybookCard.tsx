@@ -48,6 +48,7 @@ export default function PlaybookCard({ pb, searchTerm = '', staggerIndex = 0 }: 
   const setPlaybooks      = useStore(s => s.setPlaybooks)
   const runs              = useStore(s => s.runs)
   const [exporting, setExporting] = useState(false)
+  const [deleteArmed, setDeleteArmed] = useState(false)
 
   async function handleRun() {
     const res = await window.electronAPI.startRun(pb.id)
@@ -73,7 +74,12 @@ export default function PlaybookCard({ pb, searchTerm = '', staggerIndex = 0 }: 
   }
 
   async function handleDelete() {
-    if (!confirm(`Delete "${pb.name}"? This cannot be undone.`)) return
+    if (!deleteArmed) {
+      setDeleteArmed(true)
+      setTimeout(() => setDeleteArmed(false), 4000)
+      return
+    }
+    setDeleteArmed(false)
     const res = await window.electronAPI.deletePlaybook(pb.id)
     if (res.ok) {
       const all = await window.electronAPI.getAllPlaybooks()
@@ -225,9 +231,9 @@ export default function PlaybookCard({ pb, searchTerm = '', staggerIndex = 0 }: 
             {exporting ? '…' : 'Export'}
           </button>
           {!pb.isBuiltIn && (
-            <button onClick={handleDelete} className="no-drag text-xs px-2 py-1 rounded transition-colors"
-              style={{ background: 'rgba(248,81,73,0.08)', color: '#f85149', border: '1px solid rgba(248,81,73,0.2)', height: 28 }}>
-              Del
+            <button onClick={handleDelete} title={deleteArmed ? 'Click again within 4 s to delete' : `Delete "${pb.name}"`} className="no-drag text-xs px-2 py-1 rounded transition-colors"
+              style={{ background: deleteArmed ? 'rgba(248,81,73,0.28)' : 'rgba(248,81,73,0.08)', color: '#f85149', border: `1px solid ${deleteArmed ? 'rgba(248,81,73,0.55)' : 'rgba(248,81,73,0.2)'}`, height: 28, fontWeight: deleteArmed ? 700 : 400 }}>
+              {deleteArmed ? 'Sure?' : 'Del'}
             </button>
           )}
         </div>
