@@ -21,6 +21,7 @@ export default function SecuritySection() {
   const [rec, setRec]                     = useState<{ configured: boolean }>({ configured: false })
   const [showRecovery, setShowRecovery]   = useState(false)
   const [recovery, setRecovery]           = useState<string | null>(null)
+  const [recoveryCopied, setRecoveryCopied] = useState(false)
   const [recBusy, setRecBusy]             = useState(false)
 
   // ── Touch ID state ─────────────────────────────────────────────────────
@@ -109,7 +110,15 @@ export default function SecuritySection() {
   }
 
   async function copyRecovery() {
-    if (recovery) await navigator.clipboard.writeText(recovery)
+    if (!recovery) return
+    try {
+      await navigator.clipboard.writeText(recovery)
+      // A recovery key the user thinks they copied but didn't is a
+      // lost-access scenario; only flash the confirmation on actual
+      // clipboard-write success.
+      setRecoveryCopied(true)
+      setTimeout(() => setRecoveryCopied(false), 2500)
+    } catch { /* ignore — leave button in non-confirmed state */ }
   }
 
   // ── Render ─────────────────────────────────────────────────────────────
@@ -270,8 +279,8 @@ export default function SecuritySection() {
                 {recovery}
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={copyRecovery} className="btn btn-ghost" style={{ fontSize: 12 }}>
-                  Copy
+                <button onClick={copyRecovery} className="btn btn-ghost" style={{ fontSize: 12, color: recoveryCopied ? '#3fb950' : undefined }}>
+                  {recoveryCopied ? 'Copied ✓' : 'Copy'}
                 </button>
                 <button onClick={downloadRecovery} className="btn btn-ghost" style={{ fontSize: 12 }}>
                   Download .txt
