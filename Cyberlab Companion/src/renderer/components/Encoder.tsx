@@ -44,10 +44,12 @@ export default function Encoder() {
 
   async function copyOutput() {
     if (!output) return;
-    await navigator.clipboard.writeText(output);
-    SOUNDS.click();
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    try {
+      await navigator.clipboard.writeText(output);
+      SOUNDS.click();
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch { /* clipboard rejected — leave indicator off so user knows */ }
   }
 
   function swapInputOutput() {

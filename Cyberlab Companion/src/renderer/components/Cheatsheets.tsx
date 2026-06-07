@@ -11,10 +11,12 @@ export default function Cheatsheets() {
   const sheet = CHEATSHEETS[selectedId];
 
   async function copyStep(text: string) {
-    await navigator.clipboard.writeText(text);
-    SOUNDS.click();
-    setCopiedStep(text);
-    setTimeout(() => setCopiedStep(null), 1200);
+    try {
+      await navigator.clipboard.writeText(text);
+      SOUNDS.click();
+      setCopiedStep(text);
+      setTimeout(() => setCopiedStep(null), 1200);
+    } catch { /* clipboard rejected — leave indicator off so user knows */ }
   }
 
   return (

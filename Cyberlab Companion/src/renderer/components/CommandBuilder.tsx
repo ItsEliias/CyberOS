@@ -45,7 +45,13 @@ export default function CommandBuilder() {
 
   async function copyCmd() {
     if (!generatedCmd) return;
-    await navigator.clipboard.writeText(generatedCmd);
+    try {
+      await navigator.clipboard.writeText(generatedCmd);
+    } catch {
+      // Clipboard rejected — don't record a 'copied' session event for a
+      // command the user doesn't actually have on their clipboard.
+      return;
+    }
     SOUNDS.click();
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);

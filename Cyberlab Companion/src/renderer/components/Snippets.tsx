@@ -59,10 +59,12 @@ export default function Snippets() {
   }
 
   async function copySnippet(cmd: string, id: string) {
-    await navigator.clipboard.writeText(cmd);
-    SOUNDS.click();
-    setCopied(id);
-    setTimeout(() => setCopied(null), 1200);
+    try {
+      await navigator.clipboard.writeText(cmd);
+      SOUNDS.click();
+      setCopied(id);
+      setTimeout(() => setCopied(null), 1200);
+    } catch { /* clipboard rejected — leave indicator off */ }
   }
 
   return (
