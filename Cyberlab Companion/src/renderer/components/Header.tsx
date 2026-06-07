@@ -37,6 +37,7 @@ function useTimeInLab(startedAt: string | undefined): string {
 export default function Header({ onHelp }: HeaderProps) {
   const { vpnStatus, tabs, activeTabId, config, setConfig } = useStore();
   const [showAiMenu, setShowAiMenu] = useState(false);
+  const isMac = window.electronAPI.osPlatform === 'darwin';
 
   const activeTab = tabs.find(t => t.id === activeTabId);
   const session = activeTab?.session;
@@ -89,8 +90,8 @@ export default function Header({ onHelp }: HeaderProps) {
         }}
       />
 
-      {/* macOS traffic light spacer */}
-      <div className="w-[70px] no-drag" />
+      {/* macOS traffic light spacer — hidden on Linux/Windows */}
+      {isMac && <div className="w-[70px] no-drag" />}
 
       {/* App identity */}
       <div className="flex items-center gap-2 no-drag">

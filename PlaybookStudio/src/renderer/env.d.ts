@@ -4,6 +4,7 @@ import type { Playbook, PlaybookRun, PlaybookStep, SharedContext, AppState } fro
 declare global {
   interface Window {
     electronAPI: {
+      platform:    NodeJS.Platform
       getVersion:  () => Promise<string>
       getState:    () => Promise<AppState>
       getContext:  () => Promise<SharedContext>

@@ -4,6 +4,7 @@ import type { FeedItem, FeedSource, FeedState, RelevanceContext, AppSettings } f
 declare global {
   interface Window {
     electronAPI: {
+      platform:        NodeJS.Platform
       getState:        () => Promise<FeedState>
       refresh:         () => Promise<boolean>
       getVersion:      () => Promise<string>

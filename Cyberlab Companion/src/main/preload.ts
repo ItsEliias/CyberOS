@@ -1,6 +1,11 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
 const api = {
+  // OS platform — synchronously available so renderer can adapt layout
+  // (e.g. macOS traffic-light spacer) without an IPC round-trip.
+  // Named osPlatform to avoid conflict with HTB/THM lab "platform" field.
+  osPlatform: process.platform,
+
   getConfig:   ()           => ipcRenderer.invoke('get-config'),
   saveConfig:  (cfg: unknown) => ipcRenderer.invoke('save-config', cfg),
   getOutputDir:()           => ipcRenderer.invoke('get-output-dir'),
