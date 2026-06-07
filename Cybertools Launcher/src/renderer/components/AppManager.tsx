@@ -40,12 +40,13 @@ function StatusDot({ installed, built }: { installed: boolean; built: boolean })
 interface ActionProps {
   app: AppStatus;
   isInstalling: boolean;
+  uninstallArmed: boolean;
   onInstall: () => void;
   onUninstall: () => void;
   onOpen: () => void;
 }
 
-function ActionButtons({ app, isInstalling, onInstall, onUninstall, onOpen }: ActionProps) {
+function ActionButtons({ app, isInstalling, uninstallArmed, onInstall, onUninstall, onOpen }: ActionProps) {
   if (isInstalling) {
     return (
       <div className="flex items-center gap-1.5">
@@ -66,8 +67,12 @@ function ActionButtons({ app, isInstalling, onInstall, onUninstall, onOpen }: Ac
         </button>
         <button onClick={onUninstall}
           className="text-[10px] px-2 py-0.5 rounded font-medium transition-all hover:opacity-90"
-          style={{ background: 'rgba(248,81,73,0.1)', color: '#f85149', border: '1px solid rgba(248,81,73,0.25)' }}>
-          Remove
+          style={{
+            background: uninstallArmed ? 'rgba(248,81,73,0.28)' : 'rgba(248,81,73,0.1)',
+            color: '#f85149',
+            border: `1px solid ${uninstallArmed ? 'rgba(248,81,73,0.6)' : 'rgba(248,81,73,0.25)'}`,
+          }}>
+          {uninstallArmed ? 'Click to confirm' : 'Remove'}
         </button>
       </div>
     );
@@ -83,8 +88,12 @@ function ActionButtons({ app, isInstalling, onInstall, onUninstall, onOpen }: Ac
         </button>
         <button onClick={onUninstall}
           className="text-[10px] px-2 py-0.5 rounded font-medium transition-all hover:opacity-90"
-          style={{ background: 'rgba(248,81,73,0.1)', color: '#f85149', border: '1px solid rgba(248,81,73,0.25)' }}>
-          Remove Build
+          style={{
+            background: uninstallArmed ? 'rgba(248,81,73,0.28)' : 'rgba(248,81,73,0.1)',
+            color: '#f85149',
+            border: `1px solid ${uninstallArmed ? 'rgba(248,81,73,0.6)' : 'rgba(248,81,73,0.25)'}`,
+          }}>
+          {uninstallArmed ? 'Click to confirm' : 'Remove Build'}
         </button>
       </div>
     );
@@ -104,13 +113,14 @@ function ActionButtons({ app, isInstalling, onInstall, onUninstall, onOpen }: Ac
 interface CardProps {
   app: AppStatus;
   isInstalling: boolean;
+  uninstallArmed: boolean;
   progress: string;
   onInstall: (id: string) => void;
   onUninstall: (id: string, productName: string) => void;
   onOpen: (productName: string) => void;
 }
 
-function AppManagerCard({ app, isInstalling, progress, onInstall, onUninstall, onOpen }: CardProps) {
+function AppManagerCard({ app, isInstalling, uninstallArmed, progress, onInstall, onUninstall, onOpen }: CardProps) {
   const cat = getCategory(app.name);
   return (
     <motion.div
@@ -147,6 +157,7 @@ function AppManagerCard({ app, isInstalling, progress, onInstall, onUninstall, o
       <ActionButtons
         app={app}
         isInstalling={isInstalling}
+        uninstallArmed={uninstallArmed}
         onInstall={() => onInstall(app.id)}
         onUninstall={() => onUninstall(app.id, app.name)}
         onOpen={() => onOpen(app.name)}
@@ -180,7 +191,9 @@ export default function AppManager() {
   const [installing, setInstalling] = useState<Set<string>>(new Set());
   const [progress, setProgress]     = useState<Record<string, string>>({});
   const [loading, setLoading]       = useState(true);
+  const [uninstallArmed, setUninstallArmed] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const armTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function refresh() {
     try {
@@ -222,6 +235,17 @@ export default function AppManager() {
   }
 
   async function handleUninstall(id: string, productName: string) {
+    // Two-click confirmation: removing an installed app or build directory
+    // is destructive and instant. First click arms the button; second click
+    // within 5 s actually runs the uninstall.
+    if (uninstallArmed !== id) {
+      setUninstallArmed(id);
+      if (armTimerRef.current) clearTimeout(armTimerRef.current);
+      armTimerRef.current = setTimeout(() => setUninstallArmed(null), 5000);
+      return;
+    }
+    if (armTimerRef.current) { clearTimeout(armTimerRef.current); armTimerRef.current = null; }
+    setUninstallArmed(null);
     setInstalling(prev => new Set(prev).add(id));
     try {
       await window.api.appManager.uninstall(id, productName);
@@ -271,6 +295,7 @@ export default function AppManager() {
               key={app.id}
               app={app}
               isInstalling={installing.has(app.id)}
+              uninstallArmed={uninstallArmed === app.id}
               progress={progress[app.id] ?? ''}
               onInstall={handleInstall}
               onUninstall={handleUninstall}
