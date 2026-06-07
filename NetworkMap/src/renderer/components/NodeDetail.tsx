@@ -32,8 +32,14 @@ function stateBorder(state: string): string {
   return 'rgba(72,79,88,0.22)'
 }
 
-function copyToClipboard(text: string): void {
-  navigator.clipboard.writeText(text).catch(console.error)
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch (err) {
+    console.error('copy failed', err)
+    return false
+  }
 }
 
 // Common port service names
@@ -66,15 +72,15 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate, s
   const [copyFeedback, setCopyFeedback] = useState(false)
   const [copyHostnameFeedback, setCopyHostnameFeedback] = useState(false)
 
-  function handleCopyHostname() {
+  async function handleCopyHostname() {
     if (!node.hostname) return
-    copyToClipboard(node.hostname)
+    if (!await copyToClipboard(node.hostname)) return
     setCopyHostnameFeedback(true)
     setTimeout(() => setCopyHostnameFeedback(false), 1500)
   }
 
-  function handleCopyIP() {
-    copyToClipboard(node.ip)
+  async function handleCopyIP() {
+    if (!await copyToClipboard(node.ip)) return
     setCopyFeedback(true)
     setTimeout(() => setCopyFeedback(false), 1500)
   }
@@ -329,7 +335,7 @@ export default function NodeDetail({ node, onClose, allScans = [], onAnnotate, s
             <div style={{ display: 'flex', gap: 5, marginBottom: 10 }}>
               <ActionBtn onClick={() => {
                 const line = `${node.ip}${node.hostname ? ` (${node.hostname})` : ''} — ${openPorts.map(p => `${p.port}/${p.protocol}`).join(', ')}`
-                copyToClipboard(line)
+                void copyToClipboard(line)
               }}>Copy line</ActionBtn>
             </div>
             {node.ports.length === 0 ? (
