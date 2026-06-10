@@ -1,4 +1,6 @@
-// GhostVault — Title Bar (redesigned with Geist Sans + soft blue accent glow)
+// GhostVault — Title Bar (polish)
+// Header identity: ghost glyph lockup + app-name (600) + subname (muted, caption).
+// Separators: ╱. Flat metric strip with · separators + left border.
 
 import { useStore } from '../../store';
 import type { LayoutMode } from '../../store';
@@ -7,11 +9,37 @@ interface TitleBarProps {
   onHelp?: () => void
 }
 
-const LAYOUT_ICONS: Record<LayoutMode, string> = {
-  '1col': '▐',
-  '2col': '▐▌',
-  '3col': '▐▌▌',
-};
+/** Ghost/notebook domain glyph — 13×13 */
+function GhostIcon({ size = 13 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none"
+      stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 2C5.8 2 4 3.8 4 6c0 2 1.2 3.4 2.4 4.4L8 14l1.6-3.6C10.8 9.4 12 8 12 6c0-2.2-1.8-4-4-4z" />
+      <circle cx="8" cy="6" r="1.5" fill="currentColor" />
+    </svg>
+  )
+}
+
+/** Minimize icon */
+function MinimizeIcon() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  )
+}
+
+/** Close icon */
+function CloseIcon() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  )
+}
 
 const LAYOUT_LABELS: Record<LayoutMode, string> = {
   '1col': 'Sidebar only',
@@ -25,43 +53,44 @@ export default function TitleBar({ onHelp }: TitleBarProps) {
 
   return (
     <div
-      className="h-10 flex items-center px-3 drag-region shrink-0"
-      style={{
-        borderBottom: '1px solid rgba(42,51,71,0.45)',
-        background: 'rgba(7,8,15,0.92)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-      }}
+      className="flex items-center px-3 drag-region shrink-0"
+      style={{ height: 32, borderBottom: '1px solid var(--border-subtle)', background: 'var(--surface-0)' }}
     >
-      {/* macOS traffic-light spacer — hidden on Linux/Windows */}
       {isMac && <div className="w-[70px] shrink-0 no-drag" />}
 
-      {/* Brand */}
-      <div className="flex items-center gap-2 no-drag">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ color: '#7bb8ff', filter: 'drop-shadow(0 0 4px rgba(123,184,255,0.5))' }}>
-          <path d="M8 2C5.8 2 4 3.8 4 6c0 2 1.2 3.4 2.4 4.4L8 14l1.6-3.6C10.8 9.4 12 8 12 6c0-2.2-1.8-4-4-4z"
-            stroke="currentColor" strokeWidth="1.5" fill="none" />
-          <circle cx="8" cy="6" r="1.5" fill="currentColor" />
-        </svg>
-        <span
-          className="text-xs font-semibold tracking-wide"
-          style={{ color: '#e6edf3', fontFamily: 'var(--font-display)' }}
-        >
-          GhostVault
-        </span>
-        {vaultPath && (
-          <span
-            className="text-[10px] font-mono"
-            style={{ color: 'rgba(139,148,158,0.6)' }}
-          >
-            {notes.length} {notes.length === 1 ? 'note' : 'notes'}
+      {/* Brand lockup */}
+      <div className="flex items-center gap-2 no-drag" style={{ color: 'var(--accent)' }}>
+        <GhostIcon />
+        <div className="flex items-baseline gap-1.5">
+          <span style={{ fontSize: 'var(--type-body)', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+            GhostVault
           </span>
-        )}
+          <span style={{ color: 'var(--border-default)', userSelect: 'none' }}>╱</span>
+          <span style={{ fontSize: 'var(--type-caption)', color: 'var(--text-muted)' }}>
+            Notes
+          </span>
+        </div>
       </div>
 
       <div className="flex-1" />
 
-      {/* Layout toggle */}
+      {/* Metric strip */}
+      {vaultPath && (
+        <div
+          className="flex items-center no-drag mr-3"
+          style={{
+            fontSize: 'var(--type-caption)', color: 'var(--text-muted)',
+            borderLeft: '1px solid var(--border-subtle)', paddingLeft: 8,
+            fontVariantNumeric: 'tabular-nums',
+          }}
+        >
+          <span style={{ color: 'var(--text-secondary)' }}>{notes.length}</span>
+          <span style={{ margin: '0 4px', color: 'var(--border-default)' }}>·</span>
+          <span>{notes.length === 1 ? 'note' : 'notes'}</span>
+        </div>
+      )}
+
+      {/* Layout toggle — compact SVG-only buttons */}
       <div className="flex items-center gap-0.5 no-drag mr-2">
         {(['1col', '2col', '3col'] as LayoutMode[]).map(mode => {
           const isActive = layoutMode === mode;
@@ -70,15 +99,15 @@ export default function TitleBar({ onHelp }: TitleBarProps) {
               key={mode}
               onClick={() => setLayoutMode(mode)}
               title={LAYOUT_LABELS[mode]}
-              className="px-2 py-0.5 rounded text-[10px] font-mono transition-all"
+              className="px-1.5 py-0.5 rounded transition-all"
               style={{
-                background: isActive ? 'rgba(123,184,255,0.12)' : 'transparent',
-                color: isActive ? '#7bb8ff' : 'rgba(72,79,88,0.8)',
-                border: isActive ? '1px solid rgba(123,184,255,0.28)' : '1px solid transparent',
-                boxShadow: isActive ? '0 0 6px rgba(123,184,255,0.15)' : 'none',
+                background: isActive ? 'var(--accent-tint)' : 'transparent',
+                color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+                border: isActive ? '1px solid var(--accent-border)' : '1px solid transparent',
+                fontSize: 'var(--type-caption)', fontFamily: 'var(--font-mono)',
               }}
             >
-              {LAYOUT_ICONS[mode]}
+              {mode === '1col' ? '▐' : mode === '2col' ? '▐▌' : '▐▌▌'}
             </button>
           );
         })}
@@ -86,26 +115,25 @@ export default function TitleBar({ onHelp }: TitleBarProps) {
 
       {/* Right actions */}
       <div className="flex items-center gap-1 no-drag">
-        {/* CYBERTOOLS badge */}
+        {/* CYBERTOOLS text badge */}
         <span
-          className="flex items-center gap-1 text-[9px] font-semibold tracking-widest uppercase px-2 py-0.5 rounded-full"
+          className="no-drag mr-1"
           style={{
-            background: 'rgba(123,184,255,0.06)',
-            color: 'rgba(72,79,88,0.7)',
-            border: '1px solid rgba(123,184,255,0.1)',
+            fontSize: 'var(--type-caption)', fontWeight: 600,
+            letterSpacing: '0.08em', textTransform: 'uppercase',
+            color: 'var(--text-muted)',
           }}
         >
-          <span style={{ opacity: 0.6 }}>⬡</span>
-          <span>CYBERTOOLS</span>
+          CYBERTOOLS
         </span>
 
         {alwaysOnTop && (
           <span
-            className="text-[9px] px-1.5 py-0.5 rounded font-semibold tracking-wider"
+            className="px-1.5 py-0.5 rounded"
             style={{
-              background: 'rgba(123,184,255,0.1)',
-              color: '#7bb8ff',
-              border: '1px solid rgba(123,184,255,0.25)',
+              fontSize: 'var(--type-caption)', fontWeight: 600,
+              background: 'var(--accent-tint)', color: 'var(--accent)',
+              border: '1px solid var(--accent-border)',
             }}
           >
             ON TOP
@@ -115,11 +143,11 @@ export default function TitleBar({ onHelp }: TitleBarProps) {
         {onHelp && (
           <button
             onClick={onHelp}
-            title="Help & onboarding"
-            className="w-7 h-7 flex items-center justify-center rounded transition-colors no-drag"
-            style={{ color: 'rgba(72,79,88,0.8)', fontSize: 11, fontWeight: 700 }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#7bb8ff'; e.currentTarget.style.background = 'rgba(123,184,255,0.08)'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(72,79,88,0.8)'; e.currentTarget.style.background = 'transparent'; }}
+            title="Help"
+            className="w-6 h-6 flex items-center justify-center rounded transition-all"
+            style={{ color: 'var(--text-muted)', fontSize: 'var(--type-caption)', fontWeight: 700 }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent)'; e.currentTarget.style.background = 'var(--accent-tint)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
           >
             ?
           </button>
@@ -128,28 +156,23 @@ export default function TitleBar({ onHelp }: TitleBarProps) {
         <button
           onClick={() => window.ghostvault.minimizeWindow()}
           title="Minimize"
-          className="w-7 h-7 flex items-center justify-center rounded transition-colors no-drag"
-          style={{ color: 'rgba(72,79,88,0.7)' }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+          className="w-6 h-6 flex items-center justify-center rounded transition-all"
+          style={{ color: 'var(--text-muted)' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-2)'; }}
           onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
         >
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
+          <MinimizeIcon />
         </button>
 
         <button
           onClick={() => window.ghostvault.closeWindow()}
           title="Close"
-          className="w-7 h-7 flex items-center justify-center rounded transition-colors no-drag"
-          style={{ color: 'rgba(72,79,88,0.7)' }}
+          className="w-6 h-6 flex items-center justify-center rounded transition-all"
+          style={{ color: 'var(--text-muted)' }}
           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(248,81,73,0.12)'; e.currentTarget.style.color = '#f85149'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(72,79,88,0.7)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
         >
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
+          <CloseIcon />
         </button>
       </div>
     </div>

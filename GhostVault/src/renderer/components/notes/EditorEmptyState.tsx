@@ -1,51 +1,51 @@
-// GhostVault — Editor empty state (no note selected)
-
-import { motion } from 'framer-motion';
+// GhostVault — Editor empty state (ghost/notebook domain glyph)
 
 export default function EditorEmptyState() {
   return (
-    <motion.div
-      key="editor-empty"
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
-      className="flex-1 flex flex-col items-center justify-center gap-5 text-center px-8"
+    <div
+      className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-8 content-stream-in"
       style={{ pointerEvents: 'none' }}
     >
-      <div style={{ opacity: 0.22 }}>
-        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" style={{ color: '#7bb8ff' }}>
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-          <line x1="16" y1="13" x2="8" y2="13" />
-          <line x1="16" y1="17" x2="8" y2="17" />
-          <line x1="10" y1="9" x2="8" y2="9" />
+      {/* ghost/quick-capture domain glyph */}
+      <div className="empty-glyph">
+        <svg width="22" height="22" viewBox="0 0 16 16" fill="none"
+          stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M8 2C5.8 2 4 3.8 4 6c0 2 1.2 3.4 2.4 4.4L8 14l1.6-3.6C10.8 9.4 12 8 12 6c0-2.2-1.8-4-4-4z" />
+          <circle cx="8" cy="6" r="1.5" fill="currentColor" />
         </svg>
       </div>
+
       <div>
-        <div className="text-sm font-semibold mb-1.5" style={{ color: 'rgba(139,148,158,0.55)' }}>
-          No note open
-        </div>
-        <div className="text-xs leading-relaxed mb-3" style={{ color: 'rgba(72,79,88,0.7)', maxWidth: '24ch', margin: '0 auto 12px' }}>
+        <div className="empty-title mb-1">No note open</div>
+        <div className="empty-sub" style={{ margin: '0 auto 12px' }}>
           Select a note from the list or create one
         </div>
         <div className="flex items-center justify-center gap-3">
           <div className="flex items-center gap-1.5">
-            <kbd className="px-1.5 py-0.5 rounded text-[10px] font-mono"
-              style={{ background: 'rgba(42,51,71,0.4)', color: 'rgba(123,184,255,0.6)', border: '1px solid rgba(123,184,255,0.2)' }}>
+            <kbd className="px-1.5 py-0.5 rounded"
+              style={{
+                background: 'var(--surface-2)', color: 'var(--accent)',
+                border: '1px solid var(--accent-border)',
+                fontSize: 'var(--type-caption)', fontFamily: 'var(--font-mono)',
+              }}>
               ⌘N
             </kbd>
-            <span className="text-[10px]" style={{ color: 'rgba(72,79,88,0.5)' }}>new note</span>
+            <span style={{ fontSize: 'var(--type-caption)', color: 'var(--text-muted)' }}>new note</span>
           </div>
-          <span style={{ color: 'rgba(42,51,71,0.5)', fontSize: 10 }}>·</span>
+          <span className="status-sep">·</span>
           <div className="flex items-center gap-1.5">
-            <kbd className="px-1.5 py-0.5 rounded text-[10px] font-mono"
-              style={{ background: 'rgba(42,51,71,0.4)', color: 'rgba(139,148,158,0.5)', border: '1px solid rgba(42,51,71,0.5)' }}>
+            <kbd className="px-1.5 py-0.5 rounded"
+              style={{
+                background: 'var(--surface-2)', color: 'var(--text-muted)',
+                border: '1px solid var(--border-subtle)',
+                fontSize: 'var(--type-caption)', fontFamily: 'var(--font-mono)',
+              }}>
               ⌘S
             </kbd>
-            <span className="text-[10px]" style={{ color: 'rgba(72,79,88,0.5)' }}>save</span>
+            <span style={{ fontSize: 'var(--type-caption)', color: 'var(--text-muted)' }}>save</span>
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
