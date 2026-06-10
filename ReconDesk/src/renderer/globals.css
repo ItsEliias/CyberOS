@@ -1,3 +1,10 @@
+/* ── globals.css — ReconDesk (shadcn migration) ───────────────────────────
+   Tokens resolved from canonical design-system/tokens.css.
+   NO parallel token declarations here — tokens.css is the single source.
+──────────────────────────────────────────────────────────────────────────── */
+
+@import url('../../../design-system/tokens.css');
+
 @import '@fontsource/geist-sans/400.css';
 @import '@fontsource/geist-sans/500.css';
 @import '@fontsource/geist-sans/600.css';
@@ -10,91 +17,50 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── CyberOS Design Bible — Global Styles ────────────────────────────────── */
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
+/* ── shadcn/ui token bridge ──────────────────────────────────────────────── */
 :root {
-  --surface-0: #07080f; --surface-1: #0d0e18; --surface-2: #131525; --surface-3: #191c32;
-  --surface-glass: rgba(13,14,24,0.72); --surface-glass-strong: rgba(10,11,20,0.88);
-  --elevation-1: 0 1px 3px rgba(0,0,0,.5), 0 1px 2px rgba(0,0,0,.35);
-  --elevation-2: 0 4px 16px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.4);
-  --elevation-3: 0 12px 40px rgba(0,0,0,.6), 0 4px 12px rgba(0,0,0,.45);
-  --elevation-4: 0 24px 64px rgba(0,0,0,.65), 0 8px 24px rgba(0,0,0,.5);
-  --border-subtle: rgba(42,51,71,0.35); --border-default: rgba(42,51,71,0.75);
-  --border-strong: rgba(61,79,107,0.9); --border-glass: rgba(255,255,255,0.055);
-  --text-primary: #e6edf3; --text-secondary: #8b949e; --text-muted: #484f58;
-  --sev-critical: #f85149; --sev-high: #ff8c42; --sev-medium: #d29922;
-  --sev-low: #4a9eff; --sev-info: #8b949e;
-  --state-online: #3fb950; --state-offline: #484f58; --state-blocked: #f85149; --state-pending: #d29922;
-  --accent: #d29922; --accent-rgb: 210,153,34;
-  --accent-tint: rgba(210,153,34,0.08); --accent-tint2: rgba(210,153,34,0.15);
-  --accent-glow: rgba(210,153,34,0.28); --accent-border: rgba(210,153,34,0.30);
-  --font-display: 'Geist Sans', 'Inter', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-  --radius-xs: 4px; --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px; --radius-xl: 20px;
-  --motion-fast: 150ms; --motion-base: 250ms; --motion-slow: 400ms;
-  --ease: cubic-bezier(0.2,0.8,0.2,1); --spring: cubic-bezier(0.34,1.56,0.64,1);
+  --background:   var(--surface-0);
+  --foreground:   var(--text-primary);
+  --card:         var(--surface-1);
+  --card-foreground: var(--text-primary);
+  --popover:      var(--surface-1);
+  --popover-foreground: var(--text-primary);
+  --primary:      var(--accent);
+  --primary-foreground: #ffffff;
+  --secondary:    var(--surface-2);
+  --secondary-foreground: var(--text-secondary);
+  --muted:        var(--surface-2);
+  --muted-foreground: var(--text-muted);
+  --accent:       var(--accent-tint2);
+  --accent-foreground: var(--text-primary);
+  --destructive:  var(--sev-critical);
+  --destructive-foreground: #ffffff;
+  --border:       var(--border-default);
+  --input:        var(--surface-2);
+  --ring:         var(--accent-border);
+  --radius:       var(--radius-md);
 }
 
-html, body, #root {
-  height: 100%; overflow: hidden;
-  background: radial-gradient(ellipse at 18% 0%, rgba(210,153,34,0.04) 0%, transparent 55%), #07080f;
-  color: var(--text-primary);
-  font-family: var(--font-display);
-  font-size: 14px; line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
+/* ── ReconDesk accent override ───────────────────────────────────────────── */
+:root {
+  --accent: #d29922;
+  --accent-rgb: 210, 153, 34;
+  --accent-tint: rgba(210, 153, 34, 0.08);
+  --accent-tint2: rgba(210, 153, 34, 0.15);
+  --accent-tint3: rgba(210, 153, 34, 0.22);
+  --accent-glow: rgba(210, 153, 34, 0.28);
+  --accent-border: rgba(210, 153, 34, 0.30);
+  --accent-dim: rgba(210, 153, 34, 0.40);
 }
 
-/* ─── Selection ───────────────────────────────────────────────────────────── */
-
-::selection {
-  background: rgba(210, 153, 34, 0.25);
-  color: inherit;
-}
-
-*:not(input):not(textarea):not(select) {
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-input, textarea, select, button {
-  user-select: text;
-  -webkit-user-select: text;
-}
+/* re-bind shadcn --accent to tint2 so hover states use the translucent tint */
+:root { --accent: var(--accent-tint2); }
+:root { --primary: var(--accent); --ring: var(--accent-border); }
 
 /* ─── Drag Regions (macOS frameless) ──────────────────────────────────────── */
 
 .drag-region { -webkit-app-region: drag; }
 .no-drag { -webkit-app-region: no-drag; }
-
-/* ─── Scrollbars ──────────────────────────────────────────────────────────── */
-
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(42, 51, 71, 0.5);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(42, 51, 71, 0.8);
-}
-
-/* ─── Focus Styles ────────────────────────────────────────────────────────── */
-
-*:focus-visible {
-  outline: 1px solid rgba(210, 153, 34, 0.5);
-  outline-offset: 1px;
-  border-radius: 4px;
-}
 
 /* ─── Tabular Nums ────────────────────────────────────────────────────────── */
 

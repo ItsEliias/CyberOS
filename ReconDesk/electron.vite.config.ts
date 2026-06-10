@@ -28,7 +28,8 @@ export default defineConfig({
     },
     resolve: {
       alias: {
-        '@shared': resolve('src/shared')
+        '@shared': resolve('src/shared'),
+        '@': resolve('src/renderer'),
       }
     },
     plugins: [react()]
