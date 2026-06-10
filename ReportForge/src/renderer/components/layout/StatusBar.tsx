@@ -54,9 +54,9 @@ export default function StatusBar({ lastSavedAt }: Props) {
       className="shrink-0 flex items-center gap-4 px-4 tabular-nums"
       style={{
         height: 26,
-        borderTop: '1px solid rgba(255,255,255,0.04)',
-        background: 'rgba(7,8,15,0.95)',
-        fontSize: 11,
+        borderTop: '1px solid var(--border-subtle)',
+        background: 'var(--surface-0)',
+        fontSize: 'var(--type-caption)',
         color: 'var(--text-muted)',
         userSelect: 'none',
       }}

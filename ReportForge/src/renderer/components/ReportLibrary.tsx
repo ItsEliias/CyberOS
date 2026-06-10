@@ -91,21 +91,36 @@ export default function ReportLibrary({ onNew, onOpen, onDelete, onDuplicate }: 
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--surface-0)' }}>
-      {/* Search + sort bar */}
+      {/* Library header — identity lockup + search + sort bar */}
       <div
-        className="shrink-0 flex items-center gap-3 px-5"
+        className="shrink-0 flex items-center gap-3 px-4"
         style={{
-          height: 52,
-          borderBottom: '1px solid rgba(255,255,255,0.04)',
-          background: 'rgba(13,14,24,0.85)',
+          height: 44,
+          borderBottom: '1px solid var(--border-subtle)',
+          background: 'var(--surface-0)',
           WebkitAppRegion: 'drag' as never,
         }}
       >
         <div style={{ width: 72, flexShrink: 0 }} />
 
-        {/* Library label with help (no-drag) */}
-        <div className="no-drag" style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Library</span>
+        {/* App identity lockup */}
+        <div className="no-drag" style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          {/* Document/scroll glyph */}
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true"
+            stroke="var(--accent)" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
+            style={{ opacity: 0.85 }}
+          >
+            <rect x="2.5" y="1.5" width="9" height="12" rx="1" />
+            <path d="M5 5h5M5 7.5h5M5 10h3" />
+          </svg>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, lineHeight: 1 }}>
+            <span style={{ fontSize: 'var(--type-body-md)', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '0.01em' }}>
+              ReportForge
+            </span>
+            <span style={{ fontSize: 'var(--type-caption)', color: 'var(--text-muted)' }}>
+              ╱ library
+            </span>
+          </div>
           <HelpTip
             title="Report Library"
             body="Every saved report lives here. Search by title, target, or operator; switch between grid and list views; click any card to open the editor."
@@ -183,19 +198,24 @@ export default function ReportLibrary({ onNew, onOpen, onDelete, onDuplicate }: 
 
           <button
             onClick={onNew}
-            className="flex items-center gap-1.5 h-7 px-3 rounded-sm text-xs font-semibold transition-all"
-            style={{ background: 'rgba(74,158,255,0.15)', color: '#4a9eff', border: '1px solid rgba(74,158,255,0.30)' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(74,158,255,0.25)'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(74,158,255,0.15)'; }}
+            className="flex items-center gap-1.5 h-7 px-3 rounded-sm font-semibold transition-all"
+            style={{
+              fontSize: 'var(--type-label)',
+              background: 'var(--accent-tint2)',
+              color: 'var(--accent)',
+              border: '1px solid var(--accent-border)',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--accent-tint3)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--accent-tint2)'; }}
           >
-            <span className="text-sm leading-none">+</span>
+            <span style={{ fontSize: 14, lineHeight: 1 }}>+</span>
             New Report
           </button>
         </div>
       </div>
 
       {/* Grid / empty state */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+      <div className="content-stream-in" style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
         {loading ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(288px, 1fr))', gap: 14 }}>
             {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} index={i} />)}
