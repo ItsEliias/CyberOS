@@ -17,6 +17,10 @@
         "CLAUDE_FLOW_MEMORY_BACKEND": "hybrid"
       },
       "autoStart": false
+    },
+    "shadcn": {
+      "command": "bunx",
+      "args": ["-y", "@jpisnice/shadcn-ui-mcp-server"]
     }
   }
 }
