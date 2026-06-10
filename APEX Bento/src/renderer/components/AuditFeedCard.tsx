@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { AuditEvent } from '../../shared/types.js';
 import { DetailDrawer } from './DetailDrawer.js';
+import { formatLocalTimeShort, formatISO } from '../lib/datetime.js';
 
 interface Props {
   events: AuditEvent[];
@@ -70,10 +71,10 @@ function EmptyState() {
 }
 
 function AuditRow({ event, compact }: { event: AuditEvent; compact: boolean }) {
-  const ts = new Date(event.ts);
-  const time = compact
-    ? ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : ts.toISOString();
+  // Centralised formatters per src/renderer/lib/datetime.ts — short local
+  // time for the card body, ISO-8601 for the drawer where operators may
+  // copy the timestamp into logs.
+  const time = compact ? formatLocalTimeShort(event.ts) : formatISO(event.ts);
 
   return (
     <div className="flex items-start gap-2 py-1 border-b border-[var(--border-subtle)] last:border-0">

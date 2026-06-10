@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { KillSwitchStatus } from '../../shared/types.js';
 import { DetailDrawer } from './DetailDrawer.js';
+import { formatLocalDateTime, formatISO } from '../lib/datetime.js';
 
 interface Props {
   status: KillSwitchStatus;
@@ -44,7 +45,7 @@ const STATE_STYLES: Record<string, StateStyle> = {
 export function KillSwitchCard({ status }: Props) {
   const [open, setOpen] = useState(false);
   const style = STATE_STYLES[status.state] ?? STATE_STYLES['paused'];
-  const since = new Date(status.since);
+  // Centralised formatters per src/renderer/lib/datetime.ts.
 
   return (
     <>
@@ -64,7 +65,7 @@ export function KillSwitchCard({ status }: Props) {
           {style.description}
         </p>
         <p className="text-[var(--text-muted)] text-[10px] font-mono">
-          Since {since.toLocaleDateString()} {since.toLocaleTimeString()}
+          Since {formatLocalDateTime(status.since)}
         </p>
       </div>
 
@@ -79,7 +80,7 @@ export function KillSwitchCard({ status }: Props) {
             </div>
             <p className="text-[var(--text-primary)] text-[12px] leading-relaxed">{style.description}</p>
             <p className="text-[var(--text-muted)] text-[11px] font-mono mt-2">
-              Last transition: {since.toISOString()}
+              Last transition: {formatISO(status.since)}
             </p>
           </div>
           <div>

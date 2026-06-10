@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { GateEntry } from '../../shared/types.js';
 import { DetailDrawer } from './DetailDrawer.js';
+import { formatLocalDateShort } from '../lib/datetime.js';
 
 interface Props {
   gates: GateEntry[];
@@ -114,7 +115,7 @@ function GateDetail({ g, onBack }: { g: GateEntry; onBack: () => void }) {
       </div>
       {g.resolved_at && (
         <p className="text-[var(--text-muted)] text-[11px] mt-3 font-mono">
-          Resolved: {new Date(g.resolved_at).toLocaleDateString()}
+          Resolved: {formatLocalDateShort(g.resolved_at)}
         </p>
       )}
     </div>
