@@ -272,7 +272,7 @@ export default function App() {
   const ssoBlocked = requireSSO && ssoUnlocked === false;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'var(--bg)', color: 'var(--text)', position: 'relative' }}>
+    <div className="flex flex-col h-full overflow-hidden bg-surface-0 text-text-primary relative">
       {ssoBlocked && (
         <SSOLockScreen onCheck={async () => {
           const r = await window.reportforge.getSSO();
