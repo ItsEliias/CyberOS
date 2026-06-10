@@ -20,8 +20,12 @@
   "dependencies": {
     "@fontsource/geist-sans": "^5.2.5",
     "@fontsource/jetbrains-mono": "^5.2.8",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
     "framer-motion": "^11.0.0",
+    "lucide-react": "^0.400.0",
     "otpauth": "^9.5.1",
+    "tailwind-merge": "^2.3.0",
     "zustand": "^4.5.0"
   },
   "devDependencies": {
