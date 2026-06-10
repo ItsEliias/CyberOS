@@ -1,3 +1,10 @@
+/* ── globals.css — TerminalLink (shadcn migration) ───────────────────────────
+   Tokens resolved from canonical design-system/tokens.css.
+   NO parallel token declarations here — tokens.css is the single source.
+──────────────────────────────────────────────────────────────────────────── */
+
+@import url('../../../design-system/tokens.css');
+
 @import '@fontsource/geist-sans/400.css';
 @import '@fontsource/geist-sans/500.css';
 @import '@fontsource/geist-sans/600.css';
@@ -10,34 +17,70 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── TerminalLink Design Tokens ──────────────────────────────────────────── */
-
+/* ── shadcn/ui token bridge ──────────────────────────────────────────────── */
 :root {
-  --surface-0: #07080f; --surface-1: #0d0e18; --surface-2: #0d1208; --surface-3: #111a0a;
-  --surface-glass: rgba(7,12,5,0.72);
-  --elevation-1: 0 1px 3px rgba(0,0,0,.5), 0 1px 2px rgba(0,0,0,.35);
-  --elevation-2: 0 4px 16px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.4);
-  --elevation-3: 0 12px 40px rgba(0,0,0,.6), 0 4px 12px rgba(0,0,0,.45);
-  --border-subtle: rgba(0,255,65,0.12); --border-default: rgba(0,255,65,0.2);
-  --border-glass: rgba(0,255,65,0.06);
-  --text-primary: #c8ffc8; --text-secondary: #7abf7a; --text-muted: #3d6b3d;
-  --sev-critical: #f85149; --sev-high: #ff8c42; --sev-medium: #d29922; --sev-low: #4a9eff; --sev-info: #8b949e;
-  --state-online: #00ff41; --state-offline: #3d6b3d; --state-blocked: #f85149;
-  --accent: #00ff41; --accent-rgb: 0,255,65;
-  --accent-tint: rgba(0,255,65,0.08); --accent-tint2: rgba(0,255,65,0.15);
-  --accent-glow: rgba(0,255,65,0.3); --accent-border: rgba(0,255,65,0.25);
-  --font-display: 'JetBrains Mono', 'Fira Code', monospace;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-  --radius-xs: 2px; --radius-sm: 4px; --radius-md: 6px; --radius-lg: 8px;
-  --motion-fast: 80ms; --motion-base: 150ms; --motion-slow: 300ms;
-  --ease: cubic-bezier(0.2,0.8,0.2,1);
-  /* Legacy aliases used by existing inline styles */
-  --bg: #050a04; --panel: #0d1208; --border: rgba(0,255,65,0.18);
-  --text: #c8ffc8; --text-dim: #7abf7a; --accent-dim: rgba(0,255,65,0.12);
-  --error: #f85149;
+  --background:         var(--surface-0);
+  --foreground:         var(--text-primary);
+  --card:               var(--surface-1);
+  --card-foreground:    var(--text-primary);
+  --popover:            var(--surface-1);
+  --popover-foreground: var(--text-primary);
+  --primary:            var(--accent);
+  --primary-foreground: #ffffff;
+  --secondary:          var(--surface-2);
+  --secondary-foreground: var(--text-secondary);
+  --muted:              var(--surface-2);
+  --muted-foreground:   var(--text-muted);
+  --accent:             var(--accent-tint2);
+  --accent-foreground:  var(--text-primary);
+  --destructive:        var(--sev-critical);
+  --destructive-foreground: #ffffff;
+  --border:             var(--border-default);
+  --input:              var(--surface-2);
+  --ring:               var(--accent-border);
+  --radius:             var(--radius-md);
 }
 
-/* ─── CyberOS Design Bible — Global Styles ────────────────────────────────── */
+/* ── TerminalLink accent override ────────────────────────────────────────── */
+:root {
+  --accent: #00ff41;
+  --accent-rgb: 0, 255, 65;
+  --accent-tint: rgba(0, 255, 65, 0.08);
+  --accent-tint2: rgba(0, 255, 65, 0.15);
+  --accent-tint3: rgba(0, 255, 65, 0.22);
+  --accent-glow: rgba(0, 255, 65, 0.3);
+  --accent-border: rgba(0, 255, 65, 0.25);
+  --accent-dim: rgba(0, 255, 65, 0.12);
+  /* TerminalLink surface override — dark green-tinted panels */
+  --surface-0: #050a04;
+  --surface-1: #0d1208;
+  --surface-2: #111a0a;
+  --surface-3: #141f0c;
+  --surface-glass: rgba(7, 12, 5, 0.72);
+  --border-subtle: rgba(0, 255, 65, 0.12);
+  --border-default: rgba(0, 255, 65, 0.20);
+  --border-glass: rgba(0, 255, 65, 0.06);
+  --text-primary: #c8ffc8;
+  --text-secondary: #7abf7a;
+  --text-muted: #3d6b3d;
+  --state-online: #00ff41;
+  --font-display: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* re-bind shadcn --accent to tint2 so hover states use translucent tint */
+:root { --accent: var(--accent-tint2); }
+:root { --primary: var(--accent); --ring: var(--accent-border); }
+
+/* ── Legacy variable aliases (existing components) ───────────────────────── */
+:root {
+  --bg: var(--surface-0);
+  --panel: var(--surface-1);
+  --text: var(--text-primary);
+  --text-dim: var(--text-secondary);
+  --error: var(--danger);
+}
+
+/* ── CyberOS Design Bible — Global Styles ────────────────────────────────── */
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -45,20 +88,20 @@ html, body, #root {
   height: 100%;
   min-height: 100vh;
   overflow: hidden;
-  background-color: #050a04 !important;
-  background: radial-gradient(ellipse at 18% 0%, rgba(0,255,65,0.04) 0%, transparent 55%), #050a04 !important;
-  color: #c8ffc8;
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  background-color: var(--surface-0);
+  background: var(--surface-0);
+  color: var(--text-primary);
+  font-family: var(--font-display);
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ─── Selection ───────────────────────────────────────────────────────────── */
+/* ── Selection ───────────────────────────────────────────────────────────── */
 
 ::selection {
-  background: rgba(0, 255, 65, 0.25);
+  background: var(--accent-tint2);
   color: inherit;
 }
 
@@ -72,7 +115,7 @@ input, textarea, select, button {
   -webkit-user-select: text;
 }
 
-/* ─── Drag Regions (macOS frameless) ──────────────────────────────────────── */
+/* ── Drag Regions (macOS frameless) ──────────────────────────────────────── */
 
 .drag-region {
   -webkit-app-region: drag;
@@ -82,7 +125,7 @@ input, textarea, select, button {
   -webkit-app-region: no-drag;
 }
 
-/* ─── Scrollbars ──────────────────────────────────────────────────────────── */
+/* ── Scrollbars ──────────────────────────────────────────────────────────── */
 
 ::-webkit-scrollbar {
   width: 6px;
@@ -94,7 +137,7 @@ input, textarea, select, button {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 255, 65, 0.12);
+  background: var(--accent-tint);
   border-radius: 3px;
 }
 
@@ -102,37 +145,37 @@ input, textarea, select, button {
   background: rgba(0, 255, 65, 0.22);
 }
 
-/* ─── Focus Styles ────────────────────────────────────────────────────────── */
+/* ── Focus Styles ────────────────────────────────────────────────────────── */
 
 *:focus-visible {
-  outline: 1px solid rgba(0, 255, 65, 0.5);
+  outline: 1px solid var(--accent-border);
   outline-offset: 1px;
   border-radius: 4px;
 }
 
-/* ─── Tabular Nums ────────────────────────────────────────────────────────── */
+/* ── Tabular Nums ────────────────────────────────────────────────────────── */
 
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
 
-/* ─── Transitions ─────────────────────────────────────────────────────────── */
+/* ── Transitions ─────────────────────────────────────────────────────────── */
 
 button, a, input, select {
   transition: all 0.15s ease-out;
 }
 
-/* ─── Glassmorphism Card ──────────────────────────────────────────────────── */
+/* ── Glassmorphism Card ──────────────────────────────────────────────────── */
 
 .glass-card {
-  background: rgba(7, 12, 5, 0.72);
+  background: var(--surface-glass);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(0, 255, 65, 0.1);
+  border: 1px solid var(--accent-tint);
   border-radius: 6px;
 }
 
-/* ─── Status Pulse Glow Animation ─────────────────────────────────────────── */
+/* ── Status Pulse Glow Animation ─────────────────────────────────────────── */
 
 @keyframes statusPulse {
   0% {
@@ -150,34 +193,34 @@ button, a, input, select {
   animation: statusPulse 2s ease-out infinite;
 }
 
-/* ─── Metric Glow ─────────────────────────────────────────────────────────── */
+/* ── Metric Glow ─────────────────────────────────────────────────────────── */
 
 .metric-glow {
   filter: drop-shadow(0 0 8px var(--glow-color, rgba(0, 255, 65, 0.5)));
 }
 
-/* ─── Accent Left Border Utility ──────────────────────────────────────────── */
+/* ── Accent Left Border Utility ──────────────────────────────────────────── */
 
 .accent-border-left {
   border-left: 3px solid var(--accent-color, #00ff41);
 }
 
-/* ─── Input focus glow ────────────────────────────────────────────────────── */
+/* ── Input focus glow ────────────────────────────────────────────────────── */
 
 input:focus, textarea:focus, select:focus {
-  border-color: rgba(0,255,65,0.45) !important;
-  box-shadow: 0 0 0 2px rgba(0,255,65,0.08), 0 0 8px rgba(0,255,65,0.12) !important;
+  border-color: var(--accent-border) !important;
+  box-shadow: 0 0 0 2px var(--accent-tint), 0 0 8px var(--accent-tint) !important;
   outline: none !important;
 }
 
-/* ─── Skeleton shimmer ────────────────────────────────────────────────────── */
+/* ── Skeleton shimmer ────────────────────────────────────────────────────── */
 
 @keyframes skeleton-shimmer {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
 
-/* ─── xterm overrides ─────────────────────────────────────────────────────── */
+/* ── xterm overrides ─────────────────────────────────────────────────────── */
 
 .xterm {
   height: 100%;
@@ -191,7 +234,7 @@ input:focus, textarea:focus, select:focus {
   width: 100% !important;
 }
 
-/* ─── Handshake / connection animation ────────────────────────────────────── */
+/* ── Handshake / connection animation ────────────────────────────────────── */
 
 @keyframes handshake {
   0%   { transform: translateX(0) rotate(0deg); }
@@ -217,7 +260,7 @@ input:focus, textarea:focus, select:focus {
   animation: conn-dot-in 0.35s var(--ease) forwards;
 }
 
-/* ─── Tag chip ────────────────────────────────────────────────────────────── */
+/* ── Tag chip ────────────────────────────────────────────────────────────── */
 
 .session-tag-chip {
   display: inline-flex;
@@ -234,7 +277,7 @@ input:focus, textarea:focus, select:focus {
   transition: opacity 0.15s ease;
 }
 
-/* ─── Keyboard shortcut overlay ───────────────────────────────────────────── */
+/* ── Keyboard shortcut overlay ───────────────────────────────────────────── */
 
 @keyframes kb-slide-in {
   from { opacity: 0; transform: translateX(320px); }
@@ -254,7 +297,7 @@ input:focus, textarea:focus, select:focus {
   animation: kb-slide-out 0.18s ease-in forwards;
 }
 
-/* ─── Recent host chip ────────────────────────────────────────────────────── */
+/* ── Recent host chip ────────────────────────────────────────────────────── */
 
 .recent-host-chip {
   display: inline-flex;
@@ -263,46 +306,46 @@ input:focus, textarea:focus, select:focus {
   font-size: 9px;
   padding: 2px 7px;
   border-radius: 10px;
-  border: 1px solid rgba(0,255,65,0.2);
-  background: rgba(0,255,65,0.05);
-  color: rgba(0,255,65,0.6);
+  border: 1px solid var(--accent-border);
+  background: var(--accent-tint);
+  color: var(--text-secondary);
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 
 .recent-host-chip:hover {
-  background: rgba(0,255,65,0.12);
-  border-color: rgba(0,255,65,0.4);
-  color: #00ff41;
+  background: var(--accent-tint2);
+  border-color: var(--accent-border);
+  color: var(--text-primary);
 }
 
-/* ─── ANSI-like output coloring ───────────────────────────────────────────── */
+/* ── ANSI-like output coloring ───────────────────────────────────────────── */
 
-.ansi-error  { color: #f85149; }
-.ansi-warn   { color: #d29922; }
-.ansi-path   { color: #4a9eff; }
-.ansi-success { color: #00ff41; }
-.ansi-muted  { color: rgba(0,255,65,0.35); }
+.ansi-error  { color: var(--sev-critical); }
+.ansi-warn   { color: var(--warning); }
+.ansi-path   { color: var(--sev-low); }
+.ansi-success { color: var(--state-online); }
+.ansi-muted  { color: var(--text-muted); }
 
-/* ─── SSH test spinner ────────────────────────────────────────────────────── */
+/* ── SSH test spinner ────────────────────────────────────────────────────── */
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
-/* ─── Tab activity dot pulse ──────────────────────────────────────────────── */
+/* ── Tab activity dot pulse ──────────────────────────────────────────────── */
 
 @keyframes activityPulse {
-  0%, 100% { opacity: 1; box-shadow: 0 0 4px rgba(0,255,65,0.8); }
-  50%       { opacity: 0.45; box-shadow: 0 0 2px rgba(0,255,65,0.3); }
+  0%, 100% { opacity: 1; box-shadow: 0 0 4px var(--accent-glow); }
+  50%       { opacity: 0.45; box-shadow: 0 0 2px var(--accent-tint); }
 }
 
 .tab-activity-dot {
   animation: activityPulse 1.6s ease-in-out infinite;
 }
 
-/* ─── INSERT mode chip flash ──────────────────────────────────────────────── */
+/* ── INSERT mode chip flash ──────────────────────────────────────────────── */
 
 @keyframes modeChipIn {
   from { opacity: 0; transform: scaleX(0.7); }
@@ -312,4 +355,14 @@ input:focus, textarea:focus, select:focus {
 .mode-chip {
   animation: modeChipIn 0.12s var(--ease) forwards;
   transform-origin: left center;
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
