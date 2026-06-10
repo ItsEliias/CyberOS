@@ -1,4 +1,9 @@
-/* NetworkMap — CyberOS Stylesheet */
+/* ── index.css — NetworkMap (shadcn migration) ────────────────────────────
+   Tokens resolved from canonical design-system/tokens.css.
+   NO parallel token declarations here — tokens.css is the single source.
+──────────────────────────────────────────────────────────────────────────── */
+
+@import url('../../../design-system/tokens.css');
 
 @import '@fontsource/geist-sans/400.css';
 @import '@fontsource/geist-sans/500.css';
@@ -8,61 +13,75 @@
 @import '@fontsource/jetbrains-mono/500.css';
 @import '@fontsource/jetbrains-mono/600.css';
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── shadcn/ui token bridge ──────────────────────────────────────────────── */
 :root {
-  --surface-0: #07080f; --surface-1: #0d0e18; --surface-2: #131525; --surface-3: #191c32;
-  --surface-glass: rgba(13,14,24,0.72);
-  --elevation-1: 0 1px 3px rgba(0,0,0,.5), 0 1px 2px rgba(0,0,0,.35);
-  --elevation-2: 0 4px 16px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.4);
-  --elevation-3: 0 12px 40px rgba(0,0,0,.6), 0 4px 12px rgba(0,0,0,.45);
-  --border-subtle: rgba(42,51,71,0.35); --border-default: rgba(42,51,71,0.75);
-  --border-glass: rgba(255,255,255,0.055);
-  --text-primary: #e2e8f0; --text-secondary: #8b949e; --text-muted: #4a5568;
-  --sev-critical: #f85149; --sev-high: #ff8c42; --sev-medium: #d29922; --sev-low: #4a9eff; --sev-info: #8b949e;
-  --state-online: #3fb950; --state-offline: #484f58; --state-blocked: #f85149;
-
-  /* Per-app theme vars — can be overridden by JS via setProperty */
-  --app-accent: #d29922;
-  --app-bg: #0a0a0f;
-  --app-text: #e2e8f0;
-
-  --accent: var(--app-accent); --accent-rgb: 210,153,34;
-  --accent-tint: rgba(210,153,34,0.08); --accent-tint2: rgba(210,153,34,0.15);
-  --accent-glow: rgba(210,153,34,0.28); --accent-border: rgba(210,153,34,0.30);
-  --font-display: 'Geist Sans', 'Inter', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-  --radius-xs: 4px; --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px;
-  --motion-fast: 150ms; --motion-base: 250ms; --motion-slow: 400ms;
-  --ease: cubic-bezier(0.2,0.8,0.2,1);
-
-  /* Legacy compat */
-  --bg:         var(--app-bg);
-  --panel:      #0d0e18;
-  --border:     rgba(42,51,71,0.75);
-  --text:       var(--app-text);
-  --text-dim:   #8b949e;
-  --success:    #3fb950;
-  --error:      #f85149;
-  --warning:    #d29922;
+  --background:         var(--surface-0);
+  --foreground:         var(--text-primary);
+  --card:               var(--surface-1);
+  --card-foreground:    var(--text-primary);
+  --popover:            var(--surface-1);
+  --popover-foreground: var(--text-primary);
+  --primary:            var(--accent);
+  --primary-foreground: #ffffff;
+  --secondary:          var(--surface-2);
+  --secondary-foreground: var(--text-secondary);
+  --muted:              var(--surface-2);
+  --muted-foreground:   var(--text-muted);
+  --accent:             var(--accent-tint2);
+  --accent-foreground:  var(--text-primary);
+  --destructive:        var(--sev-critical);
+  --destructive-foreground: #ffffff;
+  --border:             var(--border-default);
+  --input:              var(--surface-2);
+  --ring:               var(--accent-border);
+  --radius:             var(--radius-md);
 }
 
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* ── NetworkMap accent override ──────────────────────────────────────────── */
+:root {
+  --accent: #d29922;
+  --accent-rgb: 210, 153, 34;
+  --accent-tint: rgba(210, 153, 34, 0.08);
+  --accent-tint2: rgba(210, 153, 34, 0.15);
+  --accent-tint3: rgba(210, 153, 34, 0.22);
+  --accent-glow: rgba(210, 153, 34, 0.28);
+  --accent-border: rgba(210, 153, 34, 0.30);
+  --accent-dim: rgba(210, 153, 34, 0.40);
 }
+
+/* re-bind shadcn --accent to tint2 so hover states use the translucent tint */
+:root { --accent: var(--accent-tint2); }
+:root { --primary: var(--accent); --ring: var(--accent-border); }
+
+/* ── Legacy variable aliases (existing components) ───────────────────────── */
+:root {
+  --bg:       var(--surface-0);
+  --panel:    var(--surface-1);
+  --border:   var(--border-default);
+  --text:     var(--text-primary);
+  --text-dim: var(--text-muted);
+  --success:  var(--state-online);
+  --error:    var(--sev-critical);
+  --warning:  var(--sev-medium);
+}
+
+/* ─── Reset ───────────────────────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body, #root {
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-  background: radial-gradient(ellipse at 18% 0%, rgba(255,140,66,0.04) 0%, transparent 55%), #07080f;
+  height: 100%; width: 100%; overflow: hidden;
+  background: var(--surface-0);
   font-family: var(--font-display);
 }
 
 body {
   color: var(--text-primary);
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 14px; line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   user-select: none;
@@ -76,25 +95,22 @@ input, textarea, select, button {
 
 button {
   font-family: var(--font-display);
-  font-size: 13px;
-  cursor: pointer;
-  border: none;
-  outline: none;
+  font-size: 13px; cursor: pointer;
+  border: none; outline: none;
   transition: all var(--motion-fast) var(--ease);
 }
 
 input, textarea {
   font-family: var(--font-display);
-  font-size: 13px;
-  outline: none;
+  font-size: 13px; outline: none;
 }
 
-/* ─── Drag Regions ─────────────────────────────────────────────────────────── */
+/* ─── Drag Regions ────────────────────────────────────────────────────────── */
 
 .drag-region { -webkit-app-region: drag; }
 .no-drag     { -webkit-app-region: no-drag; }
 
-/* ─── Glass card ───────────────────────────────────────────────────────────── */
+/* ─── Glass card ──────────────────────────────────────────────────────────── */
 
 .glass-card {
   background: var(--surface-glass);
@@ -105,13 +121,11 @@ input, textarea {
   box-shadow: var(--elevation-2);
 }
 
-/* ─── Utilities ────────────────────────────────────────────────────────────── */
+/* ─── Utilities ───────────────────────────────────────────────────────────── */
 
 .tabular-nums { font-variant-numeric: tabular-nums; }
 
-.status-dot-pulse {
-  animation: statusPulse 2s ease-out infinite;
-}
+.status-dot-pulse { animation: statusPulse 2s ease-out infinite; }
 
 @keyframes statusPulse {
   0%   { box-shadow: 0 0 0 0 rgba(var(--pulse-rgb, 63,185,80), 0.5); }
@@ -119,141 +133,115 @@ input, textarea {
   100% { box-shadow: 0 0 0 0 transparent; }
 }
 
-/* ─── Focus styles ─────────────────────────────────────────────────────────── */
+/* ─── Focus & Selection ───────────────────────────────────────────────────── */
 
 *:focus-visible {
-  outline: 1px solid rgba(255,140,66,0.5);
+  outline: 1px solid var(--accent-border);
   outline-offset: 1px;
   border-radius: var(--radius-xs);
 }
 
-/* ─── Selection ────────────────────────────────────────────────────────────── */
+::selection { background: var(--accent-tint2); color: inherit; }
 
-::selection {
-  background: rgba(255,140,66,0.22);
-  color: inherit;
-}
+/* ─── Graph canvas ────────────────────────────────────────────────────────── */
 
-/* Graph canvas */
-.graph-canvas {
-  cursor: crosshair;
-  display: block;
-  width: 100%;
-  height: 100%;
-}
+.graph-canvas { cursor: crosshair; display: block; width: 100%; height: 100%; }
+.graph-canvas .node-group { cursor: pointer; }
+.graph-canvas .node-group:hover circle { filter: brightness(1.15); }
 
-.graph-canvas .node-group {
-  cursor: pointer;
-}
+/* ─── Node / filter panel animations ─────────────────────────────────────── */
 
-.graph-canvas .node-group:hover circle {
-  filter: brightness(1.15);
-}
-
-/* Node detail slide-in */
 @keyframes slideInRight {
   from { transform: translateX(100%); opacity: 0; }
   to   { transform: translateX(0);    opacity: 1; }
 }
 
-/* Filter panel slide-in */
 @keyframes slideInFromRight {
   from { transform: translateX(110%); opacity: 0; }
   to   { transform: translateX(0);    opacity: 1; }
 }
 
-/* Badge count pop-in */
+/* ─── Badge count pop-in ──────────────────────────────────────────────────── */
+
 @keyframes badgePop {
   0%   { transform: scale(0.6); opacity: 0; }
   60%  { transform: scale(1.15); }
   100% { transform: scale(1);   opacity: 1; }
 }
 
-/* Shimmer sweep for headers */
-@keyframes shimmerSweep {
-  0%   { background-position: -200% center; }
-  100% { background-position: 200% center; }
-}
+/* ─── Fade-up ─────────────────────────────────────────────────────────────── */
 
-/* Fade-up for empty states */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Pulse ring for active node path indicator */
+/* ─── Pulse ring for active node ──────────────────────────────────────────── */
+
 @keyframes ringPulse {
-  0%   { box-shadow: 0 0 0 0 rgba(255,140,66,0.4); }
+  0%   { box-shadow: 0 0 0 0 var(--accent-glow); }
   70%  { box-shadow: 0 0 0 8px transparent; }
   100% { box-shadow: 0 0 0 0 transparent; }
 }
 
-/* Spin for loading spinners */
+/* ─── Spin for loading ────────────────────────────────────────────────────── */
+
 @keyframes spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
 
-/* Count badge animate-in */
-.badge-animate {
-  animation: badgePop 0.25s var(--ease) forwards;
-}
+/* ─── Count badge animate-in ─────────────────────────────────────────────── */
 
-/* Fade-up animate-in */
-.fade-up {
-  animation: fadeUp 0.35s var(--ease) forwards;
-}
+.badge-animate { animation: badgePop 0.25s var(--ease) forwards; }
+.fade-up       { animation: fadeUp 0.35s var(--ease) forwards; }
 
-/* Library row hover bar */
+/* ─── Library row hover bar ───────────────────────────────────────────────── */
+
 .lib-row {
   transition: background var(--motion-fast) var(--ease);
   position: relative;
 }
+
 .lib-row::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 2px;
-  background: var(--accent);
-  border-radius: 0 2px 2px 0;
-  transform: scaleY(0);
-  transform-origin: center;
+  content: ''; position: absolute;
+  left: 0; top: 0; bottom: 0; width: 2px;
+  background: var(--accent); border-radius: 0 2px 2px 0;
+  transform: scaleY(0); transform-origin: center;
   transition: transform var(--motion-fast) var(--ease);
 }
-.lib-row:hover::before {
-  transform: scaleY(1);
-}
-.lib-row:hover {
-  background: rgba(255,140,66,0.04) !important;
-}
 
-/* Animated dashed border for drop zone — dashMarch animates SVG stroke-dashoffset */
+.lib-row:hover::before { transform: scaleY(1); }
+.lib-row:hover { background: var(--accent-tint) !important; }
+
+/* ─── Drop zone animations ────────────────────────────────────────────────── */
+
 @keyframes dashMarch {
   0%   { stroke-dashoffset: 0; }
   100% { stroke-dashoffset: -30; }
 }
 
 @keyframes dropzoneGlow {
-  0%, 100% { box-shadow: 0 0 12px rgba(255,140,66,0.10), inset 0 0 16px rgba(255,140,66,0.03); }
-  50%       { box-shadow: 0 0 20px rgba(255,140,66,0.22), inset 0 0 24px rgba(255,140,66,0.06); }
+  0%, 100% { box-shadow: 0 0 12px var(--accent-tint2), inset 0 0 16px var(--accent-tint); }
+  50%       { box-shadow: 0 0 20px var(--accent-tint3), inset 0 0 24px var(--accent-tint2); }
 }
 
-.dropzone-active {
-  animation: dropzoneGlow 1.5s ease-in-out infinite !important;
-}
+.dropzone-active  { animation: dropzoneGlow 1.5s ease-in-out infinite !important; }
+.dropzone-dash-rect { animation: dashMarch 0.6s linear infinite; }
 
-.dropzone-dash-rect {
-  animation: dashMarch 0.6s linear infinite;
-}
+/* ─── Scrollbar ───────────────────────────────────────────────────────────── */
 
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
+::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb {
-  background: rgba(42,51,71,0.6);
-  border-radius: 3px;
-}
+::-webkit-scrollbar-thumb { background: rgba(42,51,71,0.6); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(42,51,71,0.9); }
+
+/* ─── Reduced Motion ──────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
