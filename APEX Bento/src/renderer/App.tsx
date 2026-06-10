@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   StrategyManifest, GateEntry, KillSwitchStatus,
   ModeFlags, AuditEvent, JbeckerRow
@@ -41,10 +41,20 @@ export default function App() {
     jbecker: []
   });
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const refreshingRef = useRef(false);
 
-  useEffect(() => {
+  // Re-fetchable IPC pull. Initial mount sets `loading` (blocks the grid);
+  // subsequent refreshes set `refreshing` (the button busy-state, grid stays).
+  // Per React docs, updater functions keep this callback dependency-free
+  // (https://react.dev/reference/react/useCallback).
+  const refresh = useCallback((isInitial: boolean) => {
     const apex = window.apex;
     if (!apex) { setLoading(false); return; }
+    if (refreshingRef.current) return; // de-dupe concurrent refreshes
+    refreshingRef.current = true;
+    if (!isInitial) setRefreshing(true);
 
     Promise.all([
       apex.getManifests(),
@@ -55,8 +65,29 @@ export default function App() {
       apex.getJbeckerFixture()
     ]).then(([manifests, gates, killSwitch, modeFlags, auditEvents, jbecker]) => {
       setState({ manifests, gates, killSwitch, modeFlags, auditEvents, jbecker });
-    }).catch(console.error).finally(() => setLoading(false));
+      setLastRefresh(new Date());
+    }).catch(console.error).finally(() => {
+      refreshingRef.current = false;
+      if (isInitial) setLoading(false); else setRefreshing(false);
+    });
   }, []);
+
+  useEffect(() => {
+    refresh(true);
+  }, [refresh]);
+
+  // Cmd/Ctrl+R re-fetches without reloading the renderer. Prevents the default
+  // browser reload which would wipe component state + drawer open state.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'r' && !e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        refresh(false);
+      }
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [refresh]);
 
   const ks = state.killSwitch ?? DEFAULT_KILL_SWITCH;
   const flags = state.modeFlags ?? DEFAULT_MODE_FLAGS;
@@ -117,8 +148,15 @@ export default function App() {
           </p>
         </div>
 
-        {/* Right: Kill-switch state pill */}
-        <KillSwitchPill state={ks.state} />
+        {/* Right: Refresh control + Kill-switch state pill */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <RefreshButton
+            refreshing={refreshing}
+            lastRefresh={lastRefresh}
+            onRefresh={() => refresh(false)}
+          />
+          <KillSwitchPill state={ks.state} />
+        </div>
       </header>
 
       {/* Bento grid */}
@@ -140,6 +178,68 @@ export default function App() {
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+interface RefreshButtonProps {
+  refreshing: boolean;
+  lastRefresh: Date | null;
+  onRefresh: () => void;
+}
+
+function RefreshButton({ refreshing, lastRefresh, onRefresh }: RefreshButtonProps) {
+  // ARIA semantics per W3C button APG (https://www.w3.org/WAI/ARIA/apg/patterns/button/):
+  // explicit aria-label since the glyph alone isn't an accessible name.
+  // aria-busy="true" while a refresh is in flight, per MDN aria-busy guidance
+  // (https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-busy).
+  const timeLabel = lastRefresh
+    ? lastRefresh.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    : '—';
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span style={{
+        fontFamily: 'var(--font-mono)',
+        fontSize: 10,
+        color: 'var(--text-muted)',
+        whiteSpace: 'nowrap'
+      }}>
+        last refresh {timeLabel}
+      </span>
+      <button
+        type="button"
+        onClick={onRefresh}
+        disabled={refreshing}
+        aria-label={refreshing ? 'Refreshing APEX state' : `Refresh APEX state. Last refresh ${timeLabel}. Cmd or Ctrl + R.`}
+        aria-busy={refreshing}
+        title="Refresh (Cmd/Ctrl+R)"
+        className="apex-refresh-btn"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 28,
+          height: 28,
+          borderRadius: 'var(--radius-sm)',
+          background: 'var(--surface-2)',
+          border: '1px solid var(--border-default)',
+          color: 'var(--text-secondary)',
+          cursor: refreshing ? 'wait' : 'pointer',
+          opacity: refreshing ? 0.7 : 1,
+          fontSize: 14,
+          lineHeight: 1,
+          transition: 'border-color 150ms ease, color 150ms ease'
+        }}
+      >
+        <span
+          aria-hidden="true"
+          className={refreshing ? 'apex-spin' : ''}
+          style={{ display: 'inline-block' }}
+        >
+          ⟳
+        </span>
+      </button>
     </div>
   );
 }

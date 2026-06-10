@@ -102,3 +102,27 @@ html, body, #root {
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 2px; }
+
+/* ── Refresh button ─────────────────────────────────────────────────────── */
+.apex-refresh-btn:hover:not(:disabled) {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+.apex-refresh-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Spin animation for the in-flight refresh indicator. Respects
+   prefers-reduced-motion per WCAG 2.3.3 — when reduce is requested, the icon
+   stays static and the aria-busy state alone signals progress to AT users. */
+@keyframes apex-spin-rot {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.apex-spin {
+  animation: apex-spin-rot 900ms linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .apex-spin { animation: none; }
+}
