@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type {
   StrategyManifest, GateEntry, KillSwitchStatus,
-  ModeFlags, AuditEvent, JbeckerRow
+  ModeFlags, AuditEvent, JbeckerFixtureResult
 } from '../shared/types.js';
 import { StrategyCard } from './components/StrategyCard.js';
 import { GateCard } from './components/GateCard.js';
@@ -16,8 +16,16 @@ interface AppState {
   killSwitch: KillSwitchStatus | null;
   modeFlags: ModeFlags | null;
   auditEvents: AuditEvent[];
-  jbecker: JbeckerRow[];
+  jbecker: JbeckerFixtureResult;
 }
+
+const DEFAULT_JBECKER: JbeckerFixtureResult = {
+  ok: false,
+  reason: 'not_found',
+  resolved_path: '',
+  source: 'default',
+  message: 'Fixture not yet loaded'
+};
 
 const DEFAULT_KILL_SWITCH: KillSwitchStatus = {
   state: 'running',
@@ -38,7 +46,7 @@ export default function App() {
     killSwitch: null,
     modeFlags: null,
     auditEvents: [],
-    jbecker: []
+    jbecker: DEFAULT_JBECKER
   });
   const [loading, setLoading] = useState(true);
 
@@ -136,7 +144,7 @@ export default function App() {
             <KillSwitchCard status={ks} />
             <ModeFlagsCard flags={flags} />
             <AuditFeedCard events={state.auditEvents} />
-            <EdgeReplicationCard rows={state.jbecker} />
+            <EdgeReplicationCard fixture={state.jbecker} />
           </div>
         )}
       </main>

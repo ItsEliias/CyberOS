@@ -48,13 +48,21 @@ export interface JbeckerRow {
   side: 'maker' | 'taker';
 }
 
+// Structured result envelope per Electron IPC best practice — error details
+// are limited by serialization (Error.message only), so handlers return a
+// discriminated union the renderer can branch on without try/catch.
+// Ref: https://www.electronjs.org/docs/latest/api/ipc-main
+export type JbeckerFixtureResult =
+  | { ok: true;  rows: JbeckerRow[]; resolved_path: string; source: 'default' | 'env_override' }
+  | { ok: false; reason: 'not_found' | 'parse_error' | 'read_error'; resolved_path: string; source: 'default' | 'env_override'; message: string };
+
 export interface ApexBridge {
   getManifests: () => Promise<StrategyManifest[]>;
   getGates: () => Promise<GateEntry[]>;
   getKillSwitch: () => Promise<KillSwitchStatus>;
   getModeFlags: () => Promise<ModeFlags>;
   getAuditEvents: () => Promise<AuditEvent[]>;
-  getJbeckerFixture: () => Promise<JbeckerRow[]>;
+  getJbeckerFixture: () => Promise<JbeckerFixtureResult>;
 }
 
 declare global {

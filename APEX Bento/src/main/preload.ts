@@ -5,7 +5,7 @@ import type {
   KillSwitchStatus,
   ModeFlags,
   AuditEvent,
-  JbeckerRow,
+  JbeckerFixtureResult,
   ApexBridge
 } from '../shared/types.js';
 
@@ -15,7 +15,7 @@ const apex: ApexBridge = {
   getKillSwitch:    () => ipcRenderer.invoke('apex:get-kill-switch') as Promise<KillSwitchStatus>,
   getModeFlags:     () => ipcRenderer.invoke('apex:get-mode-flags') as Promise<ModeFlags>,
   getAuditEvents:   () => ipcRenderer.invoke('apex:get-audit-events') as Promise<AuditEvent[]>,
-  getJbeckerFixture:() => ipcRenderer.invoke('apex:get-jbecker-fixture') as Promise<JbeckerRow[]>
+  getJbeckerFixture:() => ipcRenderer.invoke('apex:get-jbecker-fixture') as Promise<JbeckerFixtureResult>
 };
 
 contextBridge.exposeInMainWorld('apex', apex);

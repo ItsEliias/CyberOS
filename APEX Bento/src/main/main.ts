@@ -8,7 +8,8 @@ import type {
   KillSwitchStatus,
   ModeFlags,
   AuditEvent,
-  JbeckerRow
+  JbeckerRow,
+  JbeckerFixtureResult
 } from '../shared/types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -91,11 +92,25 @@ const MODE_FLAGS: ModeFlags = {
   automated_live: false
 };
 
-const APEX_FIXTURE_PATH = path.join(
+// Fixture path resolution — APEX_BENTO_FIXTURE_PATH env var takes precedence,
+// allowing operators with non-default APEX checkout locations to point the
+// dashboard at their fixture without recompiling. Falls back to the default
+// 6-level relative path (out/main → CyberOS → Projects → Documents → user →
+// Projects/APEX/...). Per 12-factor §III: config in env, not code.
+// Ref: https://12factor.net/config and https://nodejs.org/api/process.html#processenv
+const DEFAULT_FIXTURE_PATH = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   '..', '..', '..', '..', '..', '..',
   'APEX', 'build', 'prototype', 'tests', 'fixtures', 'jbecker_sample.json'
 );
+
+function resolveFixturePath(): { path: string; source: 'default' | 'env_override' } {
+  const override = process.env.APEX_BENTO_FIXTURE_PATH;
+  if (override && override.trim().length > 0) {
+    return { path: path.resolve(override.trim()), source: 'env_override' };
+  }
+  return { path: DEFAULT_FIXTURE_PATH, source: 'default' };
+}
 
 // ─── IPC handlers (read-only, no writes) ────────────────────────────────────
 
@@ -110,13 +125,40 @@ function setupIPC(): void {
 
   ipcMain.handle('apex:get-audit-events', (): AuditEvent[] => []);
 
-  ipcMain.handle('apex:get-jbecker-fixture', (): JbeckerRow[] => {
+  ipcMain.handle('apex:get-jbecker-fixture', (): JbeckerFixtureResult => {
+    const { path: fixturePath, source } = resolveFixturePath();
+    if (!fs.existsSync(fixturePath)) {
+      return {
+        ok: false,
+        reason: 'not_found',
+        resolved_path: fixturePath,
+        source,
+        message: `Fixture not found at ${fixturePath}`
+      };
+    }
+    let raw: string;
     try {
-      if (!fs.existsSync(APEX_FIXTURE_PATH)) return [];
-      const raw = fs.readFileSync(APEX_FIXTURE_PATH, 'utf-8');
-      return JSON.parse(raw) as JbeckerRow[];
-    } catch {
-      return [];
+      raw = fs.readFileSync(fixturePath, 'utf-8');
+    } catch (err) {
+      return {
+        ok: false,
+        reason: 'read_error',
+        resolved_path: fixturePath,
+        source,
+        message: err instanceof Error ? err.message : 'Unknown read error'
+      };
+    }
+    try {
+      const rows = JSON.parse(raw) as JbeckerRow[];
+      return { ok: true, rows, resolved_path: fixturePath, source };
+    } catch (err) {
+      return {
+        ok: false,
+        reason: 'parse_error',
+        resolved_path: fixturePath,
+        source,
+        message: err instanceof Error ? err.message : 'Unknown parse error'
+      };
     }
   });
 }

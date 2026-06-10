@@ -1,10 +1,19 @@
 import { useState } from 'react';
-import type { JbeckerRow } from '../../shared/types.js';
+import type { JbeckerRow, JbeckerFixtureResult } from '../../shared/types.js';
 import { DetailDrawer } from './DetailDrawer.js';
 import { ResponsiveContainer, AreaChart, Area } from 'recharts';
 
 interface Props {
-  rows: JbeckerRow[];
+  fixture: JbeckerFixtureResult;
+}
+
+function reasonLabel(reason: 'not_found' | 'parse_error' | 'read_error'): string {
+  const map = {
+    not_found:   'FIXTURE NOT FOUND',
+    parse_error: 'FIXTURE PARSE ERROR',
+    read_error:  'FIXTURE READ ERROR'
+  };
+  return map[reason];
 }
 
 const PRICE_BAND_THRESHOLD = 50;
@@ -27,9 +36,14 @@ function buildEquityCurve(rows: JbeckerRow[]): number[] {
   });
 }
 
-export function EdgeReplicationCard({ rows }: Props) {
+export function EdgeReplicationCard({ fixture }: Props) {
   const [open, setOpen] = useState(false);
 
+  if (!fixture.ok) {
+    return <FixtureErrorCard fixture={fixture} open={open} setOpen={setOpen} />;
+  }
+
+  const rows = fixture.rows;
   const filteredROI = computeROI(rows, true);
   const unfilteredROI = computeROI(rows, false);
   const curve = buildEquityCurve(rows);
@@ -184,6 +198,113 @@ export function EdgeReplicationCard({ rows }: Props) {
             </p>
             <p className="text-[var(--text-secondary)] text-[11px] leading-relaxed">
               Price-band filter (≥50¢ post-commission) is a HARD invariant — load-bearing for the edge thesis. Faded rows are below threshold. GATE-12 full-dataset OOS run required before any capital.
+            </p>
+          </div>
+          <div>
+            <p className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest font-mono mb-2">
+              Fixture Origin
+            </p>
+            <div className="p-2.5 rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border-subtle)]">
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-medium ${
+                  fixture.source === 'env_override'
+                    ? 'text-[var(--info)] bg-[rgba(74,158,255,0.10)]'
+                    : 'text-[var(--text-muted)] bg-[rgba(72,79,88,0.12)]'
+                }`}>
+                  {fixture.source === 'env_override' ? 'ENV OVERRIDE' : 'DEFAULT PATH'}
+                </span>
+                <span className="text-[var(--text-secondary)] text-[10px] font-mono">
+                  {rows.length} row{rows.length === 1 ? '' : 's'}
+                </span>
+              </div>
+              <p className="text-[var(--text-muted)] text-[10px] font-mono break-all leading-relaxed">
+                {fixture.resolved_path}
+              </p>
+              <p className="text-[var(--text-muted)] text-[10px] mt-1.5 leading-relaxed">
+                Override via <span className="font-mono text-[var(--text-secondary)]">APEX_BENTO_FIXTURE_PATH</span> env var.
+              </p>
+            </div>
+          </div>
+        </div>
+      </DetailDrawer>
+    </>
+  );
+}
+
+interface ErrorProps {
+  fixture: Extract<JbeckerFixtureResult, { ok: false }>;
+  open: boolean;
+  setOpen: (b: boolean) => void;
+}
+
+function FixtureErrorCard({ fixture, open, setOpen }: ErrorProps) {
+  return (
+    <>
+      <div className="bento-card" onClick={() => setOpen(true)}>
+        <p className="text-[var(--text-muted)] text-[11px] font-mono uppercase tracking-widest mb-3">
+          GWU Edge Replication
+        </p>
+        <div className="flex flex-col items-start gap-2">
+          <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-medium text-[var(--warning)] bg-[rgba(210,153,34,0.10)]">
+            {reasonLabel(fixture.reason)}
+          </span>
+          <p className="text-[var(--text-secondary)] text-[12px] leading-relaxed">
+            Equity-curve data unavailable. Click for details.
+          </p>
+          <p className="text-[var(--text-muted)] text-[10px] font-mono break-all leading-relaxed">
+            {fixture.resolved_path || '(no path resolved)'}
+          </p>
+        </div>
+        <p className="text-[var(--text-muted)] text-[10px] mt-3">
+          Validation thesis only — GATE-12 required before capital.
+        </p>
+      </div>
+
+      <DetailDrawer open={open} onClose={() => setOpen(false)} title="GWU Edge Replication">
+        <div className="space-y-4">
+          <div className="p-3 rounded-[var(--radius-md)] bg-[rgba(210,153,34,0.06)] border border-[rgba(210,153,34,0.20)]">
+            <p className="text-[var(--warning)] text-[10px] font-mono font-medium mb-1.5">
+              {reasonLabel(fixture.reason)}
+            </p>
+            <p className="text-[var(--text-secondary)] text-[12px] leading-relaxed">
+              {fixture.message}
+            </p>
+          </div>
+          <div>
+            <p className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest font-mono mb-2">
+              Resolved Path
+            </p>
+            <div className="p-2.5 rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border-subtle)]">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-medium ${
+                  fixture.source === 'env_override'
+                    ? 'text-[var(--info)] bg-[rgba(74,158,255,0.10)]'
+                    : 'text-[var(--text-muted)] bg-[rgba(72,79,88,0.12)]'
+                }`}>
+                  {fixture.source === 'env_override' ? 'ENV OVERRIDE' : 'DEFAULT PATH'}
+                </span>
+              </div>
+              <p className="text-[var(--text-muted)] text-[10px] font-mono break-all leading-relaxed">
+                {fixture.resolved_path || '(no path resolved)'}
+              </p>
+            </div>
+          </div>
+          <div>
+            <p className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest font-mono mb-2">
+              How to fix
+            </p>
+            <ol className="space-y-2 text-[var(--text-secondary)] text-[12px] leading-relaxed list-decimal pl-4">
+              <li>Verify the APEX prototype is checked out and the jbecker fixture exists at the resolved path above.</li>
+              <li>If your APEX clone lives elsewhere, set <span className="font-mono text-[var(--text-primary)]">APEX_BENTO_FIXTURE_PATH=/abs/path/to/jbecker_sample.json</span> before launching APEX Bento.</li>
+              <li>Restart the app — the override is read on main-process startup.</li>
+            </ol>
+          </div>
+          <div className="p-3 rounded-[var(--radius-md)] bg-[var(--accent-tint)] border border-[var(--accent-border)]">
+            <p className="text-[var(--accent)] text-[10px] font-mono font-medium mb-1">
+              Read-only observability
+            </p>
+            <p className="text-[var(--text-secondary)] text-[11px] leading-relaxed">
+              APEX Bento never writes the fixture — failures here mean the file is missing, unreadable, or malformed on disk. Capital is gated by GATE-12 regardless.
             </p>
           </div>
         </div>
