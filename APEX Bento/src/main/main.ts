@@ -160,17 +160,40 @@ function createWindow(): void {
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 }
 
-// ─── App lifecycle ───────────────────────────────────────────────────────────
+// ─── Single-instance lock ────────────────────────────────────────────────────
+//
+// Prevent a second copy of APEX Bento from launching. If the operator double-
+// clicks the app while it's already running, focus the existing window instead
+// of opening a duplicate. This also prevents two main processes from racing on
+// shared on-disk state (window-state persistence, future config files).
+//
+// Source: https://www.electronjs.org/docs/latest/api/app#apprequestsingleinstancelock
 
-app.whenReady().then(() => {
-  setupIPC();
-  createWindow();
+const gotTheLock = app.requestSingleInstanceLock();
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    // Operator launched a second copy — focus the existing window.
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
   });
-});
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
-});
+  // ─── App lifecycle ─────────────────────────────────────────────────────────
+
+  app.whenReady().then(() => {
+    setupIPC();
+    createWindow();
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+  });
+
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') app.quit();
+  });
+}
