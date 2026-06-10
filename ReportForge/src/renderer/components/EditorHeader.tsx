@@ -50,9 +50,9 @@ export default function EditorHeader({ dirty, onSave, onBack, onExportMd, onExpo
     <>
       <div
         style={{
-          height: 52, flexShrink: 0,
-          background: 'rgba(7,8,15,0.95)',
-          borderBottom: '1px solid rgba(255,255,255,0.04)',
+          height: 44, flexShrink: 0,
+          background: 'var(--surface-0)',
+          borderBottom: '1px solid var(--border-subtle)',
           display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px',
           WebkitAppRegion: 'drag' as never,
         }}

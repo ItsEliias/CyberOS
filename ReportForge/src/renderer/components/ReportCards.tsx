@@ -87,36 +87,27 @@ export function StatusPill({ status }: { status: 'draft' | 'complete' }) {
 
 export function EmptyState({ onNew }: { onNew: () => void }) {
   return (
-    <div className="flex flex-col items-center justify-center h-full" style={{ padding: '48px 24px' }}>
-      <div
-        className="flex items-center justify-center mb-5"
-        style={{
-          width: 56, height: 56, borderRadius: 14,
-          background: 'rgba(74,158,255,0.08)',
-          border: '1px solid rgba(74,158,255,0.18)',
-          boxShadow: '0 0 24px rgba(74,158,255,0.10)',
-        }}
-      >
-        <svg width="26" height="26" viewBox="0 0 16 16" fill="none" style={{ color: '#4a9eff' }}>
-          <rect x="2" y="1" width="10" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.5" fill="none" />
-          <line x1="4.5" y1="5" x2="9.5" y2="5" stroke="currentColor" strokeWidth="1.2" />
-          <line x1="4.5" y1="7.5" x2="9.5" y2="7.5" stroke="currentColor" strokeWidth="1.2" />
-          <line x1="4.5" y1="10" x2="7.5" y2="10" stroke="currentColor" strokeWidth="1.2" />
-          <circle cx="12.5" cy="12.5" r="2.5" fill="currentColor" />
+    <div className="empty-state">
+      {/* Domain glyph: scroll/document */}
+      <div className="empty-glyph">
+        <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true"
+          stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
+        >
+          <path d="M7 3.5a1.5 1.5 0 0 0-1.5 1.5v16A1.5 1.5 0 0 0 7 22.5h12a1.5 1.5 0 0 0 1.5-1.5V9.5L15.5 3.5H7z" />
+          <path d="M15.5 3.5v5a1 1 0 0 0 1 1H21" />
+          <path d="M10 13h6M10 16.5h6M10 20h4" />
         </svg>
       </div>
-      <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8, textAlign: 'center' }}>
-        Professional Security Reports
-      </h2>
-      <p style={{ fontSize: 13, color: 'var(--text-muted)', maxWidth: 320, textAlign: 'center', lineHeight: 1.6, marginBottom: 20 }}>
+      <h2 className="empty-title">No reports yet</h2>
+      <p className="empty-sub">
         Generate structured pentest reports, vulnerability assessments, and security audit documents. Export to Markdown or PDF.
       </p>
-      <div className="flex gap-2 flex-wrap justify-center mb-7">
-        {['Pentest Reports', 'Vuln Assessments', 'Audit Docs', 'PDF Export'].map(label => (
+      <div className="flex gap-2 flex-wrap justify-center" style={{ marginTop: 4 }}>
+        {['Pentest', 'Vuln Assessment', 'Audit', 'PDF Export'].map(label => (
           <span key={label} style={{
-            fontSize: 11, padding: '3px 10px', borderRadius: 99,
-            background: 'rgba(74,158,255,0.08)',
-            border: '1px solid rgba(74,158,255,0.18)',
+            fontSize: 'var(--type-caption)', padding: '2px 8px', borderRadius: 99,
+            background: 'var(--accent-tint)',
+            border: '1px solid var(--accent-border)',
             color: 'var(--text-muted)',
           }}>
             {label}
@@ -125,14 +116,18 @@ export function EmptyState({ onNew }: { onNew: () => void }) {
       </div>
       <button
         onClick={onNew}
-        className="flex items-center gap-2 font-semibold transition-all"
+        className="flex items-center gap-2 font-semibold"
         style={{
-          padding: '12px 32px', fontSize: 14, borderRadius: 8,
-          background: 'rgba(74,158,255,0.15)', color: '#4a9eff',
-          border: '1px solid rgba(74,158,255,0.30)',
+          marginTop: 8,
+          padding: '10px 28px',
+          fontSize: 'var(--type-body-md)',
+          borderRadius: 6,
+          background: 'var(--accent-tint2)',
+          color: 'var(--accent)',
+          border: '1px solid var(--accent-border)',
         }}
-        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(74,158,255,0.25)'; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(74,158,255,0.15)'; }}
+        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--accent-tint3)'; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--accent-tint2)'; }}
       >
         Create New Report
       </button>
