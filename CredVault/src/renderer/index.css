@@ -1,3 +1,10 @@
+/* ── index.css — CredVault (shadcn migration) ─────────────────────────────
+   Tokens resolved from canonical design-system/tokens.css.
+   NO parallel token declarations here — tokens.css is the single source.
+──────────────────────────────────────────────────────────────────────────── */
+
+@import url('../../../design-system/tokens.css');
+
 @import '@fontsource/geist-sans/400.css';
 @import '@fontsource/geist-sans/500.css';
 @import '@fontsource/geist-sans/600.css';
@@ -10,163 +17,93 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Per-app theme CSS variables (set by App.tsx on root wrapper) ─────────── */
-/* Defaults; overridden inline by the theme store. */
+/* ── shadcn/ui token bridge ──────────────────────────────────────────────── */
 :root {
-  --app-accent: #f78166;
-  --app-bg:     #0a0a0f;
-  --app-text:   #e2e8f0;
+  --background:         var(--surface-0);
+  --foreground:         var(--text-primary);
+  --card:               var(--surface-1);
+  --card-foreground:    var(--text-primary);
+  --popover:            var(--surface-1);
+  --popover-foreground: var(--text-primary);
+  --primary:            var(--accent);
+  --primary-foreground: #ffffff;
+  --secondary:          var(--surface-2);
+  --secondary-foreground: var(--text-secondary);
+  --muted:              var(--surface-2);
+  --muted-foreground:   var(--text-muted);
+  --accent:             var(--accent-tint2);
+  --accent-foreground:  var(--text-primary);
+  --destructive:        var(--sev-critical);
+  --destructive-foreground: #ffffff;
+  --border:             var(--border-default);
+  --input:              var(--surface-2);
+  --ring:               var(--accent-border);
+  --radius:             var(--radius-md);
 }
 
-/* ─── CyberOS Design Bible — CSS Custom Properties ───────────────────────── */
-
+/* ── CredVault accent override ───────────────────────────────────────────── */
 :root {
-  --surface-0: #07080f; --surface-1: #0d0e18; --surface-2: #131525; --surface-3: #191c32;
-  --surface-glass: rgba(13,14,24,0.72);
-  --elevation-1: 0 1px 3px rgba(0,0,0,.5), 0 1px 2px rgba(0,0,0,.35);
-  --elevation-2: 0 4px 16px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.4);
-  --elevation-3: 0 12px 40px rgba(0,0,0,.6), 0 4px 12px rgba(0,0,0,.45);
-  --border-subtle: rgba(42,51,71,0.35); --border-default: rgba(42,51,71,0.75);
-  --border-glass: rgba(255,255,255,0.055);
-  --text-primary: #e6edf3; --text-secondary: #8b949e; --text-muted: #484f58;
-  --sev-critical: #f85149; --sev-high: #ff8c42; --sev-medium: #d29922; --sev-low: #4a9eff; --sev-info: #8b949e;
-  --state-online: #3fb950; --state-offline: #484f58; --state-blocked: #f85149;
-  --accent: #f78166; --accent-rgb: 247,129,102;
-  --accent-tint: rgba(247,129,102,0.08); --accent-tint2: rgba(247,129,102,0.15);
-  --accent-glow: rgba(247,129,102,0.28); --accent-border: rgba(247,129,102,0.30);
-  --font-display: 'Geist Sans', 'Inter', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-  --radius-xs: 4px; --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px;
-  --motion-fast: 150ms; --motion-base: 250ms; --motion-slow: 400ms;
-  --ease: cubic-bezier(0.2,0.8,0.2,1);
-
-  /* Legacy aliases */
-  --bg:           #0a0a0f;
-  --bg-elevated:  #12131a;
-  --panel:        #161b22;
-  --border:       #2a3347;
-  --border-subtle-legacy: #1e2030;
-  --text:         #e2e8f0;
-  --text-dim:     #8b949e;
-  --accent-dim:   rgba(247, 129, 102, 0.08);
-  --success:      #3fb950;
-  --warning:      #d29922;
-  --error:        #f85149;
-  --info:         #4a9eff;
+  --accent: #f78166;
+  --accent-rgb: 247, 129, 102;
+  --accent-tint: rgba(247, 129, 102, 0.08);
+  --accent-tint2: rgba(247, 129, 102, 0.15);
+  --accent-tint3: rgba(247, 129, 102, 0.22);
+  --accent-glow: rgba(247, 129, 102, 0.28);
+  --accent-border: rgba(247, 129, 102, 0.30);
+  --accent-dim: rgba(247, 129, 102, 0.40);
 }
 
-/* ─── CyberOS Design Bible — Global Styles ────────────────────────────────── */
+/* re-bind shadcn --accent to tint2 so hover states use the translucent tint */
+:root { --accent: var(--accent-tint2); }
+:root { --primary: var(--accent); --ring: var(--accent-border); }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-html, body, #root {
-  height: 100%;
-  min-height: 100vh;
-  overflow: hidden;
-  background-color: #07080f !important;
-  background: radial-gradient(ellipse at 18% 0%, rgba(247,129,102,0.04) 0%, transparent 55%), #07080f !important;
-  color: var(--text-primary);
-  font-family: var(--font-display);
-  font-size: 14px;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* ─── Selection ───────────────────────────────────────────────────────────── */
-
-::selection {
-  background: rgba(247, 129, 102, 0.25);
-  color: inherit;
-}
-
-*:not(input):not(textarea):not(select) {
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-input, textarea, select, button {
-  user-select: text;
-  -webkit-user-select: text;
+/* ── Legacy variable aliases (existing components) ───────────────────────── */
+:root {
+  --bg:                 var(--surface-0);
+  --bg-elevated:        var(--surface-1);
+  --panel:              var(--surface-1);
+  --border-subtle-legacy: var(--border-subtle);
+  --text:               var(--text-primary);
+  --text-dim:           var(--text-muted);
+  --success:            var(--state-online);
+  --warning:            var(--sev-medium);
+  --error:              var(--sev-critical);
+  --info:               var(--sev-low);
 }
 
 /* ─── Drag Regions (macOS frameless) ──────────────────────────────────────── */
 
-.drag-region {
-  -webkit-app-region: drag;
-}
-
-.no-drag {
-  -webkit-app-region: no-drag;
-}
-
-/* ─── Scrollbars ──────────────────────────────────────────────────────────── */
-
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(42, 51, 71, 0.5);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(42, 51, 71, 0.8);
-}
-
-/* ─── Focus Styles ────────────────────────────────────────────────────────── */
-
-*:focus-visible {
-  outline: 1px solid rgba(247, 129, 102, 0.5);
-  outline-offset: 1px;
-  border-radius: 4px;
-}
+.drag-region { -webkit-app-region: drag; }
+.no-drag     { -webkit-app-region: no-drag; }
 
 /* ─── Tabular Nums ────────────────────────────────────────────────────────── */
 
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
-}
+.tabular-nums { font-variant-numeric: tabular-nums; }
 
 /* ─── Transitions ─────────────────────────────────────────────────────────── */
 
-button, a, input, select {
-  transition: all 0.15s ease-out;
-}
+button, a, input, select { transition: all 0.15s ease-out; }
 
 /* ─── Glassmorphism Card ──────────────────────────────────────────────────── */
 
 .glass-card {
-  background: rgba(22, 27, 39, 0.75);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(42, 51, 71, 0.6);
-  border-radius: 8px;
+  background: var(--surface-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  box-shadow: var(--elevation-2);
 }
 
 /* ─── Status Pulse Glow Animation ─────────────────────────────────────────── */
 
 @keyframes statusPulse {
-  0% {
-    box-shadow: 0 0 0 0 var(--pulse-color, rgba(247, 129, 102, 0.4));
-  }
-  70% {
-    box-shadow: 0 0 0 6px var(--pulse-color-fade, rgba(247, 129, 102, 0));
-  }
-  100% {
-    box-shadow: 0 0 0 0 var(--pulse-color-fade, rgba(247, 129, 102, 0));
-  }
+  0%   { box-shadow: 0 0 0 0   var(--pulse-color, rgba(247, 129, 102, 0.4)); }
+  70%  { box-shadow: 0 0 0 6px transparent; }
+  100% { box-shadow: 0 0 0 0   transparent; }
 }
 
-.status-dot-pulse {
-  animation: statusPulse 2s ease-out infinite;
-}
+.status-dot-pulse { animation: statusPulse 2s ease-out infinite; }
 
 /* ─── Shake animation ─────────────────────────────────────────────────────── */
 
@@ -177,9 +114,7 @@ button, a, input, select {
   75%       { transform: translateX(-4px); }
 }
 
-.animate-shake {
-  animation: shake 0.3s ease-out;
-}
+.animate-shake { animation: shake 0.3s ease-out; }
 
 /* ─── Metric Glow ─────────────────────────────────────────────────────────── */
 
@@ -187,144 +122,16 @@ button, a, input, select {
   filter: drop-shadow(0 0 8px var(--glow-color, rgba(247, 129, 102, 0.5)));
 }
 
-/* ─── Accent Left Border Utility ──────────────────────────────────────────── */
+/* ─── Accent Left Border ──────────────────────────────────────────────────── */
 
-.accent-border-left {
-  border-left: 3px solid var(--accent-color, #f78166);
-}
-
-/* ─── Input base (override Tailwind) ─────────────────────────────────────── */
-
-input[type="text"],
-input[type="password"],
-input[type="number"],
-input[type="email"],
-textarea,
-select {
-  background: rgba(18, 19, 26, 0.8);
-  border: 1px solid rgba(42, 51, 71, 0.6);
-  color: #e2e8f0;
-  border-radius: 6px;
-  padding: 7px 11px;
-  font-size: 13px;
-  outline: none;
-  width: 100%;
-  transition: border-color 0.15s;
-  font-family: inherit;
-}
-
-input[type="text"]:focus,
-input[type="password"]:focus,
-input[type="number"]:focus,
-input[type="email"]:focus,
-textarea:focus,
-select:focus {
-  border-color: rgba(247, 129, 102, 0.6);
-}
-
-input::placeholder,
-textarea::placeholder {
-  color: #4a5568;
-}
-
-select option {
-  background: #12131a;
-  color: #e2e8f0;
-}
-
-/* ─── Button Components ───────────────────────────────────────────────────── */
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  font-family: inherit;
-  cursor: pointer;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--text-dim);
-  transition: all 0.15s ease-out;
-  white-space: nowrap;
-  user-select: none;
-  -webkit-user-select: none;
-  outline: none;
-}
-
-.btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.btn-accent {
-  background: var(--accent);
-  color: #0a0a0f;
-  border-color: var(--accent);
-}
-
-.btn-accent:hover:not(:disabled) {
-  opacity: 0.85;
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--text-dim);
-  border-color: var(--border);
-}
-
-.btn-ghost:hover:not(:disabled) {
-  background: var(--accent-dim);
-  border-color: var(--accent-border);
-  color: var(--accent);
-}
-
-.btn-danger {
-  background: transparent;
-  color: var(--error);
-  border-color: rgba(248, 81, 73, 0.35);
-}
-
-.btn-danger:hover:not(:disabled) {
-  background: rgba(248, 81, 73, 0.1);
-  border-color: var(--error);
-}
-
-/* ─── Tag Chip ────────────────────────────────────────────────────────────── */
-
-.tag-chip {
-  display: inline-block;
-  padding: 1px 7px;
-  border-radius: 10px;
-  font-size: 10px;
-  font-weight: 500;
-  background: var(--accent-dim);
-  color: var(--accent);
-  border: 1px solid var(--accent-border);
-  white-space: nowrap;
-}
-
-/* ─── Hover utility ───────────────────────────────────────────────────────── */
-
-.hover\:bg-accent-dim:hover {
-  background: var(--accent-dim) !important;
-}
-
-/* ─── Pulse animation ─────────────────────────────────────────────────────── */
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.6; }
-}
+.accent-border-left { border-left: 3px solid var(--accent-color, #f78166); }
 
 /* ─── Password Strength Bar ───────────────────────────────────────────────── */
 
 .pw-strength-bar {
   height: 4px;
   border-radius: 2px;
-  background: var(--border);
+  background: var(--border-default);
   overflow: hidden;
 }
 
@@ -350,93 +157,53 @@ select option {
   );
   background-size: 600px 100%;
   animation: shimmer 1.4s ease-in-out infinite;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 
 /* ─── Row lift micro-animation ────────────────────────────────────────────── */
 
 .cred-row {
-  transition: background 0.18s var(--ease), transform 0.18s var(--ease), box-shadow 0.18s var(--ease);
+  transition: background var(--motion-fast) var(--ease),
+              transform var(--motion-fast) var(--ease),
+              box-shadow var(--motion-fast) var(--ease);
   will-change: transform;
 }
 
-.cred-row:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 12px rgba(0,0,0,0.35);
-}
+.cred-row:hover  { transform: translateY(-1px); box-shadow: 0 2px 12px rgba(0,0,0,0.35); }
+.cred-row:active { transform: translateY(0); }
 
-.cred-row:active {
-  transform: translateY(0);
-}
-
-/* ─── Accent button glow pulse ────────────────────────────────────────────── */
-
-.btn-accent {
-  position: relative;
-  overflow: hidden;
-}
-
-.btn-accent::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: rgba(255,255,255,0.12);
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.btn-accent:hover:not(:disabled)::after {
-  opacity: 1;
-}
-
-/* ─── Search input glow focus ─────────────────────────────────────────────── */
-
-.search-input-wrap {
-  position: relative;
-  transition: filter 0.2s var(--ease);
-}
-
-.search-input-wrap:focus-within {
-  filter: drop-shadow(0 0 6px rgba(247,129,102,0.35));
-}
-
-.search-input-wrap input:focus {
-  border-color: rgba(247,129,102,0.65) !important;
-}
-
-/* ─── Sidebar nav item glow ───────────────────────────────────────────────── */
+/* ─── Sidebar nav item ────────────────────────────────────────────────────── */
 
 .sidebar-nav-item {
-  transition: background 0.18s var(--ease), color 0.18s var(--ease), box-shadow 0.18s var(--ease);
+  transition: background var(--motion-fast) var(--ease),
+              color var(--motion-fast) var(--ease),
+              box-shadow var(--motion-fast) var(--ease);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   margin-right: 8px;
 }
 
 .sidebar-nav-item.active {
-  box-shadow: inset 3px 0 0 var(--accent), 2px 0 12px rgba(247,129,102,0.1);
+  box-shadow: inset 3px 0 0 var(--accent), 2px 0 12px var(--accent-glow);
 }
 
 .sidebar-nav-item:not(.active):hover {
-  background: rgba(247,129,102,0.05) !important;
-  color: #c9d1d9 !important;
+  background: var(--accent-tint) !important;
+  color: var(--text-primary) !important;
 }
 
-/* ─── Table header peach gradient ─────────────────────────────────────────── */
+/* ─── Table sticky header ─────────────────────────────────────────────────── */
 
 .table-sticky-head {
   position: sticky;
   top: 0;
-  background: linear-gradient(180deg, rgba(15,16,22,1) 70%, rgba(15,16,22,0)) !important;
+  background: linear-gradient(180deg, var(--surface-0) 70%, transparent) !important;
   z-index: 2;
-  border-bottom: 1px solid rgba(247,129,102,0.1) !important;
+  border-bottom: 1px solid var(--accent-tint) !important;
 }
 
 /* ─── HIBP check spinner ──────────────────────────────────────────────────── */
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 .hibp-spinner {
   width: 10px; height: 10px;
@@ -456,53 +223,35 @@ select option {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.copy-toast {
-  animation: fadeSlideUp 0.2s var(--ease) both;
-}
+.copy-toast { animation: fadeSlideUp 0.2s var(--ease) both; }
 
-/* ─── Metric card count-up glow ───────────────────────────────────────────── */
+/* ─── Stat metric glow ────────────────────────────────────────────────────── */
 
-.stat-metric {
-  transition: text-shadow 0.4s var(--ease);
-}
+.stat-metric { transition: text-shadow 0.4s var(--ease); }
+.stat-metric:hover { text-shadow: 0 0 24px var(--accent-glow) !important; }
 
-.stat-metric:hover {
-  text-shadow: 0 0 24px rgba(247,129,102,0.6) !important;
-}
-
-/* ─── Password strength gradient bar (pass 3) ────────────────────────────── */
-
-@keyframes pw-strength-grow {
-  from { width: 0; }
-}
+/* ─── Password strength gradient bar ─────────────────────────────────────── */
 
 .pw-strength-gradient {
-  height: 4px;
-  border-radius: 2px;
-  background: var(--border);
-  overflow: hidden;
-  position: relative;
+  height: 4px; border-radius: 2px;
+  background: var(--border-default); overflow: hidden; position: relative;
 }
 
 .pw-strength-gradient-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.35s cubic-bezier(0.2,0.8,0.2,1), background 0.35s ease;
-  background-size: 200% 100%;
+  height: 100%; border-radius: 2px;
+  transition: width 0.35s var(--ease), background 0.35s ease;
 }
 
-/* ─── Expiry chip pulse (pass 3) ─────────────────────────────────────────── */
+/* ─── Expiry chip critical pulse ──────────────────────────────────────────── */
 
 @keyframes expiry-pulse {
   0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(248,81,73,0.5); }
   50%       { opacity: 0.85; box-shadow: 0 0 0 3px rgba(248,81,73,0); }
 }
 
-.expiry-chip-critical {
-  animation: expiry-pulse 2s ease-in-out infinite;
-}
+.expiry-chip-critical { animation: expiry-pulse 2s ease-in-out infinite; }
 
-/* ─── Lock screen animated background gradient (pass 3) ──────────────────── */
+/* ─── Lock screen animated background ────────────────────────────────────── */
 
 @keyframes lockBgShift {
   0%   { background-position: 0%   40%; }
@@ -511,53 +260,57 @@ select option {
 }
 
 .lock-bg-gradient {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse at 30% 25%, rgba(247,129,102,0.06) 0%, transparent 50%),
-              radial-gradient(ellipse at 70% 75%, rgba(74,158,255,0.04) 0%, transparent 50%),
-              radial-gradient(ellipse at 50% 50%, rgba(167,139,250,0.03) 0%, transparent 60%);
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 30% 25%, var(--accent-tint) 0%, transparent 50%),
+              radial-gradient(ellipse at 70% 75%, rgba(74,158,255,0.04) 0%, transparent 50%);
   background-size: 200% 200%;
   animation: lockBgShift 8s ease-in-out infinite;
   pointer-events: none;
 }
 
-/* ─── Table sort indicator arrows (pass 3) ──────────────────────────────── */
+/* ─── Sortable table header ───────────────────────────────────────────────── */
 
-.sortable-th {
-  cursor: default;
-  position: relative;
-  white-space: nowrap;
-}
-
+.sortable-th { cursor: default; position: relative; white-space: nowrap; }
 .sortable-th .sort-arrow {
-  display: inline-block;
-  margin-left: 4px;
-  font-style: normal;
-  font-size: 8px;
-  color: rgba(139,148,158,0.45);
-  vertical-align: middle;
-  line-height: 1;
+  display: inline-block; margin-left: 4px;
+  font-style: normal; font-size: 8px;
+  color: var(--text-muted); vertical-align: middle; line-height: 1;
 }
 
-/* ─── Sidebar category icon (pass 3) ─────────────────────────────────────── */
-
-.cat-icon-wrap {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  flex-shrink: 0;
-}
-
-/* ─── Staggered row fade-in (pass 3) ─────────────────────────────────────── */
+/* ─── Staggered row fade-in ───────────────────────────────────────────────── */
 
 @keyframes rowFadeIn {
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.cred-row-stagger {
-  animation: rowFadeIn 0.22s var(--ease) both;
+.cred-row-stagger { animation: rowFadeIn 0.22s var(--ease) both; }
+
+/* ─── Search input focus glow ─────────────────────────────────────────────── */
+
+.search-input-wrap {
+  position: relative;
+  transition: filter 0.2s var(--ease);
+}
+
+.search-input-wrap:focus-within { filter: drop-shadow(0 0 6px var(--accent-glow2)); }
+.search-input-wrap input:focus { border-color: var(--accent-border) !important; }
+
+/* ─── Tag chip ────────────────────────────────────────────────────────────── */
+
+.tag-chip {
+  display: inline-block; padding: 1px 7px; border-radius: 10px;
+  font-size: 10px; font-weight: 500;
+  background: var(--accent-tint2); color: var(--accent);
+  border: 1px solid var(--accent-border); white-space: nowrap;
+}
+
+/* ─── Motion preference ───────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
