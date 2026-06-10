@@ -141,7 +141,15 @@ function createWindow(): void {
       preload: path.join(__dirname, '..', 'preload', 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      // OS-level renderer process sandbox per Electron security checklist item
+      // "Enable process sandboxing". Significantly limits what a compromised
+      // renderer can do. Compatible with our preload (only uses contextBridge
+      // + ipcRenderer.invoke, both whitelisted under sandbox per
+      // https://www.electronjs.org/docs/latest/tutorial/sandbox).
+      // Sources:
+      //   https://www.electronjs.org/docs/latest/tutorial/security
+      //   https://www.electronjs.org/docs/latest/api/browser-window
+      sandbox: true,
       devTools: process.env.NODE_ENV === 'development'
     }
   });
