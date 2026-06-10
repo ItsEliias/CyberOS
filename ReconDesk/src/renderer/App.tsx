@@ -121,7 +121,7 @@ export default function App() {
   const ssoBlocked = requireSSO && ssoUnlocked === false
 
   return (
-    <div className="flex flex-col h-full" style={{ background: 'var(--surface-0)', color: 'var(--text-primary)', position: 'relative' }}>
+    <div className="flex flex-col h-full bg-surface-0 text-text-primary relative">
       {ssoBlocked && (
         <SSOLockScreen onCheck={async () => {
           const r = await window.electronAPI.getSSO()
