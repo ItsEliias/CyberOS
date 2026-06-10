@@ -47,76 +47,40 @@ export default function Footer() {
   const flagsCount = session?.findings?.flags?.length || 0;
   const targetIp   = session?.target?.ip || session?.targetIp || '';
 
+  const sep = <span style={{ color: 'var(--border-default)', fontSize: 8, lineHeight: 1 }}>·</span>;
+
   return (
     <div
-      className="h-6 flex items-center px-4 shrink-0 gap-3"
+      className="h-5 flex items-center px-3 shrink-0 gap-2 font-mono tabular-nums"
       style={{
-        background: 'rgba(7,8,15,0.98)',
-        borderTop: '1px solid rgba(255,255,255,0.04)',
-        color: '#484f58',
-        fontSize: '11px',
+        background: 'var(--surface-0)',
+        borderTop: '1px solid var(--border-subtle)',
+        fontSize: 'var(--type-caption)',
+        color: 'var(--text-muted)',
       }}
     >
-      {/* VPN status */}
-      <div className="flex items-center gap-1.5">
+      {/* VPN indicator */}
+      <div className="flex items-center gap-1">
         <span
           className="w-1.5 h-1.5 rounded-full"
-          style={{
-            background: vpnColor,
-            boxShadow: vpnOnline ? `0 0 3px ${vpnColor}88` : 'none',
-          }}
+          style={{ background: vpnColor, boxShadow: vpnOnline ? `0 0 3px ${vpnColor}66` : 'none', flexShrink: 0 }}
         />
         <span style={{ color: vpnColor }}>
-          {vpnOnline ? 'VPN: Connected' : vpnOff ? 'VPN: Off' : 'VPN: Unknown'}
+          {vpnOnline ? 'vpn' : vpnOff ? 'no-vpn' : 'vpn?'}
         </span>
       </div>
 
-      {targetIp && (
-        <>
-          <span style={{ color: 'rgba(42,51,71,0.6)' }}>·</span>
-          <span className="font-mono" style={{ color: '#8b949e' }}>{targetIp}</span>
-        </>
-      )}
-
-      {flagsCount > 0 && (
-        <>
-          <span style={{ color: 'rgba(42,51,71,0.6)' }}>·</span>
-          <span style={{ color: '#3fb950' }}>{flagsCount} flag{flagsCount !== 1 ? 's' : ''}</span>
-        </>
-      )}
-
-      {hintsCount > 0 && (
-        <>
-          <span style={{ color: 'rgba(42,51,71,0.6)' }}>·</span>
-          <span style={{ color: '#d29922' }}>{hintsCount} hint{hintsCount !== 1 ? 's' : ''}</span>
-        </>
-      )}
-
-      {findingsCount > 0 && (
-        <>
-          <span style={{ color: 'rgba(42,51,71,0.6)' }}>·</span>
-          <span style={{ color: '#484f58' }}>
-            {findingsCount} finding{findingsCount !== 1 ? 's' : ''}
-          </span>
-        </>
-      )}
+      {targetIp && <>{sep}<span style={{ color: 'var(--text-muted)' }}>{targetIp}</span></>}
+      {flagsCount > 0 && <>{sep}<span style={{ color: '#3fb950' }}>{flagsCount}f</span></>}
+      {hintsCount > 0 && <>{sep}<span style={{ color: '#d29922' }}>{hintsCount}h</span></>}
+      {findingsCount > 0 && <>{sep}<span>{findingsCount} findings</span></>}
 
       <div className="flex-1" />
 
-      <span className="font-mono tabular-nums" style={{ color: '#484f58' }}>
-        session {formatSessionActive(appElapsed)}
-      </span>
-
-      <span style={{ color: 'rgba(42,51,71,0.6)' }}>·</span>
-
-      <span className="font-mono tabular-nums" style={{ color: '#484f58' }}>{utcTime}</span>
-
-      {version && (
-        <>
-          <span style={{ color: 'rgba(42,51,71,0.6)' }}>·</span>
-          <span style={{ color: '#484f58' }}>v{version}</span>
-        </>
-      )}
+      <span>{formatSessionActive(appElapsed)}</span>
+      {sep}
+      <span>{utcTime}</span>
+      {version && <>{sep}<span>v{version}</span></>}
     </div>
   );
 }

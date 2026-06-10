@@ -39,37 +39,34 @@ function TabItem({ tab, isActive, canClose, onSelect, onClose }: {
   return (
     <motion.div
       key={tab.id}
-      initial={{ opacity: 0, x: 20 }}
+      initial={{ opacity: 0, x: 16 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -10, width: 0 }}
-      transition={{ duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
+      exit={{ opacity: 0, x: -8, width: 0 }}
+      transition={{ duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
       className="flex-shrink-0 flex items-center gap-2 px-3 cursor-pointer relative group"
       style={{
-        height: 36,
-        fontSize: '12px',
-        color: isActive ? '#b44fff' : '#8b949e',
-        background: isActive
-          ? 'linear-gradient(180deg, rgba(180,79,255,0.1) 0%, rgba(180,79,255,0.05) 100%)'
-          : 'transparent',
-        borderRight: '1px solid rgba(42, 51, 71, 0.4)',
-        borderBottom: isActive ? '2px solid #b44fff' : '2px solid transparent',
-        boxShadow: isActive ? '0 1px 0 rgba(180,79,255,0.25) inset, 0 -1px 8px rgba(180,79,255,0.08) inset' : 'none',
-        transition: 'all 0.2s cubic-bezier(0.2,0.8,0.2,1)',
+        height: 32,
+        fontSize: 'var(--type-body)',
+        color: isActive ? '#b44fff' : 'var(--text-muted)',
+        background: isActive ? 'rgba(180,79,255,0.08)' : 'transparent',
+        borderRight: '1px solid var(--border-subtle)',
+        borderBottom: isActive ? '1.5px solid #b44fff' : '1.5px solid transparent',
+        transition: 'background 0.15s var(--ease), color 0.15s var(--ease), border-color 0.15s var(--ease)',
         whiteSpace: 'nowrap',
         maxWidth: '200px',
-        minWidth: '100px',
+        minWidth: '90px',
       }}
       onClick={onSelect}
       onMouseEnter={e => {
         if (!isActive) {
-          (e.currentTarget as HTMLDivElement).style.background = 'rgba(19,21,37,0.7)';
-          (e.currentTarget as HTMLDivElement).style.color = '#c8d1da';
+          (e.currentTarget as HTMLDivElement).style.background = 'var(--surface-1)';
+          (e.currentTarget as HTMLDivElement).style.color = 'var(--text-secondary)';
         }
       }}
       onMouseLeave={e => {
         if (!isActive) {
           (e.currentTarget as HTMLDivElement).style.background = 'transparent';
-          (e.currentTarget as HTMLDivElement).style.color = '#8b949e';
+          (e.currentTarget as HTMLDivElement).style.color = 'var(--text-muted)';
         }
       }}
     >
@@ -78,7 +75,7 @@ function TabItem({ tab, isActive, canClose, onSelect, onClose }: {
           className="w-1.5 h-1.5 rounded-full flex-shrink-0"
           style={{
             background: isActive ? '#b44fff' : '#3fb950',
-            boxShadow: isActive ? '0 0 4px rgba(180, 79, 255, 0.6)' : '0 0 4px rgba(63, 185, 80, 0.4)',
+            boxShadow: running ? '0 0 4px rgba(63,185,80,0.5)' : 'none',
           }}
         />
       )}
@@ -86,7 +83,10 @@ function TabItem({ tab, isActive, canClose, onSelect, onClose }: {
       <span className="truncate" style={{ maxWidth: 110 }}>{label}</span>
 
       {timerDisplay && (
-        <span className="font-mono text-[10px] flex-shrink-0" style={{ color: isActive ? '#b44fff' : '#4a5568', opacity: 0.7 }}>
+        <span
+          className="font-mono tabular-nums flex-shrink-0"
+          style={{ fontSize: 'var(--type-caption)', color: isActive ? '#b44fff' : 'var(--text-muted)', opacity: 0.75 }}
+        >
           {timerDisplay}
         </span>
       )}
@@ -97,15 +97,22 @@ function TabItem({ tab, isActive, canClose, onSelect, onClose }: {
           style={{
             background: 'transparent',
             border: 'none',
-            color: 'rgba(139, 148, 158, 0.5)',
+            color: 'var(--text-muted)',
             padding: 0,
-            fontSize: '14px',
+            fontSize: '13px',
             lineHeight: 1,
             marginLeft: 'auto',
+            opacity: 0.5,
           }}
           onClick={e => { e.stopPropagation(); onClose(); }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#f85149'; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(139, 148, 158, 0.5)'; }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLButtonElement).style.color = '#f85149';
+            (e.currentTarget as HTMLButtonElement).style.opacity = '1';
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
+            (e.currentTarget as HTMLButtonElement).style.opacity = '0.5';
+          }}
         >
           ×
         </button>
@@ -128,9 +135,9 @@ export default function TabBar() {
       <div
         className="flex items-center overflow-x-auto shrink-0"
         style={{
-          minHeight: 36,
-          background: 'rgba(10, 10, 15, 0.9)',
-          borderBottom: '1px solid rgba(42, 51, 71, 0.5)',
+          minHeight: 32,
+          background: 'var(--surface-0)',
+          borderBottom: '1px solid var(--border-subtle)',
         }}
       >
         <AnimatePresence mode="popLayout">
@@ -148,23 +155,23 @@ export default function TabBar() {
 
         {tabs.length < MAX_TABS && (
           <button
-            className="flex-shrink-0 w-9 h-full flex items-center justify-center"
+            className="flex-shrink-0 w-8 h-full flex items-center justify-center"
             style={{
               background: 'transparent',
               border: 'none',
-              color: '#4a5568',
-              fontSize: '18px',
+              color: 'var(--text-muted)',
+              fontSize: '16px',
               lineHeight: 1,
-              transition: 'color 0.2s cubic-bezier(0.2,0.8,0.2,1), transform 0.2s cubic-bezier(0.2,0.8,0.2,1)',
+              transition: 'color var(--motion-fast) var(--ease), transform var(--motion-fast) var(--spring)',
             }}
             onMouseEnter={e => {
               const el = e.currentTarget as HTMLButtonElement;
               el.style.color = '#b44fff';
-              el.style.transform = 'rotate(90deg) scale(1.15)';
+              el.style.transform = 'rotate(90deg) scale(1.1)';
             }}
             onMouseLeave={e => {
               const el = e.currentTarget as HTMLButtonElement;
-              el.style.color = '#4a5568';
+              el.style.color = 'var(--text-muted)';
               el.style.transform = 'rotate(0deg) scale(1)';
             }}
             onClick={handleAdd}

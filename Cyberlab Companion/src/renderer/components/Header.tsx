@@ -74,62 +74,78 @@ export default function Header({ onHelp }: HeaderProps) {
 
   return (
     <div
-      className="h-10 flex items-center px-4 drag-region shrink-0 relative"
+      className="h-9 flex items-center px-3 drag-region shrink-0 relative"
       style={{
-        background: 'rgba(7,8,15,0.98)',
-        borderBottom: '1px solid rgba(255,255,255,0.04)',
+        background: 'var(--surface-0)',
+        borderBottom: '1px solid var(--border-subtle)',
       }}
     >
-      {/* Animated shimmer accent underline */}
-      <div
-        className="absolute bottom-0 left-0 right-0 h-px pointer-events-none"
-        style={{
-          background: 'linear-gradient(90deg, transparent 0%, rgba(180,79,255,0.0) 10%, rgba(180,79,255,0.35) 30%, rgba(203,128,255,0.55) 50%, rgba(180,79,255,0.35) 70%, rgba(180,79,255,0.0) 90%, transparent 100%)',
-          backgroundSize: '200% 100%',
-          animation: 'shimmer 4s ease-in-out infinite',
-        }}
-      />
-
       {/* macOS traffic light spacer — hidden on Linux/Windows */}
       {isMac && <div className="w-[70px] no-drag" />}
 
-      {/* App identity */}
-      <div className="flex items-center gap-2 no-drag">
-        <div style={{ filter: 'drop-shadow(0 0 5px rgba(180,79,255,0.45))' }}>
-          <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-            <path d="M8 1.5L13.5 4.75V11.25L8 14.5L2.5 11.25V4.75L8 1.5Z" stroke="#b44fff" strokeWidth="1.5" fill="none" />
-            <circle cx="8" cy="8" r="2" fill="#b44fff" />
+      {/* App identity — wordmark, not a badge stack */}
+      <div className="flex items-center gap-2.5 no-drag">
+        {/* Hex lockup icon */}
+        <div style={{ flexShrink: 0, opacity: 0.9 }}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path
+              d="M8 1.5L13.5 4.75V11.25L8 14.5L2.5 11.25V4.75L8 1.5Z"
+              stroke="#b44fff"
+              strokeWidth="1.25"
+              fill="rgba(180,79,255,0.08)"
+            />
+            <circle cx="8" cy="8" r="1.5" fill="#b44fff" />
           </svg>
         </div>
-        <span
-          className="text-[13px] font-semibold tracking-wide"
-          style={{ color: '#8b949e' }}
-        >
-          CyberLab
-        </span>
-        <span
-          className="text-[10px] font-mono px-1.5 py-0.5 rounded"
-          style={{
-            background: 'rgba(180,79,255,0.08)',
-            border: '1px solid rgba(180,79,255,0.18)',
-            color: '#b44fff',
-          }}
-        >
-          Companion
-        </span>
+        {/* Wordmark */}
+        <div className="flex items-baseline gap-1.5">
+          <span
+            style={{
+              fontSize: '13px',
+              fontWeight: 600,
+              letterSpacing: '0.01em',
+              color: 'var(--text-primary)',
+              lineHeight: 1,
+            }}
+          >
+            CyberLab
+          </span>
+          <span
+            style={{
+              fontSize: 'var(--type-caption)',
+              fontWeight: 500,
+              color: 'var(--text-muted)',
+              letterSpacing: '0.04em',
+              lineHeight: 1,
+            }}
+          >
+            Companion
+          </span>
+        </div>
+        {/* Active session name — separator + lab name */}
         {hasSession && (
-          <>
-            <span style={{ color: 'rgba(42,51,71,0.8)', fontSize: 12 }}>—</span>
-            <span className="text-xs font-medium" style={{ color: '#b44fff' }}>
+          <div className="flex items-center gap-1.5">
+            <span style={{ color: 'var(--border-default)', fontSize: 10 }}>╱</span>
+            <span
+              style={{
+                fontSize: 'var(--type-body)',
+                fontWeight: 500,
+                color: '#b44fff',
+                maxWidth: '180px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
               {session.labName}
             </span>
-          </>
+          </div>
         )}
       </div>
 
       <div className="flex-1" />
 
-      {/* Session HUD strip */}
+      {/* Session HUD strip — structured metric row */}
       {hasSession && (() => {
         const totalFlags = (session.findings?.flags?.length ?? 0) + (session.ctfFlags?.length ?? 0);
         const totalPts = (session.ctfFlags ?? []).reduce((s, f) => s + (f.points ?? 0), 0);
@@ -137,26 +153,33 @@ export default function Header({ onHelp }: HeaderProps) {
         const flagRate = elapsedHrs > 0 ? (totalFlags / elapsedHrs).toFixed(1) : '—';
         return (
           <div
-            className="flex items-center gap-3 px-3 py-1 rounded-md mr-2"
-            style={{ background: 'rgba(180,79,255,0.06)', border: '1px solid rgba(180,79,255,0.12)' }}
+            className="flex items-center gap-2 mr-2"
+            style={{ borderLeft: '1px solid var(--border-subtle)', paddingLeft: '10px' }}
           >
-            <span className="text-[10px] font-mono tabular-nums" style={{ color: '#3fb950' }}>
+            <span
+              className="font-mono tabular-nums"
+              style={{ fontSize: 'var(--type-caption)', color: '#3fb950', fontWeight: 500 }}
+            >
               {totalFlags} flags
             </span>
             {totalPts > 0 && (
-              <span className="text-[10px] font-mono tabular-nums" style={{ color: '#b44fff' }}>
-                {totalPts} pts
-              </span>
+              <>
+                <span style={{ color: 'var(--border-subtle)', fontSize: 9 }}>·</span>
+                <span className="font-mono tabular-nums" style={{ fontSize: 'var(--type-caption)', color: '#b44fff' }}>
+                  {totalPts} pts
+                </span>
+              </>
             )}
-            <span className="text-[10px] font-mono tabular-nums" style={{ color: '#484f58' }}>
+            <span style={{ color: 'var(--border-subtle)', fontSize: 9 }}>·</span>
+            <span className="font-mono tabular-nums" style={{ fontSize: 'var(--type-caption)', color: 'var(--text-muted)' }}>
               {flagRate}/hr
             </span>
             {timeInLab && (
               <>
-                <span style={{ color: 'rgba(42,51,71,0.6)', fontSize: 9 }}>|</span>
+                <span style={{ color: 'var(--border-subtle)', fontSize: 9 }}>·</span>
                 <span
-                  className="flex items-center gap-1 text-[10px] font-mono tabular-nums"
-                  style={{ color: '#8b949e' }}
+                  className="flex items-center gap-1 font-mono tabular-nums"
+                  style={{ fontSize: 'var(--type-caption)', color: 'var(--text-secondary)' }}
                   title="Time elapsed since lab start"
                 >
                   <svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -175,21 +198,21 @@ export default function Header({ onHelp }: HeaderProps) {
       <div className="flex items-center gap-1 no-drag">
         {/* VPN indicator */}
         <div
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs"
+          className="flex items-center gap-1.5 px-2 py-1 rounded"
           style={{
-            background: vpnOnline ? 'rgba(63,185,80,0.06)' : 'rgba(42,51,71,0.12)',
-            border: `1px solid ${vpnOnline ? 'rgba(63,185,80,0.2)' : 'rgba(42,51,71,0.3)'}`,
-            transition: 'all 0.3s cubic-bezier(0.2,0.8,0.2,1)',
+            background: vpnOnline ? 'rgba(63,185,80,0.06)' : 'transparent',
+            border: `1px solid ${vpnOnline ? 'rgba(63,185,80,0.18)' : 'var(--border-subtle)'}`,
+            transition: 'border-color 0.3s var(--ease), background 0.3s var(--ease)',
           }}
         >
           <span
-            className="w-1.5 h-1.5 rounded-full"
+            className="w-1.5 h-1.5 rounded-full flex-shrink-0"
             style={{
               background: vpnColor,
               boxShadow: vpnOnline ? `0 0 4px ${vpnColor}88` : 'none',
             }}
           />
-          <span style={{ color: vpnColor, fontSize: '11px' }}>
+          <span style={{ color: vpnColor, fontSize: 'var(--type-caption)', fontWeight: 500 }}>
             {vpnOnline ? 'VPN' : vpnOff ? 'No VPN' : 'VPN?'}
           </span>
           {vpnOnline && vpnStatus.ip && (
@@ -197,8 +220,8 @@ export default function Header({ onHelp }: HeaderProps) {
               className="font-mono"
               style={{
                 color: '#3fb950',
-                fontSize: '10px',
-                borderLeft: '1px solid rgba(63,185,80,0.3)',
+                fontSize: 'var(--type-caption)',
+                borderLeft: '1px solid rgba(63,185,80,0.25)',
                 marginLeft: '2px',
                 paddingLeft: '4px',
               }}
@@ -307,30 +330,18 @@ export default function Header({ onHelp }: HeaderProps) {
           </svg>
         </button>
 
-        {/* CYBERTOOLS badge */}
-        <span
-          className="flex items-center gap-1 text-[9px] font-semibold tracking-widest uppercase px-2 py-0.5 rounded-full"
-          style={{ background: 'rgba(180,79,255,0.06)', color: '#484f58', border: '1px solid rgba(180,79,255,0.1)' }}
-        >
-          <span>⬡</span>
-          <span>CYBERTOOLS</span>
-        </span>
-
         {/* Help button */}
         {onHelp && (
           <button
             onClick={onHelp}
-            className="w-8 h-8 flex items-center justify-center rounded-md no-drag transition-colors"
-            style={{ background: 'transparent', border: '1px solid rgba(42,51,71,0.5)', color: '#484f58', fontSize: 12, fontWeight: 700 }}
-            onMouseEnter={e => {
-              const el = e.currentTarget;
-              el.style.borderColor = 'rgba(180,79,255,0.5)';
-              el.style.color = '#b44fff';
-            }}
-            onMouseLeave={e => {
-              const el = e.currentTarget;
-              el.style.borderColor = 'rgba(42,51,71,0.5)';
-              el.style.color = '#484f58';
+            className="w-7 h-7 flex items-center justify-center rounded no-drag"
+            style={{
+              background: 'transparent',
+              border: '1px solid var(--border-subtle)',
+              color: 'var(--text-muted)',
+              fontSize: 11,
+              fontWeight: 600,
+              fontFamily: 'var(--font-display)',
             }}
             title="Help & onboarding"
           >
