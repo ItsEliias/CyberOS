@@ -208,9 +208,17 @@ export default function VaultHealthView() {
                   </Section>
                 )}
                 {!vaultStats && (
-                  <div className="flex flex-col items-center py-20 text-center">
-                    <div className="text-3xl mb-3">🏥</div>
-                    <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Click "Refresh Stats" to load vault health data</div>
+                  <div className="empty-state">
+                    <div className="empty-glyph">
+                      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"
+                        stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="2" y="8" width="18" height="12" rx="1.5" />
+                        <path d="M7 8V5.5a4 4 0 0 1 8 0V8" />
+                        <circle cx="11" cy="14" r="1.5" fill="currentColor" stroke="none" />
+                      </svg>
+                    </div>
+                    <p className="empty-title">No vault stats</p>
+                    <p className="empty-sub">Click "Refresh Stats" to load vault health data</p>
                   </div>
                 )}
               </div>
@@ -372,12 +380,53 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+// Domain-specific glyph map for vault empty states
+const GLYPHS: Record<string, React.ReactNode> = {
+  default: (
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"
+      stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="8" width="18" height="12" rx="1.5" />
+      <path d="M7 8V5.5a4 4 0 0 1 8 0V8" />
+      <circle cx="11" cy="14" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  ),
+  check: (
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"
+      stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="9" />
+      <path d="M7 11l3 3 5-5" />
+    </svg>
+  ),
+  link: (
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"
+      stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 12a5 5 0 0 1 7 0l1 1a5 5 0 0 1-7 7l-1-1" />
+      <path d="M12 10a5 5 0 0 1-7 0L4 9a5 5 0 0 1 7-7l1 1" />
+    </svg>
+  ),
+  source: (
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"
+      stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 19a9.7 9.7 0 0 1 9.7-9.7" />
+      <path d="M3 14a4.7 4.7 0 0 1 4.7-4.7" />
+      <circle cx="3" cy="19" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  ),
+};
+
+const ICON_MAP: Record<string, keyof typeof GLYPHS> = {
+  '✅': 'check',
+  '🔗': 'link',
+  '📡': 'source',
+};
+
 function EmptyState({ icon, title, subtitle }: { icon: string; title: string; subtitle: string }) {
+  const glyphKey = ICON_MAP[icon] ?? 'default';
   return (
-    <div className="flex flex-col items-center py-16 text-center">
-      <div className="text-3xl mb-3">{icon}</div>
-      <div className="text-sm font-medium" style={{ color: 'var(--text)' }}>{title}</div>
-      <div className="text-xs mt-1" style={{ color: 'var(--text-dim)' }}>{subtitle}</div>
+    <div className="empty-state">
+      <div className="empty-glyph">{GLYPHS[glyphKey]}</div>
+      <p className="empty-title">{title}</p>
+      <p className="empty-sub">{subtitle}</p>
     </div>
   );
 }

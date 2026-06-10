@@ -34,54 +34,60 @@ export default function Header({ onHelp }: HeaderProps) {
 
   return (
     <header
-      className="flex items-center gap-3 px-4 shrink-0 h-11 drag-region relative"
+      className="flex items-center gap-3 px-4 shrink-0 drag-region"
       style={{
-        background: 'rgba(7, 8, 15, 0.98)',
-        borderBottom: '1px solid rgba(255,255,255,0.04)',
+        height: 44,
+        background: 'var(--surface-0)',
+        borderBottom: '1px solid var(--border-subtle)',
       }}
     >
-      {/* Accent underline */}
-      <div
-        className="absolute bottom-0 left-0 right-0 h-px pointer-events-none"
-        style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(63,185,80,0.18) 35%, rgba(63,185,80,0.18) 65%, transparent 100%)' }}
-      />
-
       {/* macOS traffic-light spacer — hidden on Linux/Windows */}
       {isMac && <div className="w-[70px] no-drag" />}
 
-      {/* Brand */}
+      {/* App identity lockup: vault glyph + name + subname */}
       <div className="flex items-center gap-2 shrink-0 no-drag">
-        <div style={{ filter: 'drop-shadow(0 0 5px rgba(63,185,80,0.45))' }}>
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ color: '#3fb950' }}>
-            <path d="M8 1L14.5 4.75V11.25L8 15L1.5 11.25V4.75L8 1Z" stroke="currentColor" strokeWidth="1.5" fill="none" />
-            <circle cx="8" cy="8" r="2" fill="currentColor" />
-          </svg>
-        </div>
-        <span
-          className="text-[10px] font-mono px-1.5 py-0.5 rounded"
-          style={{
-            background: 'rgba(63,185,80,0.08)',
-            border: '1px solid rgba(63,185,80,0.18)',
-            color: '#3fb950',
-            letterSpacing: '0.08em',
-          }}
+        {/* Vault/key glyph — 13×13px stroke SVG */}
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true"
+          stroke="var(--accent)" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
+          style={{ opacity: 0.85 }}
         >
-          VAULTCORE
-        </span>
+          <rect x="2.5" y="6" width="10" height="7.5" rx="1" />
+          <path d="M5 6V4.5a2.5 2.5 0 0 1 5 0V6" />
+          <circle cx="7.5" cy="9.5" r="1" fill="var(--accent)" stroke="none" />
+        </svg>
+        <div className="flex items-baseline gap-1.5 leading-none">
+          <span style={{
+            fontSize: 'var(--type-body-md)',
+            fontWeight: 600,
+            color: 'var(--text-primary)',
+            letterSpacing: '0.01em',
+          }}>
+            VaultCore
+          </span>
+          <span style={{
+            fontSize: 'var(--type-caption)',
+            color: 'var(--text-muted)',
+          }}>
+            ╱ vault scraper
+          </span>
+        </div>
       </div>
 
-      {/* Vault path */}
+      {/* Vault path — flat, muted, truncated */}
       <div className="flex-1 min-w-0 hidden md:block no-drag">
-        <span className="text-[10px] font-mono truncate" style={{ color: 'var(--text-dim)' }}>
-          {vaultPath ?? 'No vault configured'}
+        <span
+          className="font-mono truncate"
+          style={{ fontSize: 'var(--type-caption)', color: 'var(--text-muted)' }}
+        >
+          {vaultPath ? `· ${vaultPath.split('/').slice(-2).join('/')}` : '· no vault configured'}
         </span>
       </div>
 
-      {/* Scraping status */}
+      {/* Scraping status — flat chip */}
       {isScraping && (
         <div className="flex items-center gap-1.5 shrink-0 no-drag">
-          <LiveDot status="online" size={6} />
-          <span className="text-[11px] font-mono" style={{ color: '#3fb950' }}>
+          <LiveDot status="online" size={5} />
+          <span className="font-mono" style={{ fontSize: 'var(--type-caption)', color: 'var(--accent)' }}>
             {progress ? `${progress.percent}%` : 'Scraping…'}
           </span>
         </div>
@@ -89,41 +95,56 @@ export default function Header({ onHelp }: HeaderProps) {
 
       {/* Update badge */}
       {updateInfo?.hasUpdate && (
-        <div className="text-[10px] px-2 py-0.5 rounded shrink-0 no-drag"
-          style={{ background: 'rgba(63,185,80,0.12)', color: 'var(--accent)', border: '1px solid rgba(63,185,80,0.25)' }}>
+        <div
+          className="shrink-0 no-drag"
+          style={{
+            fontSize: 'var(--type-caption)',
+            padding: '1px 7px',
+            borderRadius: 3,
+            background: 'var(--accent-tint)',
+            color: 'var(--accent)',
+            border: '1px solid var(--accent-border)',
+          }}
+        >
           v{updateInfo.version}
         </div>
       )}
 
-      {/* Theme pickers */}
+      {/* Theme pickers — compact, token-driven */}
       <div className="flex items-center gap-1 shrink-0 no-drag">
         {CORES.map(c => (
           <button key={c}
             onClick={() => changeCore(c)}
             title={c}
-            className="text-[9px] px-1.5 py-0.5 rounded capitalize border"
             style={{
-              background   : theme.core === c ? 'rgba(63,185,80,0.15)' : 'transparent',
-              borderColor  : theme.core === c ? 'rgba(63,185,80,0.4)' : 'rgba(42,51,71,0.6)',
-              color        : theme.core === c ? '#3fb950' : 'var(--text-dim)',
+              fontSize: 'var(--type-caption)',
+              padding: '1px 6px',
+              borderRadius: 3,
+              textTransform: 'capitalize',
+              background  : theme.core === c ? 'var(--accent-tint)' : 'transparent',
+              border      : `1px solid ${theme.core === c ? 'var(--accent-border)' : 'var(--border-subtle)'}`,
+              color       : theme.core === c ? 'var(--accent)' : 'var(--text-muted)',
             }}>
             {c}
           </button>
         ))}
       </div>
 
-      <div className="w-px h-4 shrink-0" style={{ background: 'rgba(42,51,71,0.6)' }} />
+      <div className="w-px h-4 shrink-0" style={{ background: 'var(--border-subtle)' }} />
 
       <div className="flex items-center gap-1 shrink-0 no-drag">
         {PERSONALITIES.map(p => (
           <button key={p}
             onClick={() => changePersonality(p)}
             title={p}
-            className="text-[9px] px-1.5 py-0.5 rounded capitalize border"
             style={{
-              background   : theme.personality === p ? 'rgba(63,185,80,0.15)' : 'transparent',
-              borderColor  : theme.personality === p ? 'rgba(63,185,80,0.4)' : 'rgba(42,51,71,0.6)',
-              color        : theme.personality === p ? '#3fb950' : 'var(--text-dim)',
+              fontSize: 'var(--type-caption)',
+              padding: '1px 6px',
+              borderRadius: 3,
+              textTransform: 'capitalize',
+              background  : theme.personality === p ? 'var(--accent-tint)' : 'transparent',
+              border      : `1px solid ${theme.personality === p ? 'var(--accent-border)' : 'var(--border-subtle)'}`,
+              color       : theme.personality === p ? 'var(--accent)' : 'var(--text-muted)',
             }}>
             {p}
           </button>
@@ -135,10 +156,12 @@ export default function Header({ onHelp }: HeaderProps) {
         <button
           onClick={onHelp}
           title="Help & onboarding"
-          className="w-6 h-6 rounded border flex items-center justify-center text-xs font-bold shrink-0 no-drag"
-          style={{ borderColor: 'rgba(42,51,71,0.6)', color: 'var(--text-dim)' }}
-          onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = 'rgba(63,185,80,0.4)'; el.style.color = '#3fb950'; }}
-          onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = 'rgba(42,51,71,0.6)'; el.style.color = 'var(--text-dim)'; }}
+          className="w-6 h-6 rounded flex items-center justify-center font-bold shrink-0 no-drag"
+          style={{
+            fontSize: 'var(--type-label)',
+            border: '1px solid var(--border-subtle)',
+            color: 'var(--text-muted)',
+          }}
         >
           ?
         </button>

@@ -40,34 +40,47 @@ export default function Footer() {
     <footer
       className="flex items-center justify-between px-4 shrink-0 h-7"
       style={{
-        background: 'rgba(7, 8, 15, 0.96)',
-        borderTop: '1px solid rgba(255,255,255,0.04)',
+        background: 'var(--surface-0)',
+        borderTop: '1px solid var(--border-subtle)',
       }}
     >
-      <span className="text-[10px] font-mono" style={{ color: 'var(--text-dim)' }}>
-        ItsEliias // VaultCore{version ? ` v${version}` : ''}
+      {/* Left: brand */}
+      <span className="font-mono status-metric">
+        VaultCore{version ? ` v${version}` : ''}
       </span>
 
-      <div className="flex items-center gap-3">
-        <span className="text-[10px] font-mono countdown-timer" style={{ color: 'var(--text-dim)' }}>
-          next in <span style={{ color: 'rgba(63,185,80,0.7)' }}>{countdown}</span>
+      {/* Right: flat metric strip separated by · */}
+      <div className="flex items-center">
+        {vaultStats && vaultStats.noteCount != null && (
+          <>
+            <span className="font-mono status-metric tabular-nums">
+              <strong>{vaultStats.noteCount.toLocaleString()}</strong> notes
+            </span>
+            <span className="status-sep" aria-hidden>·</span>
+          </>
+        )}
+        <span className="font-mono status-metric countdown-timer">
+          next <strong style={{ color: 'var(--accent)', opacity: 0.7 }}>{countdown}</strong>
         </span>
         {expiringSoon > 0 && (
-          <span
-            className="text-[10px] px-1.5 py-0.5 rounded border"
-            style={{ background: 'rgba(248,81,73,0.10)', borderColor: 'rgba(248,81,73,0.25)', color: '#f85149' }}
-          >
-            {expiringSoon} expiring
-          </span>
+          <>
+            <span className="status-sep" aria-hidden>·</span>
+            <span style={{
+              fontSize: 'var(--type-caption)',
+              padding: '0 5px',
+              borderRadius: 3,
+              background: 'rgba(248,81,73,0.10)',
+              border: '1px solid rgba(248,81,73,0.20)',
+              color: '#f85149',
+            }}>
+              {expiringSoon} expiring
+            </span>
+          </>
         )}
-        {vaultStats && vaultStats.noteCount != null && (
-          <span className="text-[10px] font-mono tabular-nums" style={{ color: 'var(--text-dim)' }}>
-            {vaultStats.noteCount.toLocaleString()} notes
-          </span>
-        )}
+        <span className="status-sep" aria-hidden>·</span>
         <div className="flex items-center gap-1.5">
-          <LiveDot status={dotStatus} size={5} />
-          <span className="text-[10px] font-mono" style={{ color: textColor }}>
+          <LiveDot status={dotStatus} size={4} />
+          <span className="font-mono status-metric" style={{ color: textColor }}>
             {text}
           </span>
         </div>
