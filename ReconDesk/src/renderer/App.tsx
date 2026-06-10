@@ -258,32 +258,31 @@ function EmptyState() {
   return (
     <div className="flex-1 flex items-center justify-center">
       <motion.div
-        className="text-center"
-        initial={{ opacity: 0, y: 12 }}
+        className="empty-state content-stream-in"
+        initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
+        transition={{ duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
       >
-        {/* Illustrated icon with layered glow rings */}
-        <div className="relative inline-flex items-center justify-center mb-6">
-          <div className="absolute w-24 h-24 rounded-full" style={{ background: 'radial-gradient(circle, rgba(210,153,34,0.08) 0%, transparent 70%)' }} />
-          <motion.div
-            animate={{ scale: [1, 1.05, 1] }}
-            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ filter: 'drop-shadow(0 0 16px rgba(210,153,34,0.35))' }}
-          >
-            <svg width="52" height="52" viewBox="0 0 24 24" fill="none" style={{ color: '#d29922', opacity: 0.55 }}>
-              <path d="M12 2L20.5 7V17L12 22L3.5 17V7L12 2Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
-              <circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.6" />
-              <circle cx="12" cy="12" r="1.2" fill="currentColor" />
-              <path d="M12 9V7M12 17v-2M7 12H5M19 12h-2" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity="0.4" />
-            </svg>
-          </motion.div>
+        <div className="empty-glyph">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <circle cx="12" cy="12" r="4.5" />
+            <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+            <line x1="12" y1="1" x2="12" y2="5" />
+            <line x1="12" y1="19" x2="12" y2="23" />
+            <line x1="1" y1="12" x2="5" y2="12" />
+            <line x1="19" y1="12" x2="23" y2="12" />
+          </svg>
         </div>
-
-        <p className="text-sm font-semibold mb-1.5" style={{ color: '#e6edf3' }}>No target selected</p>
-        <p className="text-xs mb-1" style={{ color: '#8b949e' }}>Select a target from the sidebar to begin</p>
-        <p className="text-xs" style={{ color: '#484f58' }}>
-          Press <kbd className="px-1 py-0.5 rounded text-[10px] font-mono" style={{ background: 'rgba(42,51,71,0.5)', border: '1px solid rgba(42,51,71,0.8)', color: '#8b949e' }}>+</kbd> to add your first target
+        <p className="empty-title">No target selected</p>
+        <p className="empty-sub">
+          Select a target from the sidebar to begin, or press{' '}
+          <kbd className="px-1 py-0.5 rounded font-mono"
+            style={{ fontSize: 'var(--type-caption, 10px)', background: 'rgba(42,51,71,0.5)', border: '1px solid rgba(42,51,71,0.8)', color: 'var(--text-secondary, #8b949e)' }}>
+            +
+          </kbd>
+          {' '}to add your first target
         </p>
       </motion.div>
     </div>

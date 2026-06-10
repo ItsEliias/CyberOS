@@ -27,46 +27,46 @@ export default function StatusBar() {
 
   return (
     <footer
-      className="h-6 flex items-center px-4 flex-shrink-0 text-[11px]"
-      style={{ background: 'rgba(7,8,15,0.98)', borderTop: '1px solid rgba(255,255,255,0.04)' }}
+      className="h-6 flex items-center px-4 flex-shrink-0"
+      style={{
+        background: 'var(--surface-0, #07080f)',
+        borderTop: '1px solid var(--border-subtle, rgba(42,51,71,0.35))',
+      }}
     >
-      {/* Brand + version */}
-      <div className="flex items-center gap-1.5">
+      {/* Brand */}
+      <span className="status-metric">
         <span
-          className="w-1.5 h-1.5 rounded-full"
-          style={{ backgroundColor: activeCount > 0 ? '#d29922' : '#484f58' }}
+          className="inline-block w-1.5 h-1.5 rounded-full mr-1.5 align-middle"
+          style={{ backgroundColor: activeCount > 0 ? '#d29922' : 'var(--text-muted, #484f58)' }}
         />
-        <span style={{ color: '#484f58' }}>ItsEliias // ReconDesk</span>
-        <span
-          className="font-mono px-1 py-0 rounded text-[10px]"
-          style={{ background: 'rgba(210,153,34,0.06)', color: 'rgba(210,153,34,0.6)', border: '1px solid rgba(210,153,34,0.12)' }}
-        >
-          v{version}
-        </span>
-      </div>
+        ItsEliias ╱ ReconDesk
+      </span>
 
-      <span className="mx-2.5" style={{ color: 'rgba(72,79,88,0.3)' }}>|</span>
+      <span className="status-sep mx-2">·</span>
 
-      {/* Stats */}
-      <div className="flex items-center gap-3">
-        <span style={{ color: '#484f58' }}>
-          <span style={{ color: '#e6edf3' }}>{activeCount}</span> active
+      {/* Flat metric strip */}
+      <div className="flex items-center gap-0">
+        <span className="status-metric">
+          <span style={{ color: 'var(--text-primary, #e6edf3)' }}>{activeCount}</span> active
         </span>
-        <span style={{ color: '#484f58' }}>
-          <span style={{ color: '#e6edf3' }}>{totalPorts}</span> ports
+        <span className="status-sep mx-2">·</span>
+        <span className="status-metric">
+          <span style={{ color: 'var(--text-primary, #e6edf3)' }}>{totalPorts}</span> ports
         </span>
-        <span style={{ color: '#484f58' }}>
-          <span style={{ color: '#e6edf3' }}>{totalCreds}</span> creds
+        <span className="status-sep mx-2">·</span>
+        <span className="status-metric">
+          <span style={{ color: 'var(--text-primary, #e6edf3)' }}>{totalCreds}</span> creds
         </span>
-        <span style={{ color: '#484f58' }}>
-          <span style={{ color: '#e6edf3' }}>{totalDoneCards}</span> done
+        <span className="status-sep mx-2">·</span>
+        <span className="status-metric">
+          <span style={{ color: 'var(--text-primary, #e6edf3)' }}>{totalDoneCards}</span> done
         </span>
       </div>
 
       <div className="flex-1" />
 
       {/* UTC clock */}
-      <span className="font-mono tabular-nums" style={{ color: '#484f58' }}>{utcTime}</span>
+      <span className="status-metric font-mono tabular-nums">{utcTime}</span>
     </footer>
   )
 }

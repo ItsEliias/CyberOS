@@ -25,51 +25,40 @@ export default function TitleBar({ onHelp }: TitleBarProps) {
   return (
     <>
       <header
-        className="drag-region h-11 flex items-center justify-between px-5 flex-shrink-0 relative"
+        className="drag-region flex items-center justify-between px-4 flex-shrink-0"
         style={{
-          background: 'rgba(7, 8, 15, 0.98)',
-          borderBottom: '1px solid rgba(255,255,255,0.04)',
+          height: 44,
+          background: 'var(--surface-0, #07080f)',
+          borderBottom: '1px solid var(--border-subtle, rgba(42,51,71,0.35))',
         }}
       >
-        {/* Amber accent underline */}
-        <div
-          className="absolute bottom-0 left-0 right-0 h-px pointer-events-none"
-          style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(210,153,34,0.18) 35%, rgba(210,153,34,0.18) 65%, transparent 100%)' }}
-        />
-
-        {/* Left: macOS traffic-light spacer (hidden off-mac) + brand */}
-        <div className="flex items-center gap-2.5 no-drag">
+        {/* Left: macOS traffic-light spacer (hidden off-mac) + brand identity */}
+        <div className="flex items-center gap-2 no-drag">
           {isMac && <div className="w-[72px]" />}
-          <div style={{ filter: 'drop-shadow(0 0 5px rgba(210,153,34,0.5))' }}>
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ color: '#d29922' }}>
-              <path d="M8 1L14.5 4.75V11.25L8 15L1.5 11.25V4.75L8 1Z" stroke="currentColor" strokeWidth="1.5" fill="none" />
-              <circle cx="8" cy="8" r="2" fill="currentColor" />
+          {/* Target/crosshair glyph */}
+          <div style={{ color: '#d29922', opacity: 0.9 }}>
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none"
+              stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="7.5" cy="7.5" r="5.5" />
+              <circle cx="7.5" cy="7.5" r="2" />
+              <line x1="7.5" y1="1" x2="7.5" y2="3" />
+              <line x1="7.5" y1="12" x2="7.5" y2="14" />
+              <line x1="1" y1="7.5" x2="3" y2="7.5" />
+              <line x1="12" y1="7.5" x2="14" y2="7.5" />
             </svg>
           </div>
-          <span className="text-[13px] font-semibold tracking-wide" style={{ color: '#e6edf3' }}>ReconDesk</span>
           <span
-            className="text-[10px] font-mono px-1.5 py-0.5 rounded"
-            style={{
-              background: 'rgba(210,153,34,0.08)',
-              border: '1px solid rgba(210,153,34,0.20)',
-              color: '#d29922',
-            }}
+            className="font-semibold"
+            style={{ fontSize: 'var(--type-body-md, 14px)', color: 'var(--text-primary, #e6edf3)' }}
           >
-            ItsEliias
+            ReconDesk
           </span>
+          <span style={{ color: 'var(--text-muted, #8b949e)', fontSize: 'var(--type-caption, 10px)' }}>╱</span>
+          <span style={{ fontSize: 'var(--type-caption, 10px)', color: 'var(--text-muted, #8b949e)' }}>recon</span>
         </div>
 
         {/* Right: actions */}
         <div className="flex items-center gap-1 no-drag">
-          {/* CYBERTOOLS badge */}
-          <span
-            className="flex items-center gap-1 text-[9px] font-semibold tracking-widest uppercase px-2 py-0.5 rounded-full mr-1"
-            style={{ background: 'rgba(210,153,34,0.06)', color: '#484f58', border: '1px solid rgba(210,153,34,0.10)' }}
-          >
-            <span>⬡</span>
-            <span>CYBERTOOLS</span>
-          </span>
-
           {settings.showLabContextInHeader && active && (
             <div
               className="flex items-center gap-2 px-2 py-1 rounded-md mr-1"
