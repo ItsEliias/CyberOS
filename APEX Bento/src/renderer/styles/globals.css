@@ -1,0 +1,104 @@
+@import '../../../../design-system/tokens.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── APEX Bento accent — amber/gold (finance/analytical) ────────────────── */
+:root {
+  --accent:        #d29922;
+  --accent-rgb:    210, 153, 34;
+  --accent-tint:   rgba(210, 153, 34, 0.08);
+  --accent-tint2:  rgba(210, 153, 34, 0.15);
+  --accent-tint3:  rgba(210, 153, 34, 0.22);
+  --accent-glow:   rgba(210, 153, 34, 0.28);
+  --accent-glow2:  rgba(210, 153, 34, 0.12);
+  --accent-dim:    rgba(210, 153, 34, 0.55);
+  --accent-border: rgba(210, 153, 34, 0.30);
+
+  /* shadcn var bridge */
+  --background:    var(--surface-0);
+  --foreground:    var(--text-primary);
+  --card:          var(--surface-1);
+  --card-foreground: var(--text-primary);
+  --popover:       var(--surface-3);
+  --popover-foreground: var(--text-primary);
+  --primary:       var(--accent);
+  --primary-foreground: var(--text-inverse);
+  --secondary:     var(--surface-2);
+  --secondary-foreground: var(--text-primary);
+  --muted:         var(--surface-2);
+  --muted-foreground: var(--text-secondary);
+  --border:        var(--border-default);
+  --input:         var(--surface-2);
+  --ring:          var(--accent-border);
+  --radius:        var(--radius-md);
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+  background: var(--surface-0);
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Bento grid layout ──────────────────────────────────────────────────── */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: auto auto;
+  gap: 12px;
+}
+
+/* ── Bento card base ────────────────────────────────────────────────────── */
+.bento-card {
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-1);
+  padding: 16px;
+  transition: border-color var(--motion-fast) var(--ease),
+              box-shadow var(--motion-fast) var(--ease);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.bento-card:hover {
+  border-color: var(--accent-border);
+  box-shadow: var(--elevation-2), 0 0 0 1px var(--accent-border);
+}
+
+/* ── Header drag region ─────────────────────────────────────────────────── */
+.titlebar {
+  -webkit-app-region: drag;
+  height: 40px;
+  flex-shrink: 0;
+}
+
+.titlebar * {
+  -webkit-app-region: no-drag;
+}
+
+/* ── Kill-switch state pill colors ──────────────────────────────────────── */
+.ks-running         { color: var(--state-online);  background: rgba(63,185,80,0.12); }
+.ks-paused          { color: var(--warning);        background: rgba(210,153,34,0.12); }
+.ks-liquidate       { color: var(--danger);         background: rgba(248,81,73,0.12); }
+.ks-emergency-flatten { color: var(--sev-critical); background: rgba(248,81,73,0.18); }
+.ks-sunset          { color: var(--text-muted);     background: rgba(72,79,88,0.15); }
+
+/* ── Gate state pills ───────────────────────────────────────────────────── */
+.gate-pending   { color: var(--state-pending); background: rgba(210,153,34,0.10); }
+.gate-pass      { color: var(--state-online);  background: rgba(63,185,80,0.10); }
+.gate-fail      { color: var(--danger);        background: rgba(248,81,73,0.10); }
+.gate-resolved  { color: var(--info);          background: rgba(74,158,255,0.10); }
+.gate-blocked   { color: var(--danger);        background: rgba(248,81,73,0.10); }
+.gate-deferred  { color: var(--text-muted);    background: rgba(72,79,88,0.12); }
+
+/* ── Scrollbars ─────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 2px; }

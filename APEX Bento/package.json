@@ -1,0 +1,70 @@
+{
+  "name": "apex-bento",
+  "version": "1.0.0",
+  "description": "APEX Quant Dashboard — Read-Only Observability",
+  "main": "out/main/index.js",
+  "type": "module",
+  "author": {
+    "name": "ItsEliias",
+    "email": "ItsEliias@users.noreply.github.com"
+  },
+  "license": "MIT",
+  "scripts": {
+    "start": "electron-vite dev",
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.node.json",
+    "package": "electron-vite build && electron-builder",
+    "package:mac": "electron-vite build && electron-builder --mac",
+    "dist:mac": "electron-vite build && electron-builder --mac --arm64"
+  },
+  "build": {
+    "appId": "com.apex.bento",
+    "productName": "APEX Bento",
+    "copyright": "ItsEliias",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*",
+      "assets/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.finance",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["arm64", "x64"]
+        }
+      ],
+      "icon": "assets/icon.icns"
+    }
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "recharts": "^2.12.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.2.0",
+    "@radix-ui/react-dialog": "^1.1.0",
+    "@radix-ui/react-tooltip": "^1.1.0",
+    "@radix-ui/react-slot": "^1.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^4.2.0",
+    "autoprefixer": "^10.4.17",
+    "electron": "^28.3.3",
+    "electron-builder": "^24.13.3",
+    "electron-vite": "^2.0.0",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.0"
+  },
+  "homepage": "https://github.com/ItsEliias/CyberOS"
+}
