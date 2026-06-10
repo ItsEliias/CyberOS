@@ -6,6 +6,7 @@ import path from 'path'
 import fs from 'fs'
 import os from 'os'
 import { emitEvent } from './ecosystem-bus'
+import { userDataDir } from './platform'
 import { BUILTIN_PLAYBOOKS } from '../shared/builtinPlaybooks'
 import type { Playbook, PlaybookRun, PlaybookStep } from '../shared/types'
 

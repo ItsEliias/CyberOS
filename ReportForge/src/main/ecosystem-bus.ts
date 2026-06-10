@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { ecosystemBusPath } from './platform';
 
 const EVENTS_PATH = ecosystemBusPath();
 const MAX_EVENTS = 150;

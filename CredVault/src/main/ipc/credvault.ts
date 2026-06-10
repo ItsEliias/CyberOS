@@ -5,7 +5,7 @@
 import { ipcMain, clipboard, dialog, BrowserWindow, systemPreferences, safeStorage } from 'electron'
 import fs from 'fs'
 import os from 'os'
-import { sharedConfigPath } from '../platform'
+import { sharedConfigPath, userDataDir } from '../platform'
 import path from 'path'
 import https from 'https'
 import crypto from 'crypto'

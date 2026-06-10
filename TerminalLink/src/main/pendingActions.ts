@@ -5,6 +5,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { sharedConfigPath } from './platform';
 
 const CONFIG_PATH = sharedConfigPath();
 

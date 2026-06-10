@@ -5,11 +5,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import os from 'os';
-import * as ecosystemBus from './ecosystem-bus.js';
-import { registerExtras, DEFAULT_CAPTURE_HOTKEY } from './ipc-extras.js';
-import { consumePendingAction, installPendingActionWatcher } from './pendingActions.js'
-import type { GhostVaultConfig, NoteFile, NewNoteResult, SaveCaptureResult } from '../shared/types.js';
-import { launchPeerApp } from './platform'
+import * as ecosystemBus from './ecosystem-bus';
+import { registerExtras, DEFAULT_CAPTURE_HOTKEY } from './ipc-extras';
+import { consumePendingAction, installPendingActionWatcher } from './pendingActions'
+import type { GhostVaultConfig, NoteFile, NewNoteResult, SaveCaptureResult } from '../shared/types';
+import { launchPeerApp, sharedConfigPath } from './platform'
 
 const APP_KEY = 'ghostvault';
 
