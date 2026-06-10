@@ -12,13 +12,19 @@ interface NavItem {
   icon: React.ReactNode
 }
 
+// 13×13px stroke SVGs, strokeWidth=1.5
 const NAV: NavItem[] = [
   {
     id: 'feed',
     label: 'Signal Feed',
     icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7M6 17a1 1 0 110-2 1 1 0 010 2z" />
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"
+        stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
+      >
+        <path d="M2 11a8 8 0 0 1 8-8" />
+        <path d="M2 7.5a4.5 4.5 0 0 1 4.5-4.5" />
+        <path d="M2 4a1 1 0 0 1 1-1" />
+        <circle cx="2" cy="11" r="0.75" fill="currentColor" stroke="none" />
       </svg>
     ),
   },
@@ -26,8 +32,11 @@ const NAV: NavItem[] = [
     id: 'timeline',
     label: 'Timeline',
     icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"
+        stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
+      >
+        <rect x="1.5" y="2.5" width="10" height="9" rx="1" />
+        <path d="M4 1.5v2M9 1.5v2M1.5 5.5h10" />
       </svg>
     ),
   },
@@ -35,8 +44,10 @@ const NAV: NavItem[] = [
     id: 'bookmarks',
     label: 'Bookmarks',
     icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"
+        stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
+      >
+        <path d="M3 1.5h7a.5.5 0 0 1 .5.5v9l-4-2-4 2V2a.5.5 0 0 1 .5-.5z" />
       </svg>
     ),
   },
@@ -44,8 +55,10 @@ const NAV: NavItem[] = [
     id: 'trends',
     label: 'Trends',
     icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"
+        stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
+      >
+        <path d="M1.5 10.5l3-3.5 2.5 2 3-4.5 2 2" />
       </svg>
     ),
   },
@@ -53,8 +66,12 @@ const NAV: NavItem[] = [
     id: 'sources',
     label: 'Sources',
     icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"
+        stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
+      >
+        <circle cx="4.5" cy="4.5" r="2" />
+        <circle cx="9" cy="9" r="2" />
+        <path d="M6 5.5l1.5 2" />
       </svg>
     ),
   },
@@ -62,9 +79,11 @@ const NAV: NavItem[] = [
     id: 'settings',
     label: 'Settings',
     icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"
+        stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
+      >
+        <circle cx="6.5" cy="6.5" r="1.5" />
+        <path d="M6.5 1.5v1.2M6.5 10.3v1.2M11.5 6.5h-1.2M2.2 6.5H1M9.7 3.3l-.85.85M4.15 8.85 3.3 9.7M9.7 9.7l-.85-.85M4.15 4.15 3.3 3.3" />
       </svg>
     ),
   },
@@ -87,7 +106,6 @@ export default function Sidebar() {
     try { localStorage.setItem('sb-sidebar-collapsed', next ? '1' : '0') } catch {}
   }
 
-  // Per-category unread counts for badges
   const categoryUnread: Record<string, number> = {
     feed:      unread,
     timeline:  items.filter(i => !i.read && i.relevanceTier !== 'low').length,
@@ -101,24 +119,23 @@ export default function Sidebar() {
     <aside
       className="flex flex-col flex-shrink-0"
       style={{
-        width: collapsed ? 48 : 200,
+        width: collapsed ? 44 : 184,
         transition: 'width 0.22s cubic-bezier(0.2,0.8,0.2,1)',
-        background: 'rgba(10,11,18,0.92)',
-        borderRight: '1px solid rgba(255,255,255,0.04)',
+        background: 'var(--surface-0)',
+        borderRight: '1px solid var(--border-subtle)',
         overflow: 'hidden',
       }}
     >
       {/* Collapse toggle */}
       <div className="flex items-center justify-end px-1.5 pt-2 pb-1 flex-shrink-0">
         <button
+          className="w-6 h-6 flex items-center justify-center rounded transition-colors"
           onClick={toggleCollapsed}
-          className="w-7 h-7 flex items-center justify-center rounded transition-colors"
-          style={{ background: 'transparent', border: 'none', color: '#484f58' }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#8b949e')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#484f58')}
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)' }}
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
             style={{ transform: collapsed ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
           >
             <polyline points="15 18 9 12 15 6" />
@@ -127,69 +144,72 @@ export default function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="px-2 pb-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+      <nav className="px-1.5 pb-2 section-sep">
         <div className="space-y-0.5">
           {NAV.map(item => {
             const isActive = activeView === item.id
-            const cnt = categoryUnread[item.id] ?? 0
+            const cnt      = categoryUnread[item.id] ?? 0
             return (
               <button
                 key={item.id}
                 onClick={() => setActiveView(item.id)}
-                className="w-full h-9 flex items-center rounded-sm font-medium transition-all duration-fast relative"
-                style={{
-                  padding: collapsed ? '0 12px' : '0 12px',
-                  justifyContent: collapsed ? 'center' : 'flex-start',
-                  gap: collapsed ? 0 : 12,
-                  color: isActive ? '#e6edf3' : '#484f58',
-                  background: isActive ? 'rgba(255,107,107,0.07)' : 'transparent',
-                }}
-                onMouseEnter={e => {
-                  if (!isActive) {
-                    e.currentTarget.style.color = '#8b949e'
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.03)'
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!isActive) {
-                    e.currentTarget.style.color = '#484f58'
-                    e.currentTarget.style.background = 'transparent'
-                  }
-                }}
                 title={collapsed ? item.label : undefined}
+                className={`nav-item w-full h-8 flex items-center rounded-sm font-medium relative${isActive ? ' active' : ''}`}
+                style={{
+                  padding: collapsed ? '0 14px' : '0 10px',
+                  justifyContent: collapsed ? 'center' : 'flex-start',
+                  gap: collapsed ? 0 : 10,
+                  color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+                  opacity: isActive ? 1 : undefined,
+                }}
               >
                 {isActive && (
                   <motion.div
-                    layoutId="sb-active"
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
-                    style={{ background: '#ff6b6b', boxShadow: '0 0 8px rgba(255,107,107,0.5)' }}
+                    layoutId="sb-active-bar"
+                    className="absolute left-0 top-1/2 -translate-y-1/2 rounded-r-full"
+                    style={{
+                      width: 2,
+                      height: 18,
+                      background: 'var(--accent)',
+                      boxShadow: '0 0 6px var(--accent-glow)',
+                    }}
                     transition={{ type: 'tween', duration: 0.15 }}
                   />
                 )}
-                <span style={{ color: isActive ? '#ff6b6b' : 'inherit', flexShrink: 0 }}>{item.icon}</span>
-                {!collapsed && <span className="text-[13px] truncate">{item.label}</span>}
+                <span style={{ opacity: isActive ? 1 : 0.55, flexShrink: 0 }}>
+                  {item.icon}
+                </span>
                 {!collapsed && (
+                  <span style={{ fontSize: 'var(--type-body)', }}
+                    className="truncate">
+                    {item.label}
+                  </span>
+                )}
+                {!collapsed && cnt > 0 && (
                   <AnimatePresence>
-                    {cnt > 0 && (
-                      <motion.span
-                        key={cnt}
-                        initial={{ scale: 0.6, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.6, opacity: 0 }}
-                        transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                        className="ml-auto min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full text-[9px] font-bold tabular-nums leading-none"
-                        style={{ background: 'rgba(255,107,107,0.18)', color: '#ff6b6b', border: '1px solid rgba(255,107,107,0.3)' }}
-                      >
-                        {cnt > 99 ? '99+' : cnt}
-                      </motion.span>
-                    )}
+                    <motion.span
+                      key={cnt}
+                      initial={{ scale: 0.6, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.6, opacity: 0 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                      className="ml-auto min-w-[16px] h-[16px] px-1 flex items-center justify-center rounded-full tabular-nums leading-none"
+                      style={{
+                        fontSize: 'var(--type-caption)',
+                        fontWeight: 700,
+                        background: 'var(--accent-tint)',
+                        color: 'var(--accent)',
+                        border: '1px solid var(--accent-border)',
+                      }}
+                    >
+                      {cnt > 99 ? '99+' : cnt}
+                    </motion.span>
                   </AnimatePresence>
                 )}
-                {/* Collapsed dot badge */}
                 {collapsed && cnt > 0 && (
                   <span
-                    className="absolute top-1 right-1 w-2 h-2 rounded-full"
-                    style={{ background: '#ff6b6b', boxShadow: '0 0 4px rgba(255,107,107,0.7)' }}
+                    className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full"
+                    style={{ background: 'var(--accent)', boxShadow: '0 0 4px var(--accent-glow)' }}
                   />
                 )}
               </button>

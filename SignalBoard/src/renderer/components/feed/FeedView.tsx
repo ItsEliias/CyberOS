@@ -96,9 +96,10 @@ export default function FeedView() {
   }
 
   return (
-    <div className="flex-1 flex min-w-0">
+    <div className="flex-1 flex min-w-0 content-stream-in">
       {/* Feed column */}
-      <div className="w-[340px] flex flex-col border-r border-white/[0.06] flex-shrink-0">
+      <div className="w-[324px] flex flex-col flex-shrink-0"
+        style={{ borderRight: '1px solid var(--border-subtle)' }}>
         {/* Column header with refresh indicator */}
         <div className="flex items-center justify-between px-3 pt-2 pb-1" style={{ minHeight: '28px' }}>
           <div className="flex items-center gap-1.5">
@@ -198,7 +199,8 @@ export default function FeedView() {
               {refreshing ? (
                 <div className="w-full px-3 space-y-2 pt-2">
                   {[1, 2, 3, 4, 5].map(n => (
-                    <div key={n} className="rounded-lg p-3 mx-0" style={{ background: 'rgba(22,27,39,0.5)', border: '1px solid rgba(42,51,71,0.4)' }}>
+                    <div key={n} className="rounded-md p-3 mx-0"
+                      style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)' }}>
                       <div className="flex items-center gap-1.5 mb-2">
                         <div className="skeleton h-3 w-14 rounded" />
                         <div className="skeleton h-3 w-10 rounded" />
@@ -210,23 +212,20 @@ export default function FeedView() {
                   ))}
                 </div>
               ) : (
-                <div className="float-up">
-                  {/* Illustrated empty state */}
-                  <div className="relative mx-auto mb-4 w-16 h-16">
-                    <svg className="w-16 h-16" viewBox="0 0 64 64" fill="none" style={{ color: 'rgba(255,107,107,0.12)' }}>
-                      <circle cx="32" cy="32" r="30" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 3" />
-                      <circle cx="32" cy="32" r="20" stroke="currentColor" strokeWidth="1" />
-                      <circle cx="32" cy="32" r="10" stroke="currentColor" strokeWidth="1" />
-                      <circle cx="32" cy="32" r="2" fill="rgba(255,107,107,0.3)" />
+                <div className="empty-state">
+                  {/* Domain glyph: RSS signal concentric arcs */}
+                  <div className="empty-glyph">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"
+                      stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
+                    >
+                      <path d="M5 19a13 13 0 0 1 13-13" />
+                      <path d="M5 14a8 8 0 0 1 8-8" />
+                      <path d="M5 9a3 3 0 0 1 3-3" />
+                      <circle cx="5" cy="19" r="1.25" fill="currentColor" stroke="none" />
                     </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <svg className="w-5 h-5" style={{ color: 'rgba(255,107,107,0.4)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7M6 17a1 1 0 110-2 1 1 0 010 2z" />
-                      </svg>
-                    </div>
                   </div>
-                  <p className="text-sm font-semibold mb-1.5" style={{ color: '#8b949e' }}>No signals found</p>
-                  <p className="text-xs leading-relaxed max-w-[170px]" style={{ color: '#4a5568' }}>
+                  <p className="empty-title">No signals yet</p>
+                  <p className="empty-sub">
                     Add a source in Sources to start receiving intelligence
                   </p>
                 </div>
