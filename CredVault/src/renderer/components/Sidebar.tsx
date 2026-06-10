@@ -17,7 +17,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 function VaultIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
       <path d="M7 11V7a5 5 0 0 1 10 0v4" />
       <circle cx="12" cy="16" r="1" fill="currentColor" />
@@ -27,7 +27,7 @@ function VaultIcon() {
 
 function ImportIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
       <polyline points="7 10 12 15 17 10" />
       <line x1="12" y1="15" x2="12" y2="3" />
@@ -37,7 +37,7 @@ function ImportIcon() {
 
 function SettingsIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68 1.65 1.65 0 0 0 9 3V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
     </svg>
@@ -46,7 +46,7 @@ function SettingsIcon() {
 
 function NoteIcon() {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
       <polyline points="14 2 14 8 20 8" />
       <line x1="16" y1="13" x2="8" y2="13" />
@@ -58,7 +58,7 @@ function NoteIcon() {
 
 function FolderIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
     </svg>
   )
@@ -69,36 +69,36 @@ function FolderIcon() {
 function CategoryIcon({ cat }: { cat: string }) {
   const s: React.CSSProperties = { flexShrink: 0 }
   if (cat === 'SSH') return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={s}>
       <rect x="2" y="7" width="7" height="14" rx="1.5" />
       <path d="M9 11h12M18 8l3 3-3 3" />
     </svg>
   )
   if (cat === 'API Key') return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={s}>
       <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4" />
     </svg>
   )
   if (cat === 'Token') return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={s}>
       <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
     </svg>
   )
   if (cat === 'Certificate') return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={s}>
       <circle cx="12" cy="8" r="5" />
       <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11" />
     </svg>
   )
   if (cat === 'Database') return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={s}>
       <ellipse cx="12" cy="5" rx="9" ry="3" />
       <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
       <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
     </svg>
   )
   if (cat === 'Web') return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={s}>
       <circle cx="12" cy="12" r="10" />
       <line x1="2" y1="12" x2="22" y2="12" />
       <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
@@ -106,7 +106,7 @@ function CategoryIcon({ cat }: { cat: string }) {
   )
   // Other / fallback
   return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={s}>
       <circle cx="12" cy="12" r="10" />
       <line x1="12" y1="8" x2="12" y2="12" />
       <line x1="12" y1="16" x2="12.01" y2="16" />
@@ -183,7 +183,7 @@ export default function Sidebar() {
   return (
     <aside
       className="shrink-0 flex flex-col py-3 overflow-y-auto"
-      style={{ width: 180, background: 'rgba(13,14,24,0.95)', borderRight: '1px solid rgba(42,51,71,0.35)' }}
+      style={{ width: 172, background: 'var(--surface-1)', borderRight: '1px solid var(--border-subtle)' }}
     >
       {/* Section label */}
       <div className="px-4 mb-2">
@@ -199,7 +199,7 @@ export default function Sidebar() {
           <button
             key={id}
             onClick={() => navClick(id)}
-            className={`sidebar-nav-item flex items-center gap-2.5 px-4 py-2 text-[13px] font-medium relative${active ? ' active' : ''}`}
+            className={`nav-item flex items-center gap-2.5 px-4 py-2 text-[13px] font-medium relative${active ? ' active' : ''}`}
             style={{
               color: active ? '#e6edf3' : '#8b949e',
               background: active ? 'rgba(247,129,102,0.08)' : 'transparent',
@@ -234,7 +234,7 @@ export default function Sidebar() {
       {/* Vault Health Score */}
       {credCount > 0 && (
         <>
-          <div className="mx-4 my-2 h-px" style={{ background: 'rgba(42,51,71,0.35)' }} />
+          <div className="section-sep mx-0 my-2" />
           <div className="px-4 py-2 flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
               <span className="text-[9px] font-semibold uppercase tracking-[0.08em]" style={{ color: '#484f58' }}>
@@ -262,10 +262,10 @@ export default function Sidebar() {
       {/* Secure Notes */}
       {noteCount > 0 && (
         <>
-          <div className="mx-4 my-2 h-px" style={{ background: 'rgba(42,51,71,0.35)' }} />
+          <div className="section-sep mx-0 my-2" />
           <button
             onClick={notesClick}
-            className={`sidebar-nav-item flex items-center gap-2.5 px-4 py-2 text-[12px] font-medium${filterFolder === '__notes__' ? ' active' : ''}`}
+            className={`nav-item flex items-center gap-2.5 px-4 py-2 text-[12px] font-medium${filterFolder === '__notes__' ? ' active' : ''}`}
             style={{
               color: filterFolder === '__notes__' ? '#e6edf3' : '#8b949e',
               background: filterFolder === '__notes__' ? 'rgba(247,129,102,0.08)' : 'transparent',
@@ -285,7 +285,7 @@ export default function Sidebar() {
       {/* Category filter */}
       {categoryCounts.length > 0 && (
         <>
-          <div className="mx-4 my-2 h-px" style={{ background: 'rgba(42,51,71,0.35)' }} />
+          <div className="section-sep mx-0 my-2" />
           <button
             onClick={() => setCategoriesOpen(o => !o)}
             className="flex items-center gap-1.5 px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] transition-colors"
@@ -353,7 +353,7 @@ export default function Sidebar() {
       {/* Folder tree */}
       {folders.length > 0 && (
         <>
-          <div className="mx-4 my-2 h-px" style={{ background: 'rgba(42,51,71,0.35)' }} />
+          <div className="section-sep mx-0 my-2" />
           <button
             onClick={() => setFoldersOpen(o => !o)}
             className="flex items-center gap-1.5 px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] transition-colors"

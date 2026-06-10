@@ -76,63 +76,25 @@ export function FilterChip({ label, active, onClick }: { label: string; active: 
   )
 }
 
-// ─── Illustrated empty state ──────────────────────────────────────────────────
+// ─── Illustrated empty state (vault/key/keyring glyph) ───────────────────────
 
 export function Empty() {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, ease: [0.2, 0.8, 0.2, 1] }}
-      style={{ padding: '72px 40px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}
-    >
-      <div style={{ position: 'relative', width: 96, height: 96, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <motion.div
-          animate={{ scale: [1, 1.08, 1], opacity: [0.35, 0.12, 0.35] }}
-          transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-          style={{
-            position: 'absolute', inset: 0, borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(247,129,102,0.2) 0%, transparent 70%)',
-            border: '1px solid rgba(247,129,102,0.15)',
-          }}
-        />
-        <motion.div
-          animate={{ y: [0, -4, 0] }}
-          transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
-          style={{
-            width: 72, height: 72, borderRadius: 20,
-            background: 'radial-gradient(circle at 50% 35%, rgba(247,129,102,0.12) 0%, rgba(247,129,102,0.04) 100%)',
-            border: '1px solid rgba(247,129,102,0.2)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.4), 0 0 24px rgba(247,129,102,0.1)',
-          }}
-        >
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f78166" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.75 }}>
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            <circle cx="12" cy="16" r="1" fill="#f78166" />
-          </svg>
-        </motion.div>
+    <div className="empty-state content-stream-in">
+      <div className="empty-glyph">
+        {/* vault/keyring domain glyph */}
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          <circle cx="12" cy="16" r="1" fill="currentColor" />
+        </svg>
       </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxWidth: 300 }}>
-        <div style={{ fontSize: 16, color: '#c9d1d9', fontWeight: 600, letterSpacing: '-0.2px' }}>Vault is empty</div>
-        <div style={{ fontSize: 12, color: '#484f58', lineHeight: 1.6 }}>
-          Add your first credential using <span style={{ color: '#f78166', fontWeight: 500 }}>+ Add</span>, or import from ReconDesk or a CSV export.
-        </div>
+      <div className="empty-title">Vault is empty</div>
+      <div className="empty-sub">
+        Add your first credential using + Add, or import from ReconDesk or a CSV export.
       </div>
-
-      <div style={{ display: 'flex', gap: 5, marginTop: 4 }}>
-        {[0, 1, 2].map(i => (
-          <motion.div
-            key={i}
-            animate={{ opacity: [0.15, 0.5, 0.15] }}
-            transition={{ duration: 1.8, repeat: Infinity, delay: i * 0.3 }}
-            style={{ width: 5, height: 5, borderRadius: '50%', background: '#f78166' }}
-          />
-        ))}
-      </div>
-    </motion.div>
+    </div>
   )
 }
 
