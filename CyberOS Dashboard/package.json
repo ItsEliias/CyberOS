@@ -18,8 +18,13 @@
   "dependencies": {
     "@fontsource/geist-sans": "^5.2.5",
     "@fontsource/jetbrains-mono": "^5.2.8",
+    "@radix-ui/react-slot": "^1.0.2",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
     "framer-motion": "^11.0.0",
+    "lucide-react": "^0.363.0",
     "recharts": "^3.8.1",
+    "tailwind-merge": "^2.2.1",
     "zustand": "^4.5.0"
   },
   "devDependencies": {
