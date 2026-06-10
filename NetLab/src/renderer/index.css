@@ -1,3 +1,10 @@
+/* ── index.css — NetLab (shadcn migration) ────────────────────────────────
+   Tokens resolved from canonical design-system/tokens.css.
+   NO parallel token declarations here — tokens.css is the single source.
+──────────────────────────────────────────────────────────────────────────── */
+
+@import url('../../../design-system/tokens.css');
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
 
@@ -5,14 +12,53 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── shadcn/ui token bridge ──────────────────────────────────────────────── */
 :root {
-  --bg: #0a0a0f;
-  --surface: #0f1117;
-  --elevated: #161b27;
-  --border: #2a3347;
-  --text: #e6edf3;
-  --accent: #5ec4ff;
-  --pulse-color: rgba(94, 196, 255, 0.4);
+  --background:         var(--surface-0);
+  --foreground:         var(--text-primary);
+  --card:               var(--surface-1);
+  --card-foreground:    var(--text-primary);
+  --popover:            var(--surface-1);
+  --popover-foreground: var(--text-primary);
+  --primary:            var(--accent);
+  --primary-foreground: #ffffff;
+  --secondary:          var(--surface-2);
+  --secondary-foreground: var(--text-secondary);
+  --muted:              var(--surface-2);
+  --muted-foreground:   var(--text-muted);
+  --accent:             var(--accent-tint2);
+  --accent-foreground:  var(--text-primary);
+  --destructive:        var(--sev-critical);
+  --destructive-foreground: #ffffff;
+  --border:             var(--border-default);
+  --input:              var(--surface-2);
+  --ring:               var(--accent-border);
+  --radius:             var(--radius-md);
+}
+
+/* ── NetLab accent override ──────────────────────────────────────────────── */
+:root {
+  --accent: #4a9eff;
+  --accent-rgb: 74, 158, 255;
+  --accent-tint: rgba(74, 158, 255, 0.08);
+  --accent-tint2: rgba(74, 158, 255, 0.15);
+  --accent-tint3: rgba(74, 158, 255, 0.22);
+  --accent-glow: rgba(74, 158, 255, 0.28);
+  --accent-border: rgba(74, 158, 255, 0.30);
+  --accent-dim: rgba(74, 158, 255, 0.40);
+}
+
+/* re-bind shadcn --accent to tint2 so hover states use translucent tint */
+:root { --accent: var(--accent-tint2); }
+:root { --primary: var(--accent); --ring: var(--accent-border); }
+
+/* ── Legacy variable aliases (existing components) ───────────────────────── */
+:root {
+  --bg: var(--surface-0);
+  --surface: var(--surface-1);
+  --elevated: var(--surface-2);
+  --text: var(--text-primary);
+  --pulse-color: rgba(74, 158, 255, 0.4);
 }
 
 * {
@@ -25,9 +71,9 @@ html, body, #root {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Inter', 'SF Pro Display', system-ui, sans-serif;
+  background: var(--surface-0);
+  color: var(--text-primary);
+  font-family: var(--font-display);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -35,20 +81,28 @@ html, body, #root {
 /* Scrollbars */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #2a3347; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #3d4f6e; }
+::-webkit-scrollbar-thumb { background: rgba(42, 51, 71, 0.45); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(42, 51, 71, 0.7); }
 
 /* Selection */
-::selection { background: rgba(94, 196, 255, 0.25); color: #e6edf3; }
+::selection { background: var(--accent-tint2); color: var(--text-primary); }
 
 /* Focus rings */
-:focus-visible { outline: 2px solid #5ec4ff; outline-offset: 2px; border-radius: 4px; }
+:focus-visible { outline: 2px solid var(--accent-border); outline-offset: 2px; border-radius: 4px; }
 
 /* Mono text utility */
 .font-mono-code {
-  font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+  font-family: var(--font-mono);
 }
 
 /* Drag region for titlebar */
 .titlebar-drag { -webkit-app-region: drag; }
 .no-drag { -webkit-app-region: no-drag; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
