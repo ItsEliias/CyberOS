@@ -61,8 +61,24 @@ export default function App() {
   const ks = state.killSwitch ?? DEFAULT_KILL_SWITCH;
   const flags = state.modeFlags ?? DEFAULT_MODE_FLAGS;
 
+  // Build a short, declarative safety status string for the aria-live region.
+  // Announced to assistive tech on first load and on any change to kill-switch
+  // state or capital-bearing mode flags. polite + atomic per MDN guidance.
+  const safetyAnnouncement = buildSafetyAnnouncement(ks.state, flags);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--surface-0)' }}>
+      {/* Screen-reader status announcer — announces kill-switch + mode state
+          changes for operators using assistive tech. Visually hidden. */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {loading ? 'Loading APEX state.' : safetyAnnouncement}
+      </div>
+
       {/* Title bar drag region */}
       <div className="titlebar" />
 
@@ -159,6 +175,23 @@ function KillSwitchPill({ state }: { state: KillSwitchStatus['state'] }) {
       {label}
     </span>
   );
+}
+
+function buildSafetyAnnouncement(state: KillSwitchStatus['state'], flags: ModeFlags): string {
+  const stateLabel: Record<KillSwitchStatus['state'], string> = {
+    running:             'running',
+    paused:              'paused',
+    liquidate:           'liquidating',
+    'emergency-flatten': 'in emergency flatten',
+    sunset:              'sunset'
+  };
+  const ksPart = `APEX kill switch is ${stateLabel[state] ?? 'unknown'}.`;
+
+  if (flags.automated_live) return `${ksPart} AUTOMATED_LIVE active — real capital at risk.`;
+  if (flags.live_mode)      return `${ksPart} LIVE_MODE active — real capital at risk.`;
+  if (flags.demo_mode)      return `${ksPart} DEMO_MODE active — paper trading against real venues.`;
+  if (flags.sim_mode)       return `${ksPart} SIM_MODE active. No capital at risk.`;
+  return `${ksPart} No mode flags active.`;
 }
 
 function LoadingState() {

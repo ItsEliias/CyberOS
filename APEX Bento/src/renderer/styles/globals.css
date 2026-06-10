@@ -102,3 +102,46 @@ html, body, #root {
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 2px; }
+
+/* ── Screen-reader-only utility (visually hidden, AT-perceivable) ───────── *
+ * Standard sr-only / visually-hidden pattern (WebAIM).
+ */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Reduced-motion (WCAG 2.3.3, MDN prefers-reduced-motion) ────────────── *
+ * Honors the operator's OS-level "Reduce motion" preference. Disables card
+ * hover-transitions, drawer slide animation, focus-ring transitions, and the
+ * status-dot pulse. Static states remain functional; only motion is removed.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .bento-card,
+  .bento-card:hover {
+    transition: none;
+  }
+  .drawer-close-btn {
+    transition: none;
+  }
+  /* Drawer panel: no slide-in transform animation; appear in place. */
+  [role="dialog"][aria-modal="true"] {
+    transition: none !important;
+  }
+  /* Backdrop opacity fade: also disable. */
+  [role="dialog"][aria-modal="true"] + div,
+  [aria-hidden="true"] {
+    transition: none !important;
+  }
+  /* Status-dot pulse keyframes from design-system tokens. */
+  .status-dot-pulse {
+    animation: none !important;
+  }
+}

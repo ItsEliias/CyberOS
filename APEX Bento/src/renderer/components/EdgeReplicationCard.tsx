@@ -1,7 +1,25 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { JbeckerRow } from '../../shared/types.js';
 import { DetailDrawer } from './DetailDrawer.js';
 import { ResponsiveContainer, AreaChart, Area } from 'recharts';
+
+// Respect the operator's OS-level prefers-reduced-motion setting for the
+// recharts sparkline animation. CSS @media handles transitions; this hook
+// covers JS-driven animation props.
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState<boolean>(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return false;
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  });
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handler = (e: MediaQueryListEvent) => setReduced(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return reduced;
+}
 
 interface Props {
   rows: JbeckerRow[];
@@ -29,6 +47,7 @@ function buildEquityCurve(rows: JbeckerRow[]): number[] {
 
 export function EdgeReplicationCard({ rows }: Props) {
   const [open, setOpen] = useState(false);
+  const reducedMotion = usePrefersReducedMotion();
 
   const filteredROI = computeROI(rows, true);
   const unfilteredROI = computeROI(rows, false);
@@ -81,7 +100,7 @@ export function EdgeReplicationCard({ rows }: Props) {
                   strokeWidth={1.5}
                   fill="url(#apex-equity)"
                   dot={false}
-                  isAnimationActive
+                  isAnimationActive={!reducedMotion}
                   animationDuration={600}
                   animationEasing="ease-out"
                 />
