@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, session } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -121,6 +121,63 @@ function setupIPC(): void {
   });
 }
 
+// ─── Permission handlers ─────────────────────────────────────────────────────
+//
+// APEX Bento is a read-only observability dashboard for local APEX fixtures.
+// The renderer has no legitimate need for camera, microphone, geolocation,
+// notifications, MIDI, HID, serial, USB, or filesystem permissions. Per
+// Electron's security checklist (item "Handle session permission requests"),
+// we explicitly deny every permission request rather than relying on the
+// default auto-approve behaviour.
+//
+// One narrow allowlist: `clipboard-sanitized-write` is permitted for our own
+// origin only. The operator-facing UI uses navigator.clipboard.writeText to
+// copy gate runbook paths (see iter 3 / PR #105 — feature already present in
+// product roadmap). Sanitized writes are plain-text only and pose no
+// credential-exfiltration surface.
+//
+// Sources:
+//   https://www.electronjs.org/docs/latest/tutorial/security
+//   https://www.electronjs.org/docs/latest/api/session
+
+const ALLOWED_PERMISSIONS = new Set<string>(['clipboard-sanitized-write']);
+
+function isAllowedOrigin(origin: string): boolean {
+  if (!origin) return false;
+  // Production: file:// (loadFile in main.ts)
+  if (origin === 'file://') return true;
+  // Development: vite dev server only (loadURL in main.ts)
+  if (process.env.NODE_ENV === 'development' && origin === 'http://localhost:5173') return true;
+  return false;
+}
+
+function setupPermissions(): void {
+  const ses = session.defaultSession;
+
+  ses.setPermissionRequestHandler((webContents, permission, callback) => {
+    const requestingUrl = (() => {
+      try { return webContents.getURL(); } catch { return ''; }
+    })();
+    let origin = '';
+    try { origin = new URL(requestingUrl).origin; } catch {
+      // file:// URLs in Electron resolve to origin 'file://'
+      if (requestingUrl.startsWith('file://')) origin = 'file://';
+    }
+
+    const allowed = ALLOWED_PERMISSIONS.has(permission) && isAllowedOrigin(origin);
+    if (!allowed) {
+      console.warn(
+        `[APEX Bento] denied permission request: permission=${permission} origin=${origin || '(unknown)'}`
+      );
+    }
+    callback(allowed);
+  });
+
+  ses.setPermissionCheckHandler((_webContents, permission, requestingOrigin) => {
+    return ALLOWED_PERMISSIONS.has(permission) && isAllowedOrigin(requestingOrigin);
+  });
+}
+
 // ─── Window ──────────────────────────────────────────────────────────────────
 
 let mainWindow: BrowserWindow | null = null;
@@ -163,6 +220,7 @@ function createWindow(): void {
 // ─── App lifecycle ───────────────────────────────────────────────────────────
 
 app.whenReady().then(() => {
+  setupPermissions();
   setupIPC();
   createWindow();
 
