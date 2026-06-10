@@ -20,7 +20,16 @@ export function AuditFeedCard({ events }: Props) {
 
   return (
     <>
-      <div className="bento-card" onClick={() => setOpen(true)}>
+      <div
+        className="bento-card"
+        role="button"
+        tabIndex={0}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={`Audit Feed ${events.length} events — open detail`}
+        onClick={() => setOpen(true)}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(true); } }}
+      >
         <div className="flex items-center justify-between mb-3">
           <p className="text-[var(--text-muted)] text-[11px] font-mono uppercase tracking-widest">
             Audit Feed

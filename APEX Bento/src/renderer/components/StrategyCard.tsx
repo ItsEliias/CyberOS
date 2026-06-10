@@ -35,9 +35,25 @@ export function StrategyCard({ manifests }: Props) {
     setOpen(true);
   }
 
+  function onCardKey(e: React.KeyboardEvent) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(true); }
+  }
+  function onRowKey(e: React.KeyboardEvent, m: StrategyManifest) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleRowClick(m); }
+  }
+
   return (
     <>
-      <div className="bento-card" onClick={() => setOpen(true)}>
+      <div
+        className="bento-card"
+        role="button"
+        tabIndex={0}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label="Strategy Vehicles — open detail"
+        onClick={() => setOpen(true)}
+        onKeyDown={onCardKey}
+      >
         <p className="text-[var(--text-muted)] text-[11px] font-mono uppercase tracking-widest mb-3">
           Strategy Vehicles
         </p>
@@ -45,8 +61,12 @@ export function StrategyCard({ manifests }: Props) {
           {manifests.map(m => (
             <div
               key={m.strategy_id}
-              className="flex items-start gap-3 p-2 rounded-[var(--radius-sm)] hover:bg-[var(--surface-2)] transition-colors cursor-pointer"
+              role="button"
+              tabIndex={0}
+              aria-label={`Strategy ${m.strategy_id} — open detail`}
+              className="flex items-start gap-3 p-2 rounded-[var(--radius-sm)] hover:bg-[var(--surface-2)] transition-colors cursor-pointer interactive-row"
               onClick={e => { e.stopPropagation(); handleRowClick(m); }}
+              onKeyDown={e => { e.stopPropagation(); onRowKey(e, m); }}
             >
               <span className={`mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium shrink-0 ${statusClass(m.status)}`}>
                 {statusLabel(m.status)}
@@ -77,8 +97,12 @@ export function StrategyCard({ manifests }: Props) {
             {manifests.map(m => (
               <div
                 key={m.strategy_id}
-                className="p-3 rounded-[var(--radius-md)] bg-[var(--surface-2)] cursor-pointer hover:border-[var(--accent-border)] border border-transparent transition-colors"
+                role="button"
+                tabIndex={0}
+                aria-label={`Strategy ${m.strategy_id} — open detail`}
+                className="p-3 rounded-[var(--radius-md)] bg-[var(--surface-2)] cursor-pointer hover:border-[var(--accent-border)] border border-transparent transition-colors interactive-row"
                 onClick={() => setSelected(m)}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelected(m); } }}
               >
                 <div className="flex items-center gap-2 mb-1">
                   <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-medium ${statusClass(m.status)}`}>

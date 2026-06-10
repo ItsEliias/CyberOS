@@ -39,9 +39,25 @@ export function GateCard({ gates }: Props) {
     setOpen(true);
   }
 
+  function onCardKey(e: React.KeyboardEvent) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(true); }
+  }
+  function onRowKey(e: React.KeyboardEvent, g: GateEntry) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleRowClick(g); }
+  }
+
   return (
     <>
-      <div className="bento-card" onClick={() => setOpen(true)}>
+      <div
+        className="bento-card"
+        role="button"
+        tabIndex={0}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label="Gate Status — open detail"
+        onClick={() => setOpen(true)}
+        onKeyDown={onCardKey}
+      >
         <p className="text-[var(--text-muted)] text-[11px] font-mono uppercase tracking-widest mb-3">
           Gate Status
         </p>
@@ -49,8 +65,12 @@ export function GateCard({ gates }: Props) {
           {gates.map(g => (
             <div
               key={g.id}
-              className="flex items-center gap-2.5 p-1.5 rounded-[var(--radius-xs)] hover:bg-[var(--surface-2)] transition-colors cursor-pointer"
+              role="button"
+              tabIndex={0}
+              aria-label={`Gate ${g.id} ${g.state} — open detail`}
+              className="flex items-center gap-2.5 p-1.5 rounded-[var(--radius-xs)] hover:bg-[var(--surface-2)] transition-colors cursor-pointer interactive-row"
               onClick={e => { e.stopPropagation(); handleRowClick(g); }}
+              onKeyDown={e => { e.stopPropagation(); onRowKey(e, g); }}
             >
               <span className={`text-[11px] font-mono w-4 text-center ${stateClass(g.state)}`}>
                 {stateIcon(g.state)}
@@ -73,8 +93,12 @@ export function GateCard({ gates }: Props) {
             {gates.map(g => (
               <div
                 key={g.id}
-                className="p-3 rounded-[var(--radius-md)] bg-[var(--surface-2)] cursor-pointer hover:border-[var(--accent-border)] border border-transparent transition-colors"
+                role="button"
+                tabIndex={0}
+                aria-label={`Gate ${g.id} ${g.state} — open detail`}
+                className="p-3 rounded-[var(--radius-md)] bg-[var(--surface-2)] cursor-pointer hover:border-[var(--accent-border)] border border-transparent transition-colors interactive-row"
                 onClick={() => setSelected(g)}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelected(g); } }}
               >
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-medium ${stateClass(g.state)}`}>

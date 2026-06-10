@@ -42,7 +42,16 @@ export function EdgeReplicationCard({ rows }: Props) {
 
   return (
     <>
-      <div className="bento-card" onClick={() => setOpen(true)}>
+      <div
+        className="bento-card"
+        role="button"
+        tabIndex={0}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label="GWU Edge Replication — open detail"
+        onClick={() => setOpen(true)}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(true); } }}
+      >
         <p className="text-[var(--text-muted)] text-[11px] font-mono uppercase tracking-widest mb-3">
           GWU Edge Replication
         </p>
