@@ -123,9 +123,8 @@ export default function PlaybookCard({ pb, searchTerm = '', staggerIndex = 0 }: 
     <div
       className="rounded-lg p-4 flex flex-col gap-3 group library-card-enter"
       style={{
-        background: 'rgba(22,27,39,0.75)',
-        backdropFilter: 'blur(8px)',
-        border: '1px solid rgba(42,51,71,0.6)',
+        background: 'var(--surface-1)',
+        border: '1px solid var(--border-default)',
         borderRadius: 8,
         transition: 'border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease',
         animationDelay: `${staggerIndex * 40}ms`,
