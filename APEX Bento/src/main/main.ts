@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, Menu, dialog, shell, ipcMain } from 'electron';
+import type { MenuItemConstructorOptions } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -160,9 +161,144 @@ function createWindow(): void {
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 }
 
+// ─── Application menu ────────────────────────────────────────────────────────
+//
+// Standard Electron Application Menu per
+// https://www.electronjs.org/docs/latest/api/menu (Menu.buildFromTemplate +
+// Menu.setApplicationMenu) and https://www.electronjs.org/docs/latest/api/menu-item
+// (built-in `role` strings: about, quit, minimize, close, zoom, reload,
+// forceReload, toggleDevTools, etc.).
+//
+// The window is `frame: false` (line 135) so there is no in-window menu bar;
+// on macOS the menu appears on the system menu bar as expected. On Linux /
+// Windows, `Menu.setApplicationMenu(null)` would hide the default Electron
+// menu — we instead install the custom one which renders inside the frame on
+// those platforms; since the window has `frame: false`, the menu items remain
+// accessible via their accelerators (Cmd/Ctrl+Q, Cmd/Ctrl+M, etc.).
+//
+// READ-ONLY surface: every menu item either invokes a built-in BrowserWindow
+// role, opens an external URL via `shell.openExternal`, or shows an About
+// dialog. No item writes to APEX paths or mutates APEX state.
+
+function openExternalSafe(url: string): void {
+  // Only allow https URLs out to the OS — never `file://`, `javascript:`, etc.
+  // shell.openExternal returns a promise; ignore the result since this is fire-and-forget.
+  if (!/^https:\/\//i.test(url)) return;
+  void shell.openExternal(url);
+}
+
+function showAboutDialog(): void {
+  const detail = [
+    `Version: ${app.getVersion()}`,
+    `Electron: ${process.versions.electron}`,
+    `Chromium: ${process.versions.chrome}`,
+    `Node: ${process.versions.node}`,
+    ``,
+    `Read-only APEX observability dashboard.`,
+    `No capital. No trades. No credentials.`
+  ].join('\n');
+
+  // dialog.showMessageBox does not write to disk; it's a modal message box.
+  void dialog.showMessageBox({
+    type: 'info',
+    title: 'About APEX Bento',
+    message: 'APEX Bento',
+    detail,
+    buttons: ['OK'],
+    defaultId: 0
+  });
+}
+
+function buildMenu(): Menu {
+  const isMac = process.platform === 'darwin';
+  const isDev = process.env.NODE_ENV === 'development';
+
+  // macOS App menu (first menu, named after the app per Apple HIG via
+  // https://www.electronjs.org/docs/latest/api/menu — "Standard menus on macOS").
+  const appMenu: MenuItemConstructorOptions = {
+    label: app.name,
+    submenu: [
+      { label: `About ${app.name}`, click: showAboutDialog },
+      { type: 'separator' },
+      { role: 'services' },
+      { type: 'separator' },
+      { role: 'hide' },
+      { role: 'hideOthers' },
+      { role: 'unhide' },
+      { type: 'separator' },
+      { role: 'quit' }
+    ]
+  };
+
+  const viewMenu: MenuItemConstructorOptions = {
+    label: 'View',
+    submenu: [
+      // `reload` re-loads the renderer — operator-visible parity with the
+      // header refresh button's Cmd/Ctrl+R (which only re-fetches IPC data).
+      // Distinct accelerator (Cmd/Ctrl+Shift+R) to avoid collision.
+      { role: 'reload', accelerator: isMac ? 'Cmd+Shift+R' : 'Ctrl+Shift+R' },
+      ...(isDev
+        ? [
+            { role: 'forceReload' } as MenuItemConstructorOptions,
+            { role: 'toggleDevTools' } as MenuItemConstructorOptions,
+            { type: 'separator' } as MenuItemConstructorOptions
+          ]
+        : [{ type: 'separator' } as MenuItemConstructorOptions]),
+      { role: 'resetZoom' },
+      { role: 'zoomIn' },
+      { role: 'zoomOut' },
+      { type: 'separator' },
+      { role: 'togglefullscreen' }
+    ]
+  };
+
+  const windowMenu: MenuItemConstructorOptions = {
+    label: 'Window',
+    submenu: [
+      { role: 'minimize' },
+      { role: 'zoom' },
+      ...(isMac
+        ? [
+            { type: 'separator' } as MenuItemConstructorOptions,
+            { role: 'front' } as MenuItemConstructorOptions,
+            { type: 'separator' } as MenuItemConstructorOptions,
+            { role: 'window' } as MenuItemConstructorOptions
+          ]
+        : [{ role: 'close' } as MenuItemConstructorOptions])
+    ]
+  };
+
+  const helpMenu: MenuItemConstructorOptions = {
+    role: 'help',
+    submenu: [
+      {
+        label: 'Electron Documentation',
+        click: () => openExternalSafe('https://www.electronjs.org/docs/latest/')
+      },
+      {
+        label: 'Report an Issue',
+        click: () => openExternalSafe('https://github.com/ItsEliias/CyberOS/issues')
+      },
+      ...(isMac
+        ? []
+        : [
+            { type: 'separator' } as MenuItemConstructorOptions,
+            { label: `About ${app.name}`, click: showAboutDialog } as MenuItemConstructorOptions
+          ])
+    ]
+  };
+
+  const template: MenuItemConstructorOptions[] = isMac
+    ? [appMenu, viewMenu, windowMenu, helpMenu]
+    : [viewMenu, windowMenu, helpMenu];
+
+  return Menu.buildFromTemplate(template);
+}
+
 // ─── App lifecycle ───────────────────────────────────────────────────────────
 
 app.whenReady().then(() => {
+  Menu.setApplicationMenu(buildMenu());
   setupIPC();
   createWindow();
 
