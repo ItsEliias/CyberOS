@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, screen } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -121,14 +121,104 @@ function setupIPC(): void {
   });
 }
 
+// ─── Window state persistence ───────────────────────────────────────────────
+//
+// Save BrowserWindow.getNormalBounds() + isMaximized() to a JSON file under
+// app.getPath('userData') on close, and restore on next launch so the operator
+// doesn't have to re-position the dashboard every day.
+//
+// Refs:
+//   https://www.electronjs.org/docs/latest/api/browser-window  (getNormalBounds, isMaximized, setBounds)
+//   https://www.electronjs.org/docs/latest/api/app             (getPath('userData'))
+//   https://www.electronjs.org/docs/latest/api/screen          (getDisplayMatching — guard against off-screen restore)
+//
+// Save is debounced via the 'close' event so resize/move don't trash the disk.
+
+interface PersistedWindowState {
+  x?: number;
+  y?: number;
+  width: number;
+  height: number;
+  isMaximized: boolean;
+}
+
+const DEFAULT_WINDOW_STATE: PersistedWindowState = {
+  width: 1280,
+  height: 820,
+  isMaximized: false
+};
+
+const WINDOW_STATE_VERSION = 1;
+
+function getWindowStatePath(): string {
+  return path.join(app.getPath('userData'), 'window-state.json');
+}
+
+function loadWindowState(): PersistedWindowState {
+  try {
+    const p = getWindowStatePath();
+    if (!fs.existsSync(p)) return DEFAULT_WINDOW_STATE;
+    const raw = fs.readFileSync(p, 'utf-8');
+    const parsed = JSON.parse(raw) as { version?: number; state?: PersistedWindowState };
+    if (parsed.version !== WINDOW_STATE_VERSION || !parsed.state) {
+      return DEFAULT_WINDOW_STATE;
+    }
+    const s = parsed.state;
+    // Shape validation — sizes are numbers, isMaximized is boolean.
+    if (typeof s.width !== 'number' || typeof s.height !== 'number') return DEFAULT_WINDOW_STATE;
+    if (typeof s.isMaximized !== 'boolean') return DEFAULT_WINDOW_STATE;
+    // Floor at min window size so a corrupt file can't shrink below the configured minimum.
+    return {
+      x: typeof s.x === 'number' ? s.x : undefined,
+      y: typeof s.y === 'number' ? s.y : undefined,
+      width: Math.max(s.width, 900),
+      height: Math.max(s.height, 600),
+      isMaximized: s.isMaximized
+    };
+  } catch (err) {
+    console.error('[APEX Bento] window-state load failed:', err);
+    return DEFAULT_WINDOW_STATE;
+  }
+}
+
+function saveWindowState(state: PersistedWindowState): void {
+  try {
+    const p = getWindowStatePath();
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    fs.writeFileSync(p, JSON.stringify({ version: WINDOW_STATE_VERSION, state }, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('[APEX Bento] window-state save failed:', err);
+  }
+}
+
+// Guard against restoring to a disconnected display (e.g. external monitor
+// unplugged between sessions). Returns null if bounds fall outside any active
+// display, signalling that BrowserWindow should center on the primary display.
+function boundsOnConnectedDisplay(state: PersistedWindowState): boolean {
+  if (typeof state.x !== 'number' || typeof state.y !== 'number') return false;
+  const rect = { x: state.x, y: state.y, width: state.width, height: state.height };
+  const display = screen.getDisplayMatching(rect);
+  // getDisplayMatching always returns a Display, but if the intersection area
+  // is zero the saved position is effectively off-screen — verify overlap.
+  const work = display.workArea;
+  const overlapX = Math.max(rect.x, work.x) < Math.min(rect.x + rect.width, work.x + work.width);
+  const overlapY = Math.max(rect.y, work.y) < Math.min(rect.y + rect.height, work.y + work.height);
+  return overlapX && overlapY;
+}
+
 // ─── Window ──────────────────────────────────────────────────────────────────
 
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow(): void {
+  const saved = loadWindowState();
+  const useSavedPosition = boundsOnConnectedDisplay(saved);
+
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 820,
+    x: useSavedPosition ? saved.x : undefined,
+    y: useSavedPosition ? saved.y : undefined,
+    width: saved.width,
+    height: saved.height,
     minWidth: 900,
     minHeight: 600,
     show: false,
@@ -146,6 +236,10 @@ function createWindow(): void {
     }
   });
 
+  if (saved.isMaximized) {
+    mainWindow.maximize();
+  }
+
   if (process.env.NODE_ENV === 'development') {
     mainWindow.loadURL('http://localhost:5173');
   } else {
@@ -154,6 +248,21 @@ function createWindow(): void {
 
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show();
+  });
+
+  // Persist on close — use getNormalBounds() so a maximized window still saves
+  // the underlying restore-size. Per Electron docs: getNormalBounds() returns
+  // dimensions in normal state regardless of current maximized/minimized status.
+  mainWindow.on('close', () => {
+    if (!mainWindow) return;
+    const bounds = mainWindow.getNormalBounds();
+    saveWindowState({
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: bounds.height,
+      isMaximized: mainWindow.isMaximized()
+    });
   });
 
   mainWindow.webContents.on('will-navigate', e => e.preventDefault());
