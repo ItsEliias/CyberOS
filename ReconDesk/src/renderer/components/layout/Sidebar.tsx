@@ -202,16 +202,31 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="w-60 flex flex-col flex-shrink-0"
-      style={{ background: 'rgba(13,14,24,0.92)', borderRight: '1px solid rgba(255,255,255,0.04)' }}
+      className="flex flex-col flex-shrink-0"
+      style={{
+        width: 224,
+        background: 'var(--surface-0, #07080f)',
+        borderRight: '1px solid var(--border-subtle, rgba(42,51,71,0.35))',
+      }}
     >
       {/* Header */}
       <div
         className="flex items-center justify-between px-3 py-2.5"
-        style={{ borderBottom: '1px solid rgba(42,51,71,0.4)' }}
+        style={{ borderBottom: '1px solid var(--border-subtle, rgba(42,51,71,0.35))' }}
       >
-        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest" style={{ color: '#484f58' }}>
-          Targets <span style={{ color: '#8b949e' }}>({targets.length})</span>
+        <span className="inline-flex items-center gap-1.5" style={{ fontSize: 'var(--type-caption, 10px)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted, #8b949e)' }}>
+          {/* Crosshair glyph */}
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none"
+            stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
+            <circle cx="5.5" cy="5.5" r="3.5" />
+            <circle cx="5.5" cy="5.5" r="1.2" />
+            <line x1="5.5" y1="0.5" x2="5.5" y2="2" />
+            <line x1="5.5" y1="9" x2="5.5" y2="10.5" />
+            <line x1="0.5" y1="5.5" x2="2" y2="5.5" />
+            <line x1="9" y1="5.5" x2="10.5" y2="5.5" />
+          </svg>
+          Targets
+          <span style={{ color: 'var(--text-secondary, #8b949e)' }}>({targets.length})</span>
           <HelpTip
             title="Target list"
             body="Every box, network, or engagement target you're tracking. Click a row to load its tabs; right indicator shows status, platform, and stale / flagged state. Use + to add a new target."
@@ -221,20 +236,16 @@ export default function Sidebar() {
           <button
             onClick={() => setShowActions(s => !s)}
             title="More actions"
-            className="w-6 h-6 flex items-center justify-center rounded-md transition-colors text-xs"
-            style={{ color: '#8b949e' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(42,51,71,0.4)'; (e.currentTarget as HTMLButtonElement).style.color = '#e6edf3' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ''; (e.currentTarget as HTMLButtonElement).style.color = '#8b949e' }}
+            className="w-6 h-6 flex items-center justify-center rounded-md text-xs nav-item"
+            style={{ color: 'var(--text-muted, #8b949e)' }}
           >
             ⋯
           </button>
           <button
             onClick={() => setNewTargetModal(true)}
             title="New target"
-            className="w-6 h-6 flex items-center justify-center rounded-md transition-colors text-sm font-medium"
-            style={{ color: '#8b949e' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(210,153,34,0.10)'; (e.currentTarget as HTMLButtonElement).style.color = '#d29922' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ''; (e.currentTarget as HTMLButtonElement).style.color = '#8b949e' }}
+            className="w-6 h-6 flex items-center justify-center rounded-md text-sm font-medium nav-item"
+            style={{ color: 'var(--text-muted, #8b949e)' }}
           >
             +
           </button>
@@ -252,19 +263,15 @@ export default function Sidebar() {
           >
             <button
               onClick={() => { setCsvImportOpen(true); setShowActions(false) }}
-              className="w-full text-left px-3 py-2 text-xs transition-colors"
-              style={{ color: '#8b949e' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(42,51,71,0.3)'; (e.currentTarget as HTMLButtonElement).style.color = '#e6edf3' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ''; (e.currentTarget as HTMLButtonElement).style.color = '#8b949e' }}
+              className="w-full text-left px-3 py-2 nav-item"
+              style={{ fontSize: 'var(--type-label, 11px)', color: 'var(--text-muted, #8b949e)' }}
             >
               Import CSV
             </button>
             <button
               onClick={() => { addEngagement(`Engagement ${engagements.length + 1}`); setShowActions(false) }}
-              className="w-full text-left px-3 py-2 text-xs transition-colors"
-              style={{ color: '#8b949e', borderTop: '1px solid rgba(42,51,71,0.3)' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(42,51,71,0.3)'; (e.currentTarget as HTMLButtonElement).style.color = '#e6edf3' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ''; (e.currentTarget as HTMLButtonElement).style.color = '#8b949e' }}
+              className="w-full text-left px-3 py-2 nav-item section-sep"
+              style={{ fontSize: 'var(--type-label, 11px)', color: 'var(--text-muted, #8b949e)' }}
             >
               New Engagement
             </button>
@@ -325,9 +332,22 @@ export default function Sidebar() {
       {/* Target list */}
       <div className="flex-1 overflow-y-auto py-1">
         {targets.length === 0 && (
-          <p className="text-[11px] text-center mt-8 px-3 leading-relaxed" style={{ color: '#484f58' }}>
-            No targets yet.<br />Hit + to add one.
-          </p>
+          <div className="empty-state py-8">
+            <div className="empty-glyph">
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none"
+                stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="9" />
+                <circle cx="11" cy="11" r="4" />
+                <circle cx="11" cy="11" r="1.5" fill="currentColor" stroke="none" />
+                <line x1="11" y1="1" x2="11" y2="5" />
+                <line x1="11" y1="17" x2="11" y2="21" />
+                <line x1="1" y1="11" x2="5" y2="11" />
+                <line x1="17" y1="11" x2="21" y2="11" />
+              </svg>
+            </div>
+            <p className="empty-title" style={{ fontSize: 'var(--type-label, 11px)' }}>No targets yet</p>
+            <p className="empty-sub" style={{ fontSize: 'var(--type-caption, 10px)' }}>Hit + to add your first target</p>
+          </div>
         )}
 
         <AnimatePresence initial>
@@ -341,9 +361,7 @@ export default function Sidebar() {
                 <div className="flex items-center group">
                   <button
                     onClick={() => toggleCollapse(eng.id)}
-                    className="flex-1 flex items-center gap-2 px-3 py-1.5 transition-colors min-w-0"
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(42,51,71,0.15)' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '' }}
+                    className="flex-1 flex items-center gap-2 px-3 py-1.5 nav-item min-w-0"
                   >
                     <span className="relative flex-shrink-0 w-2 h-2 flex items-center justify-center">
                       <span className="w-1.5 h-1.5 rounded-full block" style={{ backgroundColor: eng.color }} />
@@ -369,8 +387,6 @@ export default function Sidebar() {
                     title="Edit scope / RoE"
                     className="opacity-0 group-hover:opacity-100 mr-2 px-1.5 py-0.5 text-[9px] rounded border transition-all flex-shrink-0"
                     style={{ borderColor: !eng.inScope ? 'rgba(210,153,34,0.4)' : 'rgba(210,153,34,0.25)', color: !eng.inScope ? 'rgba(210,153,34,0.8)' : 'rgba(210,153,34,0.6)' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(210,153,34,0.10)' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '' }}
                   >
                     {eng.inScope ? 'RoE' : '⚠ RoE'}
                   </button>
