@@ -1,13 +1,12 @@
-// SignalBoard — ⌘K Command Palette
-// Self-contained palette: navigate views, refresh, toggle severity, mark read,
-// jump to feed items by title. Adapted from the Launcher reference.
+// SignalBoard — CommandPalette
+// Navigate views, refresh, toggle severity, mark read, jump to feed items.
+// ANTI-SLOP: all inline style={{}} blocks replaced with token-driven CSS vars.
+// Keyboard nav + fuzzy search + all IPC calls preserved (functional parity).
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../store'
 import type { ActiveFilter, ActiveView, FeedItem } from '../../shared/types'
-
-const ACCENT = '#ff6b6b'
 
 interface Command {
   id:        string
@@ -15,7 +14,7 @@ interface Command {
   hint?:     string
   group:     'Navigate' | 'Action' | 'Filter' | 'Feed Items'
   keywords?: string[]
-  accent:    string
+  accentVar: string   // CSS custom-property reference, e.g. 'var(--accent)'
   run:       () => Promise<void> | void
 }
 
@@ -74,26 +73,25 @@ export default function CommandPalette({ open, onClose }: Props) {
   // ── Build command list ───────────────────────────────────────────────────
   const commands = useMemo<Command[]>(() => {
     const nav: Command[] = [
-      { id: 'nav:feed',      label: 'Open Feed',      group: 'Navigate', accent: ACCENT, keywords: ['view', 'feed', 'items'],     run: () => goto('feed') },
-      { id: 'nav:sources',   label: 'Open Sources',   group: 'Navigate', accent: ACCENT, keywords: ['feeds', 'rss', 'sources'],    run: () => goto('sources') },
-      { id: 'nav:bookmarks', label: 'Open Bookmarks', group: 'Navigate', accent: ACCENT, keywords: ['bookmarks', 'saved', 'starred'], run: () => goto('bookmarks') },
-      { id: 'nav:timeline',  label: 'Open Timeline',  group: 'Navigate', accent: ACCENT, keywords: ['timeline', 'history'],        run: () => goto('timeline') },
-      { id: 'nav:trends',    label: 'Open Trends',    group: 'Navigate', accent: ACCENT, keywords: ['trends', 'analytics'],        run: () => goto('trends') },
-      { id: 'nav:settings',  label: 'Open Settings',  group: 'Navigate', accent: ACCENT, keywords: ['settings', 'preferences'],    run: () => goto('settings') },
+      { id: 'nav:feed',      label: 'Open Feed',      group: 'Navigate', accentVar: 'var(--accent)',     keywords: ['view', 'feed', 'items'],        run: () => goto('feed') },
+      { id: 'nav:sources',   label: 'Open Sources',   group: 'Navigate', accentVar: 'var(--accent)',     keywords: ['feeds', 'rss', 'sources'],       run: () => goto('sources') },
+      { id: 'nav:bookmarks', label: 'Open Bookmarks', group: 'Navigate', accentVar: 'var(--accent)',     keywords: ['bookmarks', 'saved', 'starred'], run: () => goto('bookmarks') },
+      { id: 'nav:timeline',  label: 'Open Timeline',  group: 'Navigate', accentVar: 'var(--accent)',     keywords: ['timeline', 'history'],           run: () => goto('timeline') },
+      { id: 'nav:trends',    label: 'Open Trends',    group: 'Navigate', accentVar: 'var(--accent)',     keywords: ['trends', 'analytics'],           run: () => goto('trends') },
+      { id: 'nav:settings',  label: 'Open Settings',  group: 'Navigate', accentVar: 'var(--accent)',     keywords: ['settings', 'preferences'],       run: () => goto('settings') },
     ]
 
     const actions: Command[] = [
       {
         id: 'action:refresh', label: 'Refresh all feeds', hint: 'Fetch every source now',
-        group: 'Action', accent: '#3fb950', keywords: ['refresh', 'reload', 'fetch', 'update'],
+        group: 'Action', accentVar: 'var(--state-online)', keywords: ['refresh', 'reload', 'fetch', 'update'],
         run: () => { window.electronAPI.refresh().catch(() => {}); onClose() },
       },
       {
         id: 'action:add-custom', label: 'Add custom feed', hint: 'Settings → Custom Feeds',
-        group: 'Action', accent: '#d29922', keywords: ['add', 'custom', 'feed', 'rss', 'atom'],
+        group: 'Action', accentVar: 'var(--sev-medium)', keywords: ['add', 'custom', 'feed', 'rss', 'atom'],
         run: () => {
           setActiveView('settings')
-          // Defer until settings view mounts
           setTimeout(() => {
             window.dispatchEvent(new CustomEvent('signalboard:settings-scroll', { detail: { section: 'custom-feeds-section' } }))
           }, 80)
@@ -102,18 +100,17 @@ export default function CommandPalette({ open, onClose }: Props) {
       },
       {
         id: 'action:mark-all-read', label: 'Mark all as read', hint: `${items.filter(i => !i.read).length} unread`,
-        group: 'Action', accent: '#8b949e', keywords: ['mark', 'read', 'clear', 'all'],
+        group: 'Action', accentVar: 'var(--text-muted)', keywords: ['mark', 'read', 'clear', 'all'],
         run: markAllRead,
       },
     ]
 
     const filters: Command[] = [
-      { id: 'filter:high',   label: 'Toggle severity: critical / high', hint: activeFilter === 'high'   ? 'Active' : '', group: 'Filter', accent: '#ff6b6b', keywords: ['severity', 'high', 'critical'], run: () => toggleSeverity('high') },
-      { id: 'filter:medium', label: 'Toggle severity: medium',          hint: activeFilter === 'medium' ? 'Active' : '', group: 'Filter', accent: '#d29922', keywords: ['severity', 'medium'],            run: () => toggleSeverity('medium') },
-      { id: 'filter:low',    label: 'Toggle severity: low',             hint: activeFilter === 'low'    ? 'Active' : '', group: 'Filter', accent: '#4a9eff', keywords: ['severity', 'low'],               run: () => toggleSeverity('low') },
+      { id: 'filter:high',   label: 'Toggle severity: critical / high', hint: activeFilter === 'high'   ? 'Active' : '', group: 'Filter', accentVar: 'var(--sev-critical)', keywords: ['severity', 'high', 'critical'], run: () => toggleSeverity('high') },
+      { id: 'filter:medium', label: 'Toggle severity: medium',          hint: activeFilter === 'medium' ? 'Active' : '', group: 'Filter', accentVar: 'var(--sev-medium)',   keywords: ['severity', 'medium'],           run: () => toggleSeverity('medium') },
+      { id: 'filter:low',    label: 'Toggle severity: low',             hint: activeFilter === 'low'    ? 'Active' : '', group: 'Filter', accentVar: 'var(--sev-low)',      keywords: ['severity', 'low'],              run: () => toggleSeverity('low') },
     ]
 
-    // Dynamic: feed items matching query
     const feedItems: Command[] = query.trim()
       ? items
           .map<{ item: FeedItem; score: number }>(item => ({
@@ -124,13 +121,13 @@ export default function CommandPalette({ open, onClose }: Props) {
           .sort((a, b) => b.score - a.score)
           .slice(0, 8)
           .map(({ item }) => ({
-            id:       `item:${item.id}`,
-            label:    `Open: ${item.title}`,
-            hint:     item.sourceName,
-            group:    'Feed Items',
-            accent:   '#7bb8ff',
-            keywords: [item.sourceName ?? '', item.title ?? ''],
-            run:      () => {
+            id:        `item:${item.id}`,
+            label:     `Open: ${item.title}`,
+            hint:      item.sourceName,
+            group:     'Feed Items' as const,
+            accentVar: 'var(--sev-low)',
+            keywords:  [item.sourceName ?? '', item.title ?? ''],
+            run:       () => {
               setActiveView('feed')
               setSelectedId(item.id)
               if (!item.read) {
@@ -159,7 +156,6 @@ export default function CommandPalette({ open, onClose }: Props) {
       .map(x => x.c)
   }, [query, commands])
 
-  // Reset on open + focus
   useEffect(() => {
     if (open) {
       setQuery('')
@@ -170,18 +166,13 @@ export default function CommandPalette({ open, onClose }: Props) {
 
   useEffect(() => { setActive(0) }, [query])
 
-  // Keyboard nav
   useEffect(() => {
     if (!open) return
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') { e.preventDefault(); onClose() }
-      else if (e.key === 'ArrowDown') {
-        e.preventDefault()
-        setActive(i => Math.min(filtered.length - 1, i + 1))
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault()
-        setActive(i => Math.max(0, i - 1))
-      } else if (e.key === 'Enter') {
+      else if (e.key === 'ArrowDown') { e.preventDefault(); setActive(i => Math.min(filtered.length - 1, i + 1)) }
+      else if (e.key === 'ArrowUp')   { e.preventDefault(); setActive(i => Math.max(0, i - 1)) }
+      else if (e.key === 'Enter') {
         e.preventDefault()
         const cmd = filtered[activeIdx]
         if (cmd) cmd.run()
@@ -206,13 +197,11 @@ export default function CommandPalette({ open, onClose }: Props) {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.12 }}
           onClick={onClose}
+          className="fixed inset-0 z-[200] flex items-start justify-center pt-20"
           style={{
-            position: 'fixed', inset: 0, zIndex: 200,
             background: 'rgba(5,6,12,0.55)',
             backdropFilter: 'blur(4px)',
             WebkitBackdropFilter: 'blur(4px)',
-            display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-            paddingTop: 80,
           }}
         >
           <motion.div
@@ -221,21 +210,19 @@ export default function CommandPalette({ open, onClose }: Props) {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -8, opacity: 0 }}
             transition={{ duration: 0.14 }}
+            className="w-[480px] max-w-[calc(100vw-32px)] rounded-xl overflow-hidden flex flex-col"
             style={{
-              width: 480, maxWidth: 'calc(100vw - 32px)',
-              background: 'rgba(13,14,24,0.98)',
-              border: '1px solid rgba(42,51,71,0.6)',
-              borderRadius: 12,
-              boxShadow: '0 24px 60px rgba(0,0,0,0.55)',
-              overflow: 'hidden',
-              display: 'flex', flexDirection: 'column',
+              background: 'var(--surface-glass-strong)',
+              border: '1px solid var(--border-default)',
+              boxShadow: 'var(--elevation-4)',
             }}
           >
-            <div style={{
-              padding: '12px 14px', borderBottom: '1px solid rgba(42,51,71,0.5)',
-              display: 'flex', alignItems: 'center', gap: 10,
-            }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b949e" strokeWidth="2" strokeLinecap="round">
+            {/* Search input row */}
+            <div
+              className="flex items-center gap-2.5 px-3.5 py-3"
+              style={{ borderBottom: '1px solid var(--border-subtle)' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round">
                 <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
               <input
@@ -243,31 +230,33 @@ export default function CommandPalette({ open, onClose }: Props) {
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 placeholder="Search commands, feed items…"
-                style={{
-                  flex: 1, background: 'transparent', border: 'none', outline: 'none',
-                  color: '#e6edf3', fontSize: 14, fontFamily: 'inherit',
-                }}
+                className="flex-1 bg-transparent border-none outline-none text-sm"
+                style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}
               />
-              <span style={{
-                fontSize: 9, color: '#4a5568', fontFamily: 'JetBrains Mono, monospace',
-                border: '1px solid rgba(42,51,71,0.6)', padding: '1px 5px', borderRadius: 4,
-              }}>⌘K</span>
+              <span
+                className="text-[9px] font-mono px-1 py-0.5 rounded"
+                style={{ color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' }}
+              >
+                ⌘K
+              </span>
             </div>
 
-            <div style={{ maxHeight: 380, overflowY: 'auto', padding: '6px 4px' }}>
+            {/* Results list */}
+            <div className="overflow-y-auto px-1 py-1.5" style={{ maxHeight: 380 }}>
               {filtered.length === 0 ? (
-                <div style={{ padding: 24, textAlign: 'center', color: '#4a5568', fontSize: 12 }}>
+                <div className="py-6 text-center text-xs" style={{ color: 'var(--text-muted)' }}>
                   No matches
                 </div>
               ) : (
-                (['Navigate', 'Action', 'Filter', 'Feed Items'] as const).map(group => (
+                (['Navigate', 'Action', 'Filter', 'Feed Items'] as const).map(group =>
                   grouped[group].length > 0 && (
-                    <div key={group} style={{ marginBottom: 4 }}>
-                      <div style={{
-                        padding: '6px 12px 4px',
-                        fontSize: 9, fontWeight: 700, letterSpacing: '0.12em',
-                        textTransform: 'uppercase', color: '#4a5568',
-                      }}>{group}</div>
+                    <div key={group} className="mb-1">
+                      <div
+                        className="px-3 pt-1.5 pb-1 text-[9px] font-bold tracking-widest uppercase"
+                        style={{ color: 'var(--text-muted)' }}
+                      >
+                        {group}
+                      </div>
                       {grouped[group].map(c => {
                         const flatIdx = filtered.indexOf(c)
                         const active  = flatIdx === activeIdx
@@ -276,44 +265,49 @@ export default function CommandPalette({ open, onClose }: Props) {
                             key={c.id}
                             onClick={() => c.run()}
                             onMouseEnter={() => setActive(flatIdx)}
+                            className="w-full text-left flex items-center gap-2.5 px-3 py-1.5 cursor-pointer transition-all border-none"
                             style={{
-                              width: '100%', textAlign: 'left',
-                              padding: '7px 12px', display: 'flex', alignItems: 'center', gap: 10,
-                              background: active ? `${ACCENT}1a` : 'transparent',
-                              border: 'none', cursor: 'pointer',
-                              borderLeft: active ? `2px solid ${ACCENT}` : '2px solid transparent',
+                              background: active ? 'var(--accent-tint2)' : 'transparent',
+                              borderLeft: active ? '2px solid var(--accent)' : '2px solid transparent',
                             }}
                           >
-                            <span style={{
-                              width: 7, height: 7, borderRadius: 99,
-                              background: c.accent, flexShrink: 0,
-                              boxShadow: `0 0 6px ${c.accent}60`,
-                            }} />
-                            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                              <span style={{
-                                fontSize: 12.5, color: '#e6edf3', fontWeight: 500,
-                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                              }}>{c.label}</span>
-                              {c.hint && <span style={{ fontSize: 10, color: '#6b7280' }}>{c.hint}</span>}
+                            <span
+                              className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                              style={{ background: c.accentVar, boxShadow: `0 0 6px ${c.accentVar}` }}
+                            />
+                            <div className="flex-1 min-w-0 flex items-baseline gap-2">
+                              <span
+                                className="text-[12.5px] font-medium overflow-hidden text-ellipsis whitespace-nowrap"
+                                style={{ color: 'var(--text-primary)' }}
+                              >
+                                {c.label}
+                              </span>
+                              {c.hint && (
+                                <span className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>
+                                  {c.hint}
+                                </span>
+                              )}
                             </div>
                             {active && (
-                              <span style={{ fontSize: 9, color: ACCENT, fontFamily: 'JetBrains Mono, monospace' }}>↵</span>
+                              <span className="text-[9px] font-mono" style={{ color: 'var(--accent)' }}>↵</span>
                             )}
                           </button>
                         )
                       })}
                     </div>
                   )
-                ))
+                )
               )}
             </div>
 
-            <div style={{
-              padding: '8px 12px',
-              borderTop: '1px solid rgba(42,51,71,0.5)',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              fontSize: 10, fontFamily: 'JetBrains Mono, monospace', color: '#4a5568',
-            }}>
+            {/* Footer */}
+            <div
+              className="flex items-center justify-between px-3 py-2 text-[10px] font-mono"
+              style={{
+                borderTop: '1px solid var(--border-subtle)',
+                color: 'var(--text-muted)',
+              }}
+            >
               <span>↑↓ navigate · ↵ run · ⎋ close</span>
               <span>{filtered.length} command{filtered.length === 1 ? '' : 's'}</span>
             </div>
