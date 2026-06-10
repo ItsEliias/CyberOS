@@ -8,7 +8,10 @@
     "strict": true,
     "noEmit": true,
     "sourceMap": true,
-    "paths": { "@shared/*": ["./src/shared/*"] },
+    "paths": {
+      "@shared/*": ["./src/shared/*"],
+      "@/*": ["./src/renderer/*"]
+    },
     "composite": true,
     "skipLibCheck": true
   },

@@ -1,55 +1,17 @@
-/* ── CSS Variables ─────────────────────────────────────────────────────────── */
-:root {
-  --bg        : #0a0a0f;
-  --panel     : #161b22;
-  --border    : #2a3347;
-  --border-subtle: #1e2030;
-  --text      : #e2e8f0;
-  --text-dim  : #8b949e;
-  --text-muted: #4a5568;
-  --accent    : #3fb950;
-  --accent-dim: rgba(63, 185, 80, 0.08);
-  --success   : #3fb950;
-  --error     : #f85149;
-  --warning   : #d29922;
-
-  /* Severity */
-  --sev-critical: #ff4444;
-  --sev-high    : #ff6b35;
-  --sev-medium  : #f0a500;
-  --sev-low     : #3fb950;
-  --sev-info    : #8b949e;
-}
-
-/* ── Reset ─────────────────────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-html, body, #root {
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-  font-family: 'Inter', 'SF Pro Display', system-ui, sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: #0a0a0f !important;
-  background: radial-gradient(ellipse at 20% 0%, rgba(63, 185, 80, 0.04) 0%, #0a0a0f 50%) !important;
-  color: var(--text);
-}
-
-/* ── Scrollbars ────────────────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(42, 51, 71, 0.5); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(42, 51, 71, 0.8); }
+/* ── index.css — legacy utility classes only ─────────────────────────────────
+   Parallel token vars deleted (ANTI-SLOP): all CSS variables now resolved
+   through design-system/tokens.css imported in globals.css.
+   Base reset, scrollbars, and focus styles are handled by tokens.css.
+   This file retains only: legacy btn-* + badge-* utility classes (still
+   referenced by existing component CSS classes pending full migration).
+──────────────────────────────────────────────────────────────────────────── */
 
 /* ── Inputs ────────────────────────────────────────────────────────────────── */
 input, textarea, select {
-  background: var(--bg);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
   padding: 6px 10px;
   font-size: 13px;
   font-family: inherit;
@@ -57,11 +19,12 @@ input, textarea, select {
   transition: border-color 0.15s;
 }
 input:focus, textarea:focus, select:focus {
-  border-color: var(--accent);
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 2px var(--accent-tint2);
 }
 input::placeholder, textarea::placeholder { color: var(--text-muted); }
-
 textarea { resize: vertical; min-height: 80px; }
+select option { background: var(--surface-1); color: var(--text-primary); }
 
 /* ── Buttons ───────────────────────────────────────────────────────────────── */
 button {
@@ -69,66 +32,61 @@ button {
   font-family: inherit;
   font-size: 13px;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 6px 14px;
-  transition: all 0.15s ease-out;
+  transition: all var(--motion-fast) ease-out;
 }
 button:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .btn-primary {
-  background: var(--accent);
-  color: #0a0a0f;
-  font-weight: 600;
-  border: 1px solid var(--accent);
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 5px 14px; font-size: 12px; font-weight: 600;
+  background: var(--accent-tint2);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-sm);
 }
-.btn-primary:hover:not(:disabled) { opacity: 0.88; }
+.btn-primary:hover:not(:disabled) { background: var(--accent-tint3); border-color: var(--accent-dim); }
 
 .btn-ghost {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 5px 12px; font-size: 12px; font-weight: 500;
   background: transparent;
-  color: var(--text-dim);
-  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
 }
-.btn-ghost:hover:not(:disabled) {
-  background: rgba(63, 185, 80, 0.06);
-  border-color: rgba(63, 185, 80, 0.3);
-  color: var(--accent);
-}
+.btn-ghost:hover:not(:disabled) { color: var(--text-primary); background: var(--surface-2); }
 
 .btn-danger {
-  background: transparent;
-  color: var(--error);
-  border: 1px solid rgba(248, 81, 73, 0.35);
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 5px 10px; font-size: 12px; font-weight: 500;
+  background: var(--sev-critical-bg);
+  color: var(--sev-critical);
+  border: 1px solid rgba(248,81,73,0.30);
+  border-radius: var(--radius-sm);
 }
-.btn-danger:hover:not(:disabled) { background: rgba(248, 81, 73, 0.1); border-color: var(--error); }
+.btn-danger:hover:not(:disabled) { background: rgba(248,81,73,0.20); }
 
 /* ── Severity badges ───────────────────────────────────────────────────────── */
 .badge {
   display: inline-block;
   padding: 2px 8px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-.badge-critical { background: rgba(255,68,68,0.15); color: var(--sev-critical); border: 1px solid rgba(255,68,68,0.3); }
-.badge-high     { background: rgba(255,107,53,0.15); color: var(--sev-high);     border: 1px solid rgba(255,107,53,0.3); }
-.badge-medium   { background: rgba(240,165,0,0.15);  color: var(--sev-medium);  border: 1px solid rgba(240,165,0,0.3); }
-.badge-low      { background: rgba(63,185,80,0.15);  color: var(--sev-low);     border: 1px solid rgba(63,185,80,0.3); }
-.badge-info     { background: rgba(139,148,158,0.15); color: var(--sev-info);   border: 1px solid rgba(139,148,158,0.3); }
+.badge-critical { background: var(--sev-critical-bg); color: var(--sev-critical); border: 1px solid rgba(248,81,73,0.3); }
+.badge-high     { background: var(--sev-high-bg);     color: var(--sev-high);     border: 1px solid rgba(255,140,66,0.3); }
+.badge-medium   { background: var(--sev-medium-bg);   color: var(--sev-medium);   border: 1px solid rgba(210,153,34,0.3); }
+.badge-low      { background: var(--sev-low-bg);      color: var(--sev-low);      border: 1px solid rgba(74,158,255,0.3); }
+.badge-info     { background: var(--sev-info-bg);     color: var(--sev-info);     border: 1px solid rgba(139,148,158,0.3); }
 
 /* ── Print / PDF styles ────────────────────────────────────────────────────── */
 @media print {
-  :root {
-    --bg: #ffffff;
-    --panel: #f8f8f8;
-    --border: #dddddd;
-    --text: #1a1a1a;
-    --text-dim: #555555;
-    --text-muted: #888888;
-    --accent: #2a7a36;
-  }
-  html, body { overflow: visible; height: auto; }
+  html, body { overflow: visible; height: auto; background: #fff !important; }
   #root { height: auto; overflow: visible; }
   .no-print { display: none !important; }
   .print-page { display: block !important; }
