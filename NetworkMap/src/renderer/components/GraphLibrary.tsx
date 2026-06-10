@@ -152,41 +152,69 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#07080f' }}>
 
-      {/* Title bar */}
+      {/* Title bar — polish: 32px height, lockup + ╱ separator, flat metric strip */}
       <div
         className="drag-region"
         style={{
-          padding: '0 20px',
-          height: 48,
+          padding: '0 16px',
+          height: 32,
           display: 'flex', alignItems: 'center',
-          background: 'rgba(7,8,15,0.98)',
-          borderBottom: '1px solid rgba(255,255,255,0.04)',
-          position: 'relative',
+          background: 'var(--surface-0)',
+          borderBottom: '1px solid var(--border-subtle)',
         }}
       >
-        {/* Accent underline */}
-        <div style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0, height: 1, pointerEvents: 'none',
-          background: 'linear-gradient(90deg, transparent 0%, rgba(255,140,66,0.18) 40%, rgba(255,140,66,0.18) 60%, transparent 100%)',
-        }} />
-
         {/* Traffic light spacer */}
         <div className="no-drag" style={{ width: 70 }} />
 
-        {/* Brand */}
-        <div className="no-drag" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ filter: 'drop-shadow(0 0 4px rgba(255,140,66,0.4))' }}>
-            <path d="M8 1L14.5 4.75V11.25L8 15L1.5 11.25V4.75L8 1Z" stroke="#ff8c42" strokeWidth="1.5" fill="none" />
-            <circle cx="8" cy="8" r="2" fill="#ff8c42" />
+        {/* Brand lockup: node/graph icon + app-name (600) + ╱ + subname (muted) */}
+        <div className="no-drag" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--accent)' }}>
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"
+            stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M8 1L14.5 4.75V11.25L8 15L1.5 11.25V4.75L8 1Z" />
+            <circle cx="8" cy="8" r="2" fill="currentColor" />
           </svg>
-          <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 600, letterSpacing: '0.02em' }}>NetworkMap</span>
-          <span style={{
-            fontSize: 9, fontFamily: 'var(--font-mono)', padding: '2px 6px', borderRadius: 4,
-            background: 'rgba(255,140,66,0.08)', border: '1px solid rgba(255,140,66,0.18)', color: '#ff8c42',
-          }}>CYBERTOOLS</span>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+            <span style={{ fontSize: 'var(--type-body)', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+              NetworkMap
+            </span>
+            <span style={{ color: 'var(--border-default)', userSelect: 'none' }}>╱</span>
+            <span style={{ fontSize: 'var(--type-caption)', color: 'var(--text-muted)' }}>
+              Topology
+            </span>
+          </div>
         </div>
 
+        {/* Flat metric strip */}
+        {graphs.length > 0 && (
+          <div
+            className="no-drag"
+            style={{
+              display: 'flex', alignItems: 'center', marginLeft: 12,
+              fontSize: 'var(--type-caption)', color: 'var(--text-muted)',
+              borderLeft: '1px solid var(--border-subtle)', paddingLeft: 8,
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            <span style={{ color: 'var(--text-secondary)' }}>{graphs.length}</span>
+            <span style={{ margin: '0 4px', color: 'var(--border-default)' }}>·</span>
+            <span>{graphs.length === 1 ? 'graph' : 'graphs'}</span>
+          </div>
+        )}
+
         <div style={{ flex: 1 }} />
+
+        {/* CYBERTOOLS text badge */}
+        <span
+          className="no-drag"
+          style={{
+            marginRight: 8,
+            fontSize: 'var(--type-caption)', fontWeight: 600,
+            letterSpacing: '0.08em', textTransform: 'uppercase',
+            color: 'var(--text-muted)',
+          }}
+        >
+          CYBERTOOLS
+        </span>
 
         {onOpenHelp && (
           <button
@@ -194,14 +222,14 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
             onClick={onOpenHelp}
             title="Help & onboarding"
             style={{
-              width: 28, height: 28, borderRadius: 8,
-              border: '1px solid rgba(42,51,71,0.75)', background: 'transparent',
-              color: 'var(--text-muted)', fontSize: 12, fontWeight: 700,
+              width: 24, height: 24, borderRadius: 6,
+              border: '1px solid var(--border-subtle)', background: 'transparent',
+              color: 'var(--text-muted)', fontSize: 'var(--type-caption)', fontWeight: 700,
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'all 150ms',
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#ff8c42'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,140,66,0.4)' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,51,71,0.75)' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--accent)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent-border)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-subtle)' }}
           >?</button>
         )}
 
@@ -210,16 +238,23 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
           onClick={onOpenSettings}
           title="Settings"
           style={{
-            width: 28, height: 28, borderRadius: 8, marginLeft: 6,
-            border: '1px solid rgba(42,51,71,0.75)', background: 'transparent',
-            color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer',
+            width: 24, height: 24, borderRadius: 6, marginLeft: 4,
+            border: '1px solid var(--border-subtle)', background: 'transparent',
+            color: 'var(--text-muted)', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'all 150ms',
           }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,51,71,1)' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,51,71,0.75)' }}
-        >⚙</button>
-        <span className="no-drag" style={{ marginLeft: 6 }}>
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-default)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-subtle)' }}
+        >
+          {/* Settings cog — SVG 13×13 */}
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68 1.65 1.65 0 0 0 9 3V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+        </button>
+        <span className="no-drag" style={{ marginLeft: 4 }}>
           <HelpTip
             title="Settings"
             body="Configure storage paths, default layout, edge inference rules, and integrations like ReconDesk and GNS3."
@@ -452,73 +487,39 @@ export default function GraphLibrary({ onOpenGraph, onOpenImport, onOpenSettings
   )
 }
 
-// ─── Illustrated empty state ────────────────────────────────────────────────
+// ─── Empty state ─────────────────────────────────────────────────────────────
 function EmptyState({ onOpenImport }: { onOpenImport: () => void }) {
   return (
-    <div className="fade-up" style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      justifyContent: 'center', height: '100%', gap: 16, padding: '40px 24px',
-    }}>
-      {/* Network illustration */}
-      <svg width="120" height="100" viewBox="0 0 120 100" fill="none" aria-hidden="true">
-        {/* Glow filter */}
-        <defs>
-          <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur stdDeviation="3" result="blur" />
-            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
-          <radialGradient id="bgGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="rgba(255,140,66,0.07)" />
-            <stop offset="100%" stopColor="transparent" />
-          </radialGradient>
-        </defs>
-        <ellipse cx="60" cy="50" rx="55" ry="45" fill="url(#bgGlow)" />
-        {/* Edges */}
-        <line x1="60" y1="20" x2="25" y2="55" stroke="rgba(255,140,66,0.15)" strokeWidth="1.5" strokeDasharray="3 3" />
-        <line x1="60" y1="20" x2="95" y2="55" stroke="rgba(255,140,66,0.15)" strokeWidth="1.5" strokeDasharray="3 3" />
-        <line x1="25" y1="55" x2="60" y2="80" stroke="rgba(255,140,66,0.12)" strokeWidth="1.5" strokeDasharray="3 3" />
-        <line x1="95" y1="55" x2="60" y2="80" stroke="rgba(255,140,66,0.12)" strokeWidth="1.5" strokeDasharray="3 3" />
-        <line x1="25" y1="55" x2="95" y2="55" stroke="rgba(255,140,66,0.08)" strokeWidth="1" strokeDasharray="4 4" />
-        {/* Nodes */}
-        <circle cx="60" cy="20" r="9" fill="rgba(255,140,66,0.10)" stroke="rgba(255,140,66,0.45)" strokeWidth="1.5" filter="url(#glow)" />
-        <circle cx="60" cy="20" r="4" fill="rgba(255,140,66,0.6)" />
-        <circle cx="25" cy="55" r="7" fill="rgba(255,140,66,0.07)" stroke="rgba(255,140,66,0.28)" strokeWidth="1.5" />
-        <circle cx="25" cy="55" r="3" fill="rgba(255,140,66,0.45)" />
-        <circle cx="95" cy="55" r="7" fill="rgba(255,140,66,0.07)" stroke="rgba(255,140,66,0.28)" strokeWidth="1.5" />
-        <circle cx="95" cy="55" r="3" fill="rgba(255,140,66,0.45)" />
-        <circle cx="60" cy="80" r="6" fill="rgba(139,148,158,0.07)" stroke="rgba(139,148,158,0.25)" strokeWidth="1.5" />
-        <circle cx="60" cy="80" r="2.5" fill="rgba(139,148,158,0.4)" />
-        {/* Plus icon hint */}
-        <circle cx="60" cy="50" r="10" fill="rgba(255,140,66,0.05)" stroke="rgba(255,140,66,0.18)" strokeWidth="1" strokeDasharray="2 2" />
-        <line x1="60" y1="46" x2="60" y2="54" stroke="rgba(255,140,66,0.35)" strokeWidth="1.5" strokeLinecap="round" />
-        <line x1="56" y1="50" x2="64" y2="50" stroke="rgba(255,140,66,0.35)" strokeWidth="1.5" strokeLinecap="round" />
-      </svg>
-
-      <div style={{ textAlign: 'center' }}>
-        <p style={{ color: 'var(--text-primary)', fontSize: 14, fontWeight: 600, marginBottom: 4 }}>No graphs yet</p>
-        <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>Import an nmap XML scan to visualise your network</p>
+    <div className="empty-state content-stream-in" style={{ height: '100%', justifyContent: 'center' }}>
+      <div className="empty-glyph">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="5" r="2" />
+          <circle cx="5" cy="19" r="2" />
+          <circle cx="19" cy="19" r="2" />
+          <line x1="12" y1="7" x2="5" y2="17" />
+          <line x1="12" y1="7" x2="19" y2="17" />
+          <line x1="7" y1="19" x2="17" y2="19" />
+        </svg>
       </div>
-
+      <div className="empty-title">No graphs yet</div>
+      <div className="empty-sub">Import an nmap XML scan to visualise your network topology.</div>
       <button
         onClick={onOpenImport}
         style={{
-          marginTop: 4, padding: '9px 24px', borderRadius: 9,
-          background: 'rgba(255,140,66,0.12)', border: '1px solid rgba(255,140,66,0.32)',
-          color: '#ff8c42', fontWeight: 600, fontSize: 13, cursor: 'pointer',
-          transition: 'all 200ms var(--ease)', fontFamily: 'var(--font-display)',
-          boxShadow: '0 0 0 0 rgba(255,140,66,0)',
+          marginTop: 8, padding: '7px 20px', borderRadius: 'var(--radius-md)',
+          background: 'var(--accent-tint)', border: '1px solid var(--accent-border)',
+          color: 'var(--accent)', fontWeight: 600, fontSize: 'var(--type-body)',
+          cursor: 'pointer', transition: 'all 150ms var(--ease)',
+          fontFamily: 'var(--font-display)',
         }}
         onMouseEnter={e => {
           const el = e.currentTarget as HTMLElement
-          el.style.background = 'rgba(255,140,66,0.2)'
-          el.style.boxShadow = '0 0 16px rgba(255,140,66,0.18)'
-          el.style.transform = 'translateY(-1px)'
+          el.style.background = 'var(--accent-tint2)'
         }}
         onMouseLeave={e => {
           const el = e.currentTarget as HTMLElement
-          el.style.background = 'rgba(255,140,66,0.12)'
-          el.style.boxShadow = '0 0 0 0 rgba(255,140,66,0)'
-          el.style.transform = 'translateY(0)'
+          el.style.background = 'var(--accent-tint)'
         }}
       >Import Scan</button>
     </div>
