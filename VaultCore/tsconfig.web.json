@@ -9,7 +9,10 @@
     "strict"           : true,
     "skipLibCheck"     : true,
     "resolveJsonModule": true,
-    "paths"            : { "@shared/*": ["./src/shared/*"] }
+    "paths"            : {
+      "@shared/*": ["./src/shared/*"],
+      "@/*": ["./src/renderer/*"]
+    }
   },
   "include": ["src/renderer/**/*", "src/shared/**/*"]
 }

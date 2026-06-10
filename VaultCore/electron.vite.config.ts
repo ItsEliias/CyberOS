@@ -83,7 +83,10 @@ export default defineConfig({
     root: resolve('src/renderer'),
     plugins: [react()],
     resolve: {
-      alias: { '@shared': resolve('src/shared') }
+      alias: {
+        '@shared': resolve('src/shared'),
+        '@': resolve('src/renderer'),
+      }
     },
     build: {
       rollupOptions: {
