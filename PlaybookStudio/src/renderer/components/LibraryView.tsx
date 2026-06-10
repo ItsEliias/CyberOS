@@ -399,30 +399,31 @@ export default function LibraryView() {
       {/* Playbook grid */}
       <div className="flex-1 overflow-y-auto p-4">
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-56 gap-4 anim-fade-in-up">
-            <div style={{ position: 'relative' }}>
-              <svg width="56" height="56" viewBox="0 0 56 56" fill="none" style={{ filter: 'drop-shadow(0 0 18px rgba(45,212,191,0.15))' }}>
-                <rect x="5" y="10" width="46" height="36" rx="5" stroke="rgba(45,212,191,0.25)" strokeWidth="1.5" fill="rgba(45,212,191,0.04)" />
-                <path d="M13 20h30M13 27h20M13 34h24" stroke="rgba(45,212,191,0.25)" strokeWidth="1.5" strokeLinecap="round" />
-                <circle cx="42" cy="42" r="10" fill="rgba(7,8,15,1)" stroke="rgba(45,212,191,0.30)" strokeWidth="1.5" />
-                <path d="M42 37v5l3 3" stroke="rgba(45,212,191,0.5)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <div className="empty-state content-stream-in" style={{ height: '100%', justifyContent: 'center' }}>
+            <div className="empty-glyph">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+                <line x1="10" y1="9" x2="8" y2="9" />
               </svg>
             </div>
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-sm font-medium" style={{ color: '#8b949e' }}>
-                No playbooks found
-              </span>
-              <span className="text-xs" style={{ color: '#8b949e' }}>
-                Try a different filter or create a new playbook
-              </span>
-              <button
-                onClick={handleNew}
-                className="mt-2 text-xs px-3 py-1.5 rounded font-semibold"
-                style={{ background: '#4a9eff', color: '#0a0a0f' }}
-              >
-                + New Playbook
-              </button>
-            </div>
+            <div className="empty-title">No playbooks found</div>
+            <div className="empty-sub">Try a different filter or create a new playbook.</div>
+            <button
+              onClick={handleNew}
+              style={{
+                marginTop: 8, padding: '7px 20px', borderRadius: 'var(--radius-md)',
+                background: 'var(--accent-tint)', border: '1px solid var(--accent-border)',
+                color: 'var(--accent)', fontWeight: 600, fontSize: 'var(--type-body)',
+                cursor: 'pointer', transition: 'all 150ms var(--ease)',
+                fontFamily: 'var(--font-display)',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--accent-tint2)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--accent-tint)' }}
+            >+ New Playbook</button>
           </div>
         ) : (
           <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>

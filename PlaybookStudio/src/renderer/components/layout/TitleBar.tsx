@@ -1,4 +1,4 @@
-// PlaybookStudio — TitleBar Component (teal accent redesign)
+// PlaybookStudio — TitleBar (polish: 32px, lockup, flat metric, CYBERTOOLS text)
 
 import { useStore } from '../../store'
 
@@ -7,10 +7,28 @@ interface TitleBarProps {
   onHelp?: () => void
 }
 
+const PlaybookIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 16 16" fill="none"
+    stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+    style={{ color: 'var(--accent)' }}>
+    <rect x="2" y="2" width="12" height="13" rx="2" />
+    <path d="M5 6h6M5 9h4M5 12h5" />
+  </svg>
+)
+
+const PlusIcon = () => (
+  <svg width="11" height="11" viewBox="0 0 12 12" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <line x1="6" y1="1" x2="6" y2="11" />
+    <line x1="1" y1="6" x2="11" y2="6" />
+  </svg>
+)
+
 export default function TitleBar({ activeRunName, onHelp }: TitleBarProps) {
   const view      = useStore(s => s.view)
   const setView   = useStore(s => s.setView)
   const activeRun = useStore(s => s.activeRun)
+  const playbooks = useStore(s => s.playbooks)
 
   function handleNewPlaybook() {
     const now = new Date().toISOString()
@@ -31,66 +49,74 @@ export default function TitleBar({ activeRunName, onHelp }: TitleBarProps) {
 
   return (
     <div
-      className="h-10 flex items-center px-4 drag-region shrink-0 relative"
+      className="flex items-center px-3 drag-region shrink-0"
       style={{
-        background: 'rgba(7,8,15,0.98)',
-        borderBottom: '1px solid rgba(255,255,255,0.04)',
+        height: 32,
+        background: 'var(--surface-1)',
+        borderBottom: '1px solid var(--border-subtle)',
       }}
     >
-      {/* Accent underline */}
-      <div
-        className="absolute bottom-0 left-0 right-0 h-px pointer-events-none"
-        style={{
-          background: 'linear-gradient(90deg, transparent 0%, rgba(74,158,255,0.22) 40%, rgba(74,158,255,0.22) 60%, transparent 100%)',
-        }}
-      />
-
-      {/* Traffic light spacer (macOS) */}
+      {/* macOS traffic-light spacer */}
       <div className="w-[70px] no-drag" />
 
-      {/* Brand */}
+      {/* Brand lockup */}
       <div className="flex items-center gap-2 no-drag">
-        <div style={{ filter: 'drop-shadow(0 0 5px rgba(74,158,255,0.5))' }}>
-          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ color: '#4a9eff' }}>
-            <path d="M2 4h12M2 6.5h8M2 9h10M2 11.5h6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-            <rect x="1" y="2" width="14" height="12" rx="2" stroke="currentColor" strokeWidth="1.2" fill="none" />
-          </svg>
-        </div>
-        <span className="text-[13px] font-semibold tracking-wide" style={{ color: '#8b949e' }}>
+        <PlaybookIcon />
+        <span style={{ fontSize: 'var(--type-body)', fontWeight: 600, color: 'var(--text-primary)' }}>
           PlaybookStudio
         </span>
-        {activeRunName && (
-          <span className="text-[12px] font-normal" style={{ color: '#484f58' }}>
-            — {activeRunName}
-          </span>
-        )}
+        <span style={{ color: 'var(--text-muted)', fontSize: 'var(--type-caption)' }}>╱</span>
+        <span style={{ fontSize: 'var(--type-caption)', color: 'var(--text-muted)' }}>Runbooks</span>
       </div>
+
+      {/* Flat metric strip */}
+      {playbooks.length > 0 && (
+        <div className="flex items-center no-drag" style={{
+          marginLeft: 10,
+          paddingLeft: 10,
+          borderLeft: '1px solid var(--border-subtle)',
+          gap: 4,
+        }}>
+          <span className="status-metric">
+            <strong>{playbooks.length}</strong> {playbooks.length === 1 ? 'playbook' : 'playbooks'}
+          </span>
+          {activeRunName && (
+            <>
+              <span className="status-sep">·</span>
+              <span className="status-metric" style={{ color: 'var(--state-online)' }}>{activeRunName}</span>
+            </>
+          )}
+        </div>
+      )}
 
       <div className="flex-1" />
 
-      {/* CYBERTOOLS badge */}
+      {/* CYBERTOOLS plain text badge */}
       <span
-        className="flex items-center gap-1 text-[9px] font-semibold tracking-widest uppercase px-2 py-0.5 rounded-full no-drag mr-2"
+        className="no-drag"
         style={{
-          background: 'rgba(74,158,255,0.06)',
-          color: '#484f58',
-          border: '1px solid rgba(74,158,255,0.14)',
+          fontSize: 'var(--type-caption)',
+          color: 'var(--text-muted)',
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          fontWeight: 500,
+          marginRight: 8,
+          opacity: 0.6,
         }}
       >
-        <span>⬡</span>
-        <span>CYBERTOOLS</span>
+        CYBERTOOLS
       </span>
 
-      {/* Right actions */}
-      <div className="flex items-center gap-1.5 no-drag">
+      {/* Action buttons */}
+      <div className="flex items-center gap-1 no-drag">
         {view === 'run' && activeRun ? (
           <button
             onClick={() => setView('run')}
-            className="flex items-center gap-1.5 h-7 px-3 rounded text-xs font-medium transition-colors"
+            className="flex items-center gap-1.5 px-2.5 rounded text-xs font-medium transition-colors"
             style={{
-              background: 'rgba(248,81,73,0.10)',
-              color: '#f85149',
-              border: '1px solid rgba(248,81,73,0.22)',
+              height: 24, background: 'rgba(248,81,73,0.10)',
+              color: '#f85149', border: '1px solid rgba(248,81,73,0.22)',
+              fontSize: 'var(--type-label)',
             }}
           >
             <svg width="9" height="9" viewBox="0 0 9 9" fill="currentColor">
@@ -101,17 +127,14 @@ export default function TitleBar({ activeRunName, onHelp }: TitleBarProps) {
         ) : (
           <button
             onClick={handleNewPlaybook}
-            className="flex items-center gap-1.5 h-7 px-3 rounded text-xs font-medium transition-colors"
+            className="flex items-center gap-1.5 px-2.5 rounded font-medium transition-colors"
             style={{
-              background: 'rgba(74,158,255,0.10)',
-              color: '#e2e8f0',
-              border: '1px solid rgba(74,158,255,0.30)',
+              height: 24, background: 'var(--accent-tint)',
+              color: 'var(--text-secondary)', border: '1px solid var(--accent-border)',
+              fontSize: 'var(--type-label)',
             }}
           >
-            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="6" y1="1" x2="6" y2="11" />
-              <line x1="1" y1="6" x2="11" y2="6" />
-            </svg>
+            <PlusIcon />
             New Playbook
           </button>
         )}
@@ -119,14 +142,24 @@ export default function TitleBar({ activeRunName, onHelp }: TitleBarProps) {
         {onHelp && (
           <button
             onClick={onHelp}
-            className="w-7 h-7 flex items-center justify-center rounded text-xs font-bold transition-colors"
-            style={{ border: '1px solid rgba(42,51,71,0.6)', color: '#484f58', background: 'transparent' }}
-            onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = 'rgba(45,212,191,0.35)'; el.style.color = '#2dd4bf' }}
-            onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = 'rgba(42,51,71,0.6)'; el.style.color = '#484f58' }}
+            className="flex items-center justify-center rounded transition-colors"
+            style={{
+              width: 24, height: 24, background: 'transparent',
+              border: '1px solid var(--border-subtle)',
+              color: 'var(--text-muted)', fontSize: 11, fontWeight: 700,
+            }}
+            onMouseEnter={e => {
+              const el = e.currentTarget as HTMLElement
+              el.style.color = 'var(--accent)'
+              el.style.borderColor = 'var(--accent-border)'
+            }}
+            onMouseLeave={e => {
+              const el = e.currentTarget as HTMLElement
+              el.style.color = 'var(--text-muted)'
+              el.style.borderColor = 'var(--border-subtle)'
+            }}
             title="Help & onboarding"
-          >
-            ?
-          </button>
+          >?</button>
         )}
       </div>
     </div>
