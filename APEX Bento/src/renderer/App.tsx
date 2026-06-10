@@ -9,6 +9,7 @@ import { KillSwitchCard } from './components/KillSwitchCard.js';
 import { ModeFlagsCard } from './components/ModeFlagsCard.js';
 import { AuditFeedCard } from './components/AuditFeedCard.js';
 import { EdgeReplicationCard } from './components/EdgeReplicationCard.js';
+import { ErrorBoundary } from './components/ErrorBoundary.js';
 
 interface AppState {
   manifests: StrategyManifest[];
@@ -130,14 +131,16 @@ export default function App() {
         {loading ? (
           <LoadingState />
         ) : (
-          <div className="bento-grid">
-            <StrategyCard manifests={state.manifests} />
-            <GateCard gates={state.gates} />
-            <KillSwitchCard status={ks} />
-            <ModeFlagsCard flags={flags} />
-            <AuditFeedCard events={state.auditEvents} />
-            <EdgeReplicationCard rows={state.jbecker} />
-          </div>
+          <ErrorBoundary>
+            <div className="bento-grid">
+              <StrategyCard manifests={state.manifests} />
+              <GateCard gates={state.gates} />
+              <KillSwitchCard status={ks} />
+              <ModeFlagsCard flags={flags} />
+              <AuditFeedCard events={state.auditEvents} />
+              <EdgeReplicationCard rows={state.jbecker} />
+            </div>
+          </ErrorBoundary>
         )}
       </main>
     </div>
