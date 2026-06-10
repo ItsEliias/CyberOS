@@ -22,12 +22,13 @@ export default function UpdateBanner({ updateInfo }: Props) {
           transition={{ duration: 0.2 }}
           className="overflow-hidden flex-shrink-0"
         >
+          {/* Token-driven update banner — uses --warning / --accent-tint tokens */}
           <div
             className="w-full h-full flex items-center justify-between px-3 text-[11px]"
             style={{
-              background  : 'rgba(234,179,8,0.13)',
-              borderBottom: '1px solid rgba(234,179,8,0.30)',
-              color       : '#f59e0b',
+              background:   'var(--sev-medium-bg)',
+              borderBottom: '1px solid rgba(210,153,34,0.30)',
+              color:        'var(--warning)',
             }}
           >
             <span className="font-medium truncate mr-2">
@@ -38,14 +39,14 @@ export default function UpdateBanner({ updateInfo }: Props) {
               <button
                 onClick={() => window.api.openExternal(updateInfo!.url)}
                 className="underline hover:opacity-70 transition-opacity"
-                style={{ color: '#f59e0b' }}
+                style={{ color: 'var(--warning)' }}
               >
                 View release
               </button>
               <button
                 onClick={() => setDismissed(true)}
                 className="hover:opacity-70 transition-opacity leading-none text-[13px]"
-                style={{ color: '#f59e0b' }}
+                style={{ color: 'var(--warning)' }}
                 aria-label="Dismiss update banner"
               >
                 ✕

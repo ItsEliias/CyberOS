@@ -1,7 +1,14 @@
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 import type {
   CyberlabStatus, VaultscraperStatus,
   ParsedCyberlabStatus, ParsedVaultscraperStatus
 } from '@shared/types';
+
+/** shadcn/ui cn() helper — merge Tailwind classes without conflicts. */
+export function cn(...inputs: ClassValue[]): string {
+  return twMerge(clsx(inputs));
+}
 
 export function parseCyberlabStatus(raw: CyberlabStatus | null | undefined): ParsedCyberlabStatus {
   const empty: ParsedCyberlabStatus = {
