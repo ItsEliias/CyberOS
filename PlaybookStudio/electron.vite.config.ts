@@ -21,7 +21,7 @@ export default defineConfig({
   renderer: {
     root: resolve('src/renderer'),
     build: { rollupOptions: { input: { index: resolve('src/renderer/index.html') } } },
-    resolve: { alias: { '@shared': resolve('src/shared') } },
+    resolve: { alias: { '@shared': resolve('src/shared'), '@': resolve('src/renderer') } },
     plugins: [react()]
   }
 })

@@ -1,3 +1,10 @@
+/* ── globals.css — PlaybookStudio (shadcn migration) ─────────────────────
+   Tokens resolved from canonical design-system/tokens.css.
+   NO parallel token declarations here — tokens.css is the single source.
+──────────────────────────────────────────────────────────────────────────── */
+
+@import url('../../../design-system/tokens.css');
+
 @import '@fontsource/geist-sans/400.css';
 @import '@fontsource/geist-sans/500.css';
 @import '@fontsource/geist-sans/600.css';
@@ -10,104 +17,100 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── CyberOS Design Bible — Global Styles ────────────────────────────────── */
-
+/* ── shadcn/ui token bridge ──────────────────────────────────────────────── */
 :root {
-  --surface-0: #07080f; --surface-1: #0d0e18; --surface-2: #131525; --surface-3: #191c32;
-  --surface-glass: rgba(13,14,24,0.72);
-  --elevation-1: 0 1px 3px rgba(0,0,0,.5), 0 1px 2px rgba(0,0,0,.35);
-  --elevation-2: 0 4px 16px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.4);
-  --elevation-3: 0 12px 40px rgba(0,0,0,.6), 0 4px 12px rgba(0,0,0,.45);
-  --border-subtle: rgba(42,51,71,0.35); --border-default: rgba(42,51,71,0.75);
-  --border-glass: rgba(255,255,255,0.055);
-  --text-primary: #e6edf3; --text-secondary: #8b949e; --text-muted: #484f58;
-  --sev-critical: #f85149; --sev-high: #ff8c42; --sev-medium: #d29922;
-  --sev-low: #4a9eff; --sev-info: #8b949e;
-  --state-online: #3fb950; --state-offline: #484f58; --state-blocked: #f85149;
-  --accent: #4a9eff; --accent-rgb: 74,158,255;
-  --accent-tint: rgba(74,158,255,0.08); --accent-tint2: rgba(74,158,255,0.15);
-  --accent-glow: rgba(74,158,255,0.28); --accent-border: rgba(74,158,255,0.30);
-  /* Per-app theme CSS vars (overridden by ThemeProvider) */
-  --app-accent: #4a9eff;
-  --app-bg: #0a0a0f;
-  --app-text: #e2e8f0;
-  --font-display: 'Geist Sans', 'Inter', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-  --radius-xs: 4px; --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px;
-  --motion-fast: 150ms; --motion-base: 250ms; --motion-slow: 400ms;
-  --ease: cubic-bezier(0.2,0.8,0.2,1);
-  /* Legacy compat vars */
-  --border: rgba(42,51,71,0.75);
-  --panel: #0d0e18;
-  --bg: #07080f;
-  --text: #e2e8f0;
-  --text-dim: #8b949e;
-  --text-secondary: #8b949e;
-  --text-muted: #4a5568;
-  --accent-dim: rgba(74,158,255,0.12);
-  --success: #3fb950;
-  --error: #f85149;
-  --warning: #d29922;
+  --background:         var(--surface-0);
+  --foreground:         var(--text-primary);
+  --card:               var(--surface-1);
+  --card-foreground:    var(--text-primary);
+  --popover:            var(--surface-1);
+  --popover-foreground: var(--text-primary);
+  --primary:            var(--accent);
+  --primary-foreground: #ffffff;
+  --secondary:          var(--surface-2);
+  --secondary-foreground: var(--text-secondary);
+  --muted:              var(--surface-2);
+  --muted-foreground:   var(--text-muted);
+  --accent:             var(--accent-tint2);
+  --accent-foreground:  var(--text-primary);
+  --destructive:        var(--sev-critical);
+  --destructive-foreground: #ffffff;
+  --border:             var(--border-default);
+  --input:              var(--surface-2);
+  --ring:               var(--accent-border);
+  --radius:             var(--radius-md);
 }
+
+/* ── PlaybookStudio accent override ──────────────────────────────────────── */
+:root {
+  --accent: #4a9eff;
+  --accent-rgb: 74, 158, 255;
+  --accent-tint: rgba(74, 158, 255, 0.08);
+  --accent-tint2: rgba(74, 158, 255, 0.15);
+  --accent-tint3: rgba(74, 158, 255, 0.22);
+  --accent-glow: rgba(74, 158, 255, 0.28);
+  --accent-border: rgba(74, 158, 255, 0.30);
+  --accent-dim: rgba(74, 158, 255, 0.40);
+}
+
+/* re-bind shadcn --accent to tint2 so hover states use the translucent tint */
+:root { --accent: var(--accent-tint2); }
+:root { --primary: var(--accent); --ring: var(--accent-border); }
+
+/* ── Legacy variable aliases (existing components) ───────────────────────── */
+:root {
+  --bg:        var(--surface-0);
+  --panel:     var(--surface-1);
+  --border:    var(--border-default);
+  --text:      var(--text-primary);
+  --text-dim:  var(--text-muted);
+  --success:   var(--state-online);
+  --error:     var(--sev-critical);
+  --warning:   var(--sev-medium);
+  --app-accent: var(--accent);
+  --app-bg:    var(--surface-0);
+  --app-text:  var(--text-primary);
+}
+
+/* ─── Reset ───────────────────────────────────────────────────────────────── */
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body, #root {
-  height: 100%;
-  min-height: 100vh;
-  overflow: hidden;
-  background: var(--app-bg, #0a0a0f);
-  color: var(--app-text, #e2e8f0);
+  height: 100%; min-height: 100vh; overflow: hidden;
+  background: var(--surface-0);
+  color: var(--text-primary);
   font-family: var(--font-display);
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 14px; line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 /* ─── Selection ───────────────────────────────────────────────────────────── */
 
-::selection {
-  background: rgba(45, 212, 191, 0.22);
-  color: inherit;
-}
+::selection { background: var(--accent-tint2); color: inherit; }
 
-*:not(input):not(textarea):not(select) {
-  user-select: none;
-  -webkit-user-select: none;
-}
+*:not(input):not(textarea):not(select) { user-select: none; -webkit-user-select: none; }
+input, textarea, select, button { user-select: text; -webkit-user-select: text; }
 
-input, textarea, select, button {
-  user-select: text;
-  -webkit-user-select: text;
-}
+/* ─── Drag Regions ────────────────────────────────────────────────────────── */
 
-/* ─── Drag Regions (macOS frameless) ──────────────────────────────────────── */
-
-.drag-region {
-  -webkit-app-region: drag;
-}
-
-.no-drag {
-  -webkit-app-region: no-drag;
-}
+.drag-region { -webkit-app-region: drag; }
+.no-drag     { -webkit-app-region: no-drag; }
 
 /* ─── Scrollbars ──────────────────────────────────────────────────────────── */
 
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb {
-  background: rgba(42, 51, 71, 0.45);
-  border-radius: 3px;
-}
+::-webkit-scrollbar-thumb { background: rgba(42, 51, 71, 0.45); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(42, 51, 71, 0.7); }
 
 /* ─── Focus Styles ────────────────────────────────────────────────────────── */
 
 *:focus-visible {
-  outline: 1px solid rgba(74, 158, 255, 0.45);
+  outline: 1px solid var(--accent-border);
   outline-offset: 1px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 
 /* ─── Tabular Nums ────────────────────────────────────────────────────────── */
@@ -121,11 +124,11 @@ button, a, input, select { transition: all 0.15s ease-out; }
 /* ─── Glassmorphism Card ──────────────────────────────────────────────────── */
 
 .glass-card {
-  background: rgba(13, 14, 24, 0.72);
+  background: var(--surface-glass);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.055);
-  border-radius: 10px;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
 }
 
 /* ─── Status Pulse Glow Animation ─────────────────────────────────────────── */
@@ -138,47 +141,28 @@ button, a, input, select { transition: all 0.15s ease-out; }
 
 .status-dot-pulse { animation: statusPulse 2s ease-out infinite; }
 
-/* ─── Metric Glow ─────────────────────────────────────────────────────────── */
-
-.metric-glow { filter: drop-shadow(0 0 8px var(--glow-color, rgba(45,212,191,0.45))); }
-
-/* ─── Accent Left Border ──────────────────────────────────────────────────── */
-
-.accent-border-left { border-left: 2px solid var(--accent); }
-
-/* ─── Textarea reset ──────────────────────────────────────────────────────── */
-
-textarea { resize: none; font-family: inherit; }
-
-/* ─── Shimmer (progress bar fill) ────────────────────────────────────────────── */
-
-@keyframes shimmerSlide {
-  0%   { transform: translateX(-100%); }
-  100% { transform: translateX(200%); }
-}
-
-/* ─── Fade-in (empty states, modals) ─────────────────────────────────────────── */
+/* ─── Fade-in (empty states, modals) ──────────────────────────────────────── */
 
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.anim-fade-in-up {
-  animation: fadeInUp 300ms var(--ease) both;
-}
+.anim-fade-in-up { animation: fadeInUp 300ms var(--ease) both; }
 
-/* ─── Button primary hover glow ──────────────────────────────────────────────── */
+/* ─── Button primary hover glow ───────────────────────────────────────────── */
 
 .btn-teal-glow {
-  transition: box-shadow var(--motion-fast) ease, background var(--motion-fast) ease, border-color var(--motion-fast) ease;
+  transition: box-shadow var(--motion-fast) ease,
+              background var(--motion-fast) ease,
+              border-color var(--motion-fast) ease;
 }
 
 .btn-teal-glow:hover:not(:disabled) {
-  box-shadow: 0 0 0 2px rgba(45,212,191,0.20), 0 2px 10px rgba(45,212,191,0.18);
+  box-shadow: 0 0 0 2px var(--accent-tint2), 0 2px 10px var(--accent-tint2);
 }
 
-/* ─── Animated step progress dots ────────────────────────────────────────────── */
+/* ─── Animated step progress dots ────────────────────────────────────────── */
 
 @keyframes stepDotPop {
   0%  { transform: scale(0.7); opacity: 0; }
@@ -188,13 +172,33 @@ textarea { resize: none; font-family: inherit; }
 
 .step-dot-pop { animation: stepDotPop 220ms var(--ease) both; }
 
-/* ─── Library card stagger entry ─────────────────────────────────────────────── */
+/* ─── Library card stagger entry ──────────────────────────────────────────── */
 
 @keyframes cardSlideIn {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.library-card-enter {
-  animation: cardSlideIn 260ms var(--ease) both;
+.library-card-enter { animation: cardSlideIn 260ms var(--ease) both; }
+
+/* ─── Textarea reset ──────────────────────────────────────────────────────── */
+
+textarea { resize: none; font-family: inherit; }
+
+/* ─── Metric Glow ─────────────────────────────────────────────────────────── */
+
+.metric-glow { filter: drop-shadow(0 0 8px var(--glow-color, var(--accent-glow))); }
+
+/* ─── Accent Left Border ──────────────────────────────────────────────────── */
+
+.accent-border-left { border-left: 2px solid var(--accent); }
+
+/* ─── Reduced Motion ──────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

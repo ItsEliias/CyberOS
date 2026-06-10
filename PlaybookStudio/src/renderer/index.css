@@ -1,30 +1,15 @@
-/* Legacy CSS vars — kept for StepEditor and other components that reference them.
-   globals.css (imported after this) sets the authoritative teal-accent vars.
-   The vars below are overridden by globals.css :root block. */
+/* Legacy CSS vars stub — kept because main.tsx imports this before globals.css.
+   The authoritative token declarations are in globals.css (tokens.css import).
+   Vars here are overridden by globals.css :root block that follows. */
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --bg:         #0a0a0f;
-  --panel:      #0d0e18;
-  --border:     rgba(42,51,71,0.75);
-  --text:       #e2e8f0;
-  --text-dim:   #8b949e;
-  --text-secondary: #8b949e;
-  --text-muted: #4a5568;
-  --accent:     #4a9eff;
-  --accent-dim: rgba(74,158,255,0.12);
-  --success:    #3fb950;
-  --error:      #f85149;
-  --warning:    #d29922;
-}
 
 html, body, #root {
   height: 100%;
   overflow: hidden;
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Geist Sans', 'Inter', system-ui, sans-serif;
+  background: var(--surface-0, #07080f);
+  color: var(--text-primary, #e6edf3);
+  font-family: var(--font-display, 'Geist Sans', 'Inter', system-ui, sans-serif);
   -webkit-font-smoothing: antialiased;
   user-select: none;
 }
@@ -36,7 +21,5 @@ html, body, #root {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(42,51,71,0.45); border-radius: 3px; }
 
-::selection { background: rgba(45, 212, 191, 0.20); }
 input, textarea, button, select { user-select: text; }
-
 textarea { resize: none; font-family: inherit; }
