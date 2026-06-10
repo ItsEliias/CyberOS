@@ -1,5 +1,6 @@
 // ReconDesk — credential change detection helper (extracted from main.ts)
 import fs from 'fs'
+import { ecosystemBusPath } from './platform'
 import type { ReconDeskData } from '../shared/types'
 
 const CYBERTOOLS_CONFIG = require('path').join(require('os').homedir(), 'cybertools-config.json')

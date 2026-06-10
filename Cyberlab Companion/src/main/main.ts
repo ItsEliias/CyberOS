@@ -5,13 +5,13 @@ import os from 'os';
 import https from 'https';
 import http from 'http';
 import { URL } from 'url';
-import { emitEvent } from './ecosystem-bus.js';
-import { registerExtrasIPC } from './ipc-extras.js';
-import { consumePendingAction, installPendingActionWatcher } from './pendingActions.js'
+import { emitEvent } from './ecosystem-bus';
+import { registerExtrasIPC } from './ipc-extras';
+import { consumePendingAction, installPendingActionWatcher } from './pendingActions'
 import {
   saveTokenSecure, loadTokenSecure, clearTokenSecure,
   fetchHtbStats, fetchThmStats, writeActiveLab,
-} from './platforms.js';
+} from './platforms';
 import { sharedConfigPath } from './platform';
 
 const APP_VERSION        = '1.0';

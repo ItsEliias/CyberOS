@@ -8,7 +8,8 @@ import fs from 'fs';
 import os from 'os';
 import http from 'http';
 import https from 'https';
-import { emitEvent } from './ecosystem-bus.js';
+import { emitEvent } from './ecosystem-bus';
+import { sharedConfigPath } from './platform';
 import { URL } from 'url';
 
 const CONFIG_PATH = sharedConfigPath();

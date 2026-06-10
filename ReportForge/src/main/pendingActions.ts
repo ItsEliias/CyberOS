@@ -5,6 +5,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { sharedConfigPath } from './platform';
 
 const CYBERTOOLS_CONFIG = sharedConfigPath();
 
