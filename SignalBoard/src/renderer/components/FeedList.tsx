@@ -42,8 +42,8 @@ function FeedCard({ item, selected, threshold }: { item: FeedItem; selected: boo
       onClick={handleClick}
       className="px-4 py-3 cursor-pointer transition-colors relative"
       style={{
-        background: selected ? 'rgba(255,107,107,0.07)' : 'transparent',
-        borderBottom: '1px solid rgba(42,51,71,0.3)',
+        background: selected ? 'var(--accent-tint)' : 'transparent',
+        borderBottom: '1px solid var(--border-subtle)',
         opacity: item.read ? 0.65 : 1,
       }}
       onMouseEnter={e => {
@@ -57,7 +57,7 @@ function FeedCard({ item, selected, threshold }: { item: FeedItem; selected: boo
       {selected && (
         <div
           className="absolute left-0 top-0 bottom-0 w-[3px] rounded-r-full"
-          style={{ background: '#ff6b6b', boxShadow: '0 0 8px rgba(255,107,107,0.4)' }}
+          style={{ background: 'var(--accent)', boxShadow: '0 0 8px var(--accent-glow)' }}
         />
       )}
 
@@ -66,8 +66,8 @@ function FeedCard({ item, selected, threshold }: { item: FeedItem; selected: boo
         <span
           className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 transition-opacity"
           style={{
-            background: item.read ? 'transparent' : '#ff6b6b',
-            boxShadow: item.read ? 'none' : '0 0 5px rgba(255,107,107,0.5)',
+            background: item.read ? 'transparent' : 'var(--accent)',
+            boxShadow: item.read ? 'none' : '0 0 5px var(--accent-glow)',
           }}
         />
 
@@ -79,29 +79,33 @@ function FeedCard({ item, selected, threshold }: { item: FeedItem; selected: boo
             {item.relevanceScore >= threshold && (
               <span
                 className="text-[9px] px-1 py-px rounded-xs flex-shrink-0"
-                style={{ background: 'rgba(210,153,34,0.12)', border: '1px solid rgba(210,153,34,0.25)', color: '#d29922' }}
+                style={{
+                  background: 'var(--sev-medium-bg)',
+                  border: '1px solid rgba(210,153,34,0.25)',
+                  color: 'var(--sev-medium)',
+                }}
               >
                 relevant
               </span>
             )}
             {item.saved && (
-              <span className="text-[9px] flex-shrink-0" style={{ color: '#ff6b6b' }}>saved</span>
+              <span className="text-[9px] flex-shrink-0" style={{ color: 'var(--accent)' }}>saved</span>
             )}
           </div>
           <p
             className="text-[12px] leading-snug mb-1 font-medium"
-            style={{ color: item.read ? '#484f58' : '#e6edf3' }}
+            style={{ color: item.read ? 'var(--text-muted)' : 'var(--text-primary)' }}
           >
             {item.title}
           </p>
-          <p className="text-[11px] leading-relaxed line-clamp-2" style={{ color: '#484f58' }}>
+          <p className="text-[11px] leading-relaxed line-clamp-2 text-text-muted">
             {item.summary}
           </p>
         </div>
       </div>
 
       <div className="pl-5">
-        <span className="text-[10px]" style={{ color: 'rgba(72,79,88,0.6)' }}>
+        <span className="text-[10px] text-text-muted/60">
           {timeAgo(item.publishedAt)}
         </span>
       </div>
@@ -159,18 +163,17 @@ export default function FeedList() {
   return (
     <div
       className="w-80 flex flex-col flex-shrink-0"
-      style={{ borderRight: '1px solid rgba(42,51,71,0.4)' }}
+      style={{ borderRight: '1px solid var(--border-subtle)' }}
     >
       {/* Search */}
       <div
         className="px-3 py-2.5"
-        style={{ borderBottom: '1px solid rgba(42,51,71,0.35)' }}
+        style={{ borderBottom: '1px solid var(--border-subtle)' }}
       >
         <div className="relative">
           <svg
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none"
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none text-text-muted"
             fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-            style={{ color: '#484f58' }}
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
@@ -180,12 +183,12 @@ export default function FeedList() {
             placeholder="Search feeds…"
             className="w-full pl-7 pr-2.5 py-1.5 text-xs rounded-sm focus:outline-none transition-colors no-drag"
             style={{
-              background: 'rgba(13,14,24,0.8)',
-              border: '1px solid rgba(42,51,71,0.5)',
-              color: '#e6edf3',
+              background: 'var(--surface-1)',
+              border: '1px solid var(--border-default)',
+              color: 'var(--text-primary)',
             }}
-            onFocus={e => (e.target.style.borderColor = 'rgba(255,107,107,0.4)')}
-            onBlur={e => (e.target.style.borderColor = 'rgba(42,51,71,0.5)')}
+            onFocus={e => (e.target.style.borderColor = 'var(--accent-border)')}
+            onBlur={e => (e.target.style.borderColor = 'var(--border-default)')}
           />
         </div>
       </div>
@@ -193,7 +196,7 @@ export default function FeedList() {
       {/* Tabs */}
       <div
         className="flex"
-        style={{ borderBottom: '1px solid rgba(42,51,71,0.35)' }}
+        style={{ borderBottom: '1px solid var(--border-subtle)' }}
       >
         {TABS.map(tab => {
           const count = tab.id === 'unread' ? counts.unread
@@ -206,18 +209,18 @@ export default function FeedList() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className="flex-1 py-2 text-[11px] font-medium transition-colors relative"
-              style={{ color: isActive ? '#e6edf3' : '#484f58' }}
-              onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.color = '#8b949e' }}
-              onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.color = '#484f58' }}
+              style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-muted)' }}
+              onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)' }}
+              onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' }}
             >
               {tab.label}
               {count != null && count > 0 && (
-                <span className="ml-1 text-[9px]" style={{ color: '#ff6b6b' }}>{count}</span>
+                <span className="ml-1 text-[9px]" style={{ color: 'var(--accent)' }}>{count}</span>
               )}
               {isActive && (
                 <span
                   className="absolute bottom-0 left-2 right-2 h-px rounded-full"
-                  style={{ background: '#ff6b6b', boxShadow: '0 0 6px rgba(255,107,107,0.4)' }}
+                  style={{ background: 'var(--accent)', boxShadow: '0 0 6px var(--accent-glow)' }}
                 />
               )}
             </button>
@@ -228,23 +231,23 @@ export default function FeedList() {
       {/* Meta bar */}
       <div
         className="px-3 py-1.5 flex items-center justify-between gap-2"
-        style={{ borderBottom: '1px solid rgba(42,51,71,0.35)' }}
+        style={{ borderBottom: '1px solid var(--border-subtle)' }}
       >
-        <span className="text-[10px]" style={{ color: '#484f58' }}>
+        <span className="text-[10px] text-text-muted">
           {filtered.length} item{filtered.length !== 1 ? 's' : ''}
         </span>
         <div className="flex items-center gap-2 flex-1 justify-end">
           {activeTab === 'relevant' && (
             <div className="flex items-center gap-1">
-              <span className="text-[9px]" style={{ color: '#484f58' }}>min score</span>
+              <span className="text-[9px] text-text-muted">min score</span>
               <select
                 value={relevanceThreshold}
                 onChange={e => setRelevanceThreshold(Number(e.target.value))}
                 className="rounded-xs px-1 text-[10px] focus:outline-none transition-colors no-drag"
                 style={{
-                  background: 'rgba(13,14,24,0.8)',
-                  border: '1px solid rgba(42,51,71,0.5)',
-                  color: '#8b949e',
+                  background: 'var(--surface-1)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-secondary)',
                   paddingTop: 1,
                   paddingBottom: 1,
                 }}
@@ -256,22 +259,19 @@ export default function FeedList() {
             </div>
           )}
           {refreshing && (
-            <span className="text-[10px] animate-pulse flex-shrink-0" style={{ color: '#ff6b6b' }}>
+            <span className="text-[10px] animate-pulse flex-shrink-0" style={{ color: 'var(--accent)' }}>
               Refreshing…
             </span>
           )}
           {!refreshing && lastRefreshed && (
-            <span className="text-[10px] flex-shrink-0" style={{ color: '#484f58' }}>
+            <span className="text-[10px] flex-shrink-0 text-text-muted">
               {formatRefreshed(lastRefreshed)}
             </span>
           )}
           <button
             onClick={() => window.electronAPI.refresh()}
             disabled={refreshing}
-            className="text-[12px] transition-colors no-drag disabled:opacity-40"
-            style={{ color: '#484f58' }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#8b949e')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#484f58')}
+            className="text-[12px] transition-colors no-drag disabled:opacity-40 text-text-muted hover:text-text-secondary"
           >
             ↻
           </button>
@@ -282,10 +282,10 @@ export default function FeedList() {
       <div className="flex-1 overflow-y-auto">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-2">
-            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1} style={{ color: '#2a3347' }}>
+            <svg className="w-8 h-8 text-text-muted/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7M6 17a1 1 0 110-2 1 1 0 010 2z" />
             </svg>
-            <p className="text-xs text-center px-4 leading-relaxed" style={{ color: '#484f58' }}>
+            <p className="text-xs text-center px-4 leading-relaxed text-text-muted">
               {refreshing ? 'Loading feeds…'
                 : activeTab === 'relevant'
                 ? 'No relevant items.\nLaunch CyberLab or ReconDesk\nto set context.'

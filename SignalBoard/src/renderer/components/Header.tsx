@@ -11,11 +11,11 @@ export default function Header() {
 
   const isMac = window.electronAPI.platform === 'darwin'
   return (
-    <header className="drag-region h-12 flex items-center justify-between px-5 border-b border-border flex-shrink-0">
+    <header className="drag-region h-12 flex items-center justify-between px-5 border-b border-[var(--border-default)] flex-shrink-0">
       <div className="flex items-center gap-3">
         {isMac && <div className="w-[72px]" /> /* macOS traffic-light spacer */}
-        <span className="text-sm font-semibold tracking-wide text-text">SIGNALBOARD</span>
-        {/* Total unread badge */}
+        <span className="text-sm font-semibold tracking-wide text-text-primary">SIGNALBOARD</span>
+        {/* Total unread badge — uses accent token vars, no hardcoded hex */}
         <AnimatePresence>
           {unread > 0 && (
             <motion.span
@@ -26,33 +26,47 @@ export default function Header() {
               transition={{ type: 'spring', stiffness: 400, damping: 20 }}
               className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[9px] font-bold tabular-nums leading-none no-drag"
               style={{
-                background: 'rgba(255,107,107,0.18)',
-                color: '#ff6b6b',
-                border: '1px solid rgba(255,107,107,0.3)',
+                background: 'var(--accent-tint2)',
+                color: 'var(--accent)',
+                border: '1px solid var(--accent-border)',
               }}
             >
               {unread > 99 ? '99+' : unread}
             </motion.span>
           )}
         </AnimatePresence>
-        <span className="text-xs text-muted font-light">// ItsEliias</span>
-        <span className="text-[10px] text-muted/50 ml-1">v{version}</span>
+        <span className="text-xs text-text-muted font-light">// ItsEliias</span>
+        <span className="text-[10px] text-text-muted/50 ml-1">v{version}</span>
       </div>
 
       <div className="no-drag flex items-center gap-4">
-        {/* Active context pills */}
+        {/* Active context pills — token-bridged, no Tailwind default palette */}
         {context.lab && (
-          <span className="text-[10px] px-2 py-0.5 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded font-mono">
+          <span
+            className="text-[10px] px-2 py-0.5 rounded font-mono"
+            style={{
+              background: 'rgba(180,79,255,0.10)',
+              border: '1px solid rgba(180,79,255,0.20)',
+              color: '#b44fff',
+            }}
+          >
             lab: {context.lab}
           </span>
         )}
         {context.target && (
-          <span className="text-[10px] px-2 py-0.5 bg-warning/10 border border-warning/20 text-warning rounded font-mono">
+          <span
+            className="text-[10px] px-2 py-0.5 rounded font-mono"
+            style={{
+              background: 'var(--sev-medium-bg)',
+              border: '1px solid rgba(210,153,34,0.20)',
+              color: 'var(--sev-medium)',
+            }}
+          >
             target: {context.target}
           </span>
         )}
         {refreshing && (
-          <span className="text-[11px] text-accent animate-pulse">Refreshing…</span>
+          <span className="text-[11px] animate-pulse" style={{ color: 'var(--accent)' }}>Refreshing…</span>
         )}
       </div>
     </header>

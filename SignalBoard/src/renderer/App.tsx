@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useStore } from './store'
-import { useThemeStore } from './store/themeStore'
 import TitleBar from './components/layout/TitleBar'
 import Sidebar from './components/layout/Sidebar'
 import StatusBar from './components/layout/StatusBar'
@@ -17,7 +16,6 @@ import OnboardingModal, { useOnboarding } from './components/OnboardingModal'
 
 export default function App() {
   const onboarding       = useOnboarding()
-  const theme            = useThemeStore(s => s.theme)
   const setItems         = useStore(s => s.setItems)
   const setSources       = useStore(s => s.setSources)
   const setRefreshing    = useStore(s => s.setRefreshing)
@@ -102,16 +100,7 @@ export default function App() {
   }, [])
 
   return (
-    <div
-      className="flex flex-col h-full"
-      style={{
-        background: theme.bgColor,
-        color: theme.textColor,
-        ['--app-accent' as string]: theme.accentColor,
-        ['--app-bg'     as string]: theme.bgColor,
-        ['--app-text'   as string]: theme.textColor,
-      }}
-    >
+    <div className="flex flex-col h-full bg-surface-0 text-text-primary">
       <TitleBar onHelp={onboarding.open} />
       <div className="flex flex-1 min-h-0">
         <Sidebar />
