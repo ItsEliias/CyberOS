@@ -26,16 +26,17 @@ export default function StatsStrip() {
   ];
 
   return (
-    <div className="grid grid-cols-4 border-b" style={{ borderColor: 'var(--border)' }}>
+    <div className="grid grid-cols-4 border-b border-border-default">
       {stats.map((s, i) => (
         <div key={s.label}
-          className={`flex flex-col items-center py-2.5 gap-0.5 ${i < 3 ? 'border-r' : ''}`}
-          style={{ borderColor: 'var(--border)' }}>
-          <span className="text-sm font-bold font-mono"
-            style={{ background: 'var(--stat-grad)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          className={`flex flex-col items-center py-2.5 gap-0.5 ${i < 3 ? 'border-r border-border-default' : ''}`}>
+          {/* Anti-slop: replaced gradient-clipped text with token-driven accent color.
+              Soft text-shadow gives depth without the "AI dashboard" gradient tell. */}
+          <span className="text-sm font-bold font-mono tabular-nums"
+            style={{ color: 'var(--accent)', textShadow: '0 0 8px var(--accent-glow2)' }}>
             {s.value}
           </span>
-          <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+          <span className="text-[10px] uppercase tracking-wider text-text-muted">
             {s.label}
           </span>
         </div>

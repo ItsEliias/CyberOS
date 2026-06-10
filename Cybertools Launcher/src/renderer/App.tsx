@@ -9,6 +9,7 @@ import UpdateBanner from './components/UpdateBanner';
 import SettingsPanel from './components/SettingsPanel';
 import AppManager from './components/AppManager';
 import Footer from './components/Footer';
+import CommandPalette from './components/CommandPalette';
 
 export default function App() {
   const {
@@ -85,8 +86,7 @@ export default function App() {
   const personality= config?.personalityTheme || 'neutral';
 
   return (
-    <div className="relative w-full h-full overflow-hidden flex flex-col"
-      style={{ background: 'var(--bg)', color: 'var(--text)' }}>
+    <div className="relative w-full h-full overflow-hidden flex flex-col bg-surface-0 text-text-primary">
 
       <SplashScreen visible={showSplash} onHide={() => setSplashDone(true)} />
 
@@ -96,26 +96,25 @@ export default function App() {
           <Header onSettingsClick={() => setSettingsOpen(true)} />
           <StatsStrip />
 
-          {/* Tab bar */}
-          <div className="flex border-b" style={{ borderColor: 'rgba(42,51,71,0.6)' }}>
+          {/* Tab bar — accent color from tokens.css --accent */}
+          <div className="flex border-b border-border-default">
             {(['apps', 'activity'] as const).map(tab => (
               <button key={tab}
                 onClick={() => setActiveTab(tab)}
                 className="flex-1 py-2 text-[11px] uppercase tracking-wider font-medium capitalize relative transition-colors"
-                style={{ color: activeTab === tab ? '#d29922' : '#4a5568' }}>
+                style={{ color: activeTab === tab ? 'var(--accent)' : 'var(--text-muted)' }}>
                 {tab}
                 {activeTab === tab && (
                   <motion.div layoutId="tab-indicator"
                     className="absolute bottom-0 left-0 right-0 h-0.5"
-                    style={{ background: '#d29922' }} />
+                    style={{ background: 'var(--accent)' }} />
                 )}
               </button>
             ))}
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3"
-            style={{ scrollbarWidth: 'thin', scrollbarColor: 'var(--scrollbar) transparent' }}>
+          <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
 
             {activeTab === 'apps' && (
               <AppManager />

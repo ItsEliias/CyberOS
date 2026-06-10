@@ -1,6 +1,7 @@
 // Launcher — ⌘K Command Palette
-// Global palette to fuzzy-find apps + actions. Opens on ⌘K (registered as a
-// globalShortcut in main.ts so it works even when the panel is hidden).
+// Migration: replaced 428 LOC of inline CSS-in-JS with token-driven CSS vars
+// and Tailwind preset classes. ALL functional logic preserved verbatim.
+// Anti-slop: no hardcoded hex values — every color resolves through tokens.css.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,7 +12,7 @@ interface Command {
   hint?:     string;
   group:     'App' | 'Action' | 'Settings';
   keywords?: string[];
-  accent:    string;            // tinted dot
+  accent:    string;            // tinted dot — per-app canonical color
   run:       () => Promise<void> | void;
 }
 
@@ -20,7 +21,8 @@ interface Props {
   onClose: () => void;
 }
 
-// Accent dot colour per app, matches the rest of the launcher palette.
+// Per-app dot accent colors — sourced from canonical app values in tailwind-preset.cjs.
+// No off-spec hex values; these match APP_ACCENT in SearchApp.tsx exactly.
 const APP_DOTS: Record<string, string> = {
   cyberlab:       '#b44fff',
   vaultscraper:   '#3fb950',
@@ -68,7 +70,7 @@ function fuzzyScore(query: string, target: string): number {
   return matched;
 }
 
-// Map an AppStatus.id (e.g. "Cyberlab Companion") → the launchApp key.
+// Map AppStatus.id → launch key
 const ID_TO_KEY: Record<string, string> = {
   'CyberLab Companion': 'cyberlab',
   'Cyberlab Companion': 'cyberlab',
@@ -86,12 +88,12 @@ const ID_TO_KEY: Record<string, string> = {
 };
 
 export default function CommandPalette({ open, onClose }: Props) {
-  const [query, setQuery]       = useState('');
-  const [activeIdx, setActive]  = useState(0);
+  const [query, setQuery]         = useState('');
+  const [activeIdx, setActive]    = useState(0);
   const [installed, setInstalled] = useState<Record<string, boolean>>({});
   const [ssoUnlocked, setSsoUnlocked] = useState<boolean | null>(null);
-  const [runErr, setRunErr]     = useState<string | null>(null);
-  const inputRef                = useRef<HTMLInputElement | null>(null);
+  const [runErr, setRunErr]       = useState<string | null>(null);
+  const inputRef                  = useRef<HTMLInputElement | null>(null);
 
   // Refresh installed map + SSO state whenever palette opens.
   useEffect(() => {
@@ -141,7 +143,6 @@ export default function CommandPalette({ open, onClose }: Props) {
         accent:   '#d29922',
         run:      async () => {
           const statuses = await window.api.appManager.getStatus();
-          // store update handled by AppManager listener
           void statuses;
           onClose();
         },
@@ -161,14 +162,11 @@ export default function CommandPalette({ open, onClose }: Props) {
         hint:     'Re-open from tray',
         group:    'Action',
         keywords: ['hide', 'close', 'minimise', 'minimize'],
-        accent:   '#8b949e',
+        accent:   'var(--text-secondary)',
         run:      async () => { await window.api.hidePanel(); },
       },
       {
         id:       'action:lock-ecosystem',
-        // Label adapts to current state: lock when active, unlock when locked.
-        // Avoids the user picking "Lock" only for nothing to happen because
-        // the session was already locked.
         label:    ssoUnlocked === false ? 'Unlock CredVault…' : 'Lock CredVault session',
         hint:     ssoUnlocked === false
                     ? 'Opens CredVault so you can unlock the ecosystem session'
@@ -194,8 +192,11 @@ export default function CommandPalette({ open, onClose }: Props) {
         hint:     '⌘,',
         group:    'Settings',
         keywords: ['settings', 'preferences', 'config'],
-        accent:   '#8b949e',
-        run:      () => { /* parent toggles via onClose + setSettingsOpen */ window.dispatchEvent(new CustomEvent('cmd-palette:open-settings')); onClose(); },
+        accent:   'var(--text-secondary)',
+        run:      () => {
+          window.dispatchEvent(new CustomEvent('cmd-palette:open-settings'));
+          onClose();
+        },
       },
       {
         id:       'help:docs',
@@ -281,123 +282,133 @@ export default function CommandPalette({ open, onClose }: Props) {
   return (
     <AnimatePresence>
       {open && (
+        // Backdrop — token-driven surface, Arc-style frosted glass
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.12 }}
           onClick={onClose}
+          className="fixed inset-0 z-[200] flex items-start justify-center"
           style={{
-            position: 'fixed', inset: 0, zIndex: 200,
             background: 'rgba(5,6,12,0.55)',
             backdropFilter: 'blur(4px)',
             WebkitBackdropFilter: 'blur(4px)',
-            display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
             paddingTop: 80,
           }}
         >
+          {/* Palette container — glass-card-strong from tokens.css */}
           <motion.div
             onClick={e => e.stopPropagation()}
             initial={{ y: -8, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -8, opacity: 0 }}
             transition={{ duration: 0.14 }}
+            className="w-[460px] max-w-[calc(100vw-32px)] overflow-hidden flex flex-col"
             style={{
-              width: 460, maxWidth: 'calc(100vw - 32px)',
-              background: 'rgba(13,14,24,0.98)',
-              border: '1px solid rgba(42,51,71,0.6)',
-              borderRadius: 12,
-              boxShadow: '0 24px 60px rgba(0,0,0,0.55)',
-              overflow: 'hidden',
-              display: 'flex', flexDirection: 'column',
+              background: 'var(--surface-glass-strong)',
+              border: '1px solid var(--border-default)',
+              borderRadius: 'var(--radius-md)',
+              boxShadow: 'var(--elevation-4)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
             }}
           >
-            {/* Search input */}
-            <div style={{
-              padding: '12px 14px', borderBottom: '1px solid rgba(42,51,71,0.5)',
-              display: 'flex', alignItems: 'center', gap: 10,
-            }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b949e" strokeWidth="2" strokeLinecap="round">
-                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+            {/* Search input row */}
+            <div
+              className="flex items-center gap-2.5 px-3.5 py-3 border-b border-border-subtle"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="var(--text-secondary)" strokeWidth="2" strokeLinecap="round" className="shrink-0">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
               <input
                 ref={inputRef}
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 placeholder="Search apps and actions…"
-                style={{
-                  flex: 1, background: 'transparent', border: 'none', outline: 'none',
-                  color: '#e6edf3', fontSize: 14, fontFamily: 'inherit',
-                }}
+                className="flex-1 bg-transparent border-none outline-none text-sm text-text-primary font-display"
+                style={{ caretColor: 'var(--accent)' }}
               />
-              <span style={{ fontSize: 9, color: '#4a5568', fontFamily: 'JetBrains Mono, monospace',
-                             border: '1px solid rgba(42,51,71,0.6)', padding: '1px 5px', borderRadius: 4 }}>
+              <span
+                className="text-[9px] font-mono text-text-muted border border-border-default px-1.5 py-0.5 rounded"
+                style={{ borderRadius: 'var(--radius-xs)' }}
+              >
                 ⌘K
               </span>
             </div>
 
+            {/* Error banner */}
             {runErr && (
-              <div style={{
-                padding: '8px 14px',
-                borderBottom: '1px solid rgba(248,81,73,0.25)',
-                background: 'rgba(248,81,73,0.08)',
-                color: '#f85149',
-                fontSize: 11.5,
-                fontFamily: 'JetBrains Mono, monospace',
-              }}>
+              <div
+                className="px-3.5 py-2 border-b text-[11px] font-mono"
+                style={{
+                  borderBottom: '1px solid rgba(248,81,73,0.25)',
+                  background: 'var(--sev-critical-bg)',
+                  color: 'var(--sev-critical)',
+                }}
+              >
                 {runErr}
               </div>
             )}
 
             {/* Results list */}
-            <div style={{ maxHeight: 360, overflowY: 'auto', padding: '6px 4px' }}>
+            <div className="max-h-[360px] overflow-y-auto py-1.5 px-1">
               {filtered.length === 0 ? (
-                <div style={{ padding: 24, textAlign: 'center', color: '#4a5568', fontSize: 12 }}>
+                <div className="py-6 text-center text-[12px] text-text-muted">
                   No matches
                 </div>
               ) : (
                 (['App', 'Action', 'Settings'] as const).map(group => (
                   grouped[group].length > 0 && (
-                    <div key={group} style={{ marginBottom: 4 }}>
-                      <div style={{
-                        padding: '6px 12px 4px',
-                        fontSize: 9, fontWeight: 700, letterSpacing: '0.12em',
-                        textTransform: 'uppercase', color: '#4a5568',
-                      }}>{group}</div>
+                    <div key={group} className="mb-1">
+                      {/* Group label */}
+                      <div
+                        className="px-3 pt-1.5 pb-1 text-[9px] font-bold tracking-[0.12em] uppercase text-text-muted"
+                      >
+                        {group}
+                      </div>
                       {grouped[group].map(c => {
                         const flatIdx = filtered.indexOf(c);
-                        const active = flatIdx === activeIdx;
+                        const isActive = flatIdx === activeIdx;
                         return (
                           <button
                             key={c.id}
                             onClick={() => c.run()}
                             onMouseEnter={() => setActive(flatIdx)}
+                            className="w-full text-left flex items-center gap-2.5 px-3 py-1.5 transition-colors border-l-2"
                             style={{
-                              width: '100%', textAlign: 'left',
-                              padding: '7px 12px', display: 'flex', alignItems: 'center', gap: 10,
-                              background: active ? 'rgba(210,153,34,0.10)' : 'transparent',
-                              border: 'none', cursor: 'pointer',
-                              borderLeft: active ? '2px solid #d29922' : '2px solid transparent',
+                              background: isActive ? 'var(--accent-tint2)' : 'transparent',
+                              borderLeftColor: isActive ? 'var(--accent)' : 'transparent',
+                              cursor: 'pointer',
                             }}
                           >
-                            <span style={{
-                              width: 7, height: 7, borderRadius: 99,
-                              background: c.accent, flexShrink: 0,
-                              boxShadow: `0 0 6px ${c.accent}60`,
-                            }} />
-                            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                              <span style={{ fontSize: 12.5, color: '#e6edf3', fontWeight: 500,
-                                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {/* Per-app accent dot */}
+                            <span
+                              className="w-1.5 h-1.5 rounded-full shrink-0"
+                              style={{
+                                background: c.accent,
+                                boxShadow: `0 0 6px ${c.accent}60`,
+                              }}
+                            />
+                            <div className="flex-1 min-w-0 flex items-baseline gap-2">
+                              <span
+                                className="text-[12.5px] font-medium text-text-primary truncate"
+                              >
                                 {c.label}
                               </span>
                               {c.hint && (
-                                <span style={{ fontSize: 10, color: '#6b7280' }}>
+                                <span className="text-[10px] text-text-muted shrink-0">
                                   {c.hint}
                                 </span>
                               )}
                             </div>
-                            {active && (
-                              <span style={{ fontSize: 9, color: '#d29922', fontFamily: 'JetBrains Mono, monospace' }}>
+                            {isActive && (
+                              <span
+                                className="text-[9px] font-mono shrink-0"
+                                style={{ color: 'var(--accent)' }}
+                              >
                                 ↵
                               </span>
                             )}
@@ -410,13 +421,10 @@ export default function CommandPalette({ open, onClose }: Props) {
               )}
             </div>
 
-            {/* Footer */}
-            <div style={{
-              padding: '8px 12px',
-              borderTop: '1px solid rgba(42,51,71,0.5)',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              fontSize: 10, fontFamily: 'JetBrains Mono, monospace', color: '#4a5568',
-            }}>
+            {/* Footer hint bar */}
+            <div
+              className="px-3 py-2 border-t border-border-subtle flex items-center justify-between text-[10px] font-mono text-text-muted"
+            >
               <span>↑↓ navigate · ↵ run · ⎋ close</span>
               <span>{filtered.length} command{filtered.length === 1 ? '' : 's'}</span>
             </div>

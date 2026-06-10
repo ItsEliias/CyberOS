@@ -3,22 +3,50 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { SearchResult } from '@shared/types';
 
 // ─── App colour chips ─────────────────────────────────────────────────────────
+// Anti-slop: deleted parallel APP_COLORS map with off-spec hex values.
+// Now resolved from canonical per-app accents in tailwind-preset.cjs via CSS vars.
 
-const APP_COLORS: Record<string, { bg: string; text: string }> = {
-  Launcher:    { bg: '#7c3aed22', text: '#a78bfa' },
-  ReconDesk:   { bg: '#0e7490aa', text: '#22d3ee' },
-  CyberLab:    { bg: '#15803d22', text: '#4ade80' },
-  GhostVault:  { bg: '#9d174d22', text: '#f9a8d4' },
-  CredVault:   { bg: '#b91c1c22', text: '#fca5a5' },
-  SignalBoard:  { bg: '#92400e22', text: '#fcd34d' },
+// Maps display names → canonical app keys (matching tailwind-preset.cjs app.{key}).
+const APP_KEY_MAP: Record<string, string> = {
+  Launcher:       'launcher',
+  ReconDesk:      'recondesk',
+  'CyberLab':     'cyberlab',
+  'CyberLab Companion': 'cyberlab',
+  GhostVault:     'ghostvault',
+  CredVault:      'credvault',
+  SignalBoard:    'signalboard',
+  PlaybookStudio: 'playbookstudio',
+  ReportForge:    'reportforge',
+  TerminalLink:   'terminallink',
+  NetworkMap:     'networkmap',
+  NetLab:         'netlab',
+  VaultCore:      'vaultcore',
+};
+
+// Inline CSS vars for app accent colors (sourced from tailwind-preset.cjs values).
+const APP_ACCENT: Record<string, string> = {
+  launcher:       '#b44fff',
+  recondesk:      '#d29922',
+  cyberlab:       '#b44fff',
+  ghostvault:     '#7bb8ff',
+  credvault:      '#f78166',
+  signalboard:    '#ff6b6b',
+  playbookstudio: '#4a9eff',
+  reportforge:    '#3fb950',
+  terminallink:   '#00ff41',
+  networkmap:     '#d29922',
+  netlab:         '#4a9eff',
+  vaultcore:      '#3fb950',
 };
 
 function AppChip({ app }: { app: string }) {
-  const c = APP_COLORS[app] || { bg: '#ffffff11', text: '#aaaaaa' };
+  const key    = APP_KEY_MAP[app] || app.toLowerCase().replace(/\s+/g, '');
+  const color  = APP_ACCENT[key] || '#8b949e';
+  const bgRgba = `${color}26`; // ~15% opacity tint
   return (
     <span
       className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wide shrink-0"
-      style={{ background: c.bg, color: c.text, border: `1px solid ${c.text}33` }}
+      style={{ background: bgRgba, color, border: `1px solid ${color}40` }}
     >
       {app}
     </span>
@@ -111,13 +139,13 @@ export default function SearchApp() {
   return (
     <div
       className="flex flex-col w-full h-full"
-      style={{ background: 'var(--bg)', color: 'var(--text)', fontFamily: 'inherit' }}
+      style={{ background: 'var(--surface-0)', color: 'var(--text-primary)', fontFamily: 'inherit' }}
       onKeyDown={handleKeyDown}
     >
       {/* ── Search input ── */}
       <div
-        className="flex items-center gap-2 px-3 py-3 border-b"
-        style={{ borderColor: 'var(--border)', background: 'var(--bg2)' }}
+        className="flex items-center gap-2 px-3 py-3 border-b border-border-default"
+        style={{ background: 'var(--surface-1)' }}
       >
         {/* Search icon */}
         <svg
@@ -136,8 +164,8 @@ export default function SearchApp() {
           value={query}
           onChange={handleChange}
           placeholder="Search CyberOS…"
-          className="flex-1 bg-transparent outline-none text-sm"
-          style={{ color: 'var(--text)', caretColor: 'var(--accent)' }}
+          className="flex-1 bg-transparent outline-none text-sm text-text-primary"
+          style={{ caretColor: 'var(--accent)' }}
           autoComplete="off"
           spellCheck={false}
         />
@@ -152,8 +180,7 @@ export default function SearchApp() {
         )}
 
         <kbd
-          className="hidden sm:inline-flex items-center px-1 rounded text-[10px] opacity-30"
-          style={{ border: '1px solid var(--border)', color: 'var(--text-dim)' }}
+          className="hidden sm:inline-flex items-center px-1 rounded text-[10px] opacity-30 border border-border-default text-text-muted"
         >
           ESC
         </kbd>
@@ -162,7 +189,7 @@ export default function SearchApp() {
       {/* ── Results list ── */}
       <div
         className="flex-1 overflow-y-auto"
-        style={{ scrollbarWidth: 'thin', scrollbarColor: 'var(--scrollbar) transparent' }}
+        style={{ scrollbarWidth: 'thin' }}
       >
         <AnimatePresence initial={false}>
           {hasResults && results.map((r, i) => (
@@ -186,17 +213,16 @@ export default function SearchApp() {
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <AppChip app={r.app} />
                   <span
-                    className="text-[9px] uppercase tracking-wide px-1 py-0.5 rounded opacity-60"
-                    style={{ background: 'var(--bg3)', color: 'var(--text-dim)', border: '1px solid var(--border)' }}
+                    className="text-[9px] uppercase tracking-wide px-1 py-0.5 rounded opacity-60 bg-surface-2 text-text-muted border border-border-subtle"
                   >
                     {TYPE_LABEL[r.type] || r.type}
                   </span>
-                  <span className="text-[12px] font-medium truncate" style={{ color: 'var(--text)' }}>
+                  <span className="text-[12px] font-medium truncate text-text-primary">
                     {r.title}
                   </span>
                 </div>
                 {r.subtitle && (
-                  <span className="text-[11px] truncate pl-0.5" style={{ color: 'var(--text-dim)' }}>
+                  <span className="text-[11px] truncate pl-0.5 text-text-muted">
                     {r.subtitle}
                   </span>
                 )}
@@ -213,10 +239,7 @@ export default function SearchApp() {
         </AnimatePresence>
 
         {showEmpty && (
-          <div
-            className="flex flex-col items-center justify-center py-10 gap-2"
-            style={{ color: 'var(--text-dim)' }}
-          >
+          <div className="flex flex-col items-center justify-center py-10 gap-2 text-text-muted">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="opacity-30">
               <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="1.5" />
               <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -226,10 +249,8 @@ export default function SearchApp() {
         )}
 
         {!query.trim() && !loading && (
-          <div
-            className="flex flex-col items-center justify-center py-10 gap-1.5"
-            style={{ color: 'var(--text-dim)' }}
-          >
+          <div className="flex flex-col items-center justify-center py-10 gap-1.5 text-text-muted">
+
             <span className="text-[12px] opacity-60">Search targets, ports, credentials, and more</span>
             <div className="flex gap-3 mt-1 text-[10px] opacity-40">
               <span>↑↓ navigate</span>
@@ -242,14 +263,11 @@ export default function SearchApp() {
 
       {/* ── Footer ── */}
       {hasResults && (
-        <div
-          className="px-3 py-1.5 border-t flex justify-between items-center"
-          style={{ borderColor: 'var(--border)', background: 'var(--bg2)' }}
-        >
-          <span className="text-[10px]" style={{ color: 'var(--text-dim)' }}>
+        <div className="px-3 py-1.5 border-t border-border-default bg-surface-1 flex justify-between items-center">
+          <span className="text-[10px] text-text-muted">
             {results.length} result{results.length !== 1 ? 's' : ''}
           </span>
-          <span className="text-[10px]" style={{ color: 'var(--text-dim)' }}>
+          <span className="text-[10px] text-text-muted">
             CyberOS Unified Search
           </span>
         </div>

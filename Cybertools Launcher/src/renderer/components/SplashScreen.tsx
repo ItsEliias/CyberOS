@@ -11,7 +11,7 @@ export default function SplashScreen({ visible, onHide }: Props) {
       {visible && (
         <motion.div
           className="absolute inset-0 z-50 flex flex-col items-center justify-center"
-          style={{ background: 'var(--bg)' }}
+          style={{ background: 'var(--surface-0)' }}
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
@@ -23,7 +23,7 @@ export default function SplashScreen({ visible, onHide }: Props) {
             className="flex flex-col items-center gap-3"
           >
             <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
-              style={{ background: 'var(--accent)', boxShadow: '0 0 32px var(--shadow-color)' }}>
+              style={{ background: 'var(--accent)', boxShadow: '0 0 32px var(--accent-glow)' }}>
               <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
                 <path d="M6 18L18 6L30 18L18 30L6 18Z" fill="white" fillOpacity="0.9"/>
                 <path d="M12 18L18 12L24 18L18 24L12 18Z" fill="white"/>
@@ -34,7 +34,7 @@ export default function SplashScreen({ visible, onHide }: Props) {
                 style={{ color: 'var(--accent)' }}>
                 CYBERTOOLS
               </div>
-              <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              <div className="text-xs mt-0.5 text-text-secondary">
                 ItsEliias
               </div>
             </div>

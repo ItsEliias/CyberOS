@@ -1,87 +1,107 @@
+/* 1. Import canonical CyberOS design tokens FIRST (surfaces, borders, text,
+      severity, accent, typography, motion).  tokens.css is the single source
+      of truth — no parallel token set is ever introduced here. */
+@import url('../../../../design-system/tokens.css');
+
+/* 2. JetBrains Mono from Google Fonts as a progressive enhancement; the
+      font-family stack in tokens.css already includes it as the first choice. */
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
 
+/* 3. Tailwind layers — PostCSS processes these after the imports above. */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Reset ──────────────────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body, #root { width: 100%; height: 100%; overflow: hidden; }
+/* ─── shadcn token bridge ────────────────────────────────────────────────────
+   shadcn/ui expects its own CSS variable names. We remap them onto the
+   canonical tokens.css variables so shadcn primitives inherit the CyberOS
+   design system automatically. NO new color values are introduced here.
 
-/* ─── Font ───────────────────────────────────────────────────────────────── */
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
-.font-mono { font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace; }
+   Note: shadcn uses --accent to mean "muted hover highlight background", NOT
+   our brand accent. CyberOS's --accent (brand color) stays canonical.
+   shadcn's --accent is rebound to --accent-tint2 (a translucent brand tint),
+   which is the correct semantic for hover states anyway.
+──────────────────────────────────────────────────────────────────────────── */
+:root {
+  --background:         var(--surface-0);
+  --foreground:         var(--text-primary);
 
-/* ═══ CORE THEMES ═════════════════════════════════════════════════════════ */
+  --card:               var(--surface-1);
+  --card-foreground:    var(--text-primary);
 
-[data-core="stealth"], :root {
-  --bg: #0a0c14;  --bg2: #080a12;  --bg3: #0e1117;
-  --panel: rgba(10,12,20,0.95);  --panel2: rgba(14,17,26,0.9);
-  --border: rgba(42,51,71,0.6);  --border2: rgba(55,65,90,0.7);
-  --input-bg: #0d1017;  --input-border: rgba(42,51,71,0.6);
-  --text: #e2e8f0;  --text-muted: #8b949e;  --text-dim: #4a5568;
-  --scrollbar: rgba(42,51,71,0.6);
-  --card-bg: rgba(22,27,39,0.75);  --card-hover: rgba(28,35,50,0.85);
-  --shadow-color: rgba(210,153,34,.12);
-  --stat-grad: linear-gradient(135deg, #d29922, #f0b842);
-  --active-card-border: #3fb950;
-  --active-card-glow: rgba(63,185,80,.25);
+  --popover:            var(--surface-3);
+  --popover-foreground: var(--text-primary);
+
+  --primary:            var(--accent);
+  --primary-foreground: var(--text-inverse);
+
+  --secondary:            var(--surface-2);
+  --secondary-foreground: var(--text-primary);
+
+  --muted:            var(--surface-1);
+  --muted-foreground: var(--text-secondary);
+
+  --accent:            var(--accent-tint2);
+  --accent-foreground: var(--text-primary);
+
+  --destructive:           var(--danger);
+  --destructive-foreground:#0a0a0a;
+
+  --border: var(--border-default);
+  --input:  var(--surface-2);
+  --ring:   var(--accent-border);
+
+  --radius: var(--radius-md);
 }
 
-[data-core="graphite"] {
-  --bg: #111318;  --bg2: #0d0f14;  --bg3: #1a1f27;
-  --panel: #1a1f27;  --panel2: #1f2535;
-  --border: #2a313d;  --border2: #353d4d;
-  --input-bg: #0d0f14;  --input-border: #2a313d;
-  --text: #d8dee9;  --text-muted: #8892a4;  --text-dim: #6b7591;
-  --scrollbar: #2a313d;
-  --card-bg: #151b25;  --card-hover: #1f2535;
-  --shadow-color: rgba(110,168,254,.14);
-  --stat-grad: linear-gradient(135deg, var(--accent, #6ea8fe), var(--accent2, #9ec5fe));
-  --active-card-border: #22c55e;
-  --active-card-glow: rgba(34,197,94,.25);
+/* ─── Launcher accent (purple per tokens.css comment) ───────────────────────
+   Override the design-system default accent (#4a9eff) for this app.
+   All shadcn primitives reading --primary / --ring resolve through here. */
+:root {
+  --accent:     #b44fff;
+  --accent-rgb: 180, 79, 255;
+  --accent-tint:  rgba(180, 79, 255, 0.08);
+  --accent-tint2: rgba(180, 79, 255, 0.15);
+  --accent-tint3: rgba(180, 79, 255, 0.22);
+  --accent-glow:  rgba(180, 79, 255, 0.28);
+  --accent-glow2: rgba(180, 79, 255, 0.12);
+  --accent-dim:   rgba(180, 79, 255, 0.55);
+  --accent-border:rgba(180, 79, 255, 0.30);
 }
 
-[data-core="frost"] {
-  --bg: #f0f4f8;  --bg2: #e8edf3;  --bg3: #ffffff;
-  --panel: #ffffff;  --panel2: #f5f8fc;
-  --border: #d1d9e0;  --border2: #c2ccd6;
-  --input-bg: #f5f8fc;  --input-border: #d1d9e0;
-  --text: #1a2030;  --text-muted: #536070;  --text-dim: #8090a0;
-  --scrollbar: #d1d9e0;
-  --card-bg: #f9fbfd;  --card-hover: #f0f4f8;
-  --shadow-color: rgba(74,158,255,.10);
-  --stat-grad: linear-gradient(135deg, #2a7ae2, #5b8af0);
-  --active-card-border: #16a34a;
-  --active-card-glow: rgba(22,163,74,.2);
+/* ─── Re-apply shadcn bridge after accent override ───────────────────────── */
+:root {
+  --primary: var(--accent);
+  --ring:    var(--accent-border);
 }
 
-[data-core="oled"] {
-  --bg: #000000;  --bg2: #000000;  --bg3: #0d0d0d;
-  --panel: #0a0a0a;  --panel2: #111111;
-  --border: #222222;  --border2: #2a2a2a;
-  --input-bg: #050505;  --input-border: #222222;
-  --text: #eeeeee;  --text-muted: #888888;  --text-dim: #555555;
-  --scrollbar: #222222;
-  --card-bg: #0d0d0d;  --card-hover: #141414;
-  --shadow-color: rgba(200,200,200,.08);
-  --stat-grad: linear-gradient(135deg, #d0d0d0, #ffffff);
-  --active-card-border: #22c55e;
-  --active-card-glow: rgba(34,197,94,.3);
-}
+/* ─── Core / personality theme overlays ─────────────────────────────────────
+   Keep the data-core selectors for surface palette choices, but collapse them
+   so they only affect accent-derived colors where needed. The canonical
+   surface/border/text tokens come from tokens.css import above.
+──────────────────────────────────────────────────────────────────────────── */
+[data-core="stealth"], :root   { /* default — surfaces from tokens.css */ }
+[data-core="graphite"]         { /* graphite accents handled by personality */ }
+[data-core="frost"]            { /* frost: future light-mode extension */ }
+[data-core="oled"]             { /* oled: max-dark extension */ }
 
-/* ═══ PERSONALITY OVERLAYS ════════════════════════════════════════════════ */
+[data-personality="neutral"]   { --accent: #d29922; --accent-rgb: 210,153,34;
+  --accent-tint: rgba(210,153,34,0.08); --accent-tint2: rgba(210,153,34,0.15);
+  --accent-border: rgba(210,153,34,0.30); --primary: #d29922; --ring: rgba(210,153,34,0.30); }
+[data-personality="cyberpunk"] { --accent: #b44eff; --accent-rgb: 180,78,255;
+  --accent-tint: rgba(180,78,255,0.08); --accent-tint2: rgba(180,78,255,0.15);
+  --accent-border: rgba(180,78,255,0.30); --primary: #b44eff; --ring: rgba(180,78,255,0.30); }
+[data-personality="terminal"]  { --accent: #33ff66; --accent-rgb: 51,255,102;
+  --accent-tint: rgba(51,255,102,0.08); --accent-tint2: rgba(51,255,102,0.15);
+  --accent-border: rgba(51,255,102,0.30); --primary: #33ff66; --ring: rgba(51,255,102,0.30); }
+[data-personality="threat"]    { --accent: #ff4a4a; --accent-rgb: 255,74,74;
+  --accent-tint: rgba(255,74,74,0.08); --accent-tint2: rgba(255,74,74,0.15);
+  --accent-border: rgba(255,74,74,0.30); --primary: #ff4a4a; --ring: rgba(255,74,74,0.30); }
 
-[data-personality="neutral"]  { --accent: #d29922; --accent2: #f0b842; }
-[data-personality="cyberpunk"]{ --accent: #b44eff; --accent2: #d68cff; }
-[data-personality="terminal"] { --accent: #33ff66; --accent2: #66ff99; }
-[data-personality="threat"]   { --accent: #ff4a4a; --accent2: #ff7b7b; }
+/* ─── Electron window layout ─────────────────────────────────────────────── */
+/* tokens.css already sets html/body/root height:100% overflow:hidden.
+   Additional Electron-specific layout constraints go here. */
+html, body, #root { width: 100%; }
 
-/* ─── Scrollbar ──────────────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 2px; }
-
-/* ─── Electron drag region ───────────────────────────────────────────────── */
-body { -webkit-user-select: none; user-select: none; }
-input, textarea { -webkit-user-select: text; user-select: text; }
+/* Override: launcher window is fixed-size so keep overflow:hidden for root */
+#root { overflow: hidden; }

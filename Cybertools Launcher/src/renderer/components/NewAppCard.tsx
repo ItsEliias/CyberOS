@@ -27,11 +27,11 @@ function DotStatus({ color, glow }: { color: string; glow?: string }) {
 
 function MetricCell({ label, value, accent }: { label: string; value: string; accent: string }) {
   return (
-    <div className="text-center py-1.5 rounded" style={{ background: 'var(--bg3)' }}>
+    <div className="text-center py-1.5 rounded bg-surface-2">
       <div className="text-[11px] font-bold font-mono truncate px-1" style={{ color: accent }}>
         {value}
       </div>
-      <div className="text-[9px] uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+      <div className="text-[9px] uppercase tracking-wider text-text-muted">
         {label}
       </div>
     </div>
@@ -56,15 +56,15 @@ export default function NewAppCard({ appKey, config, onLaunch }: Props) {
 
     return (
       <motion.div whileHover={{ scale: 1.01 }} className="rounded-lg p-3 border"
-        style={{ background: 'var(--card-bg)', borderColor: 'var(--border)' }}>
+        style={{ background: 'var(--surface-1)', borderColor: 'var(--border-default)' }}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <DotStatus color={dotColor} glow={dotGlow} />
             <div className="min-w-0">
-              <div className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>
+              <div className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
                 {meta.name}
               </div>
-              <div className="text-[11px] truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              <div className="text-[11px] truncate mt-0.5" style={{ color: 'var(--text-secondary)' }}>
                 {statusLine}
               </div>
             </div>
@@ -98,15 +98,15 @@ export default function NewAppCard({ appKey, config, onLaunch }: Props) {
 
     return (
       <motion.div whileHover={{ scale: 1.01 }} className="rounded-lg p-3 border"
-        style={{ background: 'var(--card-bg)', borderColor: 'var(--border)' }}>
+        style={{ background: 'var(--surface-1)', borderColor: 'var(--border-default)' }}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <DotStatus color={dotColor} glow={dotGlow} />
             <div className="min-w-0">
-              <div className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>
+              <div className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
                 {meta.name}
               </div>
-              <div className="text-[11px] truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              <div className="text-[11px] truncate mt-0.5" style={{ color: 'var(--text-secondary)' }}>
                 {statusLine}
               </div>
             </div>
@@ -140,15 +140,15 @@ export default function NewAppCard({ appKey, config, onLaunch }: Props) {
 
     return (
       <motion.div whileHover={{ scale: 1.01 }} className="rounded-lg p-3 border"
-        style={{ background: 'var(--card-bg)', borderColor: 'var(--border)' }}>
+        style={{ background: 'var(--surface-1)', borderColor: 'var(--border-default)' }}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <DotStatus color={dotColor} glow={dotGlow} />
             <div className="min-w-0">
-              <div className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>
+              <div className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
                 {meta.name}
               </div>
-              <div className="text-[11px] truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              <div className="text-[11px] truncate mt-0.5" style={{ color: 'var(--text-secondary)' }}>
                 {statusLine}
               </div>
             </div>
@@ -182,15 +182,15 @@ export default function NewAppCard({ appKey, config, onLaunch }: Props) {
 
     return (
       <motion.div whileHover={{ scale: 1.01 }} className="rounded-lg p-3 border"
-        style={{ background: 'var(--card-bg)', borderColor: 'var(--border)' }}>
+        style={{ background: 'var(--surface-1)', borderColor: 'var(--border-default)' }}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <DotStatus color={dotColor} glow={dotGlow} />
             <div className="min-w-0">
-              <div className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>
+              <div className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
                 {meta.name}
               </div>
-              <div className="text-[11px] truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              <div className="text-[11px] truncate mt-0.5" style={{ color: 'var(--text-secondary)' }}>
                 {statusLine}
               </div>
             </div>
@@ -223,15 +223,15 @@ export default function NewAppCard({ appKey, config, onLaunch }: Props) {
 
   return (
     <motion.div whileHover={{ scale: 1.01 }} className="rounded-lg p-3 border"
-      style={{ background: 'var(--card-bg)', borderColor: 'var(--border)' }}>
+      style={{ background: 'var(--surface-1)', borderColor: 'var(--border-default)' }}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <DotStatus color={dotColor} glow={dotGlow} />
           <div className="min-w-0">
-            <div className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>
+            <div className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
               {meta.name}
             </div>
-            <div className="text-[11px] truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            <div className="text-[11px] truncate mt-0.5" style={{ color: 'var(--text-secondary)' }}>
               {statusLine}
             </div>
           </div>
