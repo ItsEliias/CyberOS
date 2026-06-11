@@ -21,13 +21,13 @@ interface Props {
 }
 
 const btnBase: React.CSSProperties = {
-  fontSize: 10, padding: '3px 10px', borderRadius: 6, height: 24,
-  border: '1px solid rgba(42,51,71,0.6)',
-  background: 'rgba(42,51,71,0.4)',
-  color: '#e2e8f0', cursor: 'pointer',
+  fontSize: 10, padding: '2px 8px', borderRadius: 4, height: 22,
+  border: '1px solid rgba(0,255,65,0.18)',
+  background: 'rgba(0,255,65,0.04)',
+  color: 'var(--text-secondary)', cursor: 'pointer',
   fontFamily: 'var(--font-mono)', lineHeight: '16px',
   WebkitAppRegion: 'no-drag' as unknown as undefined,
-  transition: 'all 0.15s cubic-bezier(0.2,0.8,0.2,1)',
+  transition: 'background var(--motion-fast, 0.12s) ease, border-color var(--motion-fast, 0.12s) ease, color var(--motion-fast, 0.12s) ease',
 };
 
 const btnActive: React.CSSProperties = {
@@ -62,9 +62,9 @@ export default function TitleBar({
 
   return (
     <div style={{
-      height: 34, display: 'flex', alignItems: 'center', padding: '0 12px',
-      background: 'rgba(5,10,4,0.98)',
-      borderBottom: '1px solid rgba(0,255,65,0.1)',
+      height: 32, display: 'flex', alignItems: 'center', padding: '0 12px',
+      background: 'var(--surface-0)',
+      borderBottom: '1px solid var(--border-subtle)',
       flexShrink: 0, gap: 6,
       WebkitAppRegion: 'drag' as unknown as undefined,
       userSelect: 'none',
@@ -79,30 +79,38 @@ export default function TitleBar({
       {/* Traffic light spacer */}
       <div style={{ width: 64, flexShrink: 0 }} />
 
-      {/* Brand */}
+      {/* Lockup: terminal glyph + TerminalLink 600 + ╱ + SSH Client muted */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ filter: 'drop-shadow(0 0 4px rgba(0,255,65,0.5))' }}>
-          <polyline points="1,4 4,1 4,4" stroke="#00ff41" strokeWidth="1.5" fill="none" />
-          <line x1="4" y1="4" x2="12" y2="12" stroke="#00ff41" strokeWidth="1" />
-          <rect x="8" y="8" width="4" height="4" stroke="#00ff41" strokeWidth="1" fill="none" />
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"
+          style={{ filter: 'drop-shadow(0 0 3px rgba(0,255,65,0.4))', flexShrink: 0 }}>
+          <polyline points="1,4 4,1 4,4" stroke="var(--accent)" strokeWidth="1.5"
+            strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          <line x1="4" y1="4" x2="12" y2="12" stroke="var(--accent)" strokeWidth="1.5"
+            strokeLinecap="round" />
+          <rect x="8" y="8" width="4" height="4" stroke="var(--accent)" strokeWidth="1.5"
+            strokeLinejoin="round" fill="none" />
         </svg>
         <span style={{
-          fontSize: 11, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase',
+          fontSize: 'var(--type-body)', fontWeight: 600,
           fontFamily: 'var(--font-mono)',
-          color: '#00ff41',
-          textShadow: '0 0 10px rgba(0,255,65,0.45)',
+          color: 'var(--text-primary)',
         }}>
           TerminalLink
+        </span>
+        <span style={{ fontSize: 'var(--type-caption)', color: 'var(--text-muted)' }}>╱</span>
+        <span style={{ fontSize: 'var(--type-caption)', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+          SSH Client
         </span>
       </div>
 
       {sessionBadge && (
         <span style={{
-          fontSize: 9, color: '#3d6b3d', fontFamily: 'var(--font-mono)',
-          background: 'rgba(0,255,65,0.04)', border: '1px solid rgba(0,255,65,0.1)',
+          fontSize: 'var(--type-caption)', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)',
+          background: 'var(--accent-tint)', border: '1px solid var(--border-subtle)',
           borderRadius: 2, padding: '1px 6px',
-          maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           letterSpacing: '0.05em',
+          borderLeft: '2px solid var(--accent-border)',
         }}>
           {sessionBadge}
         </span>
@@ -124,8 +132,8 @@ export default function TitleBar({
 
       {commandCount > 0 && (
         <span style={{
-          fontSize: 9, color: '#00ff41', fontFamily: 'var(--font-mono)',
-          background: 'rgba(0,255,65,0.08)', border: '1px solid rgba(0,255,65,0.25)',
+          fontSize: 'var(--type-caption)', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)',
+          background: 'var(--accent-tint)', border: '1px solid var(--accent-border)',
           borderRadius: 2, padding: '1px 6px', flexShrink: 0,
         }}>
           {commandCount} cmd{commandCount !== 1 ? 's' : ''}
@@ -196,11 +204,8 @@ export default function TitleBar({
       )}
 
       <span style={{
-        display: 'flex', alignItems: 'center', gap: 4, fontSize: 8, fontWeight: 700,
-        letterSpacing: '0.15em', textTransform: 'uppercase',
-        color: 'rgba(0,255,65,0.35)',
-        background: 'rgba(0,255,65,0.04)', border: '1px solid rgba(0,255,65,0.08)',
-        borderRadius: 999, padding: '2px 8px', flexShrink: 0,
+        fontSize: 'var(--type-caption)', letterSpacing: '0.08em',
+        color: 'var(--text-muted)', flexShrink: 0,
         fontFamily: 'var(--font-mono)',
         WebkitAppRegion: 'no-drag' as unknown as undefined,
       }}>
