@@ -93,8 +93,18 @@ export default function EventLog() {
       {/* Event list */}
       <div className="max-h-[360px] overflow-y-auto">
         {filtered.length === 0 ? (
-          <div className="px-4 py-8 text-center">
-            <p className="text-xs text-text-muted">No events match your filters</p>
+          <div className="empty-state content-stream-in">
+            <div className="empty-glyph">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"
+                stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="2" width="7" height="7" rx="1" />
+                <rect x="11" y="2" width="7" height="7" rx="1" />
+                <rect x="11" y="11" width="7" height="7" rx="1" />
+                <rect x="2" y="11" width="7" height="7" rx="1" />
+              </svg>
+            </div>
+            <p className="empty-title">No events</p>
+            <p className="empty-sub">No events match your current filters.</p>
           </div>
         ) : (
           filtered.map((event, rowIdx) => {
