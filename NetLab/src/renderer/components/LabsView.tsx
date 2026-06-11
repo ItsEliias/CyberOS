@@ -142,7 +142,19 @@ export default function LabsView() {
         {/* Lab list */}
         <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
           {filtered.length === 0 && (
-            <p className="text-sm text-text-muted text-center pt-8">No labs match your filters.</p>
+            <div className="empty-state content-stream-in">
+              <div className="empty-glyph">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"
+                  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M7 3v5.5L3.5 14h13L13 8.5V3" />
+                  <line x1="6" y1="3" x2="14" y2="3" />
+                  <circle cx="8" cy="11.5" r="1" fill="currentColor" stroke="none" />
+                  <circle cx="12" cy="12.5" r="0.75" fill="currentColor" stroke="none" />
+                </svg>
+              </div>
+              <p className="empty-title">No labs match</p>
+              <p className="empty-sub">Try adjusting your filters or search term.</p>
+            </div>
           )}
           {filtered.map(lab => (
             <LabCard
@@ -160,9 +172,20 @@ export default function LabsView() {
       {previewLab ? (
         <LabDetail lab={previewLab} progress={progress[previewLab.id]} onStart={handleStart} />
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center text-center">
-          <span className="text-4xl mb-4" style={{ opacity: 0.3 }}>📋</span>
-          <p className="text-text-secondary text-sm">Select a lab from the list to view details.</p>
+        <div className="flex-1 flex flex-col items-center justify-center">
+          <div className="empty-state content-stream-in">
+            <div className="empty-glyph">
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none"
+                stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 3v6L4 15h14L14 9V3" />
+                <line x1="7" y1="3" x2="15" y2="3" />
+                <circle cx="9.5" cy="12" r="1.25" fill="currentColor" stroke="none" />
+                <circle cx="13" cy="13.5" r="1" fill="currentColor" stroke="none" />
+              </svg>
+            </div>
+            <p className="empty-title">Select a lab</p>
+            <p className="empty-sub">Pick a network exercise from the list to preview its objective and steps.</p>
+          </div>
         </div>
       )}
     </div>
