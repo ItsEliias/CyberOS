@@ -63,22 +63,21 @@ function SkeletonRow() {
 /* ── Empty state ── */
 function EmptyState({ onNew }: { onNew: () => void }) {
   return (
-    <div style={{
-      flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-      justifyContent: 'center', padding: '32px 24px', gap: 16,
-    }}>
-      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" style={{ opacity: 0.25 }}>
-        <rect x="4" y="8" width="32" height="24" rx="3" stroke="#00ff41" strokeWidth="1.5" />
-        <path d="M10 16l5 4-5 4" stroke="#00ff41" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        <line x1="18" y1="24" x2="28" y2="24" stroke="#00ff41" strokeWidth="1.5" strokeLinecap="round" />
-      </svg>
+    <div style={{ flex: 1 }} className="empty-state content-stream-in">
+      {/* terminal/cursor-prompt domain glyph — green-tinted to preserve domain personality */}
+      <div className="empty-glyph">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <rect x="2" y="4" width="16" height="12" rx="2"
+            stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M5 9l3 2.5-3 2.5"
+            stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <line x1="9.5" y1="14" x2="15" y2="14"
+            stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      </div>
       <div style={{ textAlign: 'center' }}>
-        <p style={{ fontSize: 12, color: 'rgba(0,255,65,0.5)', fontWeight: 600, letterSpacing: '0.05em', marginBottom: 6 }}>
-          No sessions yet
-        </p>
-        <p style={{ fontSize: 10, color: 'rgba(0,255,65,0.25)', lineHeight: 1.6 }}>
-          Start a new session to open a terminal.
-        </p>
+        <p className="empty-title">No sessions yet</p>
+        <p className="empty-sub">Start a new session to open a terminal.</p>
       </div>
       <button
         onClick={onNew}
