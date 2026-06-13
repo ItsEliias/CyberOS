@@ -19,7 +19,7 @@
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@playwright/browser-chromium": "^1.40.0",
     "cheerio": "^1.0.0-rc.12",
-    "cron-parser": "^4.9.0",
+    "cron-parser": "^5.5.0",
     "node-cron": "^3.0.3",
     "node-fetch": "^2.7.0",
     "pdf-parse": "^1.1.1",
