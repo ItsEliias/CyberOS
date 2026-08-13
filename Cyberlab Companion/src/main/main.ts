@@ -5,13 +5,13 @@ import os from 'os';
 import https from 'https';
 import http from 'http';
 import { URL } from 'url';
-import { emitEvent } from './ecosystem-bus.js';
-import { registerExtrasIPC } from './ipc-extras.js';
-import { consumePendingAction, installPendingActionWatcher } from './pendingActions.js'
+import { emitEvent } from './ecosystem-bus';
+import { registerExtrasIPC } from './ipc-extras';
+import { consumePendingAction, installPendingActionWatcher } from './pendingActions'
 import {
   saveTokenSecure, loadTokenSecure, clearTokenSecure,
   fetchHtbStats, fetchThmStats, writeActiveLab,
-} from './platforms.js';
+} from './platforms';
 import { sharedConfigPath } from './platform';
 
 const APP_VERSION        = '1.0';
@@ -27,7 +27,7 @@ const SNIPPETS_FILE      = path.join(DATA_DIR, 'snippets.json');
 const KNOWLEDGE_FILE     = path.join(DATA_DIR, 'knowledgebase.json');
 const LAB_REVIEWS_FILE   = path.join(DATA_DIR, 'lab-reviews.json');
 const CLAUDE_API_URL     = 'https://api.anthropic.com/v1/messages';
-const CLAUDE_MODEL       = 'claude-sonnet-4-20250514';
+const CLAUDE_MODEL       = 'claude-sonnet-4-6';
 const UPDATE_CHECK_URL   = 'https://api.github.com/repos/ItsEliias/cyberlab-companion/releases/latest';
 
 // ─── Crash reporter (locally-stored minidumps; nothing uploaded) ─────────────
