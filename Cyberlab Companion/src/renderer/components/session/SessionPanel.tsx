@@ -120,10 +120,24 @@ export default function SessionPanel() {
     return (
       <div
         className="flex flex-col items-center justify-center h-full"
-        style={{ width: 320, flexShrink: 0, background: 'var(--sidebar-bg)', borderRight: '1px solid var(--border)' }}
+        style={{
+          width: 304,
+          flexShrink: 0,
+          background: 'var(--surface-0)',
+          borderRight: '1px solid var(--border-subtle)',
+        }}
       >
-        <div className="text-xs text-center px-4" style={{ color: 'var(--text-muted)' }}>
-          Start a session to see info here
+        <div className="empty-state" style={{ padding: 'var(--space-6) var(--space-4)' }}>
+          <div className="empty-icon">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="4" y1="2" x2="4" y2="18" />
+              <path d="M4 4 L16 4 L13 8 L16 12 L4 12" fill="rgba(180,79,255,0.12)" />
+            </svg>
+          </div>
+          <div className="empty-title">No active session</div>
+          <div className="empty-sub">
+            Start a lab session to see your timer, findings, and session context here.
+          </div>
         </div>
       </div>
     );
@@ -134,72 +148,150 @@ export default function SessionPanel() {
       <div
         className="flex flex-col overflow-y-auto overflow-x-hidden"
         style={{
-          width: 320,
+          width: 304,
           flexShrink: 0,
-          background: 'var(--sidebar-bg)',
-          borderRight: '1px solid var(--border)',
+          background: 'var(--surface-0)',
+          borderRight: '1px solid var(--border-subtle)',
         }}
       >
-        {/* Session name header */}
+        {/* Session name header — instrument panel style */}
         <div
-          className="px-3 py-2 flex-shrink-0"
-          style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg2)' }}
+          className="flex-shrink-0 px-4 py-3"
+          style={{
+            borderBottom: '1px solid var(--border-subtle)',
+            background: 'var(--surface-0)',
+          }}
         >
-          <div className="font-mono text-sm font-semibold truncate" style={{ color: 'var(--accent)' }}>
+          <div
+            style={{
+              fontSize: 'var(--type-body)',
+              fontWeight: 600,
+              color: 'var(--text-primary)',
+              letterSpacing: '-0.01em',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
             {session.labName}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+            <span className="platform-badge" data-platform={session.platform}>
+              {session.platform}
+            </span>
+            {session.difficulty && (
+              <span className="diff-pill" data-diff={session.difficulty}>
+                {session.difficulty}
+              </span>
+            )}
+            {session.labType && (
+              <span
+                style={{
+                  fontSize: 'var(--type-caption)',
+                  color: 'var(--text-muted)',
+                  fontStyle: 'italic',
+                }}
+              >
+                {session.labType}
+              </span>
+            )}
           </div>
         </div>
 
-        <div className="flex flex-col gap-4 p-3 flex-1">
-          {/* Timer */}
-          <TimerCard onStop={handleStop} />
+        <div className="flex flex-col flex-1">
+          {/* Timer — primary instrument */}
+          <div style={{ padding: 'var(--space-3)', borderBottom: '1px solid var(--border-subtle)' }}>
+            <TimerCard onStop={handleStop} />
+          </div>
 
-          {/* Session metadata */}
-          <div
-            className="rounded-lg p-3"
-            style={{ background: 'var(--bg3)', border: '1px solid var(--border)' }}
-          >
+          {/* Session metadata — compact metric rows */}
+          <div style={{ padding: 'var(--space-3)', borderBottom: '1px solid var(--border-subtle)' }}>
             <SessionMeta session={session} />
           </div>
 
           {/* Findings panel */}
-          <FindingsPanel onViewAll={handleViewAllFindings} />
+          <div style={{ padding: 'var(--space-3)', borderBottom: '1px solid var(--border-subtle)' }}>
+            <FindingsPanel onViewAll={handleViewAllFindings} />
+          </div>
 
-          {/* CTF Flag Tracker (collapsible) */}
-          <div>
-            <button
-              className="w-full text-xs py-1.5 rounded btn-ghost flex items-center justify-between px-3"
-              onClick={() => setShowFlagTracker(true)}
+          {/* Flag HUD strip */}
+          {session.findings.flags.length > 0 && (
+            <div
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: 'var(--space-2) var(--space-3)',
+                borderBottom: '1px solid var(--border-subtle)',
+                background: 'rgba(63,185,80,0.04)',
+              }}
             >
-              <span className="flex items-center gap-1.5">
-                <span>🚩</span>
+              <span
+                style={{ fontSize: 'var(--type-caption)', fontFamily: 'var(--font-mono)', color: '#3fb950', fontWeight: 500 }}
+              >
+                {session.findings.flags.length} flag{session.findings.flags.length !== 1 ? 's' : ''}
+              </span>
+              {(session.timer?.elapsed ?? 0) > 0 && (
+                <span style={{ fontSize: 'var(--type-caption)', fontFamily: 'var(--font-mono)', color: '#3fb950', opacity: 0.65 }}>
+                  {((session.findings.flags.length / Math.max(1, (session.timer?.elapsed ?? 1) / 3600))).toFixed(1)}/hr
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Collapsible sections */}
+          <div style={{ padding: 'var(--space-2) var(--space-3)', display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+
+            {/* CTF Flag Tracker */}
+            <button
+              className="w-full rounded flex items-center justify-between"
+              onClick={() => setShowFlagTracker(true)}
+              style={{
+                padding: '6px 8px',
+                fontSize: 'var(--type-body)',
+                background: 'transparent',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="3" y1="2" x2="3" y2="14" />
+                  <path d="M3 3 L13 3 L11 7 L13 11 L3 11" />
+                </svg>
                 <span>Flag Tracker</span>
                 {(session.ctfFlags?.length ?? 0) > 0 && (
-                  <span className="text-[10px] font-mono" style={{ color: '#3fb950' }}>
+                  <span style={{ fontSize: 'var(--type-caption)', fontFamily: 'var(--font-mono)', color: '#3fb950' }}>
                     {session.ctfFlags!.length}
                   </span>
                 )}
               </span>
-              <span style={{ opacity: 0.5 }}>→</span>
+              <span style={{ opacity: 0.4, fontSize: 11 }}>→</span>
             </button>
-          </div>
 
-          {/* Hints (collapsible) */}
-          <div>
+            {/* Hints */}
             <button
-              className="w-full text-xs py-1.5 rounded btn-ghost flex items-center justify-between px-3"
+              className="w-full rounded flex items-center justify-between"
               onClick={() => setShowHints(h => !h)}
+              style={{
+                padding: '6px 8px',
+                fontSize: 'var(--type-body)',
+                background: 'transparent',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-secondary)',
+              }}
             >
-              <span className="flex items-center gap-1.5">
-                <span>💡</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                  <circle cx="8" cy="8" r="6.5" />
+                  <path d="M8 11v1M6 6.5a2 2 0 014 0c0 1-2 1.5-2 2.5" strokeLinejoin="round" />
+                </svg>
                 <span>Hints</span>
                 {(session.sessionHints?.length ?? 0) > 0 && (
-                  <span className="text-[10px]" style={{ color: 'var(--accent)' }}>
+                  <span style={{ fontSize: 'var(--type-caption)', color: 'var(--accent)' }}>
                     {session.sessionHints!.filter(h => h.revealed).length}/{session.sessionHints!.length}
                   </span>
                 )}
               </span>
-              <span style={{ opacity: 0.5 }}>{showHints ? '▲' : '▼'}</span>
+              <span style={{ opacity: 0.4, fontSize: 10 }}>{showHints ? '▲' : '▼'}</span>
             </button>
             <AnimatePresence>
               {showHints && (
@@ -207,105 +299,97 @@ export default function SessionPanel() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.15 }}
+                  transition={{ duration: 0.15, ease: [0.2, 0.8, 0.2, 1] }}
                   className="overflow-hidden"
                 >
-                  <div className="mt-1.5">
+                  <div style={{ paddingTop: '4px' }}>
                     <HintsPanel />
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
 
-          {/* Notes (expandable) */}
-          <div>
+            {/* Notes */}
             <button
-              className="w-full text-xs py-1.5 rounded btn-ghost flex items-center justify-between px-3"
+              className="w-full rounded flex items-center justify-between"
               onClick={() => setShowNotes(n => !n)}
+              style={{
+                padding: '6px 8px',
+                fontSize: 'var(--type-body)',
+                background: 'transparent',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-secondary)',
+              }}
             >
-              <span className="flex items-center gap-1.5">
-                <span>📝</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 2H3a1 1 0 00-1 1v10a1 1 0 001 1h10a1 1 0 001-1V5z" />
+                  <polyline points="11 2 11 5 14 5" />
+                  <line x1="5" y1="8" x2="11" y2="8" /><line x1="5" y1="11" x2="8" y2="11" />
+                </svg>
                 <span>Notes</span>
-                {notesValue && <span className="text-[10px]" style={{ color: 'var(--accent)' }}>●</span>}
+                {notesValue && <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#b44fff', display: 'inline-block' }} />}
               </span>
-              <span style={{ opacity: 0.5 }}>{showNotes ? '▲' : '▼'}</span>
+              <span style={{ opacity: 0.4, fontSize: 10 }}>{showNotes ? '▲' : '▼'}</span>
             </button>
-
             <AnimatePresence>
               {showNotes && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.15 }}
+                  transition={{ duration: 0.15, ease: [0.2, 0.8, 0.2, 1] }}
                   className="overflow-hidden"
                 >
-                  <div className="mt-1.5 flex flex-col gap-1.5">
+                  <div style={{ paddingTop: '4px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <textarea
                       value={notesValue}
                       onChange={e => setNotesValue(e.target.value)}
-                      placeholder="Session notes (Markdown supported)..."
-                      className="w-full font-mono text-xs resize-none"
+                      placeholder="Session notes (Markdown supported)…"
+                      className="w-full font-mono selectable resize-none"
                       style={{
-                        height: 140,
-                        background: 'var(--input-bg)',
-                        border: '1px solid var(--border)',
-                        borderRadius: 6,
+                        height: 120,
+                        background: 'var(--surface-1)',
+                        border: '1px solid var(--border-default)',
+                        borderRadius: 'var(--radius-sm)',
                         padding: '6px 8px',
-                        color: 'var(--text)',
+                        color: 'var(--text-primary)',
+                        fontSize: 'var(--type-label)',
                         outline: 'none',
                       }}
                     />
-                    <div className="flex gap-1.5">
-                      <button
-                        className="flex-1 btn-ghost text-xs py-1 rounded"
-                        onClick={saveNotes}
-                      >
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button className="flex-1 btn-ghost" style={{ fontSize: 'var(--type-caption)', padding: '4px 8px', borderRadius: '4px' }} onClick={saveNotes}>
                         {notesSaved ? 'Saved ✓' : 'Save'}
                       </button>
-                      <button
-                        className="flex-1 btn-ghost text-xs py-1 rounded"
-                        onClick={saveNotesToVault}
-                        title="Save to GhostVault"
-                      >
-                        → GhostVault
+                      <button className="flex-1 btn-ghost" style={{ fontSize: 'var(--type-caption)', padding: '4px 8px', borderRadius: '4px' }} onClick={saveNotesToVault} title="Save to GhostVault">
+                        → Vault
                       </button>
                     </div>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
 
-          {/* Flag HUD — count + flags/hr */}
-          {session.findings.flags.length > 0 && (
-            <div
-              className="flex items-center justify-between px-3 py-2 rounded"
-              style={{ background: 'rgba(63,185,80,0.08)', border: '1px solid rgba(63,185,80,0.3)' }}
-            >
-              <span className="text-xs font-mono" style={{ color: '#3fb950' }}>
-                {session.findings.flags.length} flag{session.findings.flags.length !== 1 ? 's' : ''}
-              </span>
-              {(session.timer?.elapsed ?? 0) > 0 && (
-                <span className="text-[10px]" style={{ color: '#3fb950', opacity: 0.7 }}>
-                  {((session.findings.flags.length / Math.max(1, (session.timer?.elapsed ?? 1) / 3600))).toFixed(1)}/hr
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Tool Launcher (collapsible) */}
-          <div>
+            {/* Tool Launcher */}
             <button
-              className="w-full text-xs py-1.5 rounded btn-ghost flex items-center justify-between px-3"
+              className="w-full rounded flex items-center justify-between"
               onClick={() => setShowTools(t => !t)}
+              style={{
+                padding: '6px 8px',
+                fontSize: 'var(--type-body)',
+                background: 'transparent',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-secondary)',
+              }}
             >
-              <span className="flex items-center gap-1.5">
-                <span>🔧</span>
-                <span>Launch Tool</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M13 2l-5 5M3 12l4-4" /><circle cx="11" cy="4" r="2" /><circle cx="5" cy="11" r="2" />
+                </svg>
+                <span>Tools</span>
               </span>
-              <span style={{ opacity: 0.5 }}>{showTools ? '▲' : '▼'}</span>
+              <span style={{ opacity: 0.4, fontSize: 10 }}>{showTools ? '▲' : '▼'}</span>
             </button>
             <AnimatePresence>
               {showTools && (
@@ -313,26 +397,33 @@ export default function SessionPanel() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.15 }}
+                  transition={{ duration: 0.15, ease: [0.2, 0.8, 0.2, 1] }}
                   className="overflow-hidden"
                 >
                   <ToolLauncher />
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
 
-          {/* Methodology Guide (collapsible) */}
-          <div>
+            {/* Methodology */}
             <button
-              className="w-full text-xs py-1.5 rounded btn-ghost flex items-center justify-between px-3"
+              className="w-full rounded flex items-center justify-between"
               onClick={() => setShowMethodology(m => !m)}
+              style={{
+                padding: '6px 8px',
+                fontSize: 'var(--type-body)',
+                background: 'transparent',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-secondary)',
+              }}
             >
-              <span className="flex items-center gap-1.5">
-                <span>📋</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="3" y1="5" x2="13" y2="5" /><line x1="3" y1="8" x2="10" y2="8" /><line x1="3" y1="11" x2="8" y2="11" />
+                </svg>
                 <span>Methodology</span>
               </span>
-              <span style={{ opacity: 0.5 }}>{showMethodology ? '▲' : '▼'}</span>
+              <span style={{ opacity: 0.4, fontSize: 10 }}>{showMethodology ? '▲' : '▼'}</span>
             </button>
             <AnimatePresence>
               {showMethodology && (
@@ -340,7 +431,7 @@ export default function SessionPanel() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.15 }}
+                  transition={{ duration: 0.15, ease: [0.2, 0.8, 0.2, 1] }}
                   className="overflow-hidden"
                 >
                   <MethodologyGuide />
@@ -350,13 +441,17 @@ export default function SessionPanel() {
           </div>
 
           {/* Screenshot capture */}
-          <CaptureAnnotateButton sessionId={session.id} labName={session.labName} />
+          <div style={{ padding: '0 var(--space-3) var(--space-2)' }}>
+            <CaptureAnnotateButton sessionId={session.id} labName={session.labName} />
+          </div>
 
           {/* Quick actions */}
-          <QuickActions
-            onFlagLogger={() => setShowFlagLogger(true)}
-            onNotes={() => setShowNotes(n => !n)}
-          />
+          <div style={{ padding: '0 var(--space-3) var(--space-3)' }}>
+            <QuickActions
+              onFlagLogger={() => setShowFlagLogger(true)}
+              onNotes={() => setShowNotes(n => !n)}
+            />
+          </div>
         </div>
       </div>
 

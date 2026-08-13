@@ -244,72 +244,97 @@ export default function ChatPanel() {
         />
       )}
 
-      {/* Session bar */}
+      {/* Session bar — structured meta strip */}
       <div
-        className="flex items-center gap-2 px-4 py-2 flex-shrink-0"
-        style={{ borderBottom: '1px solid var(--border-default)', background: 'rgba(7,8,15,0.7)' }}
+        className="flex items-center gap-2 px-3 py-1.5 flex-shrink-0"
+        style={{ borderBottom: '1px solid var(--border-subtle)', background: 'var(--surface-0)' }}
       >
         <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
-          <span className="text-xs font-medium truncate" style={{ color: '#8b949e' }}>
-            {session.labName}
-          </span>
-          <span style={{ color: 'rgba(42,51,71,0.8)' }}>·</span>
-          <Badge variant={session.platform === 'HTB' ? 'purple' : 'default'}>
-            {session.platform}
-          </Badge>
-          <Badge
-            variant={
-              session.difficulty === 'Easy' ? 'success'
-              : session.difficulty === 'Medium' ? 'warning'
-              : session.difficulty === 'Hard' ? 'warning'
-              : 'danger'
-            }
+          {/* Platform badge */}
+          <span
+            className="platform-badge"
+            data-platform={session.platform}
           >
-            {session.difficulty}
-          </Badge>
+            {session.platform}
+          </span>
+          {/* Difficulty pill */}
+          {session.difficulty && (
+            <span className="diff-pill" data-diff={session.difficulty}>
+              {session.difficulty}
+            </span>
+          )}
+          {/* Target IP — monospace, copyable-feeling */}
           {session.target.ip && (
-            <span className="font-mono text-[11px]" style={{ color: '#484f58' }}>
+            <span className="data-value" style={{ color: 'var(--text-secondary)', fontSize: 'var(--type-caption)' }}>
               {session.target.ip}
             </span>
           )}
+          {/* Model label */}
           <span
-            className="font-mono text-[10px] px-1.5 py-0.5 rounded"
+            className="font-mono"
             style={{
-              background: 'rgba(13,14,24,0.8)',
-              border: '1px solid rgba(42,51,71,0.5)',
-              color: '#484f58',
+              fontSize: 'var(--type-caption)',
+              color: 'var(--text-muted)',
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-xs)',
+              padding: '1px 5px',
             }}
           >
             {modelLabel}
           </span>
         </div>
 
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          {/* End session */}
-          <button
-            className="text-xs px-2.5 py-1 rounded-md"
-            style={{
-              background: 'rgba(248,81,73,0.08)',
-              border: '1px solid rgba(248,81,73,0.25)',
-              color: '#f85149',
-            }}
-            onClick={() => setShowCloseModal(true)}
-            title="End this lab session"
-          >
-            End Session
-          </button>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {/* Hint level stepper */}
+          <div className="flex items-center gap-0.5 mr-1">
+            {[1,2,3,4,5].map(l => (
+              <button
+                key={l}
+                style={{
+                  width: '18px', height: '18px',
+                  fontSize: 'var(--type-caption)',
+                  fontFamily: 'var(--font-mono)',
+                  fontWeight: 600,
+                  border: session.hintLevel === l ? '1px solid rgba(180,79,255,0.4)' : '1px solid transparent',
+                  background: session.hintLevel === l ? 'rgba(180,79,255,0.08)' : 'transparent',
+                  color: session.hintLevel === l ? '#b44fff' : 'var(--text-muted)',
+                  borderRadius: '3px',
+                  padding: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+                onClick={() => activeTabId && updateSession(activeTabId, { hintLevel: l })}
+                title={`Hint level ${l}`}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
 
-          {/* Hint button */}
+          {/* Hint log button */}
           <button
-            className="relative flex items-center gap-1 text-xs px-2.5 py-1 rounded-md btn-ghost"
+            className="relative flex items-center gap-1 rounded"
             onClick={logHint}
             title="Log a hint taken"
+            style={{
+              fontSize: 'var(--type-caption)',
+              padding: '3px 8px',
+              background: 'transparent',
+              border: '1px solid var(--border-subtle)',
+              color: 'var(--text-muted)',
+              fontFamily: 'var(--font-display)',
+            }}
           >
-            <span>? Hint</span>
+            Hint
             {(session.hintsUsed || 0) > 0 && (
               <span
-                className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center"
-                style={{ background: '#d29922', color: '#07080f' }}
+                style={{
+                  position: 'absolute', top: '-4px', right: '-4px',
+                  width: '14px', height: '14px', borderRadius: '50%',
+                  fontSize: '8px', fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: '#d29922', color: '#07080f',
+                }}
               >
                 {session.hintsUsed}
               </span>
@@ -318,45 +343,55 @@ export default function ChatPanel() {
 
           {/* Screenshot */}
           <button
-            className="text-xs px-2.5 py-1 rounded-md btn-ghost"
+            style={{
+              fontSize: 'var(--type-caption)',
+              padding: '3px 8px',
+              background: 'transparent',
+              border: '1px solid var(--border-subtle)',
+              color: 'var(--text-muted)',
+              borderRadius: '4px',
+              fontFamily: 'var(--font-display)',
+            }}
             onClick={takeScreenshot}
             disabled={screenshotLoading}
             title="Capture screenshot"
           >
-            {screenshotLoading ? '...' : '[ss]'}
+            {screenshotLoading ? '…' : 'SS'}
           </button>
 
-          {/* Hint level */}
-          <div className="flex items-center gap-0.5">
-            {[1,2,3,4,5].map(l => (
-              <button
-                key={l}
-                className="w-5 h-5 text-[10px] rounded transition-colors flex items-center justify-center font-bold"
-                style={{
-                  border: session.hintLevel === l ? `1px solid currentColor` : '1px solid transparent',
-                  background: session.hintLevel === l ? 'rgba(180,79,255,0.08)' : 'transparent',
-                  color: session.hintLevel === l ? '#b44fff' : '#484f58',
-                  padding: 0,
-                }}
-                onClick={() => activeTabId && updateSession(activeTabId, { hintLevel: l })}
-              >
-                {l}
-              </button>
-            ))}
-          </div>
-
-          {/* Teach Me */}
+          {/* Teach Me toggle */}
           <button
-            className="text-xs px-2.5 py-1 rounded-md transition-colors"
             style={{
-              background: session.teachMeMode ? '#b44fff' : 'transparent',
-              border: session.teachMeMode ? '1px solid #b44fff' : '1px solid rgba(42,51,71,0.6)',
-              color: session.teachMeMode ? '#fff' : '#484f58',
+              fontSize: 'var(--type-caption)',
               fontWeight: 500,
+              padding: '3px 8px',
+              borderRadius: '4px',
+              background: session.teachMeMode ? 'rgba(180,79,255,0.15)' : 'transparent',
+              border: session.teachMeMode ? '1px solid rgba(180,79,255,0.4)' : '1px solid var(--border-subtle)',
+              color: session.teachMeMode ? '#b44fff' : 'var(--text-muted)',
+              fontFamily: 'var(--font-display)',
             }}
             onClick={() => activeTabId && updateSession(activeTabId, { teachMeMode: !session.teachMeMode, usedTeachMe: true })}
           >
-            Teach Me
+            Teach
+          </button>
+
+          {/* End session */}
+          <button
+            style={{
+              fontSize: 'var(--type-caption)',
+              fontWeight: 500,
+              padding: '3px 8px',
+              borderRadius: '4px',
+              background: 'transparent',
+              border: '1px solid rgba(248,81,73,0.3)',
+              color: '#f85149',
+              fontFamily: 'var(--font-display)',
+            }}
+            onClick={() => setShowCloseModal(true)}
+            title="End this lab session"
+          >
+            End
           </button>
         </div>
       </div>
@@ -395,21 +430,29 @@ export default function ChatPanel() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3 scroll-area">
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full gap-3" style={{ color: '#484f58' }}>
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center"
-              style={{
-                background: 'rgba(180,79,255,0.08)',
-                border: '1px solid rgba(180,79,255,0.15)',
-              }}
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b44fff" strokeWidth="1.5">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          <div className="empty-state h-full">
+            {/* CTF flag glyph — domain-specific empty state identity */}
+            <div className="empty-icon">
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="4" y1="2" x2="4" y2="18" />
+                <path d="M4 4 L16 4 L13 8 L16 12 L4 12" fill="rgba(180,79,255,0.12)" />
               </svg>
             </div>
-            <div className="text-center">
-              <div className="text-sm font-medium" style={{ color: '#8b949e' }}>Ask me anything about your lab.</div>
-              <div className="text-xs mt-1" style={{ color: '#484f58' }}>Hint level {session.hintLevel} active</div>
+            <div>
+              <div className="empty-title">Ready for your lab</div>
+              <div className="empty-sub">
+                Ask about enumeration, exploits, privilege escalation — I have full session context.
+              </div>
+              <div
+                style={{
+                  fontSize: 'var(--type-caption)',
+                  color: 'var(--text-muted)',
+                  fontFamily: 'var(--font-mono)',
+                  marginTop: '8px',
+                }}
+              >
+                Hint level {session.hintLevel} active
+              </div>
             </div>
           </div>
         )}
@@ -422,32 +465,34 @@ export default function ChatPanel() {
             <motion.div
               key={msg.id}
               className={`flex group/msg ${isUser ? 'justify-end' : 'justify-start'}`}
-              initial={{ opacity: 0, y: 4 }}
+              initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.15 }}
+              transition={{ duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
             >
               <div className={`max-w-[85%] ${isUser ? 'text-right' : 'text-left'}`}>
                 <div
                   className={isUser ? 'chat-msg-user' : 'chat-msg-ai'}
                   style={isUser ? {
-                    background: 'linear-gradient(135deg, rgba(180,79,255,0.22) 0%, rgba(180,79,255,0.12) 100%)',
-                    border: '1px solid rgba(180,79,255,0.35)',
-                    borderRadius: '12px 4px 12px 12px',
-                    padding: '10px 14px',
-                    backdropFilter: 'blur(6px)',
-                    WebkitBackdropFilter: 'blur(6px)',
+                    background: 'rgba(180,79,255,0.1)',
+                    border: '1px solid rgba(180,79,255,0.22)',
+                    borderRadius: '10px 3px 10px 10px',
+                    padding: '9px 13px',
                   } : {
-                    background: 'rgba(13,14,24,0.72)',
-                    border: '1px solid rgba(255,255,255,0.055)',
-                    borderRadius: '4px 12px 12px 12px',
-                    backdropFilter: 'blur(12px)',
-                    WebkitBackdropFilter: 'blur(12px)',
-                    padding: '10px 14px',
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+                    background: 'var(--surface-1)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '3px 10px 10px 10px',
+                    padding: '9px 13px',
                   }}
                 >
                   {isUser ? (
-                    <p className="text-sm selectable whitespace-pre-wrap" style={{ color: '#e6edf3' }}>
+                    <p
+                      className="selectable whitespace-pre-wrap"
+                      style={{
+                        fontSize: 'var(--type-body)',
+                        color: 'var(--text-primary)',
+                        lineHeight: 1.55,
+                      }}
+                    >
                       {msg.content}
                     </p>
                   ) : (
@@ -535,17 +580,17 @@ export default function ChatPanel() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input area */}
+      {/* Input area — compact instrument-style */}
       <div
-        className="flex-shrink-0 p-3"
-        style={{ borderTop: '1px solid var(--border-default)', background: 'rgba(7,8,15,0.8)' }}
+        className="flex-shrink-0 px-3 py-2.5"
+        style={{ borderTop: '1px solid var(--border-subtle)', background: 'var(--surface-0)' }}
       >
         <div
-          className="flex gap-2 items-end rounded-lg p-2"
+          className="flex gap-2 items-end rounded-lg px-3 py-2"
           style={{
             background: 'var(--surface-1)',
-            border: streaming ? '1px solid rgba(180,79,255,0.3)' : '1px solid rgba(42,51,71,0.6)',
-            transition: 'border-color 0.15s',
+            border: streaming ? '1px solid var(--accent-border)' : '1px solid var(--border-default)',
+            transition: 'border-color var(--motion-fast) var(--ease)',
           }}
         >
           <textarea
@@ -553,52 +598,55 @@ export default function ChatPanel() {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask about your lab... (Enter to send, Shift+Enter for newline)"
-            className="flex-1 resize-none text-sm leading-relaxed max-h-32 min-h-[36px] bg-transparent"
+            placeholder="Ask about your lab… (↵ send, ⇧↵ newline)"
+            className="flex-1 resize-none leading-relaxed max-h-32 min-h-[32px] bg-transparent selectable"
             style={{
-              border: 'none', outline: 'none', padding: '2px 4px',
-              color: '#e6edf3', fontFamily: 'var(--font-display)',
+              border: 'none',
+              outline: 'none',
+              padding: '1px 0',
+              color: 'var(--text-primary)',
+              fontFamily: 'var(--font-display)',
+              fontSize: 'var(--type-body)',
             }}
             rows={1}
             disabled={streaming}
           />
           <button
-            className="flex-shrink-0 px-4 py-1.5 rounded-md text-sm font-medium transition-all"
+            className="flex-shrink-0 rounded font-medium"
             style={{
-              background: streaming || !input.trim() ? 'rgba(180,79,255,0.1)' : '#b44fff',
+              padding: '5px 14px',
+              fontSize: 'var(--type-body)',
+              background: streaming || !input.trim() ? 'transparent' : '#b44fff',
               color: streaming || !input.trim() ? '#b44fff' : '#fff',
-              border: '1px solid rgba(180,79,255,0.3)',
-              opacity: streaming || !input.trim() ? 0.5 : 1,
+              border: '1px solid rgba(180,79,255,0.35)',
+              opacity: streaming || !input.trim() ? 0.45 : 1,
+              fontFamily: 'var(--font-display)',
             }}
             onClick={sendMessage}
             disabled={streaming || !input.trim()}
           >
             {streaming ? (
               <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 border border-current/40 border-t-current rounded-full animate-spin" />
-                Wait
+                <span className="spinner w-3 h-3 border border-current rounded-full" style={{ borderTopColor: 'transparent' }} />
               </span>
             ) : 'Send'}
           </button>
         </div>
 
-        <div className="flex items-center gap-3 mt-1.5 px-1">
-          <span className="text-[11px]" style={{ color: '#484f58' }}>
-            {session.chat.length} msg{session.chat.length !== 1 ? 's' : ''}
+        <div className="flex items-center gap-2.5 mt-1 px-0.5">
+          <span style={{ fontSize: 'var(--type-caption)', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+            {session.chat.length}msg
           </span>
           {(session.hintsUsed || 0) > 0 && (
-            <span className="text-[11px]" style={{ color: '#d29922' }}>
-              {session.hintsUsed} hint{session.hintsUsed !== 1 ? 's' : ''}
+            <span style={{ fontSize: 'var(--type-caption)', color: 'var(--warning)', fontFamily: 'var(--font-mono)' }}>
+              {session.hintsUsed}hint
             </span>
           )}
           {session.findings.flags.length > 0 && (
-            <span className="text-[11px]" style={{ color: '#3fb950' }}>
-              {session.findings.flags.length} flag{session.findings.flags.length !== 1 ? 's' : ''}
+            <span style={{ fontSize: 'var(--type-caption)', color: 'var(--success)', fontFamily: 'var(--font-mono)' }}>
+              {session.findings.flags.length}flag
             </span>
           )}
-          <span className="text-[11px] ml-auto" style={{ color: '#484f58' }}>
-            Shift+Enter for newline
-          </span>
         </div>
       </div>
     </div>
