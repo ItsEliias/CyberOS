@@ -26,8 +26,20 @@ Each app owns one domain and runs independently — any can be closed without br
 | **NetworkMap** | Visual network topology mapper (nmap import) |
 | **NetLab** | Networking lab & study workspace |
 
-Full details, features, and how the apps communicate: see **[`CYBEROS_ECOSYSTEM_GUIDE.md`](./CYBEROS_ECOSYSTEM_GUIDE.md)**.
 Design tokens and UI conventions: see **[`CYBEROS_DESIGN_BIBLE.md`](./CYBEROS_DESIGN_BIBLE.md)**.
+Change history and per-app status notes live under [`docs/`](./docs).
+
+---
+
+## Screenshots
+
+Design mockups for the ecosystem live in [`Cyber-Mockups/`](./Cyber-Mockups). A few:
+
+| Dashboard | CredVault | NetworkMap |
+|---|---|---|
+| ![Dashboard](./Cyber-Mockups/CyberOS%20Dashboard.png) | ![CredVault](./Cyber-Mockups/CredVault.png) | ![NetworkMap](./Cyber-Mockups/NetworkMap.png) |
+
+> These are high-fidelity design mockups. Live-app captures are pending.
 
 ---
 
@@ -64,7 +76,36 @@ npm run typecheck     # type-check only
 - **`ecosystem-events.json`** — an append-only event bus the Dashboard watches for the live activity feed.
 - **The Obsidian vault** — GhostVault, VaultCore, SignalBoard, CyberLab, and ReportForge all write Markdown into one shared vault.
 
-See the ecosystem guide for the full integration tables and data-flow map.
+---
+
+## Configuration
+
+The apps require **no application secrets or `.env` file**. Runtime configuration is
+read from OS-standard locations only (`NODE_ENV`, `PATH`, and platform config/data
+dirs — `APPDATA`/`LOCALAPPDATA` on Windows, `XDG_CONFIG_HOME`/`XDG_DATA_HOME` on
+Linux). Cross-app state is coordinated through the shared files described above
+(`~/cybertools-config.json`, `ecosystem-events.json`, and the Obsidian vault).
+
+Encrypted local artifacts (`vault.enc`, `apikey.enc`, `*.cyberos-backup`, etc.) are
+generated at runtime by the apps and are deliberately excluded from version control
+via [`.gitignore`](./.gitignore) — never commit them.
+
+---
+
+## Project status & roadmap
+
+- **Active development.** All 13 apps have working `electron-vite` scaffolds; feature
+  completeness varies by app (CyberOS Dashboard is at v2, most others at v1).
+- **UI convergence in progress.** A large body of `ui/*` branches migrate individual
+  apps to a shared shadcn-based component system; not yet merged to `main`.
+- **Known issue (2026-06):** some apps hit a Rollup preload-rename bug on launch —
+  see the build note above and `fix/boot-cyberos-2026-06-10`.
+
+---
+
+## License
+
+Released under the [MIT License](./LICENSE) © 2026 Cody Liddell.
 
 ---
 
