@@ -29,8 +29,8 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.21",
-    "electron": "^42.3.3",
-    "electron-builder": "^26.15.0",
+    "electron": "^43.4.0",
+    "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "framer-motion": "^11.18.2",
     "postcss": "^8.5.3",
